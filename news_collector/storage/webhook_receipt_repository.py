@@ -157,6 +157,29 @@ class WebhookReceiptRepository:
             row = self._get_row(session, delivery_key)
             return _to_view(row) if row is not None else None
 
+    def list_unprocessed_receipts(
+        self, *, limit: int = 500
+    ) -> list[WebhookReceiptView]:
+        """Receipts still awaiting a successful processing outcome
+        (``received`` from a crash mid-flight, ``failed`` from a processing
+        exception), oldest first — the Phase 5b reconciler's replay queue.
+
+        ``processed`` rows are excluded: a replay of a processed delivery
+        must return its stored result, not re-run the effects.
+        """
+        with self._session() as session:
+            rows = (
+                session.query(_WebhookReceiptModel)
+                .filter(_WebhookReceiptModel.status.in_(("received", "failed")))
+                .order_by(
+                    _WebhookReceiptModel.received_at.asc(),
+                    _WebhookReceiptModel.id.asc(),
+                )
+                .limit(limit)
+                .all()
+            )
+            return [_to_view(r) for r in rows]
+
     @staticmethod
     def _get_row(session: Session, delivery_key: str) -> Optional[_WebhookReceiptModel]:
         return (

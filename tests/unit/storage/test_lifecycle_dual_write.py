@@ -286,7 +286,7 @@ def test_reject_publication_attempts_swallows_lifecycle_failure(
     def _boom(*args, **kwargs):
         raise RuntimeError("lifecycle transition exploded")
 
-    monkeypatch.setattr(db_manager.lifecycle, "transition_publication_attempt", _boom)
+    monkeypatch.setattr(db_manager.lifecycle, "apply_publication_transition", _boom)
 
     updated = db_manager.reject_publication_attempts(
         [str(article_id)], reason="whatever"
@@ -416,3 +416,88 @@ def test_update_article_audit_status_swallows_lifecycle_failure(
     result = db_manager.update_article_audit_status(article_id, "audit_failed", "bad")
 
     assert result is True
+
+
+# ---------------------------------------------------------------------------
+# publication_events audit (Plan 060 / Phase 5b)
+# ---------------------------------------------------------------------------
+
+
+def _events_for(db_manager, article_id):
+    [attempt] = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    return db_manager.lifecycle.get_publication_events_for_attempt(attempt.id)
+
+
+def test_publishing_row_creation_appends_no_event(db_manager):
+    article_id = _save_article(db_manager, "event-publishing")
+    db_manager.mark_article_publishing(article_id, "content/update-e")
+
+    assert _events_for(db_manager, article_id) == []
+
+
+def test_mark_article_published_cas_appends_pr_created_event(db_manager):
+    article_id = _save_article(db_manager, "event-pr-cas")
+    db_manager.mark_article_publishing(article_id, "content/update-ep")
+
+    db_manager.mark_article_published(article_id, "https://github.com/pr/ev1")
+
+    [event] = _events_for(db_manager, article_id)
+    assert event.event_type == "pr_created"
+    assert event.details == {
+        "pr_url": "https://github.com/pr/ev1",
+        "refinery_id": str(article_id),
+    }
+
+
+def test_mark_article_published_fallback_insert_appends_pr_created_event(db_manager):
+    article_id = _save_article(db_manager, "event-pr-fresh")
+
+    db_manager.mark_article_published(article_id, "https://github.com/pr/ev2")
+
+    [event] = _events_for(db_manager, article_id)
+    assert event.event_type == "pr_created"
+    assert event.details["pr_url"] == "https://github.com/pr/ev2"
+
+
+def test_reject_appends_rejected_event_with_reason(db_manager):
+    article_id = _save_article(db_manager, "event-reject")
+    db_manager.mark_article_publishing(article_id, "content/update-er")
+    db_manager.mark_article_published(article_id, "https://github.com/pr/ev3")
+
+    db_manager.reject_publication_attempts(
+        [str(article_id)], reason="Content Guard failed (commit: abc)"
+    )
+
+    events = _events_for(db_manager, article_id)
+    assert [e.event_type for e in events] == ["pr_created", "rejected"]
+    assert events[1].details == {"reason": "Content Guard failed (commit: abc)"}
+
+
+def test_complete_appends_deployed_event_with_deploy_url(db_manager):
+    article_id = _save_article(db_manager, "event-complete")
+    db_manager.mark_article_publishing(article_id, "content/update-ec")
+    db_manager.mark_article_published(article_id, "https://github.com/pr/ev4")
+
+    db_manager.complete_publication_attempts(
+        [str(article_id)], "https://noticiencias.com/live"
+    )
+
+    events = _events_for(db_manager, article_id)
+    assert [e.event_type for e in events] == ["pr_created", "deployed"]
+    assert events[1].details == {"deploy_url": "https://noticiencias.com/live"}
+
+
+def test_replayed_callback_appends_no_second_event(db_manager):
+    article_id = _save_article(db_manager, "event-replay")
+    db_manager.mark_article_publishing(article_id, "content/update-rep")
+    db_manager.mark_article_published(article_id, "https://github.com/pr/ev5")
+
+    first = db_manager.reject_publication_attempts([str(article_id)], reason="once")
+    # Legacy filter already moved the article out of 'publishing', so the
+    # replay touches nothing and must not append a second event.
+    second = db_manager.reject_publication_attempts([str(article_id)], reason="again")
+
+    assert (first, second) == (1, 0)
+    events = _events_for(db_manager, article_id)
+    assert [e.event_type for e in events] == ["pr_created", "rejected"]
+    assert events[1].details == {"reason": "once"}

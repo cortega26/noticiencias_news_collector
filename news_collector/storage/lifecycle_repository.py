@@ -1,14 +1,20 @@
 """Lifecycle repository — typed read/write access to Phase 3a's durable
-lineage tables (Plan 060 / Phase 3b).
+lineage tables (Plan 060 / Phase 3b; ``publication_events`` added in Phase
+5b).
 
-Exposes the two tables this phase actually populates — ``publication_attempts``
-and ``editorial_decisions`` — through append-only inserts and a single
-compare-and-set (CAS) transition method. The other three Phase 3a tables
-(``workflow_runs``, ``workflow_stage_attempts``, ``publication_events``) get
-no query/write methods here: nothing writes to them in this phase, so there
-is nothing for a read method to return yet. Whichever future phase first
-writes to one of those tables should add its own read methods alongside
-that write.
+Exposes the two tables that carry state — ``publication_attempts``
+(append-only inserts, a raw CAS transition, and the audited
+``apply_publication_transition`` that writes the state change and its
+``publication_events`` row in one transaction) and ``editorial_decisions``
+(append-only inserts). Phase 5b also adds the explicit legal-transition map
+and the read queries the reconciler needs (lookup by ``refinery_id``, stale
+attempt scan).
+
+``workflow_runs`` and ``workflow_stage_attempts`` still get no methods here:
+their owning workflows (``collection_run_workflow``,
+``publication_run_workflow``) manage those rows directly, and a read method
+with no caller would be dead code. Whichever future phase first needs a
+shared read adds it alongside that caller.
 
 Return types are plain frozen dataclasses, not the SQLAlchemy ORM model
 instances and not raw dicts — these are backend-internal lifecycle records
@@ -28,15 +34,17 @@ check — no schema change, no new ``version`` column.
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, update
 
 from news_collector.utils.logger import get_logger
 
+from .models import PUBLICATION_EVENT_TYPE_VALUES
 from .models import EditorialDecision as _EditorialDecisionModel
 from .models import PublicationAttemptRecord as _PublicationAttemptModel
+from .models import PublicationEvent as _PublicationEventModel
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -84,6 +92,34 @@ def map_legacy_audit_outcome(state: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Legal publication-attempt transitions (Plan 060 / Phase 5b)
+# ---------------------------------------------------------------------------
+#
+# The state machine `publication_attempts.state` actually follows in this
+# system. `PUBLISHING -> REJECTED`/`COMPLETED` are deliberately legal: a
+# webhook callback can race ahead of `mark_article_published`'s own
+# best-effort dual-write, leaving the row in PUBLISHING when the validation/
+# deploy callback lands (see `test_reject_reads_actual_current_state_not_
+# assumed_pr_created`, plan 3c). REJECTED/COMPLETED are terminal — a replay
+# must never resurrect or overwrite a finished attempt. Any state not listed
+# as a key (including unknown/future values) permits no transition.
+LEGAL_PUBLICATION_TRANSITIONS: dict[str, frozenset[str]] = {
+    "PUBLISHING": frozenset({"PR_CREATED", "REJECTED", "COMPLETED"}),
+    "PR_CREATED": frozenset({"REJECTED", "COMPLETED"}),
+    "REJECTED": frozenset(),
+    "COMPLETED": frozenset(),
+}
+
+PUBLICATION_ATTEMPT_TERMINAL_STATES = ("REJECTED", "COMPLETED")
+
+
+def is_legal_publication_transition(from_state: str, to_state: str) -> bool:
+    """Pure predicate: is ``from_state -> to_state`` a legal attempt
+    transition? Unknown states permit nothing."""
+    return to_state in LEGAL_PUBLICATION_TRANSITIONS.get(from_state, frozenset())
+
+
+# ---------------------------------------------------------------------------
 # Read-side dataclasses
 # ---------------------------------------------------------------------------
 
@@ -101,6 +137,18 @@ class PublicationAttemptView:
     branch_name: str | None
     started_at: datetime
     finished_at: datetime | None
+    details: dict[str, Any] | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class PublicationEventView:
+    """Read projection of one ``publication_events`` row."""
+
+    id: int
+    publication_attempt_id: int
+    event_type: str
+    occurred_at: datetime
     details: dict[str, Any] | None
     created_at: datetime
 
@@ -132,6 +180,17 @@ def _to_publication_attempt_view(
         branch_name=row.branch_name,
         started_at=row.started_at,
         finished_at=row.finished_at,
+        details=row.details,
+        created_at=row.created_at,
+    )
+
+
+def _to_publication_event_view(row: _PublicationEventModel) -> PublicationEventView:
+    return PublicationEventView(
+        id=row.id,
+        publication_attempt_id=row.publication_attempt_id,
+        event_type=row.event_type,
+        occurred_at=row.occurred_at,
         details=row.details,
         created_at=row.created_at,
     )
@@ -269,6 +328,112 @@ class LifecycleRepository:
                 )
             return updated
 
+    def apply_publication_transition(
+        self,
+        attempt_id: int,
+        *,
+        from_state: str,
+        to_state: str,
+        event_type: str,
+        details: dict[str, Any] | None = None,
+        occurred_at: datetime | None = None,
+        **fields: Any,
+    ) -> bool:
+        """Legality-checked CAS that appends its ``publication_events`` row
+        in the same transaction as the state change (Plan 060 / Phase 5b).
+
+        Returns ``True`` iff both the transition and the event were written.
+        An unknown ``event_type`` or an illegal ``from_state -> to_state``
+        pair is refused up front (logged, no write at all). A CAS miss is a
+        normal ``False`` that appends no event, because nothing changed.
+        """
+        if not self._audited_transition_is_legal(
+            attempt_id,
+            from_state=from_state,
+            to_state=to_state,
+            event_type=event_type,
+        ):
+            return False
+        return self._write_audited_transition(
+            attempt_id,
+            from_state=from_state,
+            to_state=to_state,
+            event_type=event_type,
+            details=details,
+            occurred_at=occurred_at,
+            **fields,
+        )
+
+    @staticmethod
+    def _audited_transition_is_legal(
+        attempt_id: int,
+        *,
+        from_state: str,
+        to_state: str,
+        event_type: str,
+    ) -> bool:
+        if event_type not in PUBLICATION_EVENT_TYPE_VALUES:
+            logger.error(
+                "Refusing audited transition of attempt {} ({} -> {}): "
+                "unknown event type {!r}.",
+                attempt_id,
+                from_state,
+                to_state,
+                event_type,
+            )
+            return False
+        if not is_legal_publication_transition(from_state, to_state):
+            logger.error(
+                "Refusing illegal publication-attempt transition {} -> {} "
+                "for attempt {} (event_type={!r}).",
+                from_state,
+                to_state,
+                attempt_id,
+                event_type,
+            )
+            return False
+        return True
+
+    def _write_audited_transition(
+        self,
+        attempt_id: int,
+        *,
+        from_state: str,
+        to_state: str,
+        event_type: str,
+        details: dict[str, Any] | None,
+        occurred_at: datetime | None,
+        **fields: Any,
+    ) -> bool:
+        with self._session() as session:
+            values: dict[str, Any] = {"state": to_state, **fields}
+            result = session.execute(
+                update(_PublicationAttemptModel)
+                .where(
+                    _PublicationAttemptModel.id == attempt_id,
+                    _PublicationAttemptModel.state == from_state,
+                )
+                .values(**values)
+            )
+            if result.rowcount != 1:
+                logger.info(
+                    "CAS miss in audited transition of publication attempt {} "
+                    "({} -> {}): already transitioned or nonexistent.",
+                    attempt_id,
+                    from_state,
+                    to_state,
+                )
+                return False
+            session.add(
+                _PublicationEventModel(
+                    publication_attempt_id=attempt_id,
+                    event_type=event_type,
+                    occurred_at=occurred_at or datetime.now(timezone.utc),
+                    details=details,
+                )
+            )
+            return True
+
     def publication_attempt_exists(self, article_id: int, refinery_id: str) -> bool:
         """Idempotency check: does a ``publication_attempts`` row already
         exist for this ``(article_id, refinery_id)`` pair?
@@ -297,6 +462,102 @@ class LifecycleRepository:
                 .all()
             )
             return [_to_publication_attempt_view(r) for r in rows]
+
+    def find_latest_publication_attempt_by_refinery_id(
+        self, refinery_id: str
+    ) -> PublicationAttemptView | None:
+        """Newest attempt for a ``refinery_id`` (by attempt_number, then id —
+        the same deterministic tie-break the dual-writes use), or ``None``.
+
+        Used by callbacks that only know the webhook's ``publication_ids``
+        (no ``article_id``) and by the Phase 5b reconciler.
+        """
+        with self._session() as session:
+            row = (
+                session.query(_PublicationAttemptModel)
+                .filter(_PublicationAttemptModel.refinery_id == refinery_id)
+                .order_by(
+                    _PublicationAttemptModel.attempt_number.desc(),
+                    _PublicationAttemptModel.id.desc(),
+                )
+                .first()
+            )
+            return _to_publication_attempt_view(row) if row is not None else None
+
+    def list_stale_publication_attempts(
+        self,
+        *,
+        older_than: datetime,
+        state: str = "PR_CREATED",
+        limit: int = 100,
+    ) -> list[PublicationAttemptView]:
+        """Attempts still in ``state`` whose ``started_at`` is strictly older
+        than ``older_than``, oldest first (Phase 5b reconciler candidates)."""
+        with self._session() as session:
+            rows = (
+                session.query(_PublicationAttemptModel)
+                .filter(
+                    _PublicationAttemptModel.state == state,
+                    _PublicationAttemptModel.started_at < older_than,
+                )
+                .order_by(
+                    _PublicationAttemptModel.started_at.asc(),
+                    _PublicationAttemptModel.id.asc(),
+                )
+                .limit(limit)
+                .all()
+            )
+            return [_to_publication_attempt_view(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # publication_events — append-only transition audit
+    # ------------------------------------------------------------------
+
+    def record_publication_event(
+        self,
+        publication_attempt_id: int,
+        *,
+        event_type: str,
+        occurred_at: datetime | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> PublicationEventView:
+        """Append one event row. Raises ``ValueError`` for an unknown event
+        type — a programming error, same convention as an invalid enum.
+
+        Callers that record an event *alongside* a state change must use
+        :meth:`apply_publication_transition` instead, so the two writes stay
+        atomic.
+        """
+        if event_type not in PUBLICATION_EVENT_TYPE_VALUES:
+            raise ValueError(f"Unknown publication event type: {event_type!r}")
+        with self._session() as session:
+            row = _PublicationEventModel(
+                publication_attempt_id=publication_attempt_id,
+                event_type=event_type,
+                occurred_at=occurred_at or datetime.now(timezone.utc),
+                details=details,
+            )
+            session.add(row)
+            session.flush()
+            return _to_publication_event_view(row)
+
+    def get_publication_events_for_attempt(
+        self, publication_attempt_id: int
+    ) -> list[PublicationEventView]:
+        with self._session() as session:
+            rows = (
+                session.query(_PublicationEventModel)
+                .filter(
+                    _PublicationEventModel.publication_attempt_id
+                    == publication_attempt_id
+                )
+                .order_by(
+                    _PublicationEventModel.occurred_at,
+                    _PublicationEventModel.id,
+                )
+                .all()
+            )
+            return [_to_publication_event_view(r) for r in rows]
 
     # ------------------------------------------------------------------
     # editorial_decisions — append-only inserts (no CAS: genuinely

@@ -200,15 +200,26 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `serving/webhook_handler.handle_webhook_event`; processed duplicates
       return the stored result, `received`/`failed` receipts are reprocessed.
       See `plans/060/phase-5a-webhook-receipts/`.)
-- [ ] Apply legal publication-attempt transitions and retain processing errors.
-      (Phase 5a retains processing errors on the receipt — `failed` + `error` +
-      `attempts`; the per-attempt `publication_events` log (legal-transition
-      audit) is the remaining 5b piece.)
-- [ ] Add stale-attempt reconciliation without duplicate PR creation.
+- [x] Apply legal publication-attempt transitions and retain processing errors.
+      (Phase 5a retained processing errors on the receipt — `failed` + `error`
+      + `attempts`; Phase 5b, 2026-09-25 adds the per-attempt
+      `publication_events` audit — `apply_publication_transition` writes the
+      legality-checked CAS and its event in one transaction, with
+      `pr_created`/`check_passed`/`rejected`/`deployed` events recorded at the
+      dual-write and callback seams. See
+      `plans/060/phase-5b-attempt-events-reconciler/`.)
+- [x] Add stale-attempt reconciliation without duplicate PR creation.
+      (Phase 5b, 2026-09-25 — `logic/workflows/publication_reconciliation.py`
+      + `scripts/ops/reconcile_publication_attempts.py`: replays unprocessed
+      `received`/`failed` receipts through the real callback effects, repairs
+      a legacy-terminal attempt only with deploy/rejection evidence, reports a
+      stale open PR as actionable, and never creates a PR or marks an attempt
+      COMPLETED without a deploy URL.)
 - [ ] Drive dashboard health from stored evidence; missing evidence is unknown.
-- [ ] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
-      (Phase 5a covers lost/duplicate/restart/error with integration tests;
-      out-of-order and stale-PR cases remain for 5b.)
+- [x] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
+      (Phase 5a covered lost/duplicate/restart/error with integration tests;
+      Phase 5b adds out-of-order repair and stale-open-PR integration tests in
+      `tests/integration/test_publication_reconciliation.py`.)
 
 ## Wave C — typed boundaries and smaller modules
 

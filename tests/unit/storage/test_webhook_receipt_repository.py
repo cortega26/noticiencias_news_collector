@@ -140,3 +140,37 @@ class TestRaceFallback:
 
         assert created is False
         assert view.id == stored.id
+
+
+class TestListUnprocessed:
+    def test_returns_received_and_failed_oldest_first_excluding_processed(
+        self, db_manager: DatabaseManager
+    ):
+        repo = db_manager.webhook_receipts
+        received, _ = _record(repo, key="received-1")
+
+        failed, _ = _record(repo, key="failed-1")
+        repo.mark_processing("failed-1")
+        repo.mark_failed("failed-1", "boom")
+
+        processed, _ = _record(repo, key="processed-1")
+        repo.mark_processing("processed-1")
+        repo.mark_processed("processed-1", {"action": "noop"})
+
+        unprocessed = repo.list_unprocessed_receipts()
+
+        assert [r.id for r in unprocessed] == [received.id, failed.id]
+        assert [r.status for r in unprocessed] == ["received", "failed"]
+        assert processed.id not in [r.id for r in unprocessed]
+
+    def test_limit_is_respected(self, db_manager: DatabaseManager):
+        repo = db_manager.webhook_receipts
+        _record(repo, key="one")
+        _record(repo, key="two")
+
+        assert [r.delivery_key for r in repo.list_unprocessed_receipts(limit=1)] == [
+            "one"
+        ]
+
+    def test_empty_queue_returns_empty_list(self, db_manager: DatabaseManager):
+        assert db_manager.webhook_receipts.list_unprocessed_receipts() == []

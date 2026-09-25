@@ -378,14 +378,19 @@ class DatabaseManager:
     def _dual_write_pr_created(
         self, article_id: int, pr_url: str, refinery_id: str | None
     ) -> None:
-        """Best-effort: CAS the latest PUBLISHING row to PR_CREATED, or
-        insert a fresh PR_CREATED row if none is found / the CAS misses.
+        """Best-effort: CAS the latest PUBLISHING row to PR_CREATED (state
+        change + ``pr_created`` event, plan 5b), or insert a fresh PR_CREATED
+        row plus its event if none is found / the CAS misses.
 
         Never raises — a LifecycleRepository failure is logged and
         swallowed so the (already-committed) legacy write remains the
         source of truth.
         """
         resolved_refinery_id = refinery_id or str(article_id)
+        event_details = {
+            "pr_url": pr_url,
+            "refinery_id": resolved_refinery_id,
+        }
         try:
             attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
             publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
@@ -398,10 +403,12 @@ class DatabaseManager:
                 latest = max(
                     publishing_attempts, key=lambda a: (a.attempt_number, a.id)
                 )
-                transitioned = self.lifecycle.transition_publication_attempt(
+                transitioned = self.lifecycle.apply_publication_transition(
                     latest.id,
                     from_state="PUBLISHING",
                     to_state="PR_CREATED",
+                    event_type="pr_created",
+                    details=event_details,
                     pr_url=pr_url,
                     # Defensive self-correction, not required by today's
                     # traced refinery_id invariant — see spec.md recon.
@@ -412,12 +419,17 @@ class DatabaseManager:
                 # mark_article_publishing) or a CAS miss (race, or already
                 # transitioned) — a PR-created event must still be
                 # represented by some row.
-                self.lifecycle.record_publication_attempt(
+                created = self.lifecycle.record_publication_attempt(
                     article_id,
                     refinery_id=resolved_refinery_id,
                     state="PR_CREATED",
                     pr_url=pr_url,
                     started_at=datetime.now(timezone.utc),
+                )
+                self.lifecycle.record_publication_event(
+                    created.id,
+                    event_type="pr_created",
+                    details=event_details,
                 )
         except Exception:
             logger.exception(
@@ -443,7 +455,12 @@ class DatabaseManager:
         # touched the DB) — never opens a second session against the same
         # SQLite file while the legacy transaction is still in flight.
         for article_id, refinery_id in transitioned:
-            self._dual_write_transition(article_id, refinery_id, "REJECTED")
+            self._dual_write_transition(
+                article_id,
+                refinery_id,
+                "REJECTED",
+                details={"reason": (reason or "")[:500]},
+            )
         return updated
 
     def complete_publication_attempts(
@@ -458,18 +475,47 @@ class DatabaseManager:
             ),
         )
         for article_id, refinery_id in transitioned:
-            self._dual_write_transition(article_id, refinery_id, "COMPLETED")
+            self._dual_write_transition(
+                article_id,
+                refinery_id,
+                "COMPLETED",
+                details={"deploy_url": (deploy_url or "")[:500] or None},
+            )
         return updated
 
+    # to_state -> publication_events.event_type for the audited dual-writes
+    # (Plan 060 / Phase 5b). PUBLISHING creation has no event type of its
+    # own — the row's started_at is its own evidence.
+    _PUBLICATION_TRANSITION_EVENT_TYPES = {
+        "REJECTED": "rejected",
+        "COMPLETED": "deployed",
+    }
+
     def _dual_write_transition(
-        self, article_id: int, refinery_id: str, to_state: str
+        self,
+        article_id: int,
+        refinery_id: str,
+        to_state: str,
+        *,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """Best-effort: look up the article's latest publication_attempts
         row for ``refinery_id``, read its actual current state (never
         assume ``PR_CREATED`` — a webhook can race ahead of
-        ``mark_article_published``'s own fallback insert), and CAS it to
-        ``to_state``. Never raises.
+        ``mark_article_published``'s own fallback insert), and apply the
+        audited CAS to ``to_state`` (state change + ``publication_events``
+        row). Never raises.
         """
+        event_type = self._PUBLICATION_TRANSITION_EVENT_TYPES.get(to_state)
+        if event_type is None:
+            logger.error(
+                "Dual-write skipped for article {} (refinery_id={}, "
+                "to_state={}): no event type mapped.",
+                article_id,
+                refinery_id,
+                to_state,
+            )
+            return
         try:
             attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
             matches = [a for a in attempts if a.refinery_id == refinery_id]
@@ -483,10 +529,12 @@ class DatabaseManager:
                 )
                 return
             latest = max(matches, key=lambda a: (a.attempt_number, a.id))
-            transitioned = self.lifecycle.transition_publication_attempt(
+            transitioned = self.lifecycle.apply_publication_transition(
                 latest.id,
                 from_state=latest.state,
                 to_state=to_state,
+                event_type=event_type,
+                details=details,
             )
             if not transitioned:
                 logger.warning(
