@@ -50,10 +50,6 @@ from news_collector.editorial.grounding import (
 )
 from news_collector.editorial.readability import analyze_body_readability
 from news_collector.logic.workflows.audit_scheduler import AuditRequest, AuditScheduler
-from news_collector.logic.workflows.frontend_publication_validation import (
-    run_frontend_publication_validation,
-    validate_post_frontmatter_fast,
-)
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.image_handler import (
     ArticleImageHandler,
@@ -69,6 +65,11 @@ from news_collector.logic.workflows.publication_attempts import (
 from news_collector.logic.workflows.publication_identity import (
     PublicationIdentity,
     PublicationIdentityResolver,
+)
+from news_collector.logic.workflows.target_repo_publication import (
+    PublicationDeps,
+    PublicationRequest,
+    TargetRepoPublicationWorkflow,
 )
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
 from news_collector.utils.logger import get_logger
@@ -284,6 +285,7 @@ class RefineryEngine:
         self.pr_orchestrator = PROrchestrator(
             git=self.git, db=self.db, config=self.config
         )
+        self.publication_workflow = TargetRepoPublicationWorkflow()
 
     def process_articles(
         self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
@@ -764,205 +766,36 @@ class RefineryEngine:
         audit_should_run: bool,
         run: "_PublicationRun",
     ) -> bool:
-        if not self._create_publication_branch(target_repo_obj, run):
-            return False
-        # _create_publication_branch guarantees both on success; the cast
-        # keeps the locked values monomorphic for the remaining stages.
-        output_filename = cast(str, run.output_filename)
-        branch_name = cast(str, run.branch_name)
-        if not self._write_post(target_dir, output_filename, refined_content, run):
-            return False
-        if not self._validate_post_frontend(target_dir, output_filename, run):
-            return False
-        self._commit_and_push(target_repo_obj, output_filename, branch_name, run)
-        return self._create_pr_and_schedule_audit(
-            article,
-            refined_content,
-            grounding_notes,
-            audit_should_run,
-            output_filename,
-            branch_name,
-            run,
-        )
-
-    def _create_publication_branch(
-        self, target_repo_obj: Any, run: "_PublicationRun"
-    ) -> bool:
-        """4. Create Branch: before writing files, so branch collisions or
-        remote sync failures do not leave uncommitted content edits behind."""
-        if not run.output_filename:
-            logger.error(f"Cannot proceed without output_filename for {run.article_id}")
-            run.record_stage("output_filename", False)
-            run.persist_attempt(False)
-            return False
-
-        branch_slug = run.output_filename.replace(".md", "")
-        expected_branch = f"content/update-{branch_slug}"
-
-        # B-01 / F-0012: Mark as "publishing" BEFORE git operations
-        if run.numeric_id is not None and hasattr(self.db, "mark_article_publishing"):
-            try:
-                self.db.mark_article_publishing(run.numeric_id, expected_branch)
-                logger.info(
-                    f"Marked article {run.article_id} as 'publishing' "
-                    f"(branch: {expected_branch})"
-                )
-            except Exception as e:
-                logger.error(f"Failed to mark article as publishing: {e}")
-
-        run.branch_name = self.git.create_branch(
-            target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
-        )
-        run.record_stage("branch_created", True, branch_name=run.branch_name)
-        return True
-
-    def _write_post(
-        self,
-        target_dir: Path,
-        output_filename: str,
-        refined_content: str,
-        run: "_PublicationRun",
-    ) -> bool:
-        """5. Save File."""
-        try:
-            self.writer.write_article(
-                posts_dir=target_dir / "src/content/posts",
-                output_filename=output_filename,
-                content=refined_content,
+        """Delegate the target-repo stages to TargetRepoPublicationWorkflow
+        (plan 060 Phase 7b), then keep the engine-owned side effects — audit
+        scheduling and attempt persistence — in the historical order."""
+        outcome = self.publication_workflow.publish(
+            PublicationRequest(
+                article=article,
                 article_id=run.article_id,
+                numeric_id=run.numeric_id,
+                output_filename=run.output_filename,
+                refined_content=refined_content,
+                grounding_notes=grounding_notes,
+                target_repo_obj=target_repo_obj,
                 target_dir=target_dir,
-            )
-        except ValueError as e:
-            logger.error("S0 GUARD: {}", e)
-            run.record_stage("file_written", False, error=str(e))
-            run.persist_attempt(False)
+                attempts_dir=self.publication_attempts_dir,
+            ),
+            PublicationDeps(
+                writer=self.writer,
+                git=self.git,
+                pr_orchestrator=self.pr_orchestrator,
+                db=self.db,
+            ),
+            record_stage=run.record_stage,
+        )
+        run.branch_name = outcome.branch_name
+        run.pr_url = outcome.pr_url
+        run.validation_summary_path = outcome.validation_summary_path
+        if not outcome.success:
+            run.persist_attempt(False, failure_class=outcome.failure_class)
             return False
-        run.record_stage("file_written", True, output_filename=output_filename)
-        return True
-
-    def _validate_post_frontend(
-        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
-    ) -> bool:
-        if not (target_dir / "package.json").exists():
-            run.record_stage(
-                "frontend_publication_validation",
-                True,
-                skipped=True,
-                reason="frontend_workspace_not_detected",
-            )
-            return True
-        run.validation_summary_path = str(
-            self.publication_attempts_dir
-            / f"{self._safe_publication_artifact_name(run.article_id)}.frontend_validation.json"
-        )
-        if not self._fast_frontmatter_guard(target_dir, output_filename, run):
-            return False
-        return self._run_full_frontend_validation(target_dir, output_filename, run)
-
-    def _fast_frontmatter_guard(
-        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
-    ) -> bool:
-        # Fast, dependency-free frontmatter check first (plan 057): the
-        # full frontend build below is slow and duplicates the frontend
-        # CI. Catching schema violations (e.g. sources[].date: null)
-        # here aborts in milliseconds instead of after a full npm
-        # ci + prettier + lint + build cycle.
-        fast_ok, fast_class, fast_error = validate_post_frontmatter_fast(
-            target_dir / "src/content/posts" / output_filename
-        )
-        if fast_ok:
-            return True
-        logger.error(
-            "Fast frontmatter validation failed for {}: {}",
-            run.article_id,
-            fast_error,
-        )
-        run.record_stage(
-            "frontend_publication_validation",
-            False,
-            failure_class=fast_class or "taxonomy_contract_violation",
-            fast=True,
-            error=fast_error,
-        )
-        run.persist_attempt(
-            False,
-            failure_class=fast_class or "taxonomy_contract_violation",
-        )
-        return False
-
-    def _run_full_frontend_validation(
-        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
-    ) -> bool:
-        # _validate_post_frontend always sets this before calling us.
-        summary_path = cast(str, run.validation_summary_path)
-        validation_summary = run_frontend_publication_validation(
-            target_dir,
-            summary_output_path=Path(summary_path),
-            stage_fixture=False,
-            post_path=target_dir / "src/content/posts" / output_filename,
-            install_dependencies=not (target_dir / "node_modules").exists(),
-        )
-        run.record_stage(
-            "frontend_publication_validation",
-            validation_summary.success,
-            failure_class=validation_summary.overall_failure_class,
-            summary_path=summary_path,
-        )
-        if validation_summary.success:
-            return True
-        run.persist_attempt(
-            False,
-            failure_class=validation_summary.overall_failure_class,
-        )
-        return False
-
-    def _commit_and_push(
-        self,
-        target_repo_obj: Any,
-        output_filename: str,
-        branch_name: str,
-        run: "_PublicationRun",
-    ) -> None:
-        """6. Commit & Push."""
-        self.git.commit_and_push(
-            target_repo_obj,
-            f"Update article: {output_filename}",
-            branch_name,
-        )
-        run.record_stage("commit_pushed", True, branch_name=branch_name)
-
-    def _create_pr_and_schedule_audit(
-        self,
-        article: Dict[str, Any],
-        refined_content: str,
-        grounding_notes: str,
-        audit_should_run: bool,
-        output_filename: str,
-        branch_name: str,
-        run: "_PublicationRun",
-    ) -> bool:
-        """7. Create PR, then persist the attempt and schedule the optional
-        post-PR auditor."""
-        pr_result = self.pr_orchestrator.create_pr(
-            article_id=run.article_id,
-            article=article,
-            branch_name=branch_name,
-            output_filename=output_filename,
-            git_handler=self.git,
-            review_notes=grounding_notes,
-        )
-        run.pr_url = pr_result.pr_url
-
-        if not run.pr_url:
-            logger.error("Failed to create PR.")
-            run.record_stage("pr_created", False)
-            run.persist_attempt(False)
-            return False
-
-        logger.info(f"Pull Request created successfully: {run.pr_url}")
-        run.record_stage("pr_created", True, pr_url=run.pr_url)
         self._schedule_or_skip_audit(article, refined_content, audit_should_run, run)
-
         run.persist_attempt(True)
         return True
 

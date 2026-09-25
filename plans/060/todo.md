@@ -220,11 +220,14 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `publication_run_workflow`/`pipeline_e2e` rewired; engine keeps
       compatibility delegates. See
       `plans/060/phase-7a-refinery-recording-audit/`.)
-- [ ] Extract the target-repository publication workflow collaborator of
-      Phase 7 (composing identity/writer/image/PR). Deferred by 7a to 7b:
-      `_publish_to_target_repo` is now an engine stage method, but a separate
-      collaborator needs its own behavior proof and a larger test-seam
-      migration.
+- [x] Extract the target-repository publication workflow collaborator of
+      Phase 7. (Phase 7b, 2026-09-25 — NEW
+      `news_collector/logic/workflows/target_repo_publication.py` owns branch →
+      write → validate → commit/push → PR behind a typed
+      `PublicationRequest`/`PublicationDeps`/`PublicationOutcome`; the engine
+      delegates and keeps audit + attempt persistence. Identity/image remain
+      upstream because the AI editor sits between them (documented deviation).
+      See `plans/060/phase-7b-target-repo-publication/`.)
 - [x] Extract audit scheduling/recording only where independently testable.
       (Phase 7a, 2026-09-25 — NEW
       `news_collector/logic/workflows/audit_scheduler.py`; the engine
