@@ -9,10 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from news_collector.contracts.webhook import (
-    PublishCompleteEvent,
-    ValidationResultEvent,
-)
+from news_collector.contracts.webhook import PublishCompleteEvent, ValidationResultEvent
 from news_collector.logic.workflows.publication_callbacks import (
     apply_publish_complete,
     apply_validation_result,
