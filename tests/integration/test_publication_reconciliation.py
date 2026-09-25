@@ -317,6 +317,7 @@ class TestStaleOpenPr:
         with db_manager.get_session() as session:
             article = session.get(Article, article_id)
             assert article.processing_status == "publishing"
+            assert article.published_url is None
 
 
 class TestQueueHygiene:

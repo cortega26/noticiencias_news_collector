@@ -54,13 +54,22 @@ def _record_check_passed_events(
     lifecycle = getattr(db, "lifecycle", None)
     if lifecycle is None or not event.publication_ids:
         return
-    for refinery_id in event.publication_ids:
+    seen_attempt_ids: set[int] = set()
+    # dict.fromkeys dedupes the caller-provided ids while preserving order;
+    # seen_attempt_ids additionally guarantees one event per attempt even if
+    # two ids resolve to the same row.
+    for refinery_id in dict.fromkeys(event.publication_ids):
         try:
             attempt = lifecycle.find_latest_publication_attempt_by_refinery_id(
                 refinery_id
             )
-            if attempt is None or attempt.state in _TERMINAL_ATTEMPT_STATES:
+            if (
+                attempt is None
+                or attempt.state in _TERMINAL_ATTEMPT_STATES
+                or attempt.id in seen_attempt_ids
+            ):
                 continue
+            seen_attempt_ids.add(attempt.id)
             lifecycle.record_publication_event(
                 attempt.id,
                 event_type="check_passed",

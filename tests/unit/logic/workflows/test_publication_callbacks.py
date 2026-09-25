@@ -113,6 +113,20 @@ class TestValidationPass:
             "refinery_id": REFINERY_ID,
         }
 
+    def test_duplicate_ids_record_one_event_per_attempt(
+        self, db_manager: DatabaseManager
+    ):
+        _, attempt = _pr_created_attempt(db_manager)
+
+        result = apply_validation_result(
+            _validation_event("pass", ids=[REFINERY_ID, REFINERY_ID, REFINERY_ID]),
+            db_manager,
+        )
+
+        assert result == {"action": "noop", "reason": "validation_passed"}
+        events = db_manager.lifecycle.get_publication_events_for_attempt(attempt.id)
+        assert [e.event_type for e in events] == ["pr_created", "check_passed"]
+
     def test_unknown_attempt_records_nothing(self, db_manager: DatabaseManager):
         result = apply_validation_result(
             _validation_event("pass", ids=["refinery-unknown"]), db_manager
