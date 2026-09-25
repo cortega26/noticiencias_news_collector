@@ -18,6 +18,8 @@ import yaml
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
+from news_collector.components.editorial.editorial_input import EditorialInput
+from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from news_collector.editorial.health_scope import is_health_scope
 from news_collector.editorial.hero_alt import resolve_hero_alt_text
@@ -2064,56 +2066,25 @@ class EditorAgent:
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
         """
-        # 1. Extract Info
-        title = ""
-        summary = ""
-        content = ""
-        image_url = None
-        image_alt = None
-        source_url = None
-        source_id = None
-        source_name = None
+        # 1. Extract Info (typed normalized input; plan 060 Phase 7c-1)
         # content_mode drives Phase 2c fact-check verification honesty (a
         # "summary_only"/"summary_fallback" source is not the full article,
-        # and the verification prompt must say so). Defaults to "full_text"
-        # to match CollectorArticleModel's own default when the upstream
-        # payload omits it (e.g. plain-string input, older export payloads).
-        content_mode = "full_text"
-        article_id = explicit_article_id or "unknown"
-
-        if isinstance(raw_text, dict):
-            title = raw_text.get("title", "") or ""
-            summary = raw_text.get("summary", "") or ""
-            content = raw_text.get("content", "") or ""
-            content_mode = raw_text.get("content_mode") or "full_text"
-
-            # Fallback for RSS feeds where "content" is often in "summary"
-            if not content and summary:
-                content = summary
-
-            image_url = raw_text.get("image_url")
-            image_alt = raw_text.get("image_alt")
-            source_id = raw_text.get("source_id")
-            source_name = raw_text.get("source_name")
-            source_url = (
-                raw_text.get("url")
-                or (raw_text.get("metadata") or {}).get("original_url")
-                or ((raw_text.get("metadata") or {}).get("source_metadata") or {}).get(
-                    "entry_id"
-                )
-            )
-            raw_category = raw_text.get("category")
-            metadata_category = (raw_text.get("metadata") or {}).get("category")
-            if article_id == "unknown":
-                article_id = str(raw_text.get("id") or "unknown")
-        else:
-            content = raw_text
-            import hashlib
-
-            if article_id == "unknown":
-                article_id = hashlib.sha256(content.encode()).hexdigest()[:8]
-            raw_category = None
-            metadata_category = None
+        # and the verification prompt must say so). EditorialInput defaults it
+        # to "full_text" to match CollectorArticleModel's own default when the
+        # upstream payload omits it (plain-string input, older export payloads).
+        editorial = EditorialInput.from_raw(raw_text, explicit_article_id)
+        article_id = editorial.article_id
+        title = editorial.title
+        summary = editorial.summary
+        content = editorial.content
+        content_mode = editorial.content_mode
+        image_url = editorial.image_url
+        image_alt = editorial.image_alt
+        source_id = editorial.source_id
+        source_name = editorial.source_name
+        source_url = editorial.source_url
+        raw_category = editorial.raw_category
+        metadata_category = editorial.metadata_category
 
         category_resolution = self.category_resolver.resolve_category(
             article_id=article_id,
@@ -2159,7 +2130,7 @@ class EditorAgent:
 
         # --- STAGE 1: Scientific Translation ---
         print("\n--- STAGE 1: Scientific Translation ---")
-        cache_s1 = self._get_cache_path(article_id, "stage1_translation")
+        cache_s1 = self._get_cache_path(article_id, EditorialStage.TRANSLATION)
         if cache_s1.exists():
             print(f"(Loaded from cache: {cache_s1})")
             translated_text = cache_s1.read_text(encoding="utf-8")
@@ -2169,7 +2140,7 @@ class EditorAgent:
 
         # --- STAGE 2: Editorial Adaptation ---
         print("\n--- STAGE 2: Editorial Adaptation ---")
-        cache_s2 = self._get_cache_path(article_id, "stage2_editorial")
+        cache_s2 = self._get_cache_path(article_id, EditorialStage.EDITORIAL)
         if cache_s2.exists():
             print(f"(Loaded from cache: {cache_s2})")
             final_content = cache_s2.read_text(encoding="utf-8")
@@ -2194,7 +2165,9 @@ class EditorAgent:
         print("\n--- STAGE 3: Critic Pass (Validation & Repair) ---")
 
         # Checkpoint: If we already passed the critic gate for this article, skip re-evaluation
-        cache_s2_5 = self._get_cache_path(article_id, "stage2_5_critic_ok")
+        cache_s2_5 = self._get_cache_path(
+            article_id, EditorialStage.TECHNICAL_CRITIC_OK
+        )
         if cache_s2_5.exists():
             print(f"(Loaded from cache: {cache_s2_5})")
         else:
@@ -2267,7 +2240,9 @@ class EditorAgent:
         # feedback accionable; fails open si la infra del LLM falla.
         # Independiente del critic técnico anterior: ese verifica integridad
         # de traducción, este verifica calidad editorial.
-        cache_s2_6 = self._get_cache_path(article_id, "stage2_6_editorial_critic_ok")
+        cache_s2_6 = self._get_cache_path(
+            article_id, EditorialStage.EDITORIAL_CRITIC_OK
+        )
         if cache_s2_6.exists():
             print(f"(Loaded from cache: {cache_s2_6})")
         elif os.getenv(
@@ -2356,7 +2331,7 @@ class EditorAgent:
 
         # --- STAGE 6: Editorial Enrichment Fields ---
         print("\n--- STAGE 6: Editorial Enrichment Fields ---")
-        cache_s4 = self._get_cache_path(article_id, "stage4_enrichment")
+        cache_s4 = self._get_cache_path(article_id, EditorialStage.ENRICHMENT)
 
         def _enrichment_cache_is_usable(cached: Any) -> bool:
             """A Stage 6 cache artifact is usable only when it carries every

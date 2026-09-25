@@ -237,6 +237,13 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `make lint`, `make type` (3229 passed, ratchet OK), `make test`
       (3216 passed), `make test-boundaries`.)
 - [ ] Extract typed EditorAgent stages while keeping `process_article` façade.
+      (Phase 7c-1 landed 2026-09-25: typed normalized input
+      `editorial_input.py` + `EditorialStage` cache identities
+      `editorial_stages.py`, five cache call sites rewired, no behavior
+      change. Remaining LLM stages — translated draft, adapted/critic-approved
+      draft, enrichment result, final artifact — with their retry policy,
+      provider provenance and failure codes; see
+      `plans/060/phase-7c1-editorial-input-contract/`.)
 - [ ] Split bounded admin route modules after wire characterization.
 - [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift.
 
