@@ -196,7 +196,7 @@ class TestE2EHappyPath:
         with (
             _mock_http_image_client(),
             patch(
-                "news_collector.logic.workflows.refinery_engine.run_frontend_publication_validation",
+                "news_collector.logic.workflows.target_repo_publication.run_frontend_publication_validation",
                 return_value=failed_validation,
             ),
         ):
