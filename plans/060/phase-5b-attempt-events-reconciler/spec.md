@@ -275,27 +275,33 @@ timer is out of scope (same rationale as plan 4a's prune script).
 ## Steps
 
 ### Step 0: Baseline + drift
+
 Record the baseline count; STOP on drift/non-green.
 
 ### Step 1: Storage — legality + events + queries + tests
+
 `LEGAL_PUBLICATION_TRANSITIONS`, `PublicationEventView`,
 `record_publication_event`, `get_publication_events_for_attempt`,
 `apply_publication_transition`, `find_latest_publication_attempt_by_refinery_id`,
 `list_stale_publication_attempts`; unit tests.
 
 ### Step 2: Dual-write event recording + tests
+
 Rewire `_dual_write_pr_created` / `_dual_write_transition` /
 `mark_article_publishing` fallback through the audited method; assert events;
 all existing dual-write tests stay green.
 
 ### Step 3: Callback move + check_passed + tests
+
 NEW `logic/workflows/publication_callbacks.py`; serving delegates; tests.
 
 ### Step 4: Reconciler + ops script + tests
+
 Receipt list method; workflow module; evidence rules; audit row; CLI; unit +
 integration tests incl. out-of-order and stale-PR.
 
 ### Step 5: Gates + docs
+
 `make lint && make type && make test && make test-contracts && make
 test-boundaries`; `make quality-gate`; `docs/PIPELINE_CONTRACTS.md`;
 `plans/060/todo.md` items 3/4/6 annotations; ledger.
