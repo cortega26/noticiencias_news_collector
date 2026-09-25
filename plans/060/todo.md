@@ -190,11 +190,25 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 ### Phase 5 — callback reconciliation and truthful health
 
 - [ ] Version callback delivery IDs and add bounded frontend retry diagnostics.
-- [ ] Persist authenticated receipts before processing and deduplicate retries.
+      (Phase 5a, 2026-09-25: backend accepts an optional `delivery_id` and
+      derives a stable identity key when absent, so dedup works before the
+      frontend sender adopts the field; the sender-side bounded retries and
+      diagnostic artifact remain cross-repo work.)
+- [x] Persist authenticated receipts before processing and deduplicate retries.
+      (Phase 5a, 2026-09-25 — `webhook_receipts` table + typed
+      `db.webhook_receipts` repository; receipt-first handling in
+      `serving/webhook_handler.handle_webhook_event`; processed duplicates
+      return the stored result, `received`/`failed` receipts are reprocessed.
+      See `plans/060/phase-5a-webhook-receipts/`.)
 - [ ] Apply legal publication-attempt transitions and retain processing errors.
+      (Phase 5a retains processing errors on the receipt — `failed` + `error` +
+      `attempts`; the per-attempt `publication_events` log (legal-transition
+      audit) is the remaining 5b piece.)
 - [ ] Add stale-attempt reconciliation without duplicate PR creation.
 - [ ] Drive dashboard health from stored evidence; missing evidence is unknown.
 - [ ] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
+      (Phase 5a covers lost/duplicate/restart/error with integration tests;
+      out-of-order and stale-PR cases remain for 5b.)
 
 ## Wave C — typed boundaries and smaller modules
 

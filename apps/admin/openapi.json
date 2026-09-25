@@ -2237,7 +2237,7 @@
   "paths": {
     "/api/v1/webhook/frontend": {
       "post": {
-        "description": "Receive CI callbacks from the Noticiencias frontend.\n\nAccepts ``validation_result`` (Content Guard) and\n``publish_complete`` (GitHub Pages deploy) events.\nProcessing is best-effort — the response is always 202.",
+        "description": "Receive CI callbacks from the Noticiencias frontend.\n\nAccepts ``validation_result`` (Content Guard) and\n``publish_complete`` (GitHub Pages deploy) events.\n\nThe delivery is persisted as a durable receipt before processing\n(plan 060 Phase 5a); a duplicate delivery returns the stored result\nwithout reapplying transitions. The response is always 202 unless\npayload validation fails.",
         "operationId": "frontend_webhook_api_v1_webhook_frontend_post",
         "parameters": [
           {
