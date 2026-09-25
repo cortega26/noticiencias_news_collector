@@ -137,17 +137,27 @@ as "reinvented wheels" in future audits.
 
 ## Current Technical Debt That The Docs Must Not Hide
 
-### `RefineryEngine` is still too broad
+### `RefineryEngine` is decomposition in progress
 
-`news_collector/logic/workflows/refinery_engine.py` currently bundles orchestration with:
+`news_collector/logic/workflows/refinery_engine.py` retains the per-article
+stage orchestration and the editorial-policy gate. The extracted owners are:
 
-- file I/O
-- image download routing
-- manifest management
-- Git branch and PR work
-- recovery logic
+- file I/O + manifest: `target_repo_writer.py`
+- image resolution/download: `image_handler.py` (+ `image_briefs.py`)
+- Git branch/PR + publishing recovery: `pr_orchestrator.py`
+- canonical identity/slug: `publication_identity.py`
+- publication-attempt JSON artifacts: `publication_attempts.py` (plan 060 Phase 7a)
+- optional post-PR auditor lifecycle: `audit_scheduler.py` (plan 060 Phase 7a)
 
-That is the current reality. Contributors should avoid making it broader and should prefer extracting narrower collaborators when touching adjacent functionality.
+`process_single_article` is a short skeleton over named stage methods
+(`_apply_contract_guard`, `_attempt_publishing_recovery`, `_resolve_identity`,
+`_resolve_article_image`, `_refine_article`, `_enforce_publication_gates`,
+`_publish_to_target_repo`) sharing a `_PublicationRun` state holder. Remaining
+debt: the editorial-policy enforcement/logging and policy-integrity bootstrap
+still live in the engine, and the target-repository publication workflow
+extraction is deferred to plan 060 Phase 7b. Contributors should avoid making
+it broader and should prefer extracting narrower collaborators when touching
+adjacent functionality.
 
 ### Publication identity is strong but not perfect
 
