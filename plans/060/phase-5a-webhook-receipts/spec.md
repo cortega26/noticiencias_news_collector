@@ -116,7 +116,7 @@ retry (new timestamp) dedupes while genuinely different events don't.
 | delivery_key | String(200) | unique index `uq_webhook_receipts_delivery_key` |
 | event_type | String(50) | |
 | payload | JSON | `model_dump(mode="json", by_alias=True)` |
-| status | String(20) | CHECK `received|processed|failed`, default `received` |
+| status | String(20) | CHECK `received\|processed\|failed`, default `received` |
 | attempts | int | default 0, incremented per processing attempt |
 | result | JSON | processed outcome (`{"action": ..., "updated": n}`) |
 | error | Text | last failure (`TypeError: ...`) |
@@ -168,20 +168,25 @@ and return `{"action": "rejected"|"completed"|"noop", "updated": n, ...}`.
 ## Steps
 
 ### Step 0: Baseline + drift
+
 Record the baseline count; STOP on drift/non-green.
 
 ### Step 1: Contract + tests
+
 `delivery_id`, `extract_deploy_url`, `compute_delivery_key`; contract tests.
 
 ### Step 2: Model + migration + repository + tests
+
 Mirror model/migration exactly; expose `db.webhook_receipts`; repository tests;
 migration list/guard updates; `pytest tests/test_database_migrations.py tests/unit/storage/test_migration_guard.py -q`.
 
 ### Step 3: Handler + endpoint + tests
+
 Receipt-first orchestration; process_* result dicts; endpoint delegation;
 handler/endpoint tests.
 
 ### Step 4: Gates + docs
+
 `make lint && make type && make test && make test-contracts && make test-boundaries`;
 `make quality-gate`; `docs/PIPELINE_CONTRACTS.md`; `plans/060/todo.md`
 annotations; ledger.
