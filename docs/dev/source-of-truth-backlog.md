@@ -22,13 +22,19 @@ of using the runtime clock. `ai_editor` also refuses a missing
 `override_date` (no clock in frontmatter). See
 `plans/058-deterministic-publication-date/spec.md`.
 
-### Decompose `RefineryEngine`
+### ~~Decompose `RefineryEngine`~~ **CLOSED (plan 060 Phase 7a)**, residual tracked
 
-Problem: `news_collector/logic/workflows/refinery_engine.py` currently owns orchestration, image handling, manifest logic, file I/O, Git operations, and recovery.  
-Impact: The module is difficult to reason about, harder to test in isolation, and prone to further architectural drift.  
-Recommendation: Extract focused collaborators for publication identity, target-repo writes, image-brief handling, and PR orchestration.  
-Affected repo(s): backend  
-Suggested priority: high
+The four named collaborators already existed when this entry was re-checked
+(`PublicationIdentityResolver`, `TargetRepoWriter`,
+`ArticleImageHandler`/`ImageBriefStore`, `PROrchestrator` — plans
+057/093/094). The residual concentration was executed
+as plan 060 Phase 7a (2026-09-25): publication-attempt recording moved to
+`news_collector/logic/workflows/publication_attempts.py`, the optional
+post-PR auditor lifecycle to `news_collector/logic/workflows/audit_scheduler.py`,
+and `process_single_article` was split from ~440 lines into named stage
+methods over a `_PublicationRun` state holder. Remaining seam — extracting
+the target-repository publication workflow collaborator and the `EditorAgent`
+stages — is tracked by plan 060 Phase 7b/7c in `plans/060/todo.md`.
 
 ### ~~Retire duplicate collector entrypoints~~ **CLOSED**
 

@@ -33,17 +33,14 @@ import contextlib
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
-from news_collector.contracts import (
-    PublicationAttemptStageResult,
-    PublicationAttemptSummary,
-)
+from news_collector.contracts import PublicationAttemptStageResult
 from news_collector.contracts.publication_validation import PublicationFailureClass
 from news_collector.editorial.grounding import (
     build_source_text,
@@ -52,6 +49,7 @@ from news_collector.editorial.grounding import (
     repair_text_hygiene,
 )
 from news_collector.editorial.readability import analyze_body_readability
+from news_collector.logic.workflows.audit_scheduler import AuditScheduler
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
     validate_post_frontmatter_fast,
@@ -62,7 +60,13 @@ from news_collector.logic.workflows.image_handler import (
     publication_safe_image_alt,
 )
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
+from news_collector.logic.workflows.publication_attempts import (
+    artifact_name,
+    persist_interrupted_attempt,
+    persist_publication_attempt,
+)
 from news_collector.logic.workflows.publication_identity import (
+    PublicationIdentity,
     PublicationIdentityResolver,
 )
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
@@ -78,6 +82,63 @@ logger = get_logger().create_module_logger("RefineryEngine")
 QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
     r'(?m)^[A-Za-z_][A-Za-z0-9_-]*:\s*(["\'])\d{4}-\d{2}-\d{2}\1\s*$'
 )
+
+_CONTRACT_REJECTED = object()
+
+
+class _PublicationRun:
+    """Mutable per-article publication state for one `process_single_article`
+    call (plan 060 Phase 7a).
+
+    Replaces the closure trio (`record_stage`, `persist_attempt` and the
+    identity-bearing locals) so the stage methods can share state without a
+    dozen parameters. Stage order and payloads stay identical: `record_stage`
+    still updates the engine's `_last_publication_stages` mirror on every call
+    (plan 069 interrupted-attempt persistence), and `persist_attempt` still
+    goes through the engine's compatibility delegate so test-level patches on
+    either seam keep intercepting.
+    """
+
+    def __init__(self, engine: "RefineryEngine", article_id: str) -> None:
+        self._engine = engine
+        self.article_id = article_id
+        self.stages: list[PublicationAttemptStageResult] = []
+        self.numeric_id: int | None = None
+        self.branch_name: str | None = None
+        self.final_slug: str | None = None
+        self.output_filename: str | None = None
+        self.pr_url: str | None = None
+        self.validation_summary_path: str | None = None
+
+    def record_stage(self, name: str, success: bool, **details: Any) -> None:
+        self.stages.append(
+            PublicationAttemptStageResult(
+                name=name,
+                success=success,
+                details={
+                    key: value for key, value in details.items() if value is not None
+                },
+            )
+        )
+        self._engine._last_publication_stages = self.stages
+
+    def persist_attempt(
+        self, success: bool, failure_class: PublicationFailureClass | None = None
+    ) -> None:
+        self._engine._persist_publication_attempt_summary(
+            article_id=self.article_id,
+            success=success,
+            stages=self.stages,
+            output_filename=self.output_filename,
+            final_slug=self.final_slug,
+            branch_name=self.branch_name,
+            pr_url=self.pr_url,
+            validation_summary_path=self.validation_summary_path,
+            failure_class=failure_class,
+            target_repo=getattr(
+                getattr(self._engine.config, "github", None), "target_repo_url", None
+            ),
+        )
 
 
 def _resolve_article_identity(article: Dict[str, Any]) -> str:
@@ -202,9 +263,7 @@ class RefineryEngine:
         from concurrent.futures import ThreadPoolExecutor
 
         self.executor = ThreadPoolExecutor(max_workers=1)
-        self._last_audit_future: Optional[concurrent.futures.Future[Dict[str, Any]]] = (
-            None
-        )
+        self.audit_scheduler = AuditScheduler(self.db)
 
         self._last_blocked_error: Dict[str, str] | None = None
 
@@ -331,7 +390,7 @@ class RefineryEngine:
                 logger.warning(f"Could not record grounding error stage: {stage_exc!r}")
         return ""
 
-    def process_single_article(  # noqa: C901
+    def process_single_article(
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
     ) -> bool:
         """
@@ -342,133 +401,187 @@ class RefineryEngine:
         # must not attribute the previous article's stages to this one.
         self._last_publication_stages = None
         article_id = _resolve_article_identity(article)
-        publication_stages: list[PublicationAttemptStageResult] = []
-        branch_name: str | None = None
-        final_slug: str | None = None
-        output_filename: str | None = None
-        pr_url: str | None = None
-        validation_summary_path: str | None = None
-
-        def record_stage(name: str, success: bool, **details: Any) -> None:
-            publication_stages.append(
-                PublicationAttemptStageResult(
-                    name=name,
-                    success=success,
-                    details={
-                        key: value
-                        for key, value in details.items()
-                        if value is not None
-                    },
-                )
-            )
-            self._last_publication_stages = publication_stages
-
-        def persist_attempt(
-            success: bool, failure_class: PublicationFailureClass | None = None
-        ) -> None:
-            self._persist_publication_attempt_summary(
-                article_id=article_id,
-                success=success,
-                stages=publication_stages,
-                output_filename=output_filename,
-                final_slug=final_slug,
-                branch_name=branch_name,
-                pr_url=pr_url,
-                validation_summary_path=validation_summary_path,
-                failure_class=failure_class,
-                target_repo=getattr(
-                    getattr(self.config, "github", None), "target_repo_url", None
-                ),
-            )
+        run = _PublicationRun(self, article_id)
 
         # --- S1 GUARD: Enforce Content Contract via Injected Validator ---
-        if self.contract_validator:
-            try:
-                article = self.contract_validator(article)
-            except Exception as e:
-                # Requisito explícito: logger.warning(..., exc_info=True)
-                # Y asegurar propagación en pruebas para caplog
-                from news_collector.utils.logger import get_logger
-
-                req_logger = get_logger().create_module_logger("RefineryEngine")
-                req_logger.warning(
-                    "Data Contract Validation failure: Article {article_id} rejected: {e}",
-                    article_id=article_id,
-                    e=e,
-                    exc_info=True,
-                )
-                record_stage(
-                    "contract_validation",
-                    False,
-                    error=str(e),
-                )
-                persist_attempt(False)
-                return False
+        article = self._apply_contract_guard(article, run)
+        if article is _CONTRACT_REJECTED:
+            return False
 
         article = self._normalize_article_payload(article)
 
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
-        _numeric_id: int | None = None
-        with contextlib.suppress(ValueError, TypeError):
-            _numeric_id = int(article_id)
+        if self._attempt_publishing_recovery(article_id, article, run):
+            return True
 
-        if _numeric_id is not None:
+        # 1. Canonical Identity Check (Idempotency)
+        posts_dir = target_dir / "src/content/posts"
+        identity = self._resolve_identity(article_id, article, posts_dir, run)
+
+        # 2. AI Processing
+        # We pass canonical_date to ensure the frontmatter matches our filename expectation
+        logger.info(f"Processing with intended date: {identity.canonical_date}")
+
+        if not self._resolve_article_image(
+            article, article_id, identity, target_dir, run
+        ):
+            return False
+
+        refinement = self._refine_article(
+            article, article_id, identity.canonical_date, run
+        )
+        if refinement is None:
+            return False
+        refined_content, grounding_notes = refinement
+
+        audit_should_run = False
+        try:
+            audit_should_run = self.auditor.should_run_fast(article, refined_content)
+        except Exception as e:
+            logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
+
+        # 3. Determine Output Filename (if not yet locked)
+        if identity.is_new:
+            # Creation mode: derive slug from AI-translated content and apply collision check.
+            # Pass self._extract_slug so that test-level monkeypatches are respected.
+            identity = self.identity_resolver.finalize_slug(
+                identity,
+                refined_content,
+                article_id,
+                posts_dir,
+                extract_slug_fn=self._extract_slug,
+            )
+        run.final_slug = identity.final_slug
+        run.output_filename = identity.output_filename
+        run.record_stage(
+            "slug_finalized",
+            bool(run.output_filename),
+            final_slug=run.final_slug,
+            output_filename=run.output_filename,
+        )
+
+        if not self._enforce_publication_gates(
+            article_id, refined_content, identity, run
+        ):
+            return False
+
+        return self._publish_to_target_repo(
+            target_repo_obj=target_repo_obj,
+            target_dir=target_dir,
+            article=article,
+            refined_content=refined_content,
+            grounding_notes=grounding_notes,
+            audit_should_run=audit_should_run,
+            run=run,
+        )
+
+    def _apply_contract_guard(self, article: Any, run: "_PublicationRun") -> Any:
+        """S1 guard: enforce the content contract via the injected validator.
+
+        Returns the validated article, or the `_CONTRACT_REJECTED` sentinel
+        after recording + persisting the failed attempt.
+        """
+        if not self.contract_validator:
+            return article
+        try:
+            return self.contract_validator(article)
+        except Exception as e:
+            # Requisito explícito: logger.warning(..., exc_info=True)
+            # Y asegurar propagación en pruebas para caplog
+            from news_collector.utils.logger import get_logger
+
+            req_logger = get_logger().create_module_logger("RefineryEngine")
+            req_logger.warning(
+                "Data Contract Validation failure: Article {article_id} rejected: {e}",
+                article_id=run.article_id,
+                e=e,
+                exc_info=True,
+            )
+            run.record_stage(
+                "contract_validation",
+                False,
+                error=str(e),
+            )
+            run.persist_attempt(False)
+            return _CONTRACT_REJECTED
+
+    def _attempt_publishing_recovery(
+        self, article_id: str, article: Dict[str, Any], run: "_PublicationRun"
+    ) -> bool:
+        """B-01 / F-0012, F-0015: recover an article stuck in `publishing`.
+
+        Returns True when recovery completed the publication (caller returns
+        immediately); False means "no recovery needed, continue normal flow".
+        """
+        run.numeric_id = None
+        with contextlib.suppress(ValueError, TypeError):
+            run.numeric_id = int(article_id)
+
+        if run.numeric_id is not None:
             recovery_result = self.pr_orchestrator.attempt_recovery(
-                numeric_id=_numeric_id,
+                numeric_id=run.numeric_id,
                 article_id=article_id,
                 article=article,
                 git_handler=self.git,
             )
             if recovery_result is not None:
-                pr_url = recovery_result.pr_url
-                record_stage("publishing_recovery", True, pr_url=pr_url)
-                persist_attempt(True)
+                run.pr_url = recovery_result.pr_url
+                run.record_stage("publishing_recovery", True, pr_url=run.pr_url)
+                run.persist_attempt(True)
                 return True
             # recovery_result is None → no recovery needed, continue normal flow
+        return False
 
-        # 1. Canonical Identity Check (Idempotency)
-        posts_dir = target_dir / "src/content/posts"
-
+    def _resolve_identity(
+        self,
+        article_id: str,
+        article: Dict[str, Any],
+        posts_dir: Path,
+        run: "_PublicationRun",
+    ) -> PublicationIdentity:
         identity = self.identity_resolver.resolve(article_id, article, posts_dir)
-        canonical_date = identity.canonical_date
         # For locked identities (P1/P2) output_filename and final_slug are already set.
         # For creation mode (P3) they remain as provisional values until after AI editing.
-        final_slug = identity.final_slug if not identity.is_new else None
-        output_filename = identity.output_filename if not identity.is_new else None
-        # preferred_slug is used for image-asset naming; only relevant when identity is stable.
-        _image_preferred_slug = identity.final_slug if not identity.is_new else None
-        record_stage(
+        run.final_slug = identity.final_slug if not identity.is_new else None
+        run.output_filename = identity.output_filename if not identity.is_new else None
+        run.record_stage(
             "identity_resolved",
             True,
-            canonical_date=str(canonical_date),
+            canonical_date=str(identity.canonical_date),
             is_new=identity.is_new,
-            output_filename=output_filename,
+            output_filename=run.output_filename,
         )
+        return identity
 
-        # 2. AI Processing
-        # We pass canonical_date to ensure the frontmatter matches our filename expectation
-        logger.info(f"Processing with intended date: {canonical_date}")
-
-        # --- IMAGE HANDLING ---
+    def _resolve_article_image(
+        self,
+        article: Dict[str, Any],
+        article_id: str,
+        identity: PublicationIdentity,
+        target_dir: Path,
+        run: "_PublicationRun",
+    ) -> bool:
+        # preferred_slug is used for image-asset naming; only relevant when identity is stable.
+        image_preferred_slug = identity.final_slug if not identity.is_new else None
         img_resolution = self.image_handler.resolve(
             article=article,
             article_id=article_id,
-            canonical_date=canonical_date,
-            preferred_slug=_image_preferred_slug,
+            canonical_date=identity.canonical_date,
+            preferred_slug=image_preferred_slug,
             target_dir=target_dir,
             download_fn=self._download_image,
         )
         if not img_resolution.resolved:
-            record_stage("image_resolution", False)
+            run.record_stage("image_resolution", False)
             if img_resolution.message:
                 self._last_blocked_error = {
                     "error": img_resolution.message,
                     "message": img_resolution.message,
                 }
                 logger.warning(f"Blocked before publish: {img_resolution.message}")
-            persist_attempt(False)
+            run.persist_attempt(False)
             return False
-        record_stage("image_resolution", True, image_url=img_resolution.image_url)
+        run.record_stage("image_resolution", True, image_url=img_resolution.image_url)
         article["image_url"] = img_resolution.image_url
         if img_resolution.image_alt:
             article["image_alt"] = img_resolution.image_alt
@@ -477,7 +590,20 @@ class RefineryEngine:
             article["image_alt"] = publication_safe_image_alt(
                 article.get("image_alt"), article.get("title", article_id)
             )
+        return True
 
+    def _refine_article(
+        self,
+        article: Dict[str, Any],
+        article_id: str,
+        canonical_date: str,
+        run: "_PublicationRun",
+    ) -> tuple[str, str] | None:
+        """Run the editor plus the advisory snapshots.
+
+        Returns `(refined_content, grounding_notes)`, or None when editorial
+        policy blocks the article (the blocked attempt is persisted).
+        """
         # Apply Policy to Editor
         self.editor.critic_threshold = self.policy.critic_threshold
         logger.info(
@@ -497,21 +623,21 @@ class RefineryEngine:
                     "error_code": error_code,
                 }
                 logger.warning(f"Blocked before publish ({error_code}): {ve}")
-                record_stage(
+                run.record_stage(
                     "editor_refinement",
                     False,
                     error_code=error_code,
                     error=str(ve),
                 )
-                persist_attempt(False)
-                return False
+                run.persist_attempt(False)
+                return None
             if "Translation Guardrail" in str(ve):
                 logger.warning(f"Blocked by Editorial Policy (Critic): {ve}")
-                record_stage("editor_refinement", False, error=str(ve))
-                persist_attempt(False)
-                return False
+                run.record_stage("editor_refinement", False, error=str(ve))
+                run.persist_attempt(False)
+                return None
             raise ve
-        record_stage("editor_refinement", True)
+        run.record_stage("editor_refinement", True)
 
         # Deterministic typography repair over the whole file (frontmatter and
         # body): the model habitually emits U+202F before units and U+2011 in
@@ -521,7 +647,7 @@ class RefineryEngine:
             refined_content, repaired_chars = repair_text_hygiene(refined_content)
             if repaired_chars:
                 logger.info(f"Text hygiene: repaired {repaired_chars} special chars.")
-                record_stage("text_hygiene", True, repaired_chars=repaired_chars)
+                run.record_stage("text_hygiene", True, repaired_chars=repaired_chars)
 
         # Editorial-critic verdict snapshot (plan 076): the editor stashes
         # its last verdict on `last_critic_verdict`; mock editors lack the
@@ -531,7 +657,7 @@ class RefineryEngine:
         if isinstance(critic_verdict, dict) and isinstance(
             critic_verdict.get("average"), (int, float)
         ):
-            record_stage(
+            run.record_stage(
                 "editorial_critic",
                 bool(critic_verdict.get("approved", False)),
                 average=float(critic_verdict["average"]),
@@ -541,7 +667,7 @@ class RefineryEngine:
         # quantities and scope claims of the refined file with the source text the
         # editor wrote from. Findings persist in the attempt summary for review.
         grounding_notes = self._record_grounding_stage(
-            article, refined_content, record_stage
+            article, refined_content, run.record_stage
         )
 
         # Deterministic audience-readability snapshot (plan 065): pure
@@ -554,34 +680,17 @@ class RefineryEngine:
             f"suitability={readability.suitability} over "
             f"{readability.words} words / {readability.sentences} sentences."
         )
-        record_stage("readability", True, **readability.stage_details())
+        run.record_stage("readability", True, **readability.stage_details())
 
-        audit_should_run = False
-        try:
-            audit_should_run = self.auditor.should_run_fast(article, refined_content)
-        except Exception as e:
-            logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
+        return refined_content, grounding_notes
 
-        # 3. Determine Output Filename (if not yet locked)
-        if identity.is_new:
-            # Creation mode: derive slug from AI-translated content and apply collision check.
-            # Pass self._extract_slug so that test-level monkeypatches are respected.
-            identity = self.identity_resolver.finalize_slug(
-                identity,
-                refined_content,
-                article_id,
-                posts_dir,
-                extract_slug_fn=self._extract_slug,
-            )
-        final_slug = identity.final_slug
-        output_filename = identity.output_filename
-        record_stage(
-            "slug_finalized",
-            bool(output_filename),
-            final_slug=final_slug,
-            output_filename=output_filename,
-        )
-
+    def _enforce_publication_gates(
+        self,
+        article_id: str,
+        refined_content: str,
+        identity: PublicationIdentity,
+        run: "_PublicationRun",
+    ) -> bool:
         # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
         # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
         # Check cached score first.
@@ -591,72 +700,87 @@ class RefineryEngine:
             logger.warning(
                 f"Article {article_id} rejected by Editorial Policy (Auditor/Strictness)."
             )
-            record_stage("policy_gate", False)
-            persist_attempt(False)
+            run.record_stage("policy_gate", False)
+            run.persist_attempt(False)
             return False
-        record_stage("policy_gate", True)
+        run.record_stage("policy_gate", True)
 
         if self._has_quoted_date_only_frontmatter(refined_content):
             logger.error(
                 "Quoted date-only frontmatter detected for article {}. Aborting before branch/commit/push.",
                 article_id,
             )
-            record_stage("frontmatter_guard", False, reason="quoted_date_only")
-            persist_attempt(False)
+            run.record_stage("frontmatter_guard", False, reason="quoted_date_only")
+            run.persist_attempt(False)
             return False
-        record_stage("frontmatter_guard", True)
+        run.record_stage("frontmatter_guard", True)
 
         # Persist canonical slug AFTER policy approval (B-02 / F-0018)
         # Only needed for new articles; P1/P2 identities already have DB entries.
-        if identity.is_new and final_slug:
-            self.identity_resolver.register_slug(article_id, final_slug)
+        if identity.is_new and run.final_slug:
+            self.identity_resolver.register_slug(article_id, run.final_slug)
+        return True
+
+    def _publish_to_target_repo(
+        self,
+        *,
+        target_repo_obj: Any,
+        target_dir: Path,
+        article: Dict[str, Any],
+        refined_content: str,
+        grounding_notes: str,
+        audit_should_run: bool,
+        run: "_PublicationRun",
+    ) -> bool:
+        article_id = run.article_id
+        posts_dir = target_dir / "src/content/posts"
 
         # 4. Create Branch
         # Create/sync the branch before writing files so branch collisions or
         # remote sync failures do not leave uncommitted content edits behind.
-        if not output_filename:
+        if not run.output_filename:
             logger.error(f"Cannot proceed without output_filename for {article_id}")
-            record_stage("output_filename", False)
-            persist_attempt(False)
+            run.record_stage("output_filename", False)
+            run.persist_attempt(False)
             return False
 
-        branch_slug = output_filename.replace(".md", "")
+        branch_slug = run.output_filename.replace(".md", "")
         expected_branch = f"content/update-{branch_slug}"
 
         # B-01 / F-0012: Mark as "publishing" BEFORE git operations
-        if _numeric_id is not None and hasattr(self.db, "mark_article_publishing"):
+        if run.numeric_id is not None and hasattr(self.db, "mark_article_publishing"):
             try:
-                self.db.mark_article_publishing(_numeric_id, expected_branch)
+                self.db.mark_article_publishing(run.numeric_id, expected_branch)
                 logger.info(
                     f"Marked article {article_id} as 'publishing' (branch: {expected_branch})"
                 )
             except Exception as e:
                 logger.error(f"Failed to mark article as publishing: {e}")
 
-        branch_name = self.git.create_branch(
+        run.branch_name = self.git.create_branch(
             target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
         )
-        record_stage("branch_created", True, branch_name=branch_name)
+        run.record_stage("branch_created", True, branch_name=run.branch_name)
 
         # 5. Save File
         try:
             self.writer.write_article(
                 posts_dir=posts_dir,
-                output_filename=output_filename,
+                output_filename=run.output_filename,
                 content=refined_content,
                 article_id=article_id,
                 target_dir=target_dir,
             )
         except ValueError as e:
             logger.error("S0 GUARD: {}", e)
-            record_stage("file_written", False, error=str(e))
-            persist_attempt(False)
+            run.record_stage("file_written", False, error=str(e))
+            run.persist_attempt(False)
             return False
-        record_stage("file_written", True, output_filename=output_filename)
+        run.record_stage("file_written", True, output_filename=run.output_filename)
 
         package_json = target_dir / "package.json"
         if package_json.exists():
-            validation_summary_path = str(
+            run.validation_summary_path = str(
                 self.publication_attempts_dir
                 / f"{self._safe_publication_artifact_name(article_id)}.frontend_validation.json"
             )
@@ -667,7 +791,7 @@ class RefineryEngine:
             # here aborts in milliseconds instead of after a full npm
             # ci + prettier + lint + build cycle.
             fast_ok, fast_class, fast_error = validate_post_frontmatter_fast(
-                posts_dir / output_filename
+                posts_dir / run.output_filename
             )
             if not fast_ok:
                 logger.error(
@@ -675,14 +799,14 @@ class RefineryEngine:
                     article_id,
                     fast_error,
                 )
-                record_stage(
+                run.record_stage(
                     "frontend_publication_validation",
                     False,
                     failure_class=fast_class or "taxonomy_contract_violation",
                     fast=True,
                     error=fast_error,
                 )
-                persist_attempt(
+                run.persist_attempt(
                     False,
                     failure_class=fast_class or "taxonomy_contract_violation",
                 )
@@ -690,25 +814,25 @@ class RefineryEngine:
 
             validation_summary = run_frontend_publication_validation(
                 target_dir,
-                summary_output_path=Path(validation_summary_path),
+                summary_output_path=Path(run.validation_summary_path),
                 stage_fixture=False,
-                post_path=posts_dir / output_filename,
+                post_path=posts_dir / run.output_filename,
                 install_dependencies=not (target_dir / "node_modules").exists(),
             )
-            record_stage(
+            run.record_stage(
                 "frontend_publication_validation",
                 validation_summary.success,
                 failure_class=validation_summary.overall_failure_class,
-                summary_path=validation_summary_path,
+                summary_path=run.validation_summary_path,
             )
             if not validation_summary.success:
-                persist_attempt(
+                run.persist_attempt(
                     False,
                     failure_class=validation_summary.overall_failure_class,
                 )
                 return False
         else:
-            record_stage(
+            run.record_stage(
                 "frontend_publication_validation",
                 True,
                 skipped=True,
@@ -719,57 +843,56 @@ class RefineryEngine:
 
         # 6. Commit & Push
         self.git.commit_and_push(
-            target_repo_obj, f"Update article: {output_filename}", branch_name
+            target_repo_obj,
+            f"Update article: {run.output_filename}",
+            run.branch_name,
         )
-        record_stage("commit_pushed", True, branch_name=branch_name)
+        run.record_stage("commit_pushed", True, branch_name=run.branch_name)
 
         # 7. Create PR
         pr_result = self.pr_orchestrator.create_pr(
             article_id=article_id,
             article=article,
-            branch_name=branch_name,
-            output_filename=output_filename,
+            branch_name=run.branch_name,
+            output_filename=run.output_filename,
             git_handler=self.git,
             review_notes=grounding_notes,
         )
-        pr_url = pr_result.pr_url
+        run.pr_url = pr_result.pr_url
 
-        if pr_url:
-            logger.info(f"Pull Request created successfully: {pr_url}")
-            record_stage("pr_created", True, pr_url=pr_url)
-            numeric_id = None
-            with contextlib.suppress(ValueError):
-                numeric_id = int(article_id)
+        if run.pr_url:
+            logger.info(f"Pull Request created successfully: {run.pr_url}")
+            run.record_stage("pr_created", True, pr_url=run.pr_url)
 
             source_url = article.get("url") or article.get("source_url") or ""
             if audit_should_run:
                 self._record_audit_status(
-                    article_numeric_id=numeric_id,
+                    article_numeric_id=run.numeric_id,
                     status="audit_pending",
                     reason="Auditor task submitted after PR creation.",
                     attempts=0,
                 )
                 self._schedule_optional_audit(
                     article_id=article_id,
-                    article_numeric_id=numeric_id,
+                    article_numeric_id=run.numeric_id,
                     content=refined_content,
                     source_url=source_url,
                     article_data=article,
                 )
             else:
                 self._record_audit_status(
-                    article_numeric_id=numeric_id,
+                    article_numeric_id=run.numeric_id,
                     status="audit_skipped",
                     reason="Auditor trigger conditions not met.",
                     attempts=0,
                 )
 
-            persist_attempt(True)
+            run.persist_attempt(True)
             return True
         else:
             logger.error("Failed to create PR.")
-            record_stage("pr_created", False)
-            persist_attempt(False)
+            run.record_stage("pr_created", False)
+            run.persist_attempt(False)
             return False
 
     def _persist_publication_attempt_summary(
@@ -786,74 +909,46 @@ class RefineryEngine:
         validation_summary_path: str | None = None,
         failure_class: PublicationFailureClass | None = None,
     ) -> None:
-        safe_article_id = self._safe_publication_artifact_name(article_id)
-
-        summary = PublicationAttemptSummary(
-            generated_at=datetime.now(timezone.utc).isoformat(),
+        """Compatibility delegate (plan 060 Phase 7a): PublicationAttempts owns
+        the artifact format. Reads `self.publication_attempts_dir` at call time
+        so per-instance redirection (tests, config) keeps working."""
+        persist_publication_attempt(
+            self.publication_attempts_dir,
             article_id=article_id,
+            success=success,
+            stages=stages,
             target_repo=target_repo,
             output_filename=output_filename,
             final_slug=final_slug,
             branch_name=branch_name,
             pr_url=pr_url,
             validation_summary_path=validation_summary_path,
-            success=success,
             failure_class=failure_class,
-            stages=stages,
-        )
-
-        summary_path = self.publication_attempts_dir / f"{safe_article_id}.json"
-        summary_path.write_text(
-            json.dumps(summary.model_dump(mode="json"), indent=2),
-            encoding="utf-8",
         )
 
     @staticmethod
     def _safe_publication_artifact_name(article_id: str) -> str:
-        safe_article_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", article_id).strip("_")
-        return safe_article_id or "unknown"
+        """Compatibility delegate (plan 060 Phase 7a): kept so existing test
+        and harness call sites keep resolving `RefineryEngine.<name>`."""
+        return artifact_name(article_id)
 
     def _persist_interrupted_attempt(
         self,
         article_id: str,
         stages: Optional[List[PublicationAttemptStageResult]],
     ) -> None:
-        """Persist accumulated stages when `process_single_article` raised
-        unexpectedly (plan 069), so failed runs still show a stage checklist
-        in the quality review loop.
+        """Compatibility delegate (plan 060 Phase 7a)."""
+        persist_interrupted_attempt(self.publication_attempts_dir, article_id, stages)
 
-        Never overwrites an existing *successful* attempt file (a re-publish
-        crash must not destroy the prior PR record); never raises; keeps
-        `failure_class` unset (the contract Literal has no generic member —
-        the workflow row already carries the error).
-        """
-        if not article_id or article_id == "unknown" or not stages:
-            return
-        safe_article_id = self._safe_publication_artifact_name(article_id)
-        summary_path = self.publication_attempts_dir / f"{safe_article_id}.json"
-        try:
-            if summary_path.is_file():
-                existing = json.loads(summary_path.read_text(encoding="utf-8"))
-                if isinstance(existing, dict) and existing.get("success") is True:
-                    logger.info(
-                        f"Keeping prior successful attempt file for {article_id}; "
-                        "not overwriting with the interrupted run."
-                    )
-                    return
-        except (OSError, ValueError) as exc:
-            logger.warning(
-                f"Could not inspect prior attempt file for {article_id}: {exc}"
-            )
-        try:
-            self._persist_publication_attempt_summary(
-                article_id=article_id,
-                success=False,
-                stages=stages,
-            )
-        except Exception as exc:
-            logger.warning(
-                f"Could not persist interrupted attempt for {article_id}: {exc}"
-            )
+    @property
+    def _last_audit_future(self) -> Optional[concurrent.futures.Future]:
+        """Compatibility shim (plan 060 Phase 7a): backpressure state lives on
+        AuditScheduler; existing callers/tests still read/write it here."""
+        return self.audit_scheduler.last_future
+
+    @_last_audit_future.setter
+    def _last_audit_future(self, value: Optional[concurrent.futures.Future]) -> None:
+        self.audit_scheduler.last_future = value
 
     def _record_audit_status(
         self,
@@ -865,25 +960,16 @@ class RefineryEngine:
         model: str | None = None,
         endpoint: str | None = None,
     ) -> None:
-        if article_numeric_id is None:
-            return
-        update_status = getattr(self.db, "update_article_audit_status", None)
-        if not callable(update_status):
-            return
-        try:
-            update_status(
-                article_numeric_id,
-                status,
-                reason,
-                attempts=attempts,
-                timeout_seconds=timeout_seconds,
-                model=model,
-                endpoint=endpoint,
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to persist audit status for article {article_numeric_id}: {e}"
-            )
+        """Compatibility delegate (plan 060 Phase 7a)."""
+        self.audit_scheduler.record_status(
+            article_numeric_id,
+            status,
+            reason,
+            attempts,
+            timeout_seconds=timeout_seconds,
+            model=model,
+            endpoint=endpoint,
+        )
 
     def _schedule_optional_audit(
         self,
@@ -894,98 +980,21 @@ class RefineryEngine:
         source_url: str,
         article_data: Dict[str, Any],
     ) -> None:
-        try:
-            if self._last_audit_future and not self._last_audit_future.done():
-                logger.warning(
-                    f"Auditor Backpressure: Skipping audit for {article_id} (Previous task still active)"
-                )
-                self._record_audit_status(
-                    article_numeric_id=article_numeric_id,
-                    status="audit_skipped_backpressure",
-                    reason="Skipped because previous audit task is still running.",
-                    attempts=0,
-                )
-                return
-
-            logger.info(
-                f"Submitting optional auditor task for {article_id} after PR creation."
-            )
-            future = self.executor.submit(
-                self.auditor.audit_article_sync,
-                article_id=article_id,
-                content=content,
-                source_url=source_url,
-                article_data=article_data,
-            )
-            self._last_audit_future = future
-
-            def _on_done(done_future):
-                try:
-                    audit_result = done_future.result() or {}
-                except Exception as exc:
-                    message = (
-                        f"Optional auditor task crashed for article {article_id}: {exc}"
-                    )
-                    logger.warning(message)
-                    self._record_audit_status(
-                        article_numeric_id=article_numeric_id,
-                        status="audit_failed",
-                        reason=message,
-                        attempts=0,
-                    )
-                    return
-
-                if not isinstance(audit_result, dict):
-                    audit_result = {
-                        "status": "audit_failed",
-                        "reason": (
-                            f"invalid_audit_result_type:{type(audit_result).__name__}"
-                        ),
-                        "attempts": 0,
-                    }
-
-                status = str(audit_result.get("status", "audit_failed"))
-                reason = str(audit_result.get("reason", "unknown"))
-                attempts_raw = audit_result.get("attempts", 0)
-                try:
-                    attempts = int(attempts_raw or 0)
-                except (TypeError, ValueError):
-                    attempts = 0
-                timeout_seconds = audit_result.get("timeout_seconds")
-                try:
-                    timeout_int = int(timeout_seconds) if timeout_seconds else None
-                except (TypeError, ValueError):
-                    timeout_int = None
-                model = audit_result.get("model")
-                endpoint = audit_result.get("endpoint")
-
-                self._record_audit_status(
-                    article_numeric_id=article_numeric_id,
-                    status=status,
-                    reason=reason,
-                    attempts=attempts,
-                    timeout_seconds=timeout_int,
-                    model=str(model) if model else None,
-                    endpoint=str(endpoint) if endpoint else None,
-                )
-
-                if status != "audit_passed":
-                    logger.warning(
-                        "Optional auditor did not pass for article {}: {}",
-                        article_id,
-                        reason,
-                    )
-
-            future.add_done_callback(_on_done)
-
-        except Exception as e:
-            logger.warning(f"Auditor submission failed for {article_id}: {e}")
-            self._record_audit_status(
-                article_numeric_id=article_numeric_id,
-                status="audit_failed",
-                reason=f"submission_failed: {e}",
-                attempts=0,
-            )
+        """Compatibility delegate (plan 060 Phase 7a)."""
+        self.audit_scheduler.schedule(
+            auditor=self.auditor,
+            executor=self.executor,
+            # Late-bound so test-level patch.object(engine,
+            # "_record_audit_status") still intercepts callback-time writes.
+            status_recorder=lambda *args, **kwargs: self._record_audit_status(
+                *args, **kwargs
+            ),
+            article_id=article_id,
+            article_numeric_id=article_numeric_id,
+            content=content,
+            source_url=source_url,
+            article_data=article_data,
+        )
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:
         """Extract slug from frontmatter or generate fallback.

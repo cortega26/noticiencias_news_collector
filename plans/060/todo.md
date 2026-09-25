@@ -213,9 +213,26 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 7 — backend decomposition
 
-- [ ] Extract publication-attempt recording and target-repository publication
-      workflow while reusing existing collaborators.
-- [ ] Extract audit scheduling/recording only where independently testable.
+- [x] Extract publication-attempt recording while reusing existing
+      collaborators. (Phase 7a, 2026-09-25 — NEW
+      `news_collector/logic/workflows/publication_attempts.py` owns artifact
+      naming + JSON persistence + interrupted-attempt preservation + read-back;
+      `publication_run_workflow`/`pipeline_e2e` rewired; engine keeps
+      compatibility delegates. See
+      `plans/060/phase-7a-refinery-recording-audit/`.)
+- [ ] Extract the target-repository publication workflow collaborator of
+      Phase 7 (composing identity/writer/image/PR). Deferred by 7a to 7b:
+      `_publish_to_target_repo` is now an engine stage method, but a separate
+      collaborator needs its own behavior proof and a larger test-seam
+      migration.
+- [x] Extract audit scheduling/recording only where independently testable.
+      (Phase 7a, 2026-09-25 — NEW
+      `news_collector/logic/workflows/audit_scheduler.py`; the engine
+      delegates inject auditor/executor/status-recorder per call so existing
+      test seams (`engine.executor`, `engine._last_audit_future`,
+      `patch.object(engine, "_record_audit_status")`) keep working. Gates:
+      `make lint`, `make type` (3229 passed, ratchet OK), `make test`
+      (3216 passed), `make test-boundaries`.)
 - [ ] Extract typed EditorAgent stages while keeping `process_article` façade.
 - [ ] Split bounded admin route modules after wire characterization.
 - [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift.

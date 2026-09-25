@@ -26,6 +26,7 @@ from news_collector.contracts import (
     PipelineE2ERunSummary,
     PipelineStageSnapshot,
 )
+from news_collector.logic.workflows.publication_attempts import artifact_name
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 from news_collector.perf.load_replay import CollectorReplaySession, ReplayEvent
 from news_collector.scoring.feature_scorer import FeatureBasedScorer
@@ -911,9 +912,7 @@ def run_pipeline_e2e_scenario(  # noqa: C901
             publication_result = engine.process_articles(
                 [approved_article], repo, target_dir
             )
-            attempt_name = engine._safe_publication_artifact_name(
-                str(selected_article_id)
-            )
+            attempt_name = artifact_name(str(selected_article_id))
             publication_attempt_path = (
                 engine.publication_attempts_dir / f"{attempt_name}.json"
             )
