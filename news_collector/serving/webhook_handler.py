@@ -14,6 +14,12 @@ branch/commit_sha remain in the event as audit context only. A
 callback with no ``publication_ids`` cannot safely mutate any article
 (there is nothing to key the mutation to) and is a no-op, logged as a
 warning rather than silently guessed at via branch matching.
+
+Plan 060 / Phase 5b: the callback *effects* (state transitions and
+``publication_events`` audit rows) live in
+``news_collector.logic.workflows.publication_callbacks``; the
+``process_*`` functions here are thin delegates kept as the dispatch seam
+the receipt handler and its tests already use.
 """
 
 from __future__ import annotations
@@ -25,7 +31,10 @@ from news_collector.contracts.webhook import (
     PublishCompleteEvent,
     ValidationResultEvent,
     compute_delivery_key,
-    extract_deploy_url,
+)
+from news_collector.logic.workflows.publication_callbacks import (
+    apply_publish_complete,
+    apply_validation_result,
 )
 from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
@@ -116,98 +125,20 @@ def process_validation_result(
     event: ValidationResultEvent,
     db: DatabaseManager,
 ) -> Dict[str, Any]:
-    """Handle a Content Guard validation result.
+    """Thin delegate to the workflow-owned callback effect (plan 5b).
 
-    On ``fail``: reject the named publication attempts so the Refinery
-    pipeline can re-evaluate them.
-
-    On ``pass``: no action needed (the PR will proceed to deploy).
+    Kept under this module's name so ``_dispatch`` and the existing
+    direct-call / ``patch(...)`` test seams stay exactly where they were;
+    the implementation lives in
+    :func:`news_collector.logic.workflows.publication_callbacks.apply_validation_result`.
     """
-    if event.status != "fail":
-        logger.info(
-            "Validation passed for commit {} on branch {} — no action needed",
-            event.commit_sha,
-            event.branch,
-        )
-        return {"action": "noop", "reason": "validation_passed"}
-
-    if not event.publication_ids:
-        logger.warning(
-            "validation_result 'fail' with no publication_ids — nothing to "
-            "reject (branch: {}, commit: {}). Refusing to guess via branch "
-            "matching.",
-            event.branch,
-            event.commit_sha,
-        )
-        return {"action": "noop", "reason": "no_publication_ids"}
-
-    reason = f"Content Guard failed (commit: {event.commit_sha})"
-    updated = db.reject_publication_attempts(event.publication_ids, reason=reason)
-
-    if updated == 0:
-        logger.warning(
-            "No in-flight publication attempts matched publication_ids={} "
-            "(branch: {}, commit: {})",
-            event.publication_ids,
-            event.branch,
-            event.commit_sha,
-        )
-    else:
-        logger.info(
-            "Rejected {} publication attempt(s) after Content Guard failure "
-            "(ids: {}, branch: {}, commit: {})",
-            updated,
-            event.publication_ids,
-            event.branch,
-            event.commit_sha,
-        )
-    return {"action": "rejected", "updated": updated}
+    return apply_validation_result(event, db)
 
 
 def process_publish_complete(
     event: PublishCompleteEvent,
     db: DatabaseManager,
 ) -> Dict[str, Any]:
-    """Handle a successful frontend deployment.
-
-    Completes the named publication attempts, setting ``published_at``/
-    ``published_url`` to reflect the live deployment — this is the only
-    place those fields get set now that opening a PR no longer implies
-    a real deploy.
-    """
-    deploy_url = extract_deploy_url(event)
-    if not deploy_url:
-        logger.warning(
-            "No deploy_url found in publish_complete diagnostics — "
-            "articles will be marked completed without a URL"
-        )
-
-    if not event.publication_ids:
-        logger.warning(
-            "publish_complete with no publication_ids — nothing to complete "
-            "(branch: {}, commit: {}). Refusing to guess via branch matching.",
-            event.branch,
-            event.commit_sha,
-        )
-        return {"action": "noop", "reason": "no_publication_ids"}
-
-    updated = db.complete_publication_attempts(event.publication_ids, deploy_url)
-
-    if updated == 0:
-        logger.warning(
-            "No in-flight publication attempts matched publication_ids={} "
-            "(branch: {}, commit: {})",
-            event.publication_ids,
-            event.branch,
-            event.commit_sha,
-        )
-    else:
-        logger.info(
-            "Marked {} publication attempt(s) LIVE (ids: {}, branch: {}, "
-            "deploy_url: {})",
-            updated,
-            event.publication_ids,
-            event.branch,
-            deploy_url or "(none)",
-        )
-    return {"action": "completed", "updated": updated, "deploy_url": deploy_url}
+    """Thin delegate to the workflow-owned callback effect (plan 5b); see
+    :func:`process_validation_result` for why the name stays here."""
+    return apply_publish_complete(event, db)
