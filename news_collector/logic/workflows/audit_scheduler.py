@@ -18,11 +18,54 @@ Does NOT own:
 from __future__ import annotations
 
 import concurrent.futures
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("AuditScheduler")
+
+
+@dataclass(frozen=True)
+class AuditRequest:
+    """One post-PR audit task: the article context the auditor needs."""
+
+    article_id: str
+    article_numeric_id: int | None
+    content: str
+    source_url: str
+    article_data: Dict[str, Any]
+
+
+def _coerce_audit_result(audit_result: Any) -> Dict[str, Any]:
+    """Normalize a raw auditor result into status-recorder kwargs."""
+    if not isinstance(audit_result, dict):
+        audit_result = {
+            "status": "audit_failed",
+            "reason": f"invalid_audit_result_type:{type(audit_result).__name__}",
+            "attempts": 0,
+        }
+
+    attempts_raw = audit_result.get("attempts", 0)
+    try:
+        attempts = int(attempts_raw or 0)
+    except (TypeError, ValueError):
+        attempts = 0
+    timeout_seconds = audit_result.get("timeout_seconds")
+    try:
+        timeout_int = int(timeout_seconds) if timeout_seconds else None
+    except (TypeError, ValueError):
+        timeout_int = None
+    model = audit_result.get("model")
+    endpoint = audit_result.get("endpoint")
+    return {
+        "status": str(audit_result.get("status", "audit_failed")),
+        "reason": str(audit_result.get("reason", "unknown")),
+        "attempts": attempts,
+        "timeout_seconds": timeout_int,
+        "model": str(model) if model else None,
+        "endpoint": str(endpoint) if endpoint else None,
+    }
 
 
 class AuditScheduler:
@@ -94,19 +137,15 @@ class AuditScheduler:
         auditor: Any,
         executor: concurrent.futures.Executor,
         status_recorder: Callable[..., None],
-        article_id: str,
-        article_numeric_id: int | None,
-        content: str,
-        source_url: str,
-        article_data: Dict[str, Any],
+        request: AuditRequest,
     ) -> None:
         try:
             if self._last_future and not self._last_future.done():
                 logger.warning(
-                    f"Auditor Backpressure: Skipping audit for {article_id} (Previous task still active)"
+                    f"Auditor Backpressure: Skipping audit for {request.article_id} (Previous task still active)"
                 )
                 status_recorder(
-                    article_numeric_id=article_numeric_id,
+                    article_numeric_id=request.article_numeric_id,
                     status="audit_skipped_backpressure",
                     reason="Skipped because previous audit task is still running.",
                     attempts=0,
@@ -114,14 +153,14 @@ class AuditScheduler:
                 return
 
             logger.info(
-                f"Submitting optional auditor task for {article_id} after PR creation."
+                f"Submitting optional auditor task for {request.article_id} after PR creation."
             )
             future = executor.submit(
                 auditor.audit_article_sync,
-                article_id=article_id,
-                content=content,
-                source_url=source_url,
-                article_data=article_data,
+                article_id=request.article_id,
+                content=request.content,
+                source_url=request.source_url,
+                article_data=request.article_data,
             )
             self._last_future = future
 
@@ -130,64 +169,34 @@ class AuditScheduler:
                     audit_result = done_future.result() or {}
                 except Exception as exc:
                     message = (
-                        f"Optional auditor task crashed for article {article_id}: {exc}"
+                        f"Optional auditor task crashed for article "
+                        f"{request.article_id}: {exc}"
                     )
                     logger.warning(message)
                     status_recorder(
-                        article_numeric_id=article_numeric_id,
+                        article_numeric_id=request.article_numeric_id,
                         status="audit_failed",
                         reason=message,
                         attempts=0,
                     )
                     return
 
-                if not isinstance(audit_result, dict):
-                    audit_result = {
-                        "status": "audit_failed",
-                        "reason": (
-                            f"invalid_audit_result_type:{type(audit_result).__name__}"
-                        ),
-                        "attempts": 0,
-                    }
+                fields = _coerce_audit_result(audit_result)
+                status_recorder(article_numeric_id=request.article_numeric_id, **fields)
 
-                status = str(audit_result.get("status", "audit_failed"))
-                reason = str(audit_result.get("reason", "unknown"))
-                attempts_raw = audit_result.get("attempts", 0)
-                try:
-                    attempts = int(attempts_raw or 0)
-                except (TypeError, ValueError):
-                    attempts = 0
-                timeout_seconds = audit_result.get("timeout_seconds")
-                try:
-                    timeout_int = int(timeout_seconds) if timeout_seconds else None
-                except (TypeError, ValueError):
-                    timeout_int = None
-                model = audit_result.get("model")
-                endpoint = audit_result.get("endpoint")
-
-                status_recorder(
-                    article_numeric_id=article_numeric_id,
-                    status=status,
-                    reason=reason,
-                    attempts=attempts,
-                    timeout_seconds=timeout_int,
-                    model=str(model) if model else None,
-                    endpoint=str(endpoint) if endpoint else None,
-                )
-
-                if status != "audit_passed":
+                if fields["status"] != "audit_passed":
                     logger.warning(
                         "Optional auditor did not pass for article {}: {}",
-                        article_id,
-                        reason,
+                        request.article_id,
+                        fields["reason"],
                     )
 
             future.add_done_callback(_on_done)
 
         except Exception as e:
-            logger.warning(f"Auditor submission failed for {article_id}: {e}")
+            logger.warning(f"Auditor submission failed for {request.article_id}: {e}")
             status_recorder(
-                article_numeric_id=article_numeric_id,
+                article_numeric_id=request.article_numeric_id,
                 status="audit_failed",
                 reason=f"submission_failed: {e}",
                 attempts=0,

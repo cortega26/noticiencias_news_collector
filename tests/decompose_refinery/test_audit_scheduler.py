@@ -4,7 +4,7 @@ tests/decompose_refinery/test_audit_scheduler.py
 Verifies AuditScheduler (plan 060 Phase 7a).
 
 Import path after implementation:
-    from news_collector.logic.workflows.audit_scheduler import AuditScheduler
+from news_collector.logic.workflows.audit_scheduler import AuditRequest, AuditScheduler
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from news_collector.logic.workflows.audit_scheduler import AuditScheduler
+from news_collector.logic.workflows.audit_scheduler import AuditRequest, AuditScheduler
 
 
 @pytest.fixture
@@ -34,11 +34,13 @@ def _schedule(scheduler: AuditScheduler, *, executor, status_recorder):
         auditor=MagicMock(),
         executor=executor,
         status_recorder=status_recorder,
-        article_id="42",
-        article_numeric_id=42,
-        content="c",
-        source_url="http://x",
-        article_data={},
+        request=AuditRequest(
+            article_id="42",
+            article_numeric_id=42,
+            content="c",
+            source_url="http://x",
+            article_data={"url": "http://x"},
+        ),
     )
 
 
@@ -125,6 +127,7 @@ class TestScheduleSubmission:
 
         assert scheduler.last_future is future
         executor.submit.assert_called_once()
+        assert executor.submit.call_args.kwargs["source_url"] == "http://x"
 
 
 # ---------------------------------------------------------------------------

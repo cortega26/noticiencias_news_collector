@@ -5,6 +5,7 @@ Verifies the publication-attempt artifact module (plan 060 Phase 7a).
 
 Import path after implementation:
     from news_collector.logic.workflows.publication_attempts import (
+        PublicationAttempt,
         artifact_name,
         persist_interrupted_attempt,
         persist_publication_attempt,
@@ -21,6 +22,7 @@ import pytest
 
 from news_collector.contracts import PublicationAttemptStageResult
 from news_collector.logic.workflows.publication_attempts import (
+    PublicationAttempt,
     artifact_name,
     persist_interrupted_attempt,
     persist_publication_attempt,
@@ -72,15 +74,17 @@ class TestPersistAndRead:
     def test_full_summary_round_trips(self, attempts_dir: Path):
         path = persist_publication_attempt(
             attempts_dir,
-            article_id="42",
-            success=True,
-            stages=_stages(),
-            target_repo="https://github.com/org/repo",
-            output_filename="2024-01-25-test.md",
-            final_slug="2024-01-25-test",
-            branch_name="content/update-2024-01-25-test",
-            pr_url="https://github.com/org/repo/pull/1",
-            validation_summary_path="/tmp/42.frontend_validation.json",
+            PublicationAttempt(
+                article_id="42",
+                success=True,
+                stages=_stages(),
+                target_repo="https://github.com/org/repo",
+                output_filename="2024-01-25-test.md",
+                final_slug="2024-01-25-test",
+                branch_name="content/update-2024-01-25-test",
+                pr_url="https://github.com/org/repo/pull/1",
+                validation_summary_path="/tmp/42.frontend_validation.json",
+            ),
         )
 
         assert path == attempts_dir / "42.json"
@@ -103,10 +107,12 @@ class TestPersistAndRead:
     def test_failure_class_is_persisted(self, attempts_dir: Path):
         persist_publication_attempt(
             attempts_dir,
-            article_id="7",
-            success=False,
-            stages=_stages(),
-            failure_class="frontend_build_failure",
+            PublicationAttempt(
+                article_id="7",
+                success=False,
+                stages=_stages(),
+                failure_class="frontend_build_failure",
+            ),
         )
         data = read_publication_attempt(attempts_dir, "7")
         assert data is not None
@@ -115,7 +121,8 @@ class TestPersistAndRead:
 
     def test_unsafe_article_id_uses_sanitized_filename(self, attempts_dir: Path):
         path = persist_publication_attempt(
-            attempts_dir, article_id="á_b$c", success=True, stages=[]
+            attempts_dir,
+            PublicationAttempt(article_id="á_b$c", success=True, stages=[]),
         )
         assert path.name == f"{artifact_name('á_b$c')}.json"
         assert read_publication_attempt(attempts_dir, "á_b$c") is not None
@@ -144,7 +151,8 @@ class TestPersistInterrupted:
 
     def test_never_overwrites_a_prior_success(self, attempts_dir: Path):
         persist_publication_attempt(
-            attempts_dir, article_id="42", success=True, stages=_stages()
+            attempts_dir,
+            PublicationAttempt(article_id="42", success=True, stages=_stages()),
         )
         persist_interrupted_attempt(attempts_dir, "42", _stages())
         data = read_publication_attempt(attempts_dir, "42")

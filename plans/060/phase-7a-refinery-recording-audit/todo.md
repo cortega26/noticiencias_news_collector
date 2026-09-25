@@ -84,6 +84,28 @@ alone.
    subclass patch of the summary method would no longer intercept interrupted
    writes; no subclass exists.
 
+## Follow-up: Codacy gate compliance (same PR)
+
+The first push produced 9 new Codacy complexity issues (limits: 50 NLOC,
+CCN 8, 8 parameters). Fixed in the same PR without behavior change:
+
+- `AuditScheduler.schedule` now takes one `AuditRequest` instead of five loose
+  fields; `_on_done` delegates coercion to `_coerce_audit_result`.
+- `persist_publication_attempt` takes one `PublicationAttempt` record;
+  `persist_interrupted_attempt` uses `_has_successful_attempt`.
+- `process_single_article`, `_refine_article` and `_publish_to_target_repo`
+  split further: `_audit_should_run`, `_record_advisory_stages`,
+  `_create_publication_branch`, `_write_post`, `_validate_post_frontend`,
+  `_fast_frontmatter_guard`, `_run_full_frontend_validation`,
+  `_commit_and_push`, `_create_pr_and_schedule_audit`,
+  `_schedule_or_skip_audit`.
+- Type narrowing restored with `cast` for the values
+  `_create_publication_branch` guarantees (`mypy` clean; 7 errors fixed).
+
+Re-verified: targeted 273 tests green; `make lint`; `make type` (3229 passed,
+ratchet 92.25% vs 91.25%); `make test-boundaries`; `make quality-gate`;
+`lizard -C 8 -L 50 -a 8` clean for every changed function.
+
 ## Independent review
 
 Fresh-context review (plan 060 §0.1(d)) compared HEAD vs working tree by

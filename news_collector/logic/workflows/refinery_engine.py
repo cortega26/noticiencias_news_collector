@@ -49,7 +49,7 @@ from news_collector.editorial.grounding import (
     repair_text_hygiene,
 )
 from news_collector.editorial.readability import analyze_body_readability
-from news_collector.logic.workflows.audit_scheduler import AuditScheduler
+from news_collector.logic.workflows.audit_scheduler import AuditRequest, AuditScheduler
 from news_collector.logic.workflows.frontend_publication_validation import (
     run_frontend_publication_validation,
     validate_post_frontmatter_fast,
@@ -61,6 +61,7 @@ from news_collector.logic.workflows.image_handler import (
 )
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.logic.workflows.publication_attempts import (
+    PublicationAttempt,
     artifact_name,
     persist_interrupted_attempt,
     persist_publication_attempt,
@@ -433,31 +434,11 @@ class RefineryEngine:
         if refinement is None:
             return False
         refined_content, grounding_notes = refinement
-
-        audit_should_run = False
-        try:
-            audit_should_run = self.auditor.should_run_fast(article, refined_content)
-        except Exception as e:
-            logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
+        audit_should_run = self._audit_should_run(article, refined_content, article_id)
 
         # 3. Determine Output Filename (if not yet locked)
-        if identity.is_new:
-            # Creation mode: derive slug from AI-translated content and apply collision check.
-            # Pass self._extract_slug so that test-level monkeypatches are respected.
-            identity = self.identity_resolver.finalize_slug(
-                identity,
-                refined_content,
-                article_id,
-                posts_dir,
-                extract_slug_fn=self._extract_slug,
-            )
-        run.final_slug = identity.final_slug
-        run.output_filename = identity.output_filename
-        run.record_stage(
-            "slug_finalized",
-            bool(run.output_filename),
-            final_slug=run.final_slug,
-            output_filename=run.output_filename,
+        identity = self._finalize_output_identity(
+            article_id, refined_content, identity, posts_dir, run
         )
 
         if not self._enforce_publication_gates(
@@ -474,6 +455,15 @@ class RefineryEngine:
             audit_should_run=audit_should_run,
             run=run,
         )
+
+    def _audit_should_run(
+        self, article: Dict[str, Any], refined_content: str, article_id: str
+    ) -> bool:
+        try:
+            return bool(self.auditor.should_run_fast(article, refined_content))
+        except Exception as e:
+            logger.warning(f"Auditor pre-check failed for {article_id}: {e}")
+            return False
 
     def _apply_contract_guard(self, article: Any, run: "_PublicationRun") -> Any:
         """S1 guard: enforce the content contract via the injected validator.
@@ -549,6 +539,36 @@ class RefineryEngine:
             True,
             canonical_date=str(identity.canonical_date),
             is_new=identity.is_new,
+            output_filename=run.output_filename,
+        )
+        return identity
+
+    def _finalize_output_identity(
+        self,
+        article_id: str,
+        refined_content: str,
+        identity: PublicationIdentity,
+        posts_dir: Path,
+        run: "_PublicationRun",
+    ) -> PublicationIdentity:
+        """Lock the creation-mode slug from the AI-translated content and
+        record the `slug_finalized` stage."""
+        if identity.is_new:
+            # Creation mode: derive slug from AI-translated content and apply collision check.
+            # Pass self._extract_slug so that test-level monkeypatches are respected.
+            identity = self.identity_resolver.finalize_slug(
+                identity,
+                refined_content,
+                article_id,
+                posts_dir,
+                extract_slug_fn=self._extract_slug,
+            )
+        run.final_slug = identity.final_slug
+        run.output_filename = identity.output_filename
+        run.record_stage(
+            "slug_finalized",
+            bool(run.output_filename),
+            final_slug=run.final_slug,
             output_filename=run.output_filename,
         )
         return identity
@@ -638,7 +658,19 @@ class RefineryEngine:
                 return None
             raise ve
         run.record_stage("editor_refinement", True)
+        return self._record_advisory_stages(article, refined_content, run)
 
+    def _record_advisory_stages(
+        self,
+        article: Dict[str, Any],
+        refined_content: str,
+        run: "_PublicationRun",
+    ) -> tuple[str, str]:
+        """Hygiene repair, critic verdict, grounding and readability.
+
+        All advisory: none of these may block publication. Returns the
+        repaired content and the grounding notes for the PR body.
+        """
         # Deterministic typography repair over the whole file (frontmatter and
         # body): the model habitually emits U+202F before units and U+2011 in
         # compounds. Pure string replacement; recorded only when it changed
@@ -732,14 +764,34 @@ class RefineryEngine:
         audit_should_run: bool,
         run: "_PublicationRun",
     ) -> bool:
-        article_id = run.article_id
-        posts_dir = target_dir / "src/content/posts"
+        if not self._create_publication_branch(target_repo_obj, run):
+            return False
+        # _create_publication_branch guarantees both on success; the cast
+        # keeps the locked values monomorphic for the remaining stages.
+        output_filename = cast(str, run.output_filename)
+        branch_name = cast(str, run.branch_name)
+        if not self._write_post(target_dir, output_filename, refined_content, run):
+            return False
+        if not self._validate_post_frontend(target_dir, output_filename, run):
+            return False
+        self._commit_and_push(target_repo_obj, output_filename, branch_name, run)
+        return self._create_pr_and_schedule_audit(
+            article,
+            refined_content,
+            grounding_notes,
+            audit_should_run,
+            output_filename,
+            branch_name,
+            run,
+        )
 
-        # 4. Create Branch
-        # Create/sync the branch before writing files so branch collisions or
-        # remote sync failures do not leave uncommitted content edits behind.
+    def _create_publication_branch(
+        self, target_repo_obj: Any, run: "_PublicationRun"
+    ) -> bool:
+        """4. Create Branch: before writing files, so branch collisions or
+        remote sync failures do not leave uncommitted content edits behind."""
         if not run.output_filename:
-            logger.error(f"Cannot proceed without output_filename for {article_id}")
+            logger.error(f"Cannot proceed without output_filename for {run.article_id}")
             run.record_stage("output_filename", False)
             run.persist_attempt(False)
             return False
@@ -752,7 +804,8 @@ class RefineryEngine:
             try:
                 self.db.mark_article_publishing(run.numeric_id, expected_branch)
                 logger.info(
-                    f"Marked article {article_id} as 'publishing' (branch: {expected_branch})"
+                    f"Marked article {run.article_id} as 'publishing' "
+                    f"(branch: {expected_branch})"
                 )
             except Exception as e:
                 logger.error(f"Failed to mark article as publishing: {e}")
@@ -761,14 +814,22 @@ class RefineryEngine:
             target_repo_obj, branch_prefix="content/update", explicit_name=branch_slug
         )
         run.record_stage("branch_created", True, branch_name=run.branch_name)
+        return True
 
-        # 5. Save File
+    def _write_post(
+        self,
+        target_dir: Path,
+        output_filename: str,
+        refined_content: str,
+        run: "_PublicationRun",
+    ) -> bool:
+        """5. Save File."""
         try:
             self.writer.write_article(
-                posts_dir=posts_dir,
-                output_filename=run.output_filename,
+                posts_dir=target_dir / "src/content/posts",
+                output_filename=output_filename,
                 content=refined_content,
-                article_id=article_id,
+                article_id=run.article_id,
                 target_dir=target_dir,
             )
         except ValueError as e:
@@ -776,124 +837,164 @@ class RefineryEngine:
             run.record_stage("file_written", False, error=str(e))
             run.persist_attempt(False)
             return False
-        run.record_stage("file_written", True, output_filename=run.output_filename)
+        run.record_stage("file_written", True, output_filename=output_filename)
+        return True
 
-        package_json = target_dir / "package.json"
-        if package_json.exists():
-            run.validation_summary_path = str(
-                self.publication_attempts_dir
-                / f"{self._safe_publication_artifact_name(article_id)}.frontend_validation.json"
-            )
-
-            # Fast, dependency-free frontmatter check first (plan 057): the
-            # full frontend build below is slow and duplicates the frontend
-            # CI. Catching schema violations (e.g. sources[].date: null)
-            # here aborts in milliseconds instead of after a full npm
-            # ci + prettier + lint + build cycle.
-            fast_ok, fast_class, fast_error = validate_post_frontmatter_fast(
-                posts_dir / run.output_filename
-            )
-            if not fast_ok:
-                logger.error(
-                    "Fast frontmatter validation failed for {}: {}",
-                    article_id,
-                    fast_error,
-                )
-                run.record_stage(
-                    "frontend_publication_validation",
-                    False,
-                    failure_class=fast_class or "taxonomy_contract_violation",
-                    fast=True,
-                    error=fast_error,
-                )
-                run.persist_attempt(
-                    False,
-                    failure_class=fast_class or "taxonomy_contract_violation",
-                )
-                return False
-
-            validation_summary = run_frontend_publication_validation(
-                target_dir,
-                summary_output_path=Path(run.validation_summary_path),
-                stage_fixture=False,
-                post_path=posts_dir / run.output_filename,
-                install_dependencies=not (target_dir / "node_modules").exists(),
-            )
-            run.record_stage(
-                "frontend_publication_validation",
-                validation_summary.success,
-                failure_class=validation_summary.overall_failure_class,
-                summary_path=run.validation_summary_path,
-            )
-            if not validation_summary.success:
-                run.persist_attempt(
-                    False,
-                    failure_class=validation_summary.overall_failure_class,
-                )
-                return False
-        else:
+    def _validate_post_frontend(
+        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
+    ) -> bool:
+        if not (target_dir / "package.json").exists():
             run.record_stage(
                 "frontend_publication_validation",
                 True,
                 skipped=True,
                 reason="frontend_workspace_not_detected",
             )
+            return True
+        run.validation_summary_path = str(
+            self.publication_attempts_dir
+            / f"{self._safe_publication_artifact_name(run.article_id)}.frontend_validation.json"
+        )
+        if not self._fast_frontmatter_guard(target_dir, output_filename, run):
+            return False
+        return self._run_full_frontend_validation(target_dir, output_filename, run)
 
-        # (Auditor checking validation block removed from here as it is done above)
+    def _fast_frontmatter_guard(
+        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
+    ) -> bool:
+        # Fast, dependency-free frontmatter check first (plan 057): the
+        # full frontend build below is slow and duplicates the frontend
+        # CI. Catching schema violations (e.g. sources[].date: null)
+        # here aborts in milliseconds instead of after a full npm
+        # ci + prettier + lint + build cycle.
+        fast_ok, fast_class, fast_error = validate_post_frontmatter_fast(
+            target_dir / "src/content/posts" / output_filename
+        )
+        if fast_ok:
+            return True
+        logger.error(
+            "Fast frontmatter validation failed for {}: {}",
+            run.article_id,
+            fast_error,
+        )
+        run.record_stage(
+            "frontend_publication_validation",
+            False,
+            failure_class=fast_class or "taxonomy_contract_violation",
+            fast=True,
+            error=fast_error,
+        )
+        run.persist_attempt(
+            False,
+            failure_class=fast_class or "taxonomy_contract_violation",
+        )
+        return False
 
-        # 6. Commit & Push
+    def _run_full_frontend_validation(
+        self, target_dir: Path, output_filename: str, run: "_PublicationRun"
+    ) -> bool:
+        # _validate_post_frontend always sets this before calling us.
+        summary_path = cast(str, run.validation_summary_path)
+        validation_summary = run_frontend_publication_validation(
+            target_dir,
+            summary_output_path=Path(summary_path),
+            stage_fixture=False,
+            post_path=target_dir / "src/content/posts" / output_filename,
+            install_dependencies=not (target_dir / "node_modules").exists(),
+        )
+        run.record_stage(
+            "frontend_publication_validation",
+            validation_summary.success,
+            failure_class=validation_summary.overall_failure_class,
+            summary_path=summary_path,
+        )
+        if validation_summary.success:
+            return True
+        run.persist_attempt(
+            False,
+            failure_class=validation_summary.overall_failure_class,
+        )
+        return False
+
+    def _commit_and_push(
+        self,
+        target_repo_obj: Any,
+        output_filename: str,
+        branch_name: str,
+        run: "_PublicationRun",
+    ) -> None:
+        """6. Commit & Push."""
         self.git.commit_and_push(
             target_repo_obj,
-            f"Update article: {run.output_filename}",
-            run.branch_name,
+            f"Update article: {output_filename}",
+            branch_name,
         )
-        run.record_stage("commit_pushed", True, branch_name=run.branch_name)
+        run.record_stage("commit_pushed", True, branch_name=branch_name)
 
-        # 7. Create PR
+    def _create_pr_and_schedule_audit(
+        self,
+        article: Dict[str, Any],
+        refined_content: str,
+        grounding_notes: str,
+        audit_should_run: bool,
+        output_filename: str,
+        branch_name: str,
+        run: "_PublicationRun",
+    ) -> bool:
+        """7. Create PR, then persist the attempt and schedule the optional
+        post-PR auditor."""
         pr_result = self.pr_orchestrator.create_pr(
-            article_id=article_id,
+            article_id=run.article_id,
             article=article,
-            branch_name=run.branch_name,
-            output_filename=run.output_filename,
+            branch_name=branch_name,
+            output_filename=output_filename,
             git_handler=self.git,
             review_notes=grounding_notes,
         )
         run.pr_url = pr_result.pr_url
 
-        if run.pr_url:
-            logger.info(f"Pull Request created successfully: {run.pr_url}")
-            run.record_stage("pr_created", True, pr_url=run.pr_url)
-
-            source_url = article.get("url") or article.get("source_url") or ""
-            if audit_should_run:
-                self._record_audit_status(
-                    article_numeric_id=run.numeric_id,
-                    status="audit_pending",
-                    reason="Auditor task submitted after PR creation.",
-                    attempts=0,
-                )
-                self._schedule_optional_audit(
-                    article_id=article_id,
-                    article_numeric_id=run.numeric_id,
-                    content=refined_content,
-                    source_url=source_url,
-                    article_data=article,
-                )
-            else:
-                self._record_audit_status(
-                    article_numeric_id=run.numeric_id,
-                    status="audit_skipped",
-                    reason="Auditor trigger conditions not met.",
-                    attempts=0,
-                )
-
-            run.persist_attempt(True)
-            return True
-        else:
+        if not run.pr_url:
             logger.error("Failed to create PR.")
             run.record_stage("pr_created", False)
             run.persist_attempt(False)
             return False
+
+        logger.info(f"Pull Request created successfully: {run.pr_url}")
+        run.record_stage("pr_created", True, pr_url=run.pr_url)
+        self._schedule_or_skip_audit(article, refined_content, audit_should_run, run)
+
+        run.persist_attempt(True)
+        return True
+
+    def _schedule_or_skip_audit(
+        self,
+        article: Dict[str, Any],
+        refined_content: str,
+        audit_should_run: bool,
+        run: "_PublicationRun",
+    ) -> None:
+        source_url = article.get("url") or article.get("source_url") or ""
+        if audit_should_run:
+            self._record_audit_status(
+                article_numeric_id=run.numeric_id,
+                status="audit_pending",
+                reason="Auditor task submitted after PR creation.",
+                attempts=0,
+            )
+            self._schedule_optional_audit(
+                article_id=run.article_id,
+                article_numeric_id=run.numeric_id,
+                content=refined_content,
+                source_url=source_url,
+                article_data=article,
+            )
+        else:
+            self._record_audit_status(
+                article_numeric_id=run.numeric_id,
+                status="audit_skipped",
+                reason="Auditor trigger conditions not met.",
+                attempts=0,
+            )
 
     def _persist_publication_attempt_summary(
         self,
@@ -914,16 +1015,18 @@ class RefineryEngine:
         so per-instance redirection (tests, config) keeps working."""
         persist_publication_attempt(
             self.publication_attempts_dir,
-            article_id=article_id,
-            success=success,
-            stages=stages,
-            target_repo=target_repo,
-            output_filename=output_filename,
-            final_slug=final_slug,
-            branch_name=branch_name,
-            pr_url=pr_url,
-            validation_summary_path=validation_summary_path,
-            failure_class=failure_class,
+            PublicationAttempt(
+                article_id=article_id,
+                success=success,
+                stages=stages,
+                target_repo=target_repo,
+                output_filename=output_filename,
+                final_slug=final_slug,
+                branch_name=branch_name,
+                pr_url=pr_url,
+                validation_summary_path=validation_summary_path,
+                failure_class=failure_class,
+            ),
         )
 
     @staticmethod
@@ -989,11 +1092,13 @@ class RefineryEngine:
             status_recorder=lambda *args, **kwargs: self._record_audit_status(
                 *args, **kwargs
             ),
-            article_id=article_id,
-            article_numeric_id=article_numeric_id,
-            content=content,
-            source_url=source_url,
-            article_data=article_data,
+            request=AuditRequest(
+                article_id=article_id,
+                article_numeric_id=article_numeric_id,
+                content=content,
+                source_url=source_url,
+                article_data=article_data,
+            ),
         )
 
     def _extract_slug(self, content: str, fallback_id: str) -> str:

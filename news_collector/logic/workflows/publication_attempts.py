@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
@@ -35,6 +36,22 @@ from news_collector.utils.logger import get_logger
 logger = get_logger().create_module_logger("PublicationAttempts")
 
 
+@dataclass(frozen=True)
+class PublicationAttempt:
+    """Input record for one persisted attempt artifact."""
+
+    article_id: str
+    success: bool
+    stages: List[PublicationAttemptStageResult] = field(default_factory=list)
+    target_repo: Optional[str] = None
+    output_filename: Optional[str] = None
+    final_slug: Optional[str] = None
+    branch_name: Optional[str] = None
+    pr_url: Optional[str] = None
+    validation_summary_path: Optional[str] = None
+    failure_class: Optional[PublicationFailureClass] = None
+
+
 def artifact_name(article_id: str) -> str:
     """Return the sanitized filename stem for one article's attempt file."""
     safe_article_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", article_id).strip("_")
@@ -46,40 +63,41 @@ def _summary_path(attempts_dir: Path, article_id: str) -> Path:
 
 
 def persist_publication_attempt(
-    attempts_dir: Path,
-    *,
-    article_id: str,
-    success: bool,
-    stages: List[PublicationAttemptStageResult],
-    target_repo: Optional[str] = None,
-    output_filename: Optional[str] = None,
-    final_slug: Optional[str] = None,
-    branch_name: Optional[str] = None,
-    pr_url: Optional[str] = None,
-    validation_summary_path: Optional[str] = None,
-    failure_class: Optional[PublicationFailureClass] = None,
+    attempts_dir: Path, attempt: PublicationAttempt
 ) -> Path:
     """Write the canonical attempt summary JSON and return its path."""
     summary = PublicationAttemptSummary(
         generated_at=datetime.now(timezone.utc).isoformat(),
-        article_id=article_id,
-        target_repo=target_repo,
-        output_filename=output_filename,
-        final_slug=final_slug,
-        branch_name=branch_name,
-        pr_url=pr_url,
-        validation_summary_path=validation_summary_path,
-        success=success,
-        failure_class=failure_class,
-        stages=stages,
+        article_id=attempt.article_id,
+        target_repo=attempt.target_repo,
+        output_filename=attempt.output_filename,
+        final_slug=attempt.final_slug,
+        branch_name=attempt.branch_name,
+        pr_url=attempt.pr_url,
+        validation_summary_path=attempt.validation_summary_path,
+        success=attempt.success,
+        failure_class=attempt.failure_class,
+        stages=attempt.stages,
     )
 
-    summary_path = _summary_path(attempts_dir, article_id)
+    summary_path = _summary_path(attempts_dir, attempt.article_id)
     summary_path.write_text(
         json.dumps(summary.model_dump(mode="json"), indent=2),
         encoding="utf-8",
     )
     return summary_path
+
+
+def _has_successful_attempt(attempts_dir: Path, article_id: str) -> bool:
+    summary_path = _summary_path(attempts_dir, article_id)
+    try:
+        if not summary_path.is_file():
+            return False
+        existing = json.loads(summary_path.read_text(encoding="utf-8"))
+        return isinstance(existing, dict) and existing.get("success") is True
+    except (OSError, ValueError) as exc:
+        logger.warning(f"Could not inspect prior attempt file for {article_id}: {exc}")
+        return False
 
 
 def persist_interrupted_attempt(
@@ -98,24 +116,16 @@ def persist_interrupted_attempt(
     """
     if not article_id or article_id == "unknown" or not stages:
         return
-    summary_path = _summary_path(attempts_dir, article_id)
-    try:
-        if summary_path.is_file():
-            existing = json.loads(summary_path.read_text(encoding="utf-8"))
-            if isinstance(existing, dict) and existing.get("success") is True:
-                logger.info(
-                    f"Keeping prior successful attempt file for {article_id}; "
-                    "not overwriting with the interrupted run."
-                )
-                return
-    except (OSError, ValueError) as exc:
-        logger.warning(f"Could not inspect prior attempt file for {article_id}: {exc}")
+    if _has_successful_attempt(attempts_dir, article_id):
+        logger.info(
+            f"Keeping prior successful attempt file for {article_id}; "
+            "not overwriting with the interrupted run."
+        )
+        return
     try:
         persist_publication_attempt(
             attempts_dir,
-            article_id=article_id,
-            success=False,
-            stages=stages,
+            PublicationAttempt(article_id=article_id, success=False, stages=stages),
         )
     except Exception as exc:
         logger.warning(f"Could not persist interrupted attempt for {article_id}: {exc}")
