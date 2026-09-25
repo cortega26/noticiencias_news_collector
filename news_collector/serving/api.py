@@ -1122,17 +1122,14 @@ def create_app(  # noqa: C901
 
         Accepts ``validation_result`` (Content Guard) and
         ``publish_complete`` (GitHub Pages deploy) events.
-        Processing is best-effort — the response is always 202.
+
+        The delivery is persisted as a durable receipt before processing
+        (plan 060 Phase 5a); a duplicate delivery returns the stored result
+        without reapplying transitions. The response is always 202 unless
+        payload validation fails.
         """
-        from news_collector.contracts.webhook import (
-            PublishCompleteEvent,
-            ValidationResultEvent,
-            parse_webhook_payload,
-        )
-        from news_collector.serving.webhook_handler import (
-            process_publish_complete,
-            process_validation_result,
-        )
+        from news_collector.contracts.webhook import parse_webhook_payload
+        from news_collector.serving.webhook_handler import handle_webhook_event
 
         # Validate payload structure
         try:
@@ -1144,24 +1141,10 @@ def create_app(  # noqa: C901
                 detail=f"Invalid payload: {exc}",
             ) from exc
 
-        # Dispatch by event type (best-effort — always return 202)
-        try:
-            if isinstance(event, ValidationResultEvent):
-                process_validation_result(event, manager)
-            elif isinstance(event, PublishCompleteEvent):
-                process_publish_complete(event, manager)
-        except Exception as exc:
-            logger.error(
-                "Webhook processing error (event={}): {}",
-                event.event,
-                exc,
-                exc_info=True,
-            )
-
-        return {
-            "accepted": True,
-            "event": event.event,
-        }
+        # Receipt-first, idempotent handling: the handler never raises for a
+        # processing failure — it records a failed receipt and still returns a
+        # body — so the response stays 202 per the callback contract.
+        return handle_webhook_event(event, manager)
 
     # ------------------------------------------------------------------
     # Admin surface (/v1/admin/*) — Phase 1 of the Refinery GUI decoupling.

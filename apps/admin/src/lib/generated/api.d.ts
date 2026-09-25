@@ -19,7 +19,11 @@ export interface paths {
          *
          *     Accepts ``validation_result`` (Content Guard) and
          *     ``publish_complete`` (GitHub Pages deploy) events.
-         *     Processing is best-effort — the response is always 202.
+         *
+         *     The delivery is persisted as a durable receipt before processing
+         *     (plan 060 Phase 5a); a duplicate delivery returns the stored result
+         *     without reapplying transitions. The response is always 202 unless
+         *     payload validation fails.
          */
         post: operations["frontend_webhook_api_v1_webhook_frontend_post"];
         delete?: never;

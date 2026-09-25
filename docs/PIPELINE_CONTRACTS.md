@@ -143,6 +143,7 @@ The serving layer is not the owner of editorial mutation workflows.
 
 - The backend's own parity test (`tests/test_contracts_sync.py`) covers only top-level field names; the full type/constraint/optionality comparison is enforced by the frontend's checker, which backend CI runs in strict mode (`.github/workflows/ci.yml` → `contract-parity` job) and the frontend runs on every push (Content Guard).
 - Frontend validation-failure notifications (`POST /api/v1/webhook/frontend`, `serving/api.py`) depend on `BACKEND_WEBHOOK_URL`/`BACKEND_WEBHOOK_TOKEN` being configured in the frontend repository — they must be set for the failure loop to close.
+- Webhook deliveries are persisted as durable receipts before processing (plan 060 Phase 5a, `webhook_receipts`): the endpoint answers 202 only after the receipt exists, an optional `delivery_id` (or a stable derived key when absent) makes replays idempotent — a duplicate of a processed delivery returns its stored result without reapplying transitions — and a processing exception leaves a `failed` receipt with its error and attempt count. The frontend sender does not yet emit `delivery_id` or bounded retries; the derived key covers that gap until it does.
 - Publication identity reuse is strong but still has fallback branches that can use non-source dates.
 - `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.
 

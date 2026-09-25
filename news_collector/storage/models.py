@@ -908,6 +908,65 @@ class PublicationEvent(Base):
         )
 
 
+WEBHOOK_RECEIPT_STATUS_VALUES = ("received", "processed", "failed")
+_WEBHOOK_RECEIPT_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{v}'" for v in WEBHOOK_RECEIPT_STATUS_VALUES)
+)
+
+
+class WebhookReceipt(Base):
+    """Append-only receipt of one inbound frontend webhook delivery.
+
+    Plan 060 / Phase 5a: the delivery is persisted *before* processing so a
+    crash or a lost response no longer discards the callback. ``delivery_key``
+    is unique (a replay returns the stored result), ``attempts`` counts
+    processing attempts, and ``status='failed'`` plus ``error`` keeps a
+    processing exception operator-visible instead of swallowed.
+    """
+
+    __tablename__ = "webhook_receipts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    delivery_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    payload: Mapped[Any] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="received")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    result: Mapped[Any | None] = mapped_column(JSON)
+    error: Mapped[str | None] = mapped_column(Text)
+
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint(
+            _WEBHOOK_RECEIPT_STATUS_CHECK,
+            name="ck_webhook_receipts_status",
+        ),
+        Index(
+            "uq_webhook_receipts_delivery_key",
+            "delivery_key",
+            unique=True,
+        ),
+        Index(
+            "ix_webhook_receipts_status_received_at",
+            "status",
+            "received_at",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<WebhookReceipt(id={self.id}, event_type='{self.event_type}', "
+            f"status='{self.status}', attempts={self.attempts})>"
+        )
+
+
 # Funciones de utilidad para trabajar con los modelos
 # ===================================================
 

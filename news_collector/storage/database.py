@@ -58,6 +58,7 @@ from .article_repository import ArticleCursor, ArticlePage, ArticleRepository
 from .lifecycle_repository import LifecycleRepository, map_legacy_audit_outcome
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
+from .webhook_receipt_repository import WebhookReceiptRepository
 
 # Configurar logging para este módulo
 logger = get_logger().create_module_logger(__name__)
@@ -175,6 +176,8 @@ class DatabaseManager:
         # Plan 060 / Phase 3b: no delegate-mirror on DatabaseManager (see the
         # attribute docstring above) — call db.lifecycle.* directly.
         self.lifecycle = LifecycleRepository(self)
+        # Plan 060 / Phase 5a: durable receipts for frontend webhook deliveries.
+        self.webhook_receipts = WebhookReceiptRepository(self)
 
     def _setup_database(self):
         """
