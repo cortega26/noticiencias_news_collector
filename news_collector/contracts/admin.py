@@ -100,6 +100,37 @@ class AdminSourceHealthEnvelope(BaseModel):
     sources: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+DashboardHealthStatus = Literal["pass", "warning", "fail", "unknown"]
+
+
+class AdminDashboardEvidence(BaseModel):
+    """One dashboard health area, derived from durable records only.
+
+    ``evidence="none"`` means no record exists to judge from — the consumer
+    must render ``unknown``, never infer ``pass`` (plan 060 Phase 5c).
+    ``counts`` always carries the area's full known key set (zeros when a
+    key has no rows), so the unknown signal lives only in ``evidence``.
+    """
+
+    status: DashboardHealthStatus
+    evidence: Literal["present", "none"]
+    detail: str = ""
+    measured_at: Optional[datetime] = None
+    oldest_pending_age_seconds: Optional[int] = None
+    counts: Dict[str, int] = Field(default_factory=dict)
+
+
+class AdminDashboardHealthEnvelope(BaseModel):
+    """Backend evidence for the admin dashboard health list (plan 060
+    Phase 5c). The frontend combines this with its own records (schema,
+    hero image, lint) in 5d; areas with no backend evidence stay unknown."""
+
+    generated_at: datetime
+    publication: AdminDashboardEvidence
+    callbacks: AdminDashboardEvidence
+    validation: AdminDashboardEvidence
+
+
 class AdminAnalyticsEnvelope(BaseModel):
     """Analytics read model (build_analytics_read_model) plus as_of."""
 

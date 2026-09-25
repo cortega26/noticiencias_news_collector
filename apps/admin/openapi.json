@@ -872,6 +872,97 @@
         "title": "AdminContentEnvelope",
         "type": "object"
       },
+      "AdminDashboardEvidence": {
+        "description": "One dashboard health area, derived from durable records only.\n\n``evidence=\"none\"`` means no record exists to judge from — the consumer\nmust render ``unknown``, never infer ``pass`` (plan 060 Phase 5c).\n``counts`` always carries the area's full known key set (zeros when a\nkey has no rows), so the unknown signal lives only in ``evidence``.",
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "evidence": {
+            "enum": [
+              "present",
+              "none"
+            ],
+            "title": "Evidence",
+            "type": "string"
+          },
+          "measured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured At"
+          },
+          "oldest_pending_age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Pending Age Seconds"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "warning",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "evidence"
+        ],
+        "title": "AdminDashboardEvidence",
+        "type": "object"
+      },
+      "AdminDashboardHealthEnvelope": {
+        "description": "Backend evidence for the admin dashboard health list (plan 060\nPhase 5c). The frontend combines this with its own records (schema,\nhero image, lint) in 5d; areas with no backend evidence stay unknown.",
+        "properties": {
+          "callbacks": {
+            "$ref": "#/components/schemas/AdminDashboardEvidence"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "publication": {
+            "$ref": "#/components/schemas/AdminDashboardEvidence"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/AdminDashboardEvidence"
+          }
+        },
+        "required": [
+          "generated_at",
+          "publication",
+          "callbacks",
+          "validation"
+        ],
+        "title": "AdminDashboardHealthEnvelope",
+        "type": "object"
+      },
       "AdminImageBriefItem": {
         "description": "One row of the image queue.",
         "properties": {
@@ -3125,6 +3216,53 @@
           }
         },
         "summary": "Admin Unpublish Article"
+      }
+    },
+    "/v1/admin/dashboard/health": {
+      "get": {
+        "description": "Backend evidence for the dashboard health list (plan 060 Phase\n5c): publication attempts, callback receipts, and Content Guard\noutcomes, with an explicit ``evidence=\"none\"`` (and ``status=\n\"unknown\"``) whenever no record exists to judge from — a zero-row\nquery is never reported as ``pass``. Read-only.",
+        "operationId": "admin_dashboard_health_v1_admin_dashboard_health_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDashboardHealthEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Dashboard Health"
       }
     },
     "/v1/admin/images": {

@@ -277,3 +277,91 @@ def test_list_stale_attempts_filters_state_age_and_limit(db_manager):
         older_than=now - timedelta(hours=4)
     )
     assert fresh_cutoff == []
+
+
+# ---------------------------------------------------------------------------
+# Dashboard aggregates (Plan 060 / Phase 5c)
+# ---------------------------------------------------------------------------
+
+
+def _aware(value: datetime) -> datetime:
+    """SQLite may round-trip tz-aware columns as naive; assume UTC."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+class TestDashboardAggregates:
+    def test_empty_db_returns_empty_aggregates(self, db_manager):
+        lifecycle = db_manager.lifecycle
+        assert lifecycle.count_publication_attempts_by_state() == {}
+        assert lifecycle.oldest_attempt_started_at("PUBLISHING") is None
+        assert lifecycle.latest_publication_attempt_created_at() is None
+        assert lifecycle.count_publication_events_by_type() == {}
+        assert lifecycle.latest_publication_event_at() is None
+
+    def test_counts_and_oldest_nonterminal(self, db_manager):
+        article_id = _make_article(db_manager, "agg1")
+        now = datetime.now(timezone.utc)
+        oldest = now - timedelta(hours=2)
+        _make_attempt(
+            db_manager,
+            article_id,
+            refinery_id="agg-publishing",
+            state="PUBLISHING",
+            started_at=oldest,
+        )
+        _make_attempt(
+            db_manager,
+            article_id,
+            refinery_id="agg-pr",
+            state="PR_CREATED",
+            started_at=now - timedelta(minutes=30),
+        )
+        _make_attempt(
+            db_manager,
+            article_id,
+            refinery_id="agg-done",
+            state="COMPLETED",
+            started_at=now,
+        )
+
+        counts = db_manager.lifecycle.count_publication_attempts_by_state()
+        assert counts == {"PUBLISHING": 1, "PR_CREATED": 1, "COMPLETED": 1}
+
+        oldest_publishing = db_manager.lifecycle.oldest_attempt_started_at("PUBLISHING")
+        assert oldest_publishing is not None
+        assert abs((_aware(oldest_publishing) - oldest).total_seconds()) < 1
+        assert db_manager.lifecycle.oldest_attempt_started_at("REJECTED") is None
+
+        assert db_manager.lifecycle.latest_publication_attempt_created_at() is not None
+
+    def test_event_counts_support_type_filter_and_latest(self, db_manager):
+        article_id = _make_article(db_manager, "agg2")
+        attempt = _make_attempt(db_manager, article_id)
+        base = datetime.now(timezone.utc) - timedelta(minutes=10)
+        for index, event_type in enumerate(
+            ("pr_created", "check_passed", "rejected", "deployed")
+        ):
+            db_manager.lifecycle.record_publication_event(
+                attempt.id,
+                event_type=event_type,
+                occurred_at=base + timedelta(minutes=index),
+            )
+
+        counts = db_manager.lifecycle.count_publication_events_by_type()
+        assert counts == {
+            "pr_created": 1,
+            "check_passed": 1,
+            "rejected": 1,
+            "deployed": 1,
+        }
+
+        validation_counts = db_manager.lifecycle.count_publication_events_by_type(
+            ("check_passed", "rejected")
+        )
+        assert validation_counts == {"check_passed": 1, "rejected": 1}
+
+        latest = db_manager.lifecycle.latest_publication_event_at(
+            ("check_passed", "rejected")
+        )
+        assert latest is not None
+        assert abs((_aware(latest) - (base + timedelta(minutes=2))).total_seconds()) < 1

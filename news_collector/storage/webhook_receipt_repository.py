@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -179,6 +180,37 @@ class WebhookReceiptRepository:
                 .all()
             )
             return [_to_view(r) for r in rows]
+
+    def count_receipts_by_status(self) -> Dict[str, int]:
+        """Receipt counts per status (Plan 060 / Phase 5c dashboard evidence)."""
+        with self._session() as session:
+            rows = (
+                session.query(
+                    _WebhookReceiptModel.status,
+                    func.count(_WebhookReceiptModel.id),
+                )
+                .group_by(_WebhookReceiptModel.status)
+                .all()
+            )
+            return {str(status): int(count) for status, count in rows}
+
+    def oldest_unprocessed_received_at(self) -> Optional[datetime]:
+        """``received_at`` of the oldest receipt still awaiting a successful
+        processing outcome (``received``/``failed``), or ``None``."""
+        with self._session() as session:
+            oldest: Optional[datetime] = (
+                session.query(func.min(_WebhookReceiptModel.received_at))
+                .filter(_WebhookReceiptModel.status.in_(("received", "failed")))
+                .scalar()
+            )
+            return oldest
+
+    def latest_receipt_received_at(self) -> Optional[datetime]:
+        with self._session() as session:
+            latest: Optional[datetime] = session.query(
+                func.max(_WebhookReceiptModel.received_at)
+            ).scalar()
+            return latest
 
     @staticmethod
     def _get_row(session: Session, delivery_key: str) -> Optional[_WebhookReceiptModel]:

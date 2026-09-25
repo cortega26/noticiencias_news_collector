@@ -80,6 +80,7 @@ from news_collector.contracts.admin import (
     AdminCollectStatus,
     AdminConfigSnapshot,
     AdminContentEnvelope,
+    AdminDashboardHealthEnvelope,
     AdminImageBriefItem,
     AdminImageBriefUpdate,
     AdminImageBriefUploadResult,
@@ -113,6 +114,7 @@ from news_collector.logic.workflows.source_catalog_workflow import (
     SourceCatalogMutationRejected,
     SourceCatalogWorkflow,
 )
+from news_collector.serving.dashboard_health import build_dashboard_health
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog, WorkflowRun
 from news_collector.utils.logger import get_logger
@@ -1773,6 +1775,21 @@ def create_app(  # noqa: C901
             ),
             meta={"generated_at": datetime.now(timezone.utc).isoformat()},
         )
+
+    @app.get(
+        "/v1/admin/dashboard/health",
+        response_model=AdminDashboardHealthEnvelope,
+    )
+    def admin_dashboard_health(
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminDashboardHealthEnvelope:
+        """Backend evidence for the dashboard health list (plan 060 Phase
+        5c): publication attempts, callback receipts, and Content Guard
+        outcomes, with an explicit ``evidence="none"`` (and ``status=
+        "unknown"``) whenever no record exists to judge from — a zero-row
+        query is never reported as ``pass``. Read-only."""
+        return build_dashboard_health(manager)
 
     @app.post(
         "/v1/admin/articles/{article_id}/reprocess",

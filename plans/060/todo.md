@@ -216,6 +216,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       stale open PR as actionable, and never creates a PR or marks an attempt
       COMPLETED without a deploy URL.)
 - [ ] Drive dashboard health from stored evidence; missing evidence is unknown.
+      (Phase 5c, 2026-09-25 — backend half landed:
+      `GET /v1/admin/dashboard/health` exposes publication/callback/validation
+      evidence with explicit unknown-on-no-evidence semantics; the frontend
+      dashboard consumption (schema/hero/lint plus this endpoint) remains 5d.)
 - [x] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
       (Phase 5a covered lost/duplicate/restart/error with integration tests;
       Phase 5b adds out-of-order repair and stale-open-PR integration tests in
