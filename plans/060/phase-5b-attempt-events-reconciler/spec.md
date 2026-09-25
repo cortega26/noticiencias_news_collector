@@ -29,13 +29,13 @@
 
 Plan 060 Phase 5 items 3–4 and the acceptance criteria:
 
-> 3. Map validation and publish-complete events to legal
->    `publication_attempts` transitions. Processing exceptions update the event
->    to retryable/failed and remain operator-visible.
-> 4. Add a scheduled/manual reconciler for stale `pr_created`/`deployed`
->    attempts. It may query GitHub/deployment evidence and replay stored
->    events. It must not create duplicate PRs or mark published without
->    deployment evidence.
+> - Map validation and publish-complete events to legal
+>   `publication_attempts` transitions. Processing exceptions update the event
+>   to retryable/failed and remain operator-visible.
+> - Add a scheduled/manual reconciler for stale `pr_created`/`deployed`
+>   attempts. It may query GitHub/deployment evidence and replay stored
+>   events. It must not create duplicate PRs or mark published without
+>   deployment evidence.
 >
 > **Acceptance:** lost callback, duplicate callback, out-of-order callback,
 > backend restart, processing exception, and stale open PR all have
