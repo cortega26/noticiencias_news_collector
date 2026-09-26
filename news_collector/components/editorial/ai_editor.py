@@ -18,6 +18,14 @@ import yaml
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
+from news_collector.components.editorial.editorial_critic_gate import (
+    EDITORIAL_CRITIC_GATE,
+    TECHNICAL_CRITIC_GATE,
+    CriticFailureCode,
+    CriticGateHooks,
+    CriticVerdict,
+    run_critic_gate,
+)
 from news_collector.components.editorial.editorial_input import EditorialInput
 from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
@@ -2171,68 +2179,78 @@ class EditorAgent:
         if cache_s2_5.exists():
             print(f"(Loaded from cache: {cache_s2_5})")
         else:
-            max_retries = 2
-            for attempt in range(max_retries + 1):
-                repair_reason = self._editorial_output_repair_reason(final_content)
+
+            def _evaluate_technical_critic(candidate: str) -> CriticVerdict:
+                repair_reason = self._editorial_output_repair_reason(candidate)
                 if repair_reason is not None:
                     logger.warning(
                         "Stage 2 editorial output is not critic-ready. Triggering repair: {}",
                         repair_reason,
                     )
-                    is_valid = False
-                    reason: str | None = repair_reason
-                    recoverable = True
-                else:
-                    critic_result = self._critic_pass(final_content)
-                    if len(critic_result) == 2:
-                        is_valid, reason = critic_result
-                        recoverable = True
-                    else:
-                        is_valid, reason, recoverable = critic_result
+                    return CriticVerdict(False, repair_reason, True)
+                critic_result = self._critic_pass(candidate)
+                if len(critic_result) == 2:
+                    is_valid, reason = critic_result
+                    return CriticVerdict(is_valid, reason, True)
+                return CriticVerdict(*critic_result)
 
-                if is_valid:
-                    # Persist critic pass checkpoint to avoid re-running on resume
-                    try:
-                        cache_s2_5.write_text("ok", encoding="utf-8")
-                    except Exception as _e:
-                        logger.warning(f"Failed to persist critic checkpoint: {_e}")
-                    break
+            def _on_technical_critic_pass() -> None:
+                # Persist critic pass checkpoint to avoid re-running on resume
+                try:
+                    cache_s2_5.write_text("ok", encoding="utf-8")
+                except Exception as _e:
+                    logger.warning(f"Failed to persist critic checkpoint: {_e}")
 
-                if not recoverable:
+            def _on_technical_critic_rejection(
+                attempt: int, reason: str | None
+            ) -> None:
+                print(
+                    "Critic rejected content "
+                    f"(Attempt {attempt}/{TECHNICAL_CRITIC_GATE.max_retries + 1}). "
+                    "Repairing..."
+                )
+                print(f"   Reason: {reason}")
+
+            def _on_technical_critic_repair(candidate: str) -> None:
+                try:
+                    self._write_editorial_cache_if_valid(cache_s2, candidate)
+                except Exception as _e:
+                    logger.warning(f"Failed to update stage2 cache after repair: {_e}")
+
+            technical_outcome = run_critic_gate(
+                TECHNICAL_CRITIC_GATE,
+                CriticGateHooks(
+                    evaluate=_evaluate_technical_critic,
+                    # Repair using the rejected editorial content as base. When
+                    # the editorial body is empty (e.g. Stage 2 produced
+                    # nothing), fall back to the translated text.
+                    is_repairable=lambda candidate: bool(
+                        _extract_publishable_body(candidate)
+                    ),
+                    repair=lambda base, reason: self._repair_editorial(
+                        base, reason or "Unknown reason", editor_context
+                    ),
+                    cleanup=self._extract_markdown_content,
+                    on_pass=_on_technical_critic_pass,
+                    on_rejection=_on_technical_critic_rejection,
+                    on_repair=_on_technical_critic_repair,
+                ),
+                content=final_content,
+                fallback_content=translated_text,
+            )
+            final_content = technical_outcome.content
+            if not technical_outcome.passed:
+                if technical_outcome.failure_code == CriticFailureCode.IRRECOVERABLE:
                     raise ValueError(
-                        f"Article permanently discarded (irrecoverable): {reason}. "
+                        "Article permanently discarded (irrecoverable): "
+                        f"{technical_outcome.failure_reason}. "
                         "No repair attempted — source content is fundamentally off-topic."
                     )
-
-                if attempt < max_retries:
-                    print(
-                        f"Critic rejected content (Attempt {attempt+1}/{max_retries + 1}). Repairing..."
-                    )
-                    print(f"   Reason: {reason}")
-                    # Repair using the rejected editorial content as base.
-                    # When the editorial body is empty (e.g. Stage 2 produced nothing),
-                    # fall back to the translated text as a starting point.
-                    repair_base = (
-                        final_content
-                        if _extract_publishable_body(final_content)
-                        else translated_text
-                    )
-                    final_content = self._repair_editorial(
-                        repair_base, reason or "Unknown reason", editor_context
-                    )
-                    final_content = self._extract_markdown_content(
-                        final_content
-                    )  # Cleanup
-                    try:
-                        self._write_editorial_cache_if_valid(cache_s2, final_content)
-                    except Exception as _e:
-                        logger.warning(
-                            f"Failed to update stage2 cache after repair: {_e}"
-                        )
-                else:
-                    raise ValueError(
-                        f"Translation Guardrail: Content rejected by critic after {max_retries} retries. Reason: {reason}"
-                    )
+                raise ValueError(
+                    "Translation Guardrail: Content rejected by critic after "
+                    f"{TECHNICAL_CRITIC_GATE.max_retries} retries. "
+                    f"Reason: {technical_outcome.failure_reason}"
+                )
 
         # --- STAGE 4: Editorial Critic Gate (Quality) ---
         # Editor-in-chief evaluation against hook/clarity/structure/rigor/
@@ -2249,58 +2267,70 @@ class EditorAgent:
             "ENABLE_EDITORIAL_CRITIC", "true"
         ).lower() != "false" and self.prompts.get("editor_critic", {}).get("system"):
             print("\n--- STAGE 4: Editorial Critic Gate ---")
-            max_editorial_retries = 1
-            for attempt in range(max_editorial_retries + 1):
-                ed_is_valid, ed_reason, ed_recoverable = self._critic_editorial_pass(
-                    final_content, editor_context
+
+            def _on_editorial_critic_pass() -> None:
+                try:
+                    cache_s2_6.write_text("ok", encoding="utf-8")
+                except Exception as _e:
+                    logger.warning(
+                        f"Failed to persist editorial critic checkpoint: {_e}"
+                    )
+
+            def _on_editorial_critic_rejection(
+                attempt: int, reason: str | None
+            ) -> None:
+                print(
+                    "Editorial Critic rejected "
+                    f"(Attempt {attempt}/{EDITORIAL_CRITIC_GATE.max_retries + 1}). "
+                    f"Reason: {reason}"
                 )
 
-                if ed_is_valid:
-                    try:
-                        cache_s2_6.write_text("ok", encoding="utf-8")
-                    except Exception as _e:
-                        logger.warning(
-                            f"Failed to persist editorial critic checkpoint: {_e}"
-                        )
-                    break
+            def _on_editorial_critic_repair(candidate: str) -> None:
+                try:
+                    self._write_editorial_cache_if_valid(cache_s2, candidate)
+                except Exception as _e:
+                    logger.warning(
+                        f"Failed to update stage2 cache after editorial repair: {_e}"
+                    )
 
-                if not ed_recoverable:
+            editorial_outcome = run_critic_gate(
+                EDITORIAL_CRITIC_GATE,
+                CriticGateHooks(
+                    evaluate=lambda candidate: CriticVerdict(
+                        *self._critic_editorial_pass(candidate, editor_context)
+                    ),
+                    is_repairable=lambda candidate: bool(
+                        _extract_publishable_body(candidate)
+                    ),
+                    repair=lambda base, reason: self._repair_editorial(
+                        base,
+                        reason or "Calidad editorial insuficiente",
+                        editor_context,
+                    ),
+                    cleanup=self._extract_markdown_content,
+                    on_pass=_on_editorial_critic_pass,
+                    on_rejection=_on_editorial_critic_rejection,
+                    on_repair=_on_editorial_critic_repair,
+                ),
+                content=final_content,
+                fallback_content=translated_text,
+            )
+            final_content = editorial_outcome.content
+            if not editorial_outcome.passed:
+                if editorial_outcome.failure_code == CriticFailureCode.IRRECOVERABLE:
                     logger.warning(
                         "Editorial Critic flagged irrecoverable issue; "
-                        f"publishing anyway with caveat: {ed_reason}"
+                        f"publishing anyway with caveat: {editorial_outcome.failure_reason}"
                     )
-                    break
-
-                if attempt < max_editorial_retries:
-                    print(
-                        f"Editorial Critic rejected (Attempt {attempt+1}/{max_editorial_retries + 1}). "
-                        f"Reason: {ed_reason}"
-                    )
-                    repair_base = (
-                        final_content
-                        if _extract_publishable_body(final_content)
-                        else translated_text
-                    )
-                    final_content = self._repair_editorial(
-                        repair_base,
-                        ed_reason or "Calidad editorial insuficiente",
-                        editor_context,
-                    )
-                    final_content = self._extract_markdown_content(final_content)
-                    try:
-                        self._write_editorial_cache_if_valid(cache_s2, final_content)
-                    except Exception as _e:
-                        logger.warning(
-                            f"Failed to update stage2 cache after editorial repair: {_e}"
-                        )
                 else:
                     # Exhausted retries: publish with logged warning rather
                     # than blocking. Editorial-critic is advisory at the
                     # tail because by this point the technical critic and
                     # the placeholder validator have already passed.
                     logger.warning(
-                        f"Editorial Critic still rejecting after {max_editorial_retries + 1} attempts. "
-                        f"Publishing with caveat. Reason: {ed_reason}"
+                        "Editorial Critic still rejecting after "
+                        f"{EDITORIAL_CRITIC_GATE.max_retries + 1} attempts. "
+                        f"Publishing with caveat. Reason: {editorial_outcome.failure_reason}"
                     )
 
         # --- STAGE 5: Metadata & Headlines (+ Headline Critic gate) ---
