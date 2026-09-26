@@ -298,11 +298,15 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       (Phase 7c-1 landed 2026-09-25: typed normalized input
       `editorial_input.py` + `EditorialStage` cache identities
       `editorial_stages.py`, five cache call sites rewired, no behavior
-      change. Remaining LLM stages — translated draft, adapted/critic-approved
-      draft, enrichment result, final artifact — with their retry policy,
-      provider provenance and failure codes; see
-      `plans/060/phase-7c1-editorial-input-contract/`. Re-checked 2026-09-26:
-      no further 7c stages landed after `8dd3981`; item stays open.)
+      change. Phase 7c-2 landed 2026-09-26: NEW `editorial_critic_gate.py`
+      owns the shared Stage 3/4 evaluate → repair → re-evaluate loop plus the
+      declared `CriticGatePolicy` retry budgets, cache identity and
+      `CriticFailureCode` terminal outcomes; raise/caveat policy, prompts,
+      cache writes and log text stay in the agent; no behavior change. See
+      `plans/060/phase-7c1-editorial-input-contract/` and
+      `plans/060/phase-7c2-critic-gate/`. Remaining LLM stages — translated
+      draft, enrichment result, final artifact — with provider/model
+      provenance; item stays open.)
 - [ ] Split bounded admin route modules after wire characterization.
       (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
       `api.py` plus `dashboard_health.py`/`webhook_handler.py`.)
@@ -372,8 +376,8 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 ## Final closeout
 
 > Not started — plan 060 stays open (re-checked 2026-09-26). Phases 0-4 and 5
-> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1); Phases 8-11
-> are pending.
+> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1/7c-2);
+> Phases 8-11 are pending.
 
 - [ ] Every master-spec done criterion is checked with evidence.
 - [ ] Operator runbooks and metrics cover every nonterminal/reconciliation path.
