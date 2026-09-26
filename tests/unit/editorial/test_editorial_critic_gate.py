@@ -29,15 +29,35 @@ def _identity(text: str) -> str:
     return text
 
 
+def _always_repairable(text: str) -> bool:
+    return True
+
+
+def _unused_repair(base: str, reason: str | None) -> str:
+    return "unused"
+
+
+def _noop() -> None:
+    return None
+
+
+def _ignore_rejection(attempt: int, reason: str | None) -> None:
+    return None
+
+
+def _ignore_repair(content: str) -> None:
+    return None
+
+
 def _hooks(
     *,
     evaluate: Callable[[str], CriticVerdict],
-    is_repairable: Callable[[str], bool] = lambda text: True,
-    repair: Callable[[str, str | None], str] = lambda base, reason: "unused",
+    is_repairable: Callable[[str], bool] = _always_repairable,
+    repair: Callable[[str, str | None], str] = _unused_repair,
     cleanup: Callable[[str], str] = _identity,
-    on_pass: Callable[[], None] = lambda: None,
-    on_rejection: Callable[[int, str | None], None] = lambda attempt, reason: None,
-    on_repair: Callable[[str], None] = lambda content: None,
+    on_pass: Callable[[], None] = _noop,
+    on_rejection: Callable[[int, str | None], None] = _ignore_rejection,
+    on_repair: Callable[[str], None] = _ignore_repair,
 ) -> CriticGateHooks:
     """Build the hook bundle with inert defaults for the non-focus callbacks."""
     return CriticGateHooks(
