@@ -183,7 +183,9 @@ def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
 # processing_status values the admin triage queue can filter by. Must stay a
 # subset of storage PROCESSING_STATUS_VALUES (models.py) — values outside the
 # DB CHECK can never match.
-_ADMIN_VALID_STATUSES = frozenset({"pending", "publishing", "rejected", "completed"})
+_ADMIN_VALID_STATUSES = frozenset(
+    {"pending", "publishing", "rejected", "completed", "validated"}
+)
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from pydantic import BaseModel, Field, field_validator, model_validator

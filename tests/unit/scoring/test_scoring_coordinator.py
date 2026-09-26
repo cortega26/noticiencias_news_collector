@@ -590,3 +590,62 @@ class TestRescoreLlmPolicy:
         )
         await coordinator.execute({}, dry_run=False)
         assert seen and all(v is True for v in seen)
+
+
+class TestSubBatchPersistence:
+    """Plan 113: a page persists in bounded sub-batches, so a worker kill
+    loses at most `_PERSIST_BATCH_SIZE` scores, and committed sub-batches
+    are counted even when a later one fails."""
+
+    @pytest.mark.asyncio
+    async def test_page_persists_in_bounded_sub_batches(self, coordinator, monkeypatch):
+        monkeypatch.setattr("news_collector.scoring.coordinator._PERSIST_BATCH_SIZE", 2)
+        articles = [_MockArticle(id=i, title=f"A{i}") for i in range(1, 4)]
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
+        coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
+            _EMPTY_PAGE
+        )
+        coordinator.scorer.score_batch_async = _batch_scores()
+        coordinator.db_manager.update_articles_score_bulk.return_value = True
+
+        result = await coordinator.execute({}, dry_run=False)
+
+        assert coordinator.db_manager.update_articles_score_bulk.call_count == 2
+        first_batch = coordinator.db_manager.update_articles_score_bulk.call_args_list[
+            0
+        ].args[0]
+        second_batch = coordinator.db_manager.update_articles_score_bulk.call_args_list[
+            1
+        ].args[0]
+        assert [row[0] for row in first_batch] == [1, 2]
+        assert [row[0] for row in second_batch] == [3]
+        assert result["statistics"]["articles_scored"] == 3
+        assert result["statistics"]["new_articles_scored"] == 3
+        assert result["statistics"]["articles_included"] == 3
+        assert result["statistics"]["average_score"] == pytest.approx(0.7)
+        assert result["stop_reason"] == "exhausted"
+
+    @pytest.mark.asyncio
+    async def test_sub_batch_failure_keeps_committed_sub_batches_counted(
+        self, coordinator, monkeypatch
+    ):
+        monkeypatch.setattr("news_collector.scoring.coordinator._PERSIST_BATCH_SIZE", 2)
+        articles = [_MockArticle(id=i, title=f"A{i}") for i in range(1, 4)]
+        coordinator.db_manager.get_pending_articles_page.return_value = _page(articles)
+        coordinator.db_manager.get_completed_articles_for_rescoring_page.return_value = (
+            _EMPTY_PAGE
+        )
+        coordinator.scorer.score_batch_async = _batch_scores()
+        coordinator.db_manager.update_articles_score_bulk.side_effect = [True, False]
+
+        result = await coordinator.execute({}, dry_run=False)
+
+        assert result["success"] is False
+        assert result["stop_reason"] == "persistence_failed"
+        # The first sub-batch (ids 1-2) was committed; the second (id 3) was
+        # not — every counter must report only the committed two.
+        assert result["statistics"]["articles_scored"] == 2
+        assert result["statistics"]["new_articles_scored"] == 2
+        assert result["statistics"]["articles_included"] == 2
+        assert result["statistics"]["articles_excluded"] == 0
+        assert result["statistics"]["average_score"] == pytest.approx(0.7)
