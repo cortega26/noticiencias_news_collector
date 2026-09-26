@@ -2,21 +2,25 @@
 
 Execution index for [`spec-oci-hosting-migration.md`](spec-oci-hosting-migration.md).
 
-## Pendiente para mañana (2026-09-26)
+## Cutover completado (2026-09-26)
 
-1. **Cloudflare (manual, ~1 min):** Zero Trust → Networks → Tunnels →
-   `noticiencias-webhook` (ID `5a22de3a-2e80-4c90-9817-ce2ca830c889`) →
-   Public Hostnames → `api.noticiencias.com` → Edit → Service =
-   `http://localhost:8010` → Save.
-2. **Verificar el corte:** `https://api.noticiencias.com/healthz` → 200;
-   webhook POST con la key compartida → 202; `/v1/admin/dashboard/health` con
-   la key admin → 200; el siguiente run del bot de métricas debe seguir
-   leyendo la evidencia del backend (publication/callbacks/validation).
-3. **Retirar Fly:** `fly scale count 0 -a noticiencias-serve`, verificar de
-   nuevo, y después `fly apps destroy noticiencias-serve noticiencias-tunnel`.
-4. **Rollback en cualquier punto previo al paso 3:**
-   `fly scale count 1 -a noticiencias-tunnel` (la config de la app se
-   conserva; solo se destruyó la máquina).
+- **Ingress cambiado** en Zero Trust (cuenta `7e153214690ac7430fde021f1f2b2916`,
+  túnel `noticiencias-webhook` = `5a22de3a-2e80-4c90-9817-ce2ca830c889`):
+  `api.noticiencias.com` → `http://localhost:8010`.
+- **Verificación inequívoca:** `GET /healthz?m=<epoch>` → 200 y el marcador
+  exacto apareció en el journal de `noticiencias-serving` (cliente IPv6 real
+  vía Cloudflare); los logs de Fly no recibieron tráfico nuevo.
+- **Fly retirado por completo:** `noticiencias-serve` y `noticiencias-tunnel`
+  destruidos; `fly apps list` → "No apps found"; la API pública siguió en 200
+  tras destruir la máquina (100 % OCI).
+- **Lección registrada:** una verificación previa pareció exitosa por una
+  ventana de tiempo solapada con un curl local; la verificación válida exige
+  un marcador único en el journal del servicio de la VM. Además, el primer
+  intento de cambio se hizo desde otra cuenta de Cloudflare (sin túneles);
+  el túnel vive en la cuenta de noticiencias indicada arriba.
+- **Rollback ya no aplica** (Fly destruido); el rollback vigente es detener
+  `noticiencias-serving.service` y volver a desplegar Fly desde el repo
+  (`fly deploy --config fly-serving.toml` + secretos) si fuese necesario.
 
 ## Step 1 — deploy the serving app on the VM
 
@@ -43,19 +47,21 @@ Execution index for [`spec-oci-hosting-migration.md`](spec-oci-hosting-migration
 
 ## Step 3 — switch the tunnel ingress (needs Cloudflare dashboard)
 
-- [ ] Zero Trust → Networks → Tunnels → `noticiencias-webhook`
-      (ID `5a22de3a-2e80-4c90-9817-ce2ca830c889`) → Public Hostnames →
+- [x] Zero Trust (cuenta `7e153214690ac7430fde021f1f2b2916`) → Networks →
+      Tunnels → `noticiencias-webhook` (ID
+      `5a22de3a-2e80-4c90-9817-ce2ca830c889`) → Public Hostnames →
       `api.noticiencias.com` → Edit → Service = `http://localhost:8010` → Save.
-- [ ] Verify externally: `/healthz` 200; webhook POST with the shared key →
-      202/accepted; `/v1/admin/dashboard/health` with the admin key → 200;
-      dashboard health still reads backend evidence on the next metrics run.
+- [x] Verify externally with a unique marker: `/healthz?m=<epoch>` → 200 and
+      the exact marker in the VM journal; webhook POST with the shared key →
+      422 on an empty payload (auth OK); `/v1/admin/dashboard/health` with the
+      admin key → 200. (The scheduled metrics run exercises the same endpoint.)
 
 ## Step 4 — retire Fly
 
-- [ ] After the cutover is confirmed: `fly scale count 0 -a noticiencias-serve`
-      (rollback window), then `fly apps destroy noticiencias-serve` and
+- [x] `fly scale count 0 -a noticiencias-serve`, public 200 ×3 after the
+      machine was destroyed, then `fly apps destroy noticiencias-serve` and
       `fly apps destroy noticiencias-tunnel`.
-- [ ] Confirm `fly apps list` shows neither app running; billing drops to $0.
+- [x] `fly apps list` → "No apps found"; compute billing drops to $0.
 
 ## Follow-ups
 
