@@ -5,7 +5,7 @@ import time
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Mapping, TypeGuard, cast
 
 from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
@@ -18,6 +18,10 @@ import yaml
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
+from news_collector.components.editorial.editorial_cached_stage import (
+    CachedStageHooks,
+    run_cached_stage,
+)
 from news_collector.components.editorial.editorial_critic_gate import (
     EDITORIAL_CRITIC_GATE,
     TECHNICAL_CRITIC_GATE,
@@ -2139,12 +2143,24 @@ class EditorAgent:
         # --- STAGE 1: Scientific Translation ---
         print("\n--- STAGE 1: Scientific Translation ---")
         cache_s1 = self._get_cache_path(article_id, EditorialStage.TRANSLATION)
-        if cache_s1.exists():
+
+        def _load_translation_cache() -> str:
             print(f"(Loaded from cache: {cache_s1})")
-            translated_text = cache_s1.read_text(encoding="utf-8")
-        else:
-            translated_text = self._translate_scientific(input_text)
-            cache_s1.write_text(translated_text, encoding="utf-8")
+            return cache_s1.read_text(encoding="utf-8")
+
+        def _persist_translation_cache(text: str) -> None:
+            cache_s1.write_text(text, encoding="utf-8")
+
+        translated_draft = run_cached_stage(
+            EditorialStage.TRANSLATION,
+            CachedStageHooks(
+                load_cached=_load_translation_cache,
+                generate=lambda: self._translate_scientific(input_text),
+                persist=_persist_translation_cache,
+            ),
+            cache_present=cache_s1.exists(),
+        )
+        translated_text = translated_draft.value
 
         # --- STAGE 2: Editorial Adaptation ---
         print("\n--- STAGE 2: Editorial Adaptation ---")
@@ -2363,7 +2379,7 @@ class EditorAgent:
         print("\n--- STAGE 6: Editorial Enrichment Fields ---")
         cache_s4 = self._get_cache_path(article_id, EditorialStage.ENRICHMENT)
 
-        def _enrichment_cache_is_usable(cached: Any) -> bool:
+        def _enrichment_cache_is_usable(cached: Any) -> TypeGuard[dict]:
             """A Stage 6 cache artifact is usable only when it carries every
             V2-required enrichment field. A cache with an empty ``sources``
             list (LLM omitted it, per prompt) would otherwise fail the V2
@@ -2373,51 +2389,47 @@ class EditorAgent:
                 return False
             return all(cached.get(key) for key in _V2_REQUIRED_ENRICHMENT_FIELDS)
 
-        if cache_s4.exists():
+        def _load_enrichment_cache() -> dict | None:
             print(f"(Loaded from cache: {cache_s4})")
             try:
                 cached_enrichment = json.loads(cache_s4.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, Exception) as e:
                 logger.warning(f"Invalid enrichment cache, regenerating: {e}")
-                cached_enrichment = None
-            if cached_enrichment is not None and not _enrichment_cache_is_usable(
-                cached_enrichment
-            ):
+                return None
+            if cached_enrichment is None:
+                return None
+            if not _enrichment_cache_is_usable(cached_enrichment):
                 logger.warning(
                     "Incomplete enrichment cache ignored (missing required V2 "
                     "fields); regenerating."
                 )
-                cached_enrichment = None
-            if cached_enrichment is not None:
-                enrichment_fields = cached_enrichment
-            else:
-                enrichment_fields = self._generate_enrichment_fields(
-                    final_content,
-                    title,
-                    source_url=source_url or "",
-                    source_name=source_name or "",
-                )
-                try:
-                    cache_s4.write_text(
-                        json.dumps(enrichment_fields, ensure_ascii=False),
-                        encoding="utf-8",
-                    )
-                except Exception as _e:
-                    logger.warning(f"Failed to persist enrichment cache: {_e}")
-        else:
-            enrichment_fields = self._generate_enrichment_fields(
-                final_content,
-                title,
-                source_url=source_url or "",
-                source_name=source_name or "",
-            )
+                return None
+            return cached_enrichment
+
+        def _persist_enrichment_cache(fields: dict) -> None:
             try:
                 cache_s4.write_text(
-                    json.dumps(enrichment_fields, ensure_ascii=False),
+                    json.dumps(fields, ensure_ascii=False),
                     encoding="utf-8",
                 )
             except Exception as _e:
                 logger.warning(f"Failed to persist enrichment cache: {_e}")
+
+        enrichment_result = run_cached_stage(
+            EditorialStage.ENRICHMENT,
+            CachedStageHooks(
+                load_cached=_load_enrichment_cache,
+                generate=lambda: self._generate_enrichment_fields(
+                    final_content,
+                    title,
+                    source_url=source_url or "",
+                    source_name=source_name or "",
+                ),
+                persist=_persist_enrichment_cache,
+            ),
+            cache_present=cache_s4.exists(),
+        )
+        enrichment_fields = enrichment_result.value
 
         # --- STAGE 7: Fact-Check Verification (Phase 2c) ---
         # Runs unconditionally here, after BOTH the cache-hit and cache-miss
