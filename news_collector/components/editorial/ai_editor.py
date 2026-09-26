@@ -14,7 +14,6 @@ from news_collector.utils.logger import get_logger
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
-import yaml
 from noticiencias.config_manager import load_config
 from pydantic import BaseModel, Field, ValidationError
 
@@ -31,15 +30,20 @@ from news_collector.components.editorial.editorial_critic_gate import (
     run_critic_gate,
 )
 from news_collector.components.editorial.editorial_input import EditorialInput
+from news_collector.components.editorial.editorial_publication_artifact import (
+    GeneratedArticleValidationError,
+    PublicationArtifactHooks,
+    PublicationArtifactInput,
+)
+from news_collector.components.editorial.editorial_publication_artifact import (
+    _capability_overclaim_block as _capability_overclaim_block,
+)
+from news_collector.components.editorial.editorial_publication_artifact import (
+    run_publication_artifact_stage,
+)
 from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
-from news_collector.editorial.health_scope import is_health_scope
-from news_collector.editorial.hero_alt import resolve_hero_alt_text
 from news_collector.editorial.readability import check_english_spillover, check_headline
-from news_collector.editorial.uncertainty import (
-    find_unvalidated_capability_claims,
-    resolve_uncertainty_counterweight,
-)
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
@@ -353,47 +357,6 @@ _V2_REQUIRED_ENRICHMENT_FIELDS = (
 # deterministic repair layer instead of raising (plan 063 — run 17 died on
 # a 0.61s empty response after minutes of successful stages).
 _HEADLINE_FORMAT_MAX_ATTEMPTS = 2
-
-
-class GeneratedArticleValidationError(ValueError):
-    """Raised when the generated article body is not publishable."""
-
-    def __init__(
-        self, message: str, *, error_code: str = "editorial_placeholder_blocked"
-    ):
-        super().__init__(message)
-        self.error_code = error_code
-
-
-def _capability_overclaim_block(
-    overclaims: list[str],
-    *,
-    categories: Any = None,
-    raw_category: Any = None,
-    metadata_category: Any = None,
-    claim_text: Any = None,
-) -> str | None:
-    """Health-scope escalation for plan-083 overclaims (plan 111).
-
-    Returns the block message when publication must stop, else None.
-    Outside health scope the caller keeps the advisory warning; inside
-    health scope an unvalidated present-tense clinical-capability claim
-    is a patient-safety-grade defect. Pure: no I/O, fully unit-testable —
-    the inline call site only raises on a non-None return.
-    """
-    if not overclaims:
-        return None
-    if not is_health_scope(
-        categories=categories,
-        category=raw_category,
-        metadata_category=metadata_category,
-        text=claim_text,
-    ):
-        return None
-    return (
-        "Unvalidated clinical-capability claim(s) in health scope — "
-        "reframe as prospective before publication: " + " | ".join(overclaims)
-    )
 
 
 def _extract_publishable_body(markdown: str) -> str:
@@ -2454,307 +2417,34 @@ class EditorAgent:
         )
         enrichment_fields["fact_check"] = verified_fact_check
 
-        # 3. Assemble Final Artifact
-        # Choose the 'direct' headline by default or a combination
-        final_title = headlines.get("direct", title)  # Fallback to original if fail
-
-        # Sanitize title: ensure it's a string and not a list representation
-        if isinstance(final_title, list):
-            final_title = final_title[0] if final_title else "Untitled"
-        final_title = str(final_title).replace('"', '\\"')
-
-        # Sanitize excerpt
-        final_excerpt = headlines.get("excerpt", "")
-        if isinstance(final_excerpt, list):
-            final_excerpt = final_excerpt[0] if final_excerpt else ""
-        final_excerpt = str(final_excerpt).replace('"', '\\"')
-
-        # Sanitize and Validate Tags (Repo-Truth Implementation)
-        try:
-            from news_collector.taxonomy.normalizer import TagNormalizer
-
-            normalizer = TagNormalizer()
-
-            raw_tags = headlines.get("tags") or []
-            # Fallback if raw_tags is None or empty, use category if not 'other'
-            if not raw_tags and raw_category.lower() != "other":
-                raw_tags = [raw_category]
-
-            # SANITIZE
-            norm_result = normalizer.sanitize_tags(raw_tags)
-            final_tags = norm_result.tags
-
-            # VALIDATE
-            val_result = normalizer.validate_tags(final_tags)
-            if val_result.needs_review:
-                logger.warning(f"Tags require review: {val_result.errors}")
-                # We could add a frontmatter flag 'needs_tag_review: true' here if desired
-                # for now, we just log it.
-
-            # Audit log
-            if norm_result.replaced or norm_result.removed or norm_result.merged:
-                logger.info(
-                    f"Tag Audit: {norm_result.model_dump_json(exclude={'tags', 'warnings'})}"
-                )
-
-        except Exception as e:
-            logger.error(f"Tag Normalization Failed: {e}")
-            final_tags = headlines.get("tags") or []  # Fallback to raw
-
-        # Construct Frontmatter using Strict Contract
-        try:
-            # Prepare optional fields
-            hl_variants = None
-            if headlines and headlines.get("question") and headlines.get("benefit"):
-                hl_variants = {
-                    "question": headlines.get("question", ""),
-                    "benefit": headlines.get("benefit", ""),
-                }
-
-            # Categories is a list in schema, but currently single string. Wrap it.
-            # Schema expects list[str].
-            categories_list = [final_category] if final_category else []
-
-            # Date parsing for PyYAML type coercion. LAW-B5: the canonical
-            # publication date must never fall back to the runtime clock —
-            # the caller (RefineryEngine) always passes the deterministically
-            # derived canonical_date; a missing date is a wiring bug.
-            if not override_date:
-                raise ValueError(
-                    "process_article requires override_date (canonical "
-                    "publication date); refusing to use the runtime clock "
-                    "in frontmatter (LAW-B5)."
-                )
-            date_str = override_date
-            parsed_date_val: Any = date_str
-            if isinstance(date_str, str):
-                from datetime import datetime
-
-                try:
-                    if len(date_str) == 10:
-                        parsed_date_val = datetime.strptime(date_str, "%Y-%m-%d").date()
-                    else:
-                        parsed_date_val = datetime.fromisoformat(date_str)
-                except ValueError:
-                    pass
-
-            model_dict = {
-                "title": final_title,
-                # REVIEW: canonical default is SCHEMA_VERSION=1; is this intentionally 2?
-                "schema_version": 2,
-                "date": parsed_date_val,
-                "author": "Noticiencias AI",
-                "categories": categories_list,
-                "tags": final_tags,
-                "excerpt": final_excerpt,
-            }
-            if image_url:
-                model_dict["image"] = image_url
-            # Hero alt root fix (plan 079): the pre-edit fallback embeds the
-            # ENGLISH original title. Recompute boilerplate alts with the
-            # Spanish title now that it exists; good brief alts pass through.
-            previous_alt = image_alt if isinstance(image_alt, str) else None
-            resolved_alt = resolve_hero_alt_text(image_alt, final_title)
-            if resolved_alt and resolved_alt != (previous_alt or "").strip():
-                logger.info("Hero alt recomputed with the Spanish headline.")
-            if resolved_alt:
-                model_dict["image_alt"] = resolved_alt
-            if source_url:
-                model_dict["source_url"] = source_url
-            if article_id and article_id != "unknown":
-                model_dict["refinery_id"] = article_id
-            if hl_variants:
-                model_dict["headlines_variants"] = hl_variants
-
-            # V2 Editorial Enrichment Fields (Stage 6 generated).
-            # Generated values serve as defaults. Upstream raw_text values
-            # take precedence when present (allows pipeline overrides and
-            # manual editorial corrections from the Refinery UI).
-            for key in [
-                "summary_points",
-                "glossary",
-                "fact_check",
-                "why_it_matters",
-                "confidence",
-                "sources",
-            ]:
-                generated_value = enrichment_fields.get(key)
-                if generated_value:
-                    model_dict[key] = generated_value
-
-            # Upstream raw_text overrides for enrichment fields
-            if isinstance(raw_text, dict):
-                for key in [
-                    "summary_points",
-                    "glossary",
-                    "fact_check",
-                    "why_it_matters",
-                    "confidence",
-                    "sources",
-                ]:
-                    if key in raw_text and raw_text[key]:
-                        model_dict[key] = raw_text[key]
-
-            # Non-enrichment passthrough fields (not generated by Stage 6)
-            if isinstance(raw_text, dict):
-                for key in [
-                    "uncertainty_note",
-                    "featured",
-                    "featured_rank",
-                    "investigation",
-                ]:
-                    if key in raw_text:
-                        model_dict[key] = raw_text[key]
-
-            requires_uncertainty_note, uncertainty_note = (
-                resolve_uncertainty_counterweight(
-                    headlines, model_dict.get("confidence")
-                )
-            )
-            model_dict["requires_uncertainty_note"] = requires_uncertainty_note
-            if uncertainty_note:
-                model_dict["uncertainty_note"] = uncertainty_note
-
-            # Flag reader-facing narrative that contradicts that counterweight
-            # (plan 083): a post that disclaims clinical validation should not
-            # also assert the capability in the present tense in
-            # `why_it_matters` / `headlines_variants.benefit`. Advisory by
-            # default — the PR reviewer (and the Codex re-review) act on it —
-            # except inside health scope, where plan 111 escalates to a
-            # hard block below.
-            overclaims = find_unvalidated_capability_claims(
-                model_dict,
-                requires_uncertainty_note=requires_uncertainty_note,
-                uncertainty_note=uncertainty_note,
-            )
-            if overclaims:
-                joined_overclaims = " | ".join(overclaims)
-                logger.warning(
-                    "Present-tense capability claim(s) under a declared "
-                    "uncertainty counterweight — reframe as prospective before "
-                    f"merge: {joined_overclaims}"
-                )
-                # Health-scope escalation (plan 111): outside health scope
-                # the warning above stays advisory for the PR reviewer.
-                # Inside health scope (clinical categories or trigger
-                # vocabulary in the claim-bearing fields) an unvalidated
-                # present-tense capability claim is a patient-safety-grade
-                # defect — block publication until reframed as prospective.
-                # The universal verifier-disputed gate below is untouched.
-                claim_text = " ".join(
-                    [
-                        str(final_title or ""),
-                        *[
-                            str(item)
-                            for item in (model_dict.get("why_it_matters") or [])
-                            if isinstance(item, str)
-                        ],
-                        str(
-                            (model_dict.get("headlines_variants") or {}).get(
-                                "benefit", ""
-                            )
-                        ),
-                    ]
-                )
-                block_message = _capability_overclaim_block(
-                    overclaims,
-                    categories=model_dict.get("categories"),
-                    raw_category=raw_category,
-                    metadata_category=metadata_category,
-                    claim_text=claim_text,
-                )
-                if block_message is not None:
-                    raise GeneratedArticleValidationError(
-                        block_message,
-                        error_code="editorial_capability_overclaim",
-                    )
-
-            # V2 contract enforcement: a schema_version >= 2 article MUST
-            # carry every enrichment field.  Omission means Stage 6 produced
-            # empty or invalid output — treat as retryable editorial failure.
-            schema_ver = model_dict.get("schema_version", 1)
-            if isinstance(schema_ver, int) and schema_ver >= 2:
-                missing = [
-                    k for k in _V2_REQUIRED_ENRICHMENT_FIELDS if not model_dict.get(k)
-                ]
-                if missing:
-                    raise GeneratedArticleValidationError(
-                        f"V2 article missing required enrichment fields: {missing}. "
-                        "Stage 6 output is incomplete; retry or supply fields manually.",
-                        error_code="editorial_v2_incomplete",
-                    )
-
-            # Fact-check gate (Phase 2c): block publication only on a claim
-            # the independent verifier (Stage 7, above) actually returned
-            # as "disputed" — i.e. the verifier compared the claim against
-            # the article's own source content and found a contradiction.
-            # Deliberately reads `verified_fact_check` (the verifier's own
-            # output), not `model_dict["fact_check"]`: the latter can be
-            # replaced by an upstream `raw_text["fact_check"]` manual
-            # override (see the "Upstream raw_text overrides" loop above),
-            # which never goes through verification — gating on model_dict
-            # would let an un-verified self-assessed "disputed" (or an
-            # operator's manual override) trigger this block, exactly the
-            # false-positive Design §2's overwrite-all rule exists to
-            # prevent. "uncertain" is advisory only and never blocks.
-            disputed_labels = [
-                str(item.get("label", "")).strip() or "(sin descripción)"
-                for item in verified_fact_check
-                if isinstance(item, dict) and item.get("status") == "disputed"
-            ]
-            if disputed_labels:
-                raise GeneratedArticleValidationError(
-                    "Fact-check verification disputed the following claim(s) "
-                    f"against the article's own source content: {disputed_labels}. "
-                    "Publication blocked pending correction.",
-                    error_code="editorial_fact_check_disputed",
-                )
-
-            # Dump to YAML
-            # Use python mode to preserve native date types and emit
-            # YAML date tokens without quotes for Astro z.date() compatibility.
-            model_dict = self._normalize_frontmatter_for_yaml(model_dict)
-
-            # Custom dumper to ensure correct formatting (e.g. no aliases)
-            # Safe dump usually avoids complex tags
-            yaml_frontmatter = yaml.safe_dump(
-                model_dict,
-                allow_unicode=True,
-                default_flow_style=False,
-                sort_keys=False,
-                width=1000,  # Avoid wrapping long lines unnecessarily
-            ).strip()
-
-            # Prepare full article
-            full_article = f"---\n{yaml_frontmatter}\n---\n\n{final_content}"
-
-        except ValidationError as ve:
-            logger.error(f"AstroPost Contract Validation Failed: {ve}")
-            # Fallback to manual construction or raise?
-            # FAIL CLOSED: Raise error to prevent invalid content
-            raise ValueError(f"Content Contract Violation: {ve}") from ve
-        except Exception as e:
-            logger.error(f"Error generating frontmatter: {e}")
-            raise
-
-        # Persist source identity metadata as a hidden comment to keep provenance
-        # without widening the frontmatter schema contract.
-        full_article = self._upsert_source_identity_comment(
-            full_article, source_id=source_id, source_name=source_name
+        # 3. Assemble Final Artifact (typed stage, plan 060 Phase 7c-4)
+        artifact = run_publication_artifact_stage(
+            PublicationArtifactInput(
+                final_content=final_content,
+                headlines=headlines,
+                enrichment_fields=enrichment_fields,
+                verified_fact_check=verified_fact_check,
+                raw_text=raw_text,
+                override_date=override_date,
+                article_id=article_id,
+                title=title,
+                final_category=final_category,
+                raw_category=raw_category,
+                metadata_category=metadata_category,
+                image_url=image_url,
+                image_alt=image_alt,
+                source_id=source_id,
+                source_name=source_name,
+                source_url=source_url,
+                required_enrichment_fields=_V2_REQUIRED_ENRICHMENT_FIELDS,
+            ),
+            PublicationArtifactHooks(
+                normalize_frontmatter=self._normalize_frontmatter_for_yaml,
+                upsert_source_identity=self._upsert_source_identity_comment,
+                strip_emojis=self._strip_emojis,
+            ),
         )
-
-        # Logic to strip Visual planning section if no image is present (Rule from tests)
-        if not image_url:
-            # Regex to remove **TL;DR Visual**... up to next **Header** or end of string
-            # Using DOTALL to match newlines
-            full_article = re.sub(
-                r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)",
-                "",
-                full_article,
-                flags=re.DOTALL | re.MULTILINE,
-            )
-
-        return self._strip_emojis(full_article)
+        return artifact.markdown
 
     def generate_social_content(self, article_content: str, url: str = "") -> str:
         """Generates social media posts (Twitter/LinkedIn) for the refined article."""
