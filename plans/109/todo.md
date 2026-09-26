@@ -11,17 +11,17 @@ Derived from `spec.md`. Mark when verified, not before.
 - [x] `run_publication_batch()` thin wrapper in `publication_pipeline.py` (sequential, per-item explicit outcomes, cap re-asserted); 21 new unit tests green
 - [x] `PublicationRunWorkflow.start_batch` + `_run_batch` sharing the single-flight slot via extracted `_enqueue`; heartbeat helper shared with `_run`; `idempotency_key` preserved; all 17 pre-existing workflow tests green
 
-## Step 1 — Contract + pipeline
-- [ ] Batch shapes in `contracts/admin.py`; adapter-only mapping
-- [ ] Batch entry aggregates per-item outcomes; attempts persisted per id
-- [ ] New unit tests (cap, empty, one-bad-item); `make test-contracts` green
+> Reconciled 2026-09-26: a stale duplicate "Step 1" block (identical to the
+> checked block above) was removed, and Steps 2-3 were checked against the
+> Close-out evidence recorded below (endpoint + GUI landed; OpenAPI snapshot
+> regenerated; GUI vitest green).
 
 ## Step 2 — Serving wrapper
-- [ ] Thin endpoint, 409/404/lease semantics preserved
-- [ ] Boundary tests; `make test-boundaries` green
+- [x] Thin endpoint, 409/404/lease semantics preserved
+- [x] Boundary tests; `make test-boundaries` green
 
 ## Step 3 — Admin GUI
-- [ ] Triage multi-select + batch status; vitest green
+- [x] Triage multi-select + batch status; vitest green
 
 ## Close-out (DONE 2026-09-16)
 - [x] No identity value changed for prior publishes (17 pre-existing workflow tests green unmodified); `make quality-gate` green

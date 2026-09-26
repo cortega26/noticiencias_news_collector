@@ -1,7 +1,10 @@
 # Plan 080 checklist
 
-Planning package prepared; implementation has not started. Mark a phase complete
-only after its acceptance evidence and required review exist.
+Phases 0-2 done and merged (stateful workflow tests; generated admin response
+contracts + drift gate). Phase 3 (offline editorial replay pilot) and Phase 4
+(delivery) remain. Mark a phase complete only after its acceptance evidence and
+required review exist. (Header reconciled 2026-09-26 — it previously claimed
+implementation had not started, contradicting the checked phases below.)
 
 ## Planning delivery
 

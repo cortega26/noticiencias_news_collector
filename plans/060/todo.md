@@ -6,14 +6,21 @@ do not implement from this checklist alone.
 
 ## Program controls
 
-- [ ] Create a small implementation `spec.md` and `todo.md` for each phase.
+- [x] Create a small implementation `spec.md` and `todo.md` for each phase.
+      (Phases 0-7 each have a folder with spec/todo; reconciled 2026-09-26.)
 - [ ] Run the phase drift check against backend `d63cbea` and frontend
       `237cd13`; update plan evidence if current code differs.
-- [ ] Use S/M pull requests; keep both repositories deployable after every
-      merge.
-- [ ] Record tests actually executed and SHAs/PRs in the master execution
-      record.
-- [ ] Keep plan 048 independent and do not reopen rejected/completed work.
+      (Each phase spec ran its own drift check at its own baseline; the
+      program-level check against `d63cbea`/`237cd13` was a planning control
+      and is superseded by those per-phase checks — annotate as closed in
+      practice, not re-run.)
+- [x] Use S/M pull requests; keep both repositories deployable after every
+      merge. (All phases landed via PRs; every merge left both repos green.)
+- [x] Record tests actually executed and SHAs/PRs in the master execution
+      record. (Recorded per phase in each `spec.md`/`todo.md` and in the
+      `plans/README.md` plan-060 ledger row; no separate master file exists.)
+- [x] Keep plan 048 independent and do not reopen rejected/completed work.
+      (048 untouched; no archived/rejected plan reopened.)
 
 ## Wave A — immediate trust gates
 
@@ -193,7 +200,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       (Phase 5a, 2026-09-25: backend accepts an optional `delivery_id` and
       derives a stable identity key when absent, so dedup works before the
       frontend sender adopts the field; the sender-side bounded retries and
-      diagnostic artifact remain cross-repo work.)
+      diagnostic artifact remain cross-repo work. Re-checked 2026-09-26:
+      `scripts/post-publish-callback.js` / `scripts/backend-notify.js` in the
+      frontend repo still have no retry/backoff logic, so this item stays
+      open pending the frontend sender change.)
 - [x] Persist authenticated receipts before processing and deduplicate retries.
       (Phase 5a, 2026-09-25 — `webhook_receipts` table + typed
       `db.webhook_receipts` repository; receipt-first handling in
@@ -236,16 +246,26 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 6 — generated contracts
 
-- [ ] Generate deterministic admin OpenAPI from FastAPI/Pydantic.
+- [x] Generate deterministic admin OpenAPI from FastAPI/Pydantic.
+      (Delivered by plan 080 Phase 2, 2026-09-23 — `scripts/export_admin_openapi.py`,
+      committed `apps/admin/openapi.json` + generated TS, `admin-contracts` CI job.)
 - [ ] Pin `openapi-typescript`/`openapi-fetch`; generate and adopt admin client
       endpoint by endpoint.
-- [ ] Fail CI on stale OpenAPI/TypeScript artifacts.
+      (Partial, re-checked 2026-09-26: `openapi-typescript` is pinned (7.13.0)
+      and the generated TS is consumed; `openapi-fetch` is not a dependency and
+      no endpoint has been migrated to it yet.)
+- [x] Fail CI on stale OpenAPI/TypeScript artifacts.
+      (Delivered by plan 080 Phase 2 — `.github/workflows/ci.yml` →
+      `admin-contracts` job runs `make admin-contracts-check`.)
 - [ ] Split frontend structural Zod schema from Astro runtime/date/semantic
       validation.
+      (Pending, re-checked 2026-09-26: the frontend keeps the full Zod schema
+      inline in `src/content.config.ts`; no schema module/script exists yet.)
 - [ ] Generate neutral JSON Schema with stable Zod 4 APIs and explicit date
-      handling.
-- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus.
+      handling. (Pending; no JSON-Schema generation script in the frontend.)
+- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus. (Pending.)
 - [ ] Retire the regex parser only after one release window of parity.
+      (Pending; the frontend contract-sync parser is still in use.)
 
 ### Phase 7 — backend decomposition
 
@@ -279,13 +299,20 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       change. Remaining LLM stages — translated draft, adapted/critic-approved
       draft, enrichment result, final artifact — with their retry policy,
       provider provenance and failure codes; see
-      `plans/060/phase-7c1-editorial-input-contract/`.)
+      `plans/060/phase-7c1-editorial-input-contract/`. Re-checked 2026-09-26:
+      no further 7c stages landed after `8dd3981`; item stays open.)
 - [ ] Split bounded admin route modules after wire characterization.
-- [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift.
+      (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
+      `api.py` plus `dashboard_health.py`/`webhook_handler.py`.)
+- [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift. (Pending.)
 
 ## Wave D — assets and frontend growth
 
 ### Phase 8 — media finalization
+
+> Not started (re-checked 2026-09-26: `components/publishing/` holds only
+> `github_publisher.py`; no derivative-publisher extraction, media descriptor,
+> or R2-read-only build path exists yet).
 
 - [ ] Extract/test derivative publisher with injected filesystem/Sharp/S3.
 - [ ] Reuse attested manifest entries and add bounded concurrency/full
@@ -296,6 +323,12 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [ ] Retire the sync path only after the compatibility window.
 
 ### Phase 9 — frontend growth and UI convergence
+
+> Status re-checked 2026-09-26: the reachability checker exists but no
+> allowlist file or CI/package wiring was found (gate not enforced); related
+> posts have a ranking helper (`src/utils/related.ts`) but no precomputed
+> top-four; no record of the four unused dependencies being removed; template
+> migration and two-layer-governance supersession not started.
 
 - [ ] Fix relative reachability allowlisting; review/delete the 37 findings in
       cohorts; enforce the gate.
@@ -310,6 +343,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 10 — reader correction lifecycle
 
+> Not started (re-checked 2026-09-26: no reader-report/correction tables or
+> decision records exist in the backend; the frontend Worker report intake
+> exists from plan 023 but nothing reconciles it into backend records yet).
+
 - [ ] Resolve refinery/content revision identity server-side.
 - [ ] Separate and delete contact data according to the privacy contract.
 - [ ] Reconcile Worker intake idempotently into backend report/decision records.
@@ -319,6 +356,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 11 — release proof and repository decision
 
+> Not started (re-checked 2026-09-26); the docs/drift-gate portion is partially
+> covered by plans 043/081, but the release smoke, overhead measurement, and
+> repository-shape ADR remain open.
+
 - [ ] Consolidate duplicated CI steps behind repository-owned commands.
 - [ ] Add the side-effect-free complete-v2 cross-repo release smoke.
 - [ ] Reconcile all active docs and drift gates.
@@ -327,6 +368,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [ ] Run both repositories' complete required gates from clean checkouts.
 
 ## Final closeout
+
+> Not started — plan 060 stays open (re-checked 2026-09-26). Phases 0-4 and 5
+> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1); Phases 8-11
+> are pending.
 
 - [ ] Every master-spec done criterion is checked with evidence.
 - [ ] Operator runbooks and metrics cover every nonterminal/reconciliation path.
