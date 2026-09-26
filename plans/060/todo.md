@@ -310,8 +310,19 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       load-or-generate-and-persist runner with a typed `CachedStageOutcome`
       and the duplicated generate+persist body removed; parsing, warnings and
       cache I/O stay in the agent closures; no behavior change. See
-      `plans/060/phase-7c3-cached-stages/`. Remaining: final publication
-      artifact extraction and provider/model provenance; item stays open.)
+      `plans/060/phase-7c3-cached-stages/`. Phase 7c-4 landed 2026-09-26: NEW
+      `editorial_publication_artifact.py` types the final publication artifact
+      (frontmatter build + plan-083/111, V2 and fact-check gates + Markdown
+      serialization) behind `PublicationArtifactInput`/`Hooks`/`Artifact`;
+      `GeneratedArticleValidationError` and `_capability_overclaim_block`
+      moved with re-exports from `ai_editor`; `process_article` is now a
+      façade over the five typed stages. See
+      `plans/060/phase-7c4-publication-artifact/`. Remaining declaration:
+      provider/model provenance — deliberately deferred (per LAW-B9 the
+      capture has no consumer yet; `_send_prompt` already logs provider/model
+      and `llm_run_stats` aggregates phase counts, not per-model); revisit
+      when a per-stage model report exists. Item stays open only for that
+      declaration.)
 - [ ] Split bounded admin route modules after wire characterization.
       (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
       `api.py` plus `dashboard_health.py`/`webhook_handler.py`.)
@@ -381,8 +392,8 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 ## Final closeout
 
 > Not started — plan 060 stays open (re-checked 2026-09-26). Phases 0-4 and 5
-> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1/7c-2/7c-3);
-> Phases 8-11 are pending.
+> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1/7c-2/7c-3/7c-4,
+> provenance declaration deferred); Phases 8-11 are pending.
 
 - [ ] Every master-spec done criterion is checked with evidence.
 - [ ] Operator runbooks and metrics cover every nonterminal/reconciliation path.
