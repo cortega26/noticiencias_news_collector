@@ -6,6 +6,7 @@ Owns:
 - CriticVerdict: normalized (is_valid, reason, recoverable) decision
 - CriticFailureCode / CriticGateOutcome: terminal outcome vocabulary
 - CriticGatePolicy + the stage policies of the technical and editorial gates
+- CriticGateHooks: the typed host-callback bundle the gate drives
 - run_critic_gate: the bounded evaluate -> repair -> re-evaluate loop shared
   by Stage 3 (technical critic) and Stage 4 (editorial critic)
 
@@ -64,18 +65,25 @@ class CriticGateOutcome:
     failure_reason: str | None = None
 
 
+@dataclass(frozen=True)
+class CriticGateHooks:
+    """Host callbacks the gate drives; supplied by `EditorAgent`."""
+
+    evaluate: Callable[[str], CriticVerdict]
+    is_repairable: Callable[[str], bool]
+    repair: Callable[[str, str | None], str]
+    cleanup: Callable[[str], str]
+    on_pass: Callable[[], None]
+    on_rejection: Callable[[int, str | None], None]
+    on_repair: Callable[[str], None]
+
+
 def run_critic_gate(
     policy: CriticGatePolicy,
+    hooks: CriticGateHooks,
     *,
     content: str,
     fallback_content: str,
-    evaluate: Callable[[str], CriticVerdict],
-    is_repairable: Callable[[str], bool],
-    repair: Callable[[str, str | None], str],
-    cleanup: Callable[[str], str],
-    on_pass: Callable[[], None],
-    on_rejection: Callable[[int, str | None], None],
-    on_repair: Callable[[str], None],
 ) -> CriticGateOutcome:
     """Run the bounded evaluate -> repair -> re-evaluate loop of one gate.
 
@@ -86,9 +94,9 @@ def run_critic_gate(
     own raise/caveat policy, logging and cache writes.
     """
     for attempt in range(policy.max_retries + 1):
-        verdict = evaluate(content)
+        verdict = hooks.evaluate(content)
         if verdict.is_valid:
-            on_pass()
+            hooks.on_pass()
             return CriticGateOutcome(content, attempt + 1, True)
 
         if not verdict.recoverable:
@@ -101,10 +109,10 @@ def run_critic_gate(
             )
 
         if attempt < policy.max_retries:
-            on_rejection(attempt + 1, verdict.reason)
-            repair_base = content if is_repairable(content) else fallback_content
-            content = cleanup(repair(repair_base, verdict.reason))
-            on_repair(content)
+            hooks.on_rejection(attempt + 1, verdict.reason)
+            repair_base = content if hooks.is_repairable(content) else fallback_content
+            content = hooks.cleanup(hooks.repair(repair_base, verdict.reason))
+            hooks.on_repair(content)
         else:
             return CriticGateOutcome(
                 content,

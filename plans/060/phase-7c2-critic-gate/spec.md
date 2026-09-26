@@ -144,18 +144,23 @@ class CriticGateOutcome:
     failure_reason: str | None = None
 
 
+@dataclass(frozen=True)
+class CriticGateHooks:
+    evaluate: Callable[[str], CriticVerdict]
+    is_repairable: Callable[[str], bool]
+    repair: Callable[[str, str | None], str]
+    cleanup: Callable[[str], str]
+    on_pass: Callable[[], None]
+    on_rejection: Callable[[int, str | None], None]
+    on_repair: Callable[[str], None]
+
+
 def run_critic_gate(
     policy: CriticGatePolicy,
+    hooks: CriticGateHooks,
     *,
     content: str,
     fallback_content: str,
-    evaluate: Callable[[str], CriticVerdict],
-    is_repairable: Callable[[str], bool],
-    repair: Callable[[str, str | None], str],
-    cleanup: Callable[[str], str],
-    on_pass: Callable[[], None],
-    on_rejection: Callable[[int, str | None], None],
-    on_repair: Callable[[str], None],
 ) -> CriticGateOutcome:
 ```
 
@@ -175,8 +180,9 @@ Loop, exactly mirroring both current blocks:
    programming error (`ValueError`). The caller maps `failure_code` to
    raise/caveat with its historical messages.
 
-Caller-specific closures in `process_article` (Stage 3 shown; Stage 4
-analogous with `EDITORIAL_CRITIC_GATE`, `_critic_editorial_pass`,
+Caller-specific closures in `process_article`, bundled into a
+`CriticGateHooks(...)` per gate (Stage 3 shown; Stage 4 analogous with
+`EDITORIAL_CRITIC_GATE`, `_critic_editorial_pass`,
 `max_editorial_retries + 1`-equivalent formats and caveat logging):
 
 - `evaluate` — Stage 3: repair-reason pre-check → `_critic_pass`, normalizing

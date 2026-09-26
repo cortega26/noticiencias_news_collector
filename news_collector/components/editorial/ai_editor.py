@@ -22,6 +22,7 @@ from news_collector.components.editorial.editorial_critic_gate import (
     EDITORIAL_CRITIC_GATE,
     TECHNICAL_CRITIC_GATE,
     CriticFailureCode,
+    CriticGateHooks,
     CriticVerdict,
     run_critic_gate,
 )
@@ -2218,22 +2219,24 @@ class EditorAgent:
 
             technical_outcome = run_critic_gate(
                 TECHNICAL_CRITIC_GATE,
+                CriticGateHooks(
+                    evaluate=_evaluate_technical_critic,
+                    # Repair using the rejected editorial content as base. When
+                    # the editorial body is empty (e.g. Stage 2 produced
+                    # nothing), fall back to the translated text.
+                    is_repairable=lambda candidate: bool(
+                        _extract_publishable_body(candidate)
+                    ),
+                    repair=lambda base, reason: self._repair_editorial(
+                        base, reason or "Unknown reason", editor_context
+                    ),
+                    cleanup=self._extract_markdown_content,
+                    on_pass=_on_technical_critic_pass,
+                    on_rejection=_on_technical_critic_rejection,
+                    on_repair=_on_technical_critic_repair,
+                ),
                 content=final_content,
                 fallback_content=translated_text,
-                evaluate=_evaluate_technical_critic,
-                # Repair using the rejected editorial content as base. When the
-                # editorial body is empty (e.g. Stage 2 produced nothing), fall
-                # back to the translated text as a starting point.
-                is_repairable=lambda candidate: bool(
-                    _extract_publishable_body(candidate)
-                ),
-                repair=lambda base, reason: self._repair_editorial(
-                    base, reason or "Unknown reason", editor_context
-                ),
-                cleanup=self._extract_markdown_content,
-                on_pass=_on_technical_critic_pass,
-                on_rejection=_on_technical_critic_rejection,
-                on_repair=_on_technical_critic_repair,
             )
             final_content = technical_outcome.content
             if not technical_outcome.passed:
@@ -2292,21 +2295,25 @@ class EditorAgent:
 
             editorial_outcome = run_critic_gate(
                 EDITORIAL_CRITIC_GATE,
+                CriticGateHooks(
+                    evaluate=lambda candidate: CriticVerdict(
+                        *self._critic_editorial_pass(candidate, editor_context)
+                    ),
+                    is_repairable=lambda candidate: bool(
+                        _extract_publishable_body(candidate)
+                    ),
+                    repair=lambda base, reason: self._repair_editorial(
+                        base,
+                        reason or "Calidad editorial insuficiente",
+                        editor_context,
+                    ),
+                    cleanup=self._extract_markdown_content,
+                    on_pass=_on_editorial_critic_pass,
+                    on_rejection=_on_editorial_critic_rejection,
+                    on_repair=_on_editorial_critic_repair,
+                ),
                 content=final_content,
                 fallback_content=translated_text,
-                evaluate=lambda candidate: CriticVerdict(
-                    *self._critic_editorial_pass(candidate, editor_context)
-                ),
-                is_repairable=lambda candidate: bool(
-                    _extract_publishable_body(candidate)
-                ),
-                repair=lambda base, reason: self._repair_editorial(
-                    base, reason or "Calidad editorial insuficiente", editor_context
-                ),
-                cleanup=self._extract_markdown_content,
-                on_pass=_on_editorial_critic_pass,
-                on_rejection=_on_editorial_critic_rejection,
-                on_repair=_on_editorial_critic_repair,
             )
             final_content = editorial_outcome.content
             if not editorial_outcome.passed:
