@@ -65,10 +65,16 @@ Execution index for [`spec-oci-hosting-migration.md`](spec-oci-hosting-migration
 
 ## Follow-ups
 
-- [ ] Add OCI-hosted deploy/update procedure (rsync + `uv pip install .` +
-      `systemctl restart`) to the spec or a runbook.
-- [ ] Consider a lightweight health monitor/alert for
-      `noticiencias-serving.service` (Pogo-lab has its own alerts only).
-- [ ] Pogo-lab prod remains untouched: `pogo-lab.service`, `nginx`,
+- [x] OCI-hosted deploy/update procedure documented (spec §Operations:
+      rsync + `uv pip install .` + restart + verify).
+- [x] Health monitor/alert: local `noticiencias-healthcheck.timer` (5 min,
+      restarts on a hung `/readyz`) + daily public readiness probe in the
+      frontend `bot-health.yml` (GitHub failure email is the alert).
+- [x] Backup: `noticiencias-backup.timer` (daily 03:45 UTC, 14-day
+      retention, consistent `sqlite3 .backup`); first backup verified at
+      `/var/backups/noticiencias-serving`.
+- [ ] Optional: copy backups off the VM (same open P0 as Pogo-lab's own
+      backup durability item).
+- [x] Pogo-lab prod remains untouched: `pogo-lab.service`, `nginx`,
       `postgresql@14-main`, `reddit-monitor-web.service`, and the existing
       `cloudflared.service` stay active.
