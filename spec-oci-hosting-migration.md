@@ -1,6 +1,6 @@
 # Spec: migrate the serving layer from Fly.io to the always-free OCI VM
 
-Status: in progress · 2026-09-25
+Status: done · 2026-09-26 (cutover verified; both Fly apps destroyed)
 
 ## Goal
 
@@ -13,6 +13,17 @@ runs Pogo-lab production, then retire the two paid Fly.io apps
 Keeps public contracts unchanged: `https://api.noticiencias.com`
 (webhook + admin, same paths, same keys) and the frontend's
 `BACKEND_WEBHOOK_URL`/`BACKEND_ADMIN_URL`.
+
+## Result (2026-09-26)
+
+Done. The service and its connector run on the OCI VM; the Cloudflare tunnel
+ingress points at `http://localhost:8010` (account
+`7e153214690ac7430fde021f1f2b2916`, tunnel
+`5a22de3a-2e80-4c90-9817-ce2ca830c889`); a unique marker request was observed
+in the VM service journal and Fly received no further traffic; both Fly apps
+were destroyed and the public endpoint stayed at 200. Cost: $0 on OCI within
+the Always Free allocation. See `todo-oci-hosting-migration.md` for the
+verification record and follow-ups.
 
 ## Current topology (Fly)
 
