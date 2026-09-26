@@ -664,6 +664,19 @@ def test_recover_expired_leases_recovers_dead_worker_with_fresh_heartbeat(
         assert "424242" in (recovered_row.error_detail or "")
 
 
+def test_pid_alive_rejects_nonpositive_pids() -> None:
+    assert CollectionRunWorkflow._pid_alive(0) is False
+    assert CollectionRunWorkflow._pid_alive(-1) is False
+
+
+def test_pid_alive_fails_safe_on_windows(monkeypatch) -> None:
+    """`os.kill(pid, 0)` terminates on Windows (Codex P1, PR #344): the
+    helper must never claim a pid is dead there — the lease still recovers."""
+    monkeypatch.setattr(os, "name", "nt")
+
+    assert CollectionRunWorkflow._pid_alive(424242) is True
+
+
 def test_recover_expired_leases_keeps_fresh_running_row_with_live_worker(
     db_manager, workflow, monkeypatch
 ) -> None:

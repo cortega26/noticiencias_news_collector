@@ -46,6 +46,15 @@ Execution index for [`spec-collection-recovery-and-scoring.md`](spec-collection-
       fallback) still propagates — committed sub-batches remain persisted;
       rare and unchanged from the pre-fix behavior
 
+## PR review (Codex P1s, PR #344)
+
+- [x] Windows `os.kill(pid, 0)` is not a probe there (it terminates): the
+      dead-worker fast path is POSIX-only and `_pid_alive` fails safe (`True`)
+      under `os.name == "nt"`; tests cover nonpositive pids and Windows
+- [x] Active-doc review for the serving/user-visible state: `docs/PRODUCT_FLOW.md`
+      now documents the `validated` intake state, sub-batch score persistence
+      and dead-worker run recovery
+
 ## Gates
 
 - [x] `make lint`; `make type` (3391 passed, ratchet 92.73% vs 91.25%);

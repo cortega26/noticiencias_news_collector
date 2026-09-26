@@ -17,7 +17,17 @@ every article follows every optional stage.
 3. The current Astro admin (`apps/admin/`, `make admin`) reads candidates and
    dispatches operations through the authenticated API. It does not require
    the operator to manually produce an export file first.
-4. Export remains a supported boundary for the legacy Streamlit path.
+   Freshly collected articles stay at `processing_status='validated'` until
+   scoring commits a row, so the triage queue exposes a `validated`
+   ("Recolectadas") filter for that intake window — a scoring backlog is
+   visible instead of silent. Scoring persists in bounded sub-batches, so an
+   interrupted run keeps the scores it already committed.
+4. Collection runs are durable in `workflow_runs`: a run whose worker process
+   died (dev-server reload, crash) is recovered to `interrupted` as soon as
+   the next process starts, instead of blocking new runs until the lease
+   timeout. A conflict response reports the active run, and the admin banner
+   shows the terminal state and error detail.
+5. Export remains a supported boundary for the legacy Streamlit path.
    `ExportContractV2` is the preferred contract, but the collector CLI's
    `--export-json` still serializes a V1 artifact; legacy Refinery handles it.
    Export absence is therefore not a universal explanation for an empty admin.

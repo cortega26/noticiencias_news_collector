@@ -389,7 +389,18 @@ class CollectionRunWorkflow:
 
     @staticmethod
     def _pid_alive(pid: int) -> bool:
-        """Same-machine liveness check; PID reuse can only delay a reap."""
+        """Same-machine liveness check; PID reuse can only delay a reap.
+
+        Windows fail-safe: ``os.kill(pid, 0)`` is NOT a harmless probe there
+        (Python maps non-console signals to ``TerminateProcess``, so it would
+        kill the process it inspects — Codex P1 on PR #344). Return "alive"
+        unconditionally on Windows and let the lease timeout recover a dead
+        run; the dead-worker fast path stays POSIX-only.
+        """
+        if pid <= 0:
+            return False
+        if os.name == "nt":  # pragma: no cover - Windows dev environments
+            return True
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
