@@ -34,7 +34,11 @@ from news_collector.components.editorial.editorial_publication_artifact import (
     GeneratedArticleValidationError,
     PublicationArtifactHooks,
     PublicationArtifactInput,
-    _capability_overclaim_block,  # noqa: F401 - re-exported for existing importers
+)
+from news_collector.components.editorial.editorial_publication_artifact import (
+    _capability_overclaim_block as _capability_overclaim_block,
+)
+from news_collector.components.editorial.editorial_publication_artifact import (
     run_publication_artifact_stage,
 )
 from news_collector.components.editorial.editorial_stages import EditorialStage
