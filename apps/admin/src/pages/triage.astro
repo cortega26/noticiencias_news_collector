@@ -132,6 +132,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   const STATUSES: ArticleStatus[] = [
     "publishable",
+    "validated",
     "pending",
     "publishing",
     "rejected",
@@ -141,6 +142,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   /** Operator labels for pipeline statuses (values stay API-contract). */
   const STATUS_LABEL: Record<string, string> = {
     publishable: "Listos",
+    validated: "Recolectadas",
     pending: "Pendientes",
     publishing: "Publicando",
     rejected: "Rechazados",

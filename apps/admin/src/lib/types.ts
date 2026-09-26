@@ -99,6 +99,9 @@ export type ArticleStatus =
   | "publishing"
   | "rejected"
   | "completed"
+  // Collected and validated, but not scored yet (plan 113): where the last
+  // fetch's fresh articles land until scoring commits.
+  | "validated"
   // Virtual filter (not a real processing_status): the current export
   // shortlist minus anything already in flight / deployed — the "Refine &
   // publish" candidate list.
@@ -106,6 +109,7 @@ export type ArticleStatus =
 
 export const ARTICLE_STATUSES: ArticleStatus[] = [
   "publishable",
+  "validated",
   "pending",
   "publishing",
   "rejected",

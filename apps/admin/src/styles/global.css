@@ -192,6 +192,12 @@ summary:focus-visible {
   background-color: color-mix(in srgb, var(--color-ink-400) 15%, transparent);
 }
 
+.status-validated {
+  color: var(--color-ink-200);
+  border: 1px solid color-mix(in srgb, var(--color-ink-500) 45%, transparent);
+  background-color: color-mix(in srgb, var(--color-ink-400) 12%, transparent);
+}
+
 /* ---------- triage queue (dynamic DOM) ---------- */
 /* NOTE: these MUST live here, not in a scoped <style> block — Astro adds
  * a data-astro-cid scope to component styles that never matches elements

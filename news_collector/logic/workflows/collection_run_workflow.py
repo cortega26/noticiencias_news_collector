@@ -36,6 +36,7 @@ the one CAS pattern this codebase actually has precedent for.
 from __future__ import annotations
 
 import asyncio
+import os
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -144,7 +145,10 @@ class CollectionRunWorkflow:
                 status="queued",
                 started_at=now,
                 idempotency_key=idempotency_key,
-                run_metadata={"dry_run": dry_run},
+                # worker_pid lets recovery distinguish a run whose worker
+                # died (reload/kill) from a healthy long run — see
+                # recover_expired_leases (plan 113).
+                run_metadata={"dry_run": dry_run, "worker_pid": os.getpid()},
             )
             session.add(row)
             try:
@@ -375,11 +379,43 @@ class CollectionRunWorkflow:
     # lease recovery
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _worker_pid(run_metadata: Any) -> int | None:
+        """The OS pid that dispatched a run, when `start()` recorded one."""
+        if not isinstance(run_metadata, dict):
+            return None
+        pid = run_metadata.get("worker_pid")
+        return int(pid) if isinstance(pid, int) else None
+
+    @staticmethod
+    def _pid_alive(pid: int) -> bool:
+        """Same-machine liveness check; PID reuse can only delay a reap.
+
+        Windows fail-safe: ``os.kill(pid, 0)`` is NOT a harmless probe there
+        (Python maps non-console signals to ``TerminateProcess``, so it would
+        kill the process it inspects — Codex P1 on PR #344). Return "alive"
+        unconditionally on Windows and let the lease timeout recover a dead
+        run; the dead-worker fast path stays POSIX-only.
+        """
+        if pid <= 0:
+            return False
+        if os.name == "nt":  # pragma: no cover - Windows dev environments
+            return True
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
     def recover_expired_leases(self, *, include_queued: bool = True) -> list[int]:
         """Find every `running` `run_type='collection'` row whose
         `heartbeat_at` is older than the lease timeout (or NULL — started
-        but never heartbeat once, e.g. crashed immediately) and
-        CAS-transition each to `interrupted`.
+        but never heartbeat once, e.g. crashed immediately), plus every
+        `running` row whose recorded `worker_pid` is no longer alive
+        (plan 113: an autoreload/kill leaves a fresh heartbeat but a dead
+        worker), and CAS-transition each to `interrupted`.
 
         Scoped to `run_type='collection'` deliberately, same as
         `get_status`'s "latest run" lookup: this is a
@@ -396,6 +432,12 @@ class CollectionRunWorkflow:
         process that could be holding a stale lease is the one that just
         restarted. Returns the list of recovered run ids for
         logging/alerting.
+
+        The worker-pid check assumes the workflow and its workers share one
+        machine (this deployment's single-writer topology): a pid recorded by
+        a worker on another host/pid namespace would read as dead once it is
+        absent or reused. PID reuse on the same host can only delay a reap
+        until the lease timeout.
         """
         cutoff = datetime.now(timezone.utc) - timedelta(
             seconds=self._lease_timeout_seconds
@@ -442,19 +484,54 @@ class CollectionRunWorkflow:
                 .all()
             )
 
+        # Dead-worker detection (plan 113): a reload/kill can orphan a
+        # `running` row while its heartbeat is still fresh — the one-hour
+        # lease would otherwise let it block single-flight. `start()` stamps
+        # the dispatching pid; a recorded pid that is no longer alive is
+        # definitive same-machine evidence the run died with its worker.
+        with self._db.get_session() as session:
+            running_rows = (
+                session.execute(
+                    select(WorkflowRun.id, WorkflowRun.run_metadata).where(
+                        WorkflowRun.run_type == RUN_TYPE_COLLECTION,
+                        WorkflowRun.status == "running",
+                    )
+                )
+                .tuples()
+                .all()
+            )
+        already_stale = {int(stale_id) for stale_id, _ in stale}
+        dead_worker: dict[int, int] = {}
+        for run_id, metadata in running_rows:
+            run_id_int = int(run_id)
+            if run_id_int in already_stale:
+                continue
+            pid = self._worker_pid(metadata)
+            if pid is not None and not self._pid_alive(pid):
+                dead_worker[run_id_int] = pid
+                stale.append((run_id_int, "running"))
+
         recovered: list[int] = []
         for stale_id, stale_status in stale:
-            detail = (
-                "Recovered at startup: heartbeat was stale or missing, "
-                "indicating the previous process exited without "
-                "completing this run."
-                if stale_status == "running"
-                else (
+            dead_pid = dead_worker.get(int(stale_id))
+            if stale_status == "running" and dead_pid is not None:
+                detail = (
+                    f"Recovered: the run's worker process (pid {dead_pid}) is "
+                    "no longer running, indicating the previous process "
+                    "exited without completing this run."
+                )
+            elif stale_status == "running":
+                detail = (
+                    "Recovered at startup: heartbeat was stale or missing, "
+                    "indicating the previous process exited without "
+                    "completing this run."
+                )
+            else:
+                detail = (
                     "Recovered at startup: row was still queued, indicating "
                     "the previous process exited between inserting this run "
                     "and dispatching it."
                 )
-            )
             if self._transition(
                 int(stale_id),
                 from_status=stale_status,

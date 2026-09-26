@@ -535,6 +535,41 @@ def test_admin_articles_valid_statuses_still_filter(
         assert all(item["processing_status"] == valid_status for item in body["data"])
 
 
+def test_admin_articles_validated_filter_returns_collected_unscored(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Plan 113: freshly collected (unscored) articles are visible under
+    `status=validated` so the editor can see the last fetch's intake."""
+    with db_manager.get_session() as session:
+        session.add(
+            Article(
+                title="Fresh validated article",
+                url="https://example.com/validated-filter",
+                summary="Collected, awaiting scoring",
+                source_id="nature",
+                source_name="Nature",
+                category="science",
+                final_score=None,
+                collected_date=datetime.now(timezone.utc),
+                processing_status="validated",
+            )
+        )
+        session.commit()
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/articles",
+            params={"status": "validated"},
+            headers=_admin_headers(),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["filters"]["status"] == "validated"
+    assert body["data"]
+    assert all(item["processing_status"] == "validated" for item in body["data"])
+
+
 # ---------------------------------------------------------------------------
 # Detail
 # ---------------------------------------------------------------------------

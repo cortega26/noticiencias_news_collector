@@ -20,10 +20,20 @@ from news_collector.config import ALL_SOURCES
 from news_collector.config.settings import get_runtime_config
 from news_collector.storage.article_repository import ArticleCursor, ArticlePage
 
+# Persist committed scores every N articles within a page (plan 113): a
+# worker kill (uvicorn reload, crash) then loses at most this many scores
+# instead of a whole page (default page_size is 200). Each sub-batch is one
+# bulk UPDATE.
+_PERSIST_BATCH_SIZE = 25
+
 
 @dataclass
 class _PageResult:
-    """Outcome of scoring+persisting one page (plan 036)."""
+    """Outcome of scoring+persisting one page (plan 036).
+
+    Plan 113: `persisted=False` means a later sub-batch failed, but the
+    counts still include the sub-batches already committed before it.
+    """
 
     persisted: bool
     scored: int = 0
@@ -187,6 +197,9 @@ class ScoringCoordinator:
                     rescore_uses_llm=rescore_uses_llm,
                 )
                 if not page_result.persisted:
+                    # Sub-batches committed before the failure are real work
+                    # and must be reported (plan 113) — then stop the walk.
+                    self._accumulate(state, page_result)
                     state.stop_reason = "persistence_failed"
                     state.failed_cursor = cursor
                     state.stop_all = True
@@ -259,19 +272,16 @@ class ScoringCoordinator:
         module_logger: Any,
         rescore_uses_llm: bool = False,
     ) -> _PageResult:
-        """Score and persist one page. Never partially counts a page whose
-        bulk persist failed — `persisted=False` means the caller must treat
-        the whole page as not committed."""
-        payloads = self._adapt_payloads(articles)
-        results = await self._score_payloads(
-            payloads,
-            max_fallback_concurrency,
-            module_logger,
-            is_pending=is_pending,
-            rescore_uses_llm=rescore_uses_llm,
-        )
+        """Score and persist one page in bounded sub-batches.
 
-        bulk_score_updates: List[tuple] = []
+        Plan 113: each sub-batch is persisted as soon as it is scored, so a
+        worker kill loses at most `_PERSIST_BATCH_SIZE` scores instead of the
+        whole page. `persisted=False` still reports the counts of the
+        sub-batches already committed before the failure.
+        """
+        payloads = self._adapt_payloads(articles)
+
+        scored = 0
         new_count = 0
         rescored_count = 0
         included = 0
@@ -279,38 +289,71 @@ class ScoringCoordinator:
         failed = 0
         total_score = 0.0
 
-        for article, score_result in zip(articles, results, strict=False):
-            if isinstance(score_result, Exception):
-                module_logger.error(
-                    f"Error scoring artículo {article.id}: {score_result}"
-                )
-                failed += 1
+        for start in range(0, len(payloads), max(1, _PERSIST_BATCH_SIZE)):
+            batch_payloads = payloads[start : start + _PERSIST_BATCH_SIZE]
+            batch_articles = articles[start : start + _PERSIST_BATCH_SIZE]
+            results = await self._score_payloads(
+                batch_payloads,
+                max_fallback_concurrency,
+                module_logger,
+                is_pending=is_pending,
+                rescore_uses_llm=rescore_uses_llm,
+            )
+
+            bulk_score_updates: List[tuple] = []
+            batch_new = 0
+            batch_rescored = 0
+            batch_included = 0
+            batch_excluded = 0
+            batch_total_score = 0.0
+            for article, score_result in zip(batch_articles, results, strict=False):
+                if isinstance(score_result, Exception):
+                    module_logger.error(
+                        f"Error scoring artículo {article.id}: {score_result}"
+                    )
+                    failed += 1
+                    continue
+
+                bulk_score_updates.append((article.id, score_result))
+                batch_total_score += score_result["final_score"]
+
+                if is_pending:
+                    batch_new += 1
+                else:
+                    batch_rescored += 1
+
+                if score_result["should_include"]:
+                    batch_included += 1
+                else:
+                    batch_excluded += 1
+
+            if not bulk_score_updates:
                 continue
 
-            bulk_score_updates.append((article.id, score_result))
-            total_score += score_result["final_score"]
-
-            if is_pending:
-                new_count += 1
-            else:
-                rescored_count += 1
-
-            if score_result["should_include"]:
-                included += 1
-            else:
-                excluded += 1
-
-        if not bulk_score_updates:
-            return _PageResult(persisted=True, failed=failed)
-
-        persisted = self.db_manager.update_articles_score_bulk(bulk_score_updates)
-        if not persisted:
-            module_logger.error("Failed to perform bulk score updates.")
-            return _PageResult(persisted=False)
+            if not self.db_manager.update_articles_score_bulk(bulk_score_updates):
+                module_logger.error("Failed to perform bulk score updates.")
+                # Only committed sub-batches are reported: this batch's
+                # counters are batch-local until its persist succeeds.
+                return _PageResult(
+                    persisted=False,
+                    scored=scored,
+                    new=new_count,
+                    rescored=rescored_count,
+                    included=included,
+                    excluded=excluded,
+                    failed=failed,
+                    total_score=total_score,
+                )
+            scored += len(bulk_score_updates)
+            new_count += batch_new
+            rescored_count += batch_rescored
+            included += batch_included
+            excluded += batch_excluded
+            total_score += batch_total_score
 
         return _PageResult(
             persisted=True,
-            scored=len(bulk_score_updates),
+            scored=scored,
             new=new_count,
             rescored=rescored_count,
             included=included,
