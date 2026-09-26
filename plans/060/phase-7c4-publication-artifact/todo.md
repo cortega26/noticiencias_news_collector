@@ -32,6 +32,13 @@ alone.
       typed stages)
 - [x] `make lint` + editor suites green (456 passed, 1 skipped)
 
+## Post-PR adjustment (Codacy)
+
+- [x] Split `run_publication_artifact_stage` into pure module-level helpers
+      (211 LOC / CCN 62 → under the Codacy limits) with the same statement
+      order, dict insertion order and messages; artifact tests, guardrails and
+      health-scope suites green (433 passed, 1 skipped)
+
 ## Independent review (fresh context, spec vs implementation)
 
 - [x] Reviewer confirmed the verbatim move (strings/regexes/gates/order),

@@ -179,6 +179,15 @@ Rules:
   `hooks.upsert_source_identity`, `self._strip_emojis` → `hooks.strip_emojis`,
   `_V2_REQUIRED_ENRICHMENT_FIELDS` → `data.required_enrichment_fields`, and
   inputs read from `data.*`.
+- The moved statements are sliced into pure module-level helpers
+  (`_sanitize_headline`, `_normalize_tags`, `_parse_publication_date`,
+  `_headline_variants`, `_base_frontmatter`, `_apply_media_frontmatter`,
+  `_apply_identity_frontmatter`, `_apply_enrichment_fields`,
+  `_overclaim_claim_text`, `_enforce_overclaim_gate`,
+  `_enforce_v2_completeness_gate`, `_enforce_fact_check_gate`,
+  `_serialize_article`, `_strip_tldr_visual`) to satisfy the Codacy
+  complexity/LOC limits; statement order, dict insertion order and every
+  message stay identical to the inline block.
 - The local `TagNormalizer` import stays inside the `try` (its ImportError
   fallback behavior is observable).
 - The module logger is created as
