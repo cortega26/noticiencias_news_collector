@@ -81,6 +81,27 @@ verification record and follow-ups.
   serves.
 - Fly apps show no running machines after cutover.
 
+## Operations (2026-09-26)
+
+- **Backup:** `noticiencias-backup.timer` (daily 03:45 UTC, 15 min jitter,
+  persistent) runs `/opt/noticiencias-serving/bin/backup.sh` — a consistent
+  `sqlite3 .backup` snapshot into `/var/backups/noticiencias-serving` with
+  14-day retention (mirrors Pogo-lab's convention). First backup verified.
+- **Self-healing readiness:** `noticiencias-healthcheck.timer` runs every
+  5 minutes; on a failed `http://127.0.0.1:8010/readyz` it logs and restarts
+  `noticiencias-serving` (systemd covers crashes; this covers hangs). The
+  frontend `bot-health.yml` additionally probes the public `/readyz` daily
+  (its failure email is the external alert).
+- **Update procedure:**
+  1. `rsync` the minimal source set (`config.toml`, `news_collector/`,
+     `noticiencias/`, `pyproject.toml`, `README.md`, `LICENSE`) to
+     `/opt/noticiencias-serving`.
+  2. `ssh`: `cd /opt/noticiencias-serving && ~/.local/bin/uv pip install --python .venv/bin/python .`
+  3. `sudo systemctl restart noticiencias-serving`
+  4. Verify `curl 127.0.0.1:8010/readyz` and `https://api.noticiencias.com/readyz`.
+- Secrets live only in `/etc/noticiencias-serving.env` (root 0600) and the
+  tunnel token in `/etc/cloudflared-noticiencias.token`; never in the repo.
+
 ## Risks / mitigations
 
 - Shared production VM: additive service, unused port, ~300 MB RAM; Pogo-lab

@@ -196,14 +196,16 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 5 — callback reconciliation and truthful health
 
-- [ ] Version callback delivery IDs and add bounded frontend retry diagnostics.
+- [x] Version callback delivery IDs and add bounded frontend retry diagnostics.
       (Phase 5a, 2026-09-25: backend accepts an optional `delivery_id` and
-      derives a stable identity key when absent, so dedup works before the
-      frontend sender adopts the field; the sender-side bounded retries and
-      diagnostic artifact remain cross-repo work. Re-checked 2026-09-26:
-      `scripts/post-publish-callback.js` / `scripts/backend-notify.js` in the
-      frontend repo still have no retry/backoff logic, so this item stays
-      open pending the frontend sender change.)
+      derives a stable identity key when absent. Phase 5e, 2026-09-26
+      (frontend PR `noticiencias#226`): the sender emits
+      `delivery_id = v1:<run_id>:<event>`, retries transient failures
+      (network/429/5xx) with exponential backoff (3 attempts, 1 s/2 s,
+      env-bounded), writes a JSON diagnostic artifact on final failure which
+      six caller workflows upload, and `bot-health.yml` now probes the
+      backend readiness endpoint. Deploy stays non-blocking. See
+      `plans/060/phase-5e-callback-sender-retries/`.)
 - [x] Persist authenticated receipts before processing and deduplicate retries.
       (Phase 5a, 2026-09-25 — `webhook_receipts` table + typed
       `db.webhook_receipts` repository; receipt-first handling in
