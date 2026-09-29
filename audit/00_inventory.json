@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T14:35:19.923665+00:00",
+  "generated_at": "2026-09-29T15:22:08.696525+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -118,6 +118,7 @@
       "PIPELINE_CONTRACTS.md",
       "PRODUCT_FLOW.md",
       "RUNBOOK_LOCAL_DEV.md",
+      "SELF_REVIEW_CHECKLIST.md",
       "SOURCE_OF_TRUTH.md",
       "SPRINT_B_REPORT.md",
       "adr",
@@ -246,6 +247,7 @@
     ],
     "scripts/": [
       "__init__.py",
+      "adversarial_review.py",
       "audit.coveragerc",
       "audit_pipeline.py",
       "audit_published_categories.py",
@@ -335,6 +337,7 @@
     "spec-editorial-grounding.md": null,
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
+    "spec-internal-review-guardrails.md": null,
     "spec-inventory-baseline-refresh.md": null,
     "spec-inventory-self-healing.md": null,
     "spec-llm-canary.md": null,
@@ -466,6 +469,7 @@
     "todo-editorial-grounding.md": null,
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
+    "todo-internal-review-guardrails.md": null,
     "todo-inventory-baseline-refresh.md": null,
     "todo-inventory-self-healing.md": null,
     "todo-llm-canary.md": null,
@@ -745,6 +749,10 @@
       "description": "Real bounded LLM canary (needs keys; ARGS=\"--items 20 --require-keys\")"
     },
     {
+      "target": "review-local",
+      "description": "Local adversarial review of the working diff (Ollama, unlimited, advisory). NOT in CI. Usage: make review-local [ARGS=\"--ref origin/main --out /tmp/rev.md\"]"
+    },
+    {
       "target": "test-timeshift",
       "description": "Run tests with the clock +120 days to expose time-bomb tests (installs time-machine)"
     },
@@ -844,6 +852,22 @@
       "functions": [],
       "classes": []
     },
+    "scripts/adversarial_review.py": {
+      "functions": [
+        "_git",
+        "collect_diff",
+        "truncate_diff",
+        "omitted_files",
+        "build_prompt",
+        "validate_api",
+        "query_ollama",
+        "build_parser",
+        "load_checklist",
+        "emit_report",
+        "main"
+      ],
+      "classes": []
+    },
     "scripts/audit_pipeline.py": {
       "functions": [
         "ensure_audit_dir",
@@ -919,18 +943,6 @@
         "_FakeScorer",
         "_FakeLogger"
       ]
-    },
-    "scripts/benchmark_serving_api.py": {
-      "functions": [
-        "_cursor_params",
-        "seed_database",
-        "explain_fingerprint",
-        "measure_case",
-        "main",
-        "_all_engines",
-        "_dataset_checksum"
-      ],
-      "classes": []
     }
   },
   "markdown_files": [
@@ -1030,6 +1042,7 @@
     "docs/PIPELINE_CONTRACTS.md",
     "docs/PRODUCT_FLOW.md",
     "docs/RUNBOOK_LOCAL_DEV.md",
+    "docs/SELF_REVIEW_CHECKLIST.md",
     "docs/SOURCE_OF_TRUTH.md",
     "docs/SPRINT_B_REPORT.md",
     "docs/adr/0000-adr-template.md",
@@ -1373,6 +1386,7 @@
     "spec-editorial-grounding.md",
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
+    "spec-internal-review-guardrails.md",
     "spec-inventory-baseline-refresh.md",
     "spec-inventory-self-healing.md",
     "spec-llm-canary.md",
@@ -1409,6 +1423,7 @@
     "todo-editorial-grounding.md",
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
+    "todo-internal-review-guardrails.md",
     "todo-inventory-baseline-refresh.md",
     "todo-inventory-self-healing.md",
     "todo-llm-canary.md",
