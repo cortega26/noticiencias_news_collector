@@ -203,6 +203,13 @@ class EnrichmentStrategyRouter:
             )
             return {"success": False, "reason": "missing_url", "strategy_used": "none"}
 
+        if strategy == "discovery_only":
+            return {
+                "success": False,
+                "reason": "discovery_only",
+                "strategy_used": "none",
+            }
+
         # 1. Scholarly Strategy
         if strategy == "scholarly":
             enrichment_metrics.record_attempt(source_id, "scholarly")

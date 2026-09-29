@@ -139,6 +139,60 @@ class TestEnrichmentStrategyRouter(unittest.TestCase):
         )
         self.router.logger.error.assert_not_called()
 
+    def test_discovery_only_skips_article_fetch(self):
+        source_config = {
+            "enrichment_strategy": "discovery_only",
+            "content_mode": "summary_only",
+        }
+        cand = {"url": "http://example.com/summary-only-article"}
+
+        result = self.router.route_enrichment("src", source_config, cand)
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "discovery_only")
+        self.assertEqual(result["strategy_used"], "none")
+        self.router.http.enrich.assert_not_called()
+        self.router.headless.enrich.assert_not_called()
+        self.router.scholarly.enrich_url.assert_not_called()
+        self.router.scrapling.enrich.assert_not_called()
+
+    def test_rss_only_does_not_gate_the_configured_strategy(self):
+        source_config = {
+            "enrichment_strategy": "http",
+            "fetch_mode": "rss_only",
+            "content_mode": "summary_only",
+        }
+        cand = {"url": "http://example.com/article"}
+        self.router.http.enrich.return_value = {
+            "success": True,
+            "content": "A" * 600,
+            "raw_content": "<html>...</html>",
+        }
+
+        result = self.router.route_enrichment("src", source_config, cand)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["strategy_used"], "http")
+        self.router.http.enrich.assert_called_once()
+
+    def test_summary_only_alone_does_not_skip(self):
+        source_config = {
+            "enrichment_strategy": "http",
+            "content_mode": "summary_only",
+        }
+        cand = {"url": "http://example.com/article"}
+        self.router.http.enrich.return_value = {
+            "success": True,
+            "content": "A" * 600,
+            "raw_content": "<html>...</html>",
+        }
+
+        result = self.router.route_enrichment("src", source_config, cand)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["strategy_used"], "http")
+        self.router.http.enrich.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
