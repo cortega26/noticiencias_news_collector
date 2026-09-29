@@ -29,6 +29,7 @@ Execution index for [`spec-inventory-self-healing.md`](spec-inventory-self-heali
 - [x] First dispatch after merge; it exposed a timestamp-only auto-commit
       (`b568a47`) caused by a textual `git diff`, fixed via the semantic
       `drift_count` comparison in `inventory-autorefresh.yml`
-- [ ] After the semantic-diff fix merges: re-dispatch `inventory autorefresh`
-      and confirm "No drift" with no new commit; the weekly audit should stop
-      opening issues and the healer closes any recovered ones
+- [x] After the semantic-diff fix merges (PR #349): re-dispatched
+      `inventory autorefresh` (run 36577966393) — success, "No drift", `main`
+      SHA unchanged (no new commit); the weekly audit should now stay quiet
+      and the healer closes any recovered drift issue
