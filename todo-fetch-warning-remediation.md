@@ -7,8 +7,8 @@
 - [x] Document `fetch_mode: rss_only` in the `sources.yaml` schema comment
 - [x] Add router tests: rss_only skip (http), rss_only skip under a strategy lock, normal source unchanged, summary_only alone unchanged
 - [x] Create plan 116 (per-host enrichment pacing) + plans ledger row
-- [ ] Run targeted pytest, `make lint`, plans ledger, `make test`, inventory check/refresh
-- [ ] Commit, push, open PR, merge, clean
+- [x] Run targeted pytest, `make lint`, plans ledger, `make test`, inventory check/refresh
+- [ ] Commit, push, open PR (PR #354), merge, clean
 
 ## Discovered during triage (not in this change)
 

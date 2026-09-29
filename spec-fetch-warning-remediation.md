@@ -89,9 +89,14 @@ Acceptance criteria:
   the full suite caught `test_rss_only_does_not_block_headless_enrichment`
   failing, so it was reverted in favour of the strategy-based fix. This is the
   deliberate decoupling contract; do not re-introduce the coupling.
-- Gate note: `make lint`, `make test` (3419 passed), plans ledger, and
+- Gate note: `make lint`, `make test` (3436 passed), plans ledger, and
   inventory-check are green. `make type` (full suite with coverage) locally
   times out `tests/e2e_pipeline/...::test_pipeline_e2e_bundle_root_is_repeatable`
   at the 300s pytest mark; without coverage the same test passes in 297.9s on
   this machine, and CI on main is green for it. Environmental, not a logic
   regression; CI remains the merge gate.
+- Coverage ratchet: touching `router.py` requires ≥90% line coverage on changed
+  modules, and the module sat at 78.65% in CI. Backfilled
+  `tests/unit/enrichment/test_router.py` with 17 additional cases (strategy
+  locks, adaptive hint, headless failure modes, scrapling http/stealth paths,
+  missing URL, scholarly failure) → router now 96.40% under `make test`.
