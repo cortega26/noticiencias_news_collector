@@ -109,3 +109,17 @@ make lint
 CI evidence after merge: one dispatch of `inventory autorefresh` (Actions →
 Run workflow) shows either "No drift" or the heal commit, and the weekly
 audit stops opening new issues.
+
+## Post-merge correction (2026-09-29)
+
+The first live dispatch (run 36576354585) exposed a defect in the heal step:
+it decided with a textual `git diff` on the regenerated JSON, but
+`generated_at` changes on every run, so the diff was never empty. The healer
+pushed a timestamp-only commit (`b568a47`) with semantic drift 0.
+
+Fix (same workflow file): compare through the script's sanitized output
+(`--compare-to` + `--summary-output`, `drift_count`), copy the generated file
+only when `drift_count > 0`, and rebuild the commit from fresh `origin/main`
+on every retry instead of amending a stale tree. The local simulation now
+covers three branches: stale-timestamp with zero semantic drift (exit 0, no
+commit), real drift (commit + push), and a lost push race (retry heals).

@@ -39,45 +39,38 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Regenerate baseline from main
-        id: drift
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git checkout -B inventory-autorefresh origin/main
-          python scripts/generate_inventory.py \
-            --output audit/00_inventory.json \
-            --sample-size 10
-          if git diff --quiet -- audit/00_inventory.json; then
-            echo "healed=false" >> "$GITHUB_OUTPUT"
-            echo "No drift: inventory baseline already current." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "healed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Push refreshed baseline
-        id: push
-        if: steps.drift.outputs.healed == 'true'
+      - name: Heal baseline from main
+        id: heal
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/00_inventory.json
-          git commit -m "chore(audit): auto-refresh inventory baseline"
           for attempt in 1 2 3; do
-            if git push origin HEAD:main; then
-              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-              echo "Inventory baseline refreshed and pushed to main." >> "$GITHUB_STEP_SUMMARY"
+            git fetch origin main
+            git checkout -B inventory-autorefresh origin/main
+            # Compare semantically, not textually: the script sanitizes
+            # generated_at/python_version, so a plain `git diff` would report
+            # drift on every run (this caused a timestamp-only auto-commit on
+            # the first live dispatch).
+            python scripts/generate_inventory.py \
+              --output reports/audit/00_inventory.generated.json \
+              --sample-size 10 \
+              --compare-to audit/00_inventory.json \
+              --summary-output reports/audit/00_inventory.summary.json
+            drift_count="$(python -c "import json; print(json.load(open('reports/audit/00_inventory.summary.json'))['drift_count'])")"
+            if [ "${drift_count}" = "0" ]; then
+              echo "No drift: inventory baseline already current." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
-            echo "Push attempt ${attempt} lost a race; rebasing on fresh origin/main."
-            git fetch origin main
-            git rebase origin/main || { git rebase --abort; exit 1; }
-            python scripts/generate_inventory.py \
-              --output audit/00_inventory.json \
-              --sample-size 10
+            cp reports/audit/00_inventory.generated.json audit/00_inventory.json
             git add audit/00_inventory.json
-            git commit --amend --no-edit
+            git commit -m "chore(audit): auto-refresh inventory baseline"
+            if git push origin HEAD:main; then
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+              echo "Inventory baseline refreshed (drift_count=${drift_count}) and pushed to main." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Push attempt ${attempt} lost a race; retrying from fresh origin/main."
             sleep 5
           done
           echo "::error::Could not push the refreshed inventory baseline after 3 attempts."
@@ -87,7 +80,7 @@ jobs:
         if: success()
         uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         env:
-          HEALED_SHA: ${{ steps.push.outputs.sha }}
+          HEALED_SHA: ${{ steps.heal.outputs.sha }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
