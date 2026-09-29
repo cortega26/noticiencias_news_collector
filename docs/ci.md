@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check docs-check plans-ledger-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist check:search-budget test:audit test:e2e check:contract-sync` |
 | Whole workspace (requires clean Git worktrees) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; frontend builds may generate artifacts or upload derivatives depending on mode/credentials |
 
@@ -55,6 +55,7 @@ make lint
 make type
 make config-validate
 make config-docs-check
+make inventory-check
 make test
 make test-contracts
 make test-boundaries
@@ -108,9 +109,24 @@ make verify-ci
     sparse-checks out the sibling frontend repo and runs
     `scripts/validate_frontend_publication.py` against it
 
+### Inventory baseline (detector + self-heal)
+
+- `.github/workflows/audit-inventory-weekly.yml` — independent detector: compares
+  `audit/00_inventory.json` against a fresh snapshot and opens/comments the
+  "Inventory drift detected" issue when drift remains.
+- `.github/workflows/inventory-autorefresh.yml` — healer: Mondays 05:00 UTC (one
+  hour before the audit) and on manual dispatch, checks out `main`, regenerates
+  the baseline and pushes only `audit/00_inventory.json` when it drifted; it also
+  closes any open drift issue once the baseline is current. It pushes with the
+  default `GITHUB_TOKEN`, whose pushes do not trigger further workflow runs, so
+  the auto-commit cannot loop.
+- Local parity: `make inventory-check` (fails with the refresh remedy when the
+  baseline is stale) and `make inventory-refresh` (regenerate + commit);
+  `inventory-check` is part of `make verify-ci`.
+
 ### Other triggers (consult each YAML; some also run on PRs)
 
-- `.github/workflows/audit-inventory-weekly.yml` — inventory drift
+- `.github/workflows/audit-inventory-weekly.yml` + `.github/workflows/inventory-autorefresh.yml` — inventory drift detector and self-heal
 - `.github/workflows/dependency-lock-check.yml` — lockfile freshness
 - `.github/workflows/manual-lock-sync.yml` — manual lockfile refresh
 - `.github/workflows/daily_collector.yml` — scheduled collection

@@ -6,6 +6,7 @@ environment-dependent runtime state (`data/image-uploads/`, `data/data/`,
 lived-in workdir drifted forever against fresh CI checkouts.
 """
 
+import json
 import shutil
 import subprocess
 import sys
@@ -88,6 +89,62 @@ def test_snapshot_stable_under_runtime_noise(workdir):
 
     assert before["top_level_inventory"] == after["top_level_inventory"]
     assert before["markdown_files"] == after["markdown_files"]
+
+
+def _run_main(workdir, tmp_path, monkeypatch, argv):
+    monkeypatch.setattr(inventory, "ROOT", workdir)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["generate_inventory.py", "--output", str(tmp_path / "out.json")] + argv,
+    )
+    inventory.main()
+
+
+def test_fail_on_drift_exits_nonzero_with_remedy(
+    workdir, tmp_path, monkeypatch, capsys
+):
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(json.dumps({"markdown_files": ["stale.md"]}), encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        _run_main(
+            workdir,
+            tmp_path,
+            monkeypatch,
+            ["--compare-to", str(baseline), "--fail-on-drift"],
+        )
+
+    assert excinfo.value.code == 1
+    assert "make inventory-refresh" in capsys.readouterr().err
+
+
+def test_fail_on_drift_accepts_current_baseline(workdir, tmp_path, monkeypatch):
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(
+        json.dumps(inventory.build_inventory(workdir, inventory.InventoryOptions())),
+        encoding="utf-8",
+    )
+
+    _run_main(
+        workdir,
+        tmp_path,
+        monkeypatch,
+        ["--compare-to", str(baseline), "--fail-on-drift"],
+    )
+
+
+def test_fail_on_drift_rejects_missing_baseline(workdir, tmp_path, monkeypatch, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        _run_main(
+            workdir,
+            tmp_path,
+            monkeypatch,
+            ["--compare-to", str(tmp_path / "missing.json"), "--fail-on-drift"],
+        )
+
+    assert excinfo.value.code == 1
+    assert "not found" in capsys.readouterr().err
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="requires git")

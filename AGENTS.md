@@ -38,6 +38,7 @@ Additional gates by change type:
 | Orchestration, workflow, storage, serving | `make test-boundaries` |
 | Publication identity or Refinery publishing | `make quality-gate` |
 | Config schema or doc generation | `make config-docs-check` |
+| Repository inventory baseline | `make inventory-check` (then `make inventory-refresh` if stale) |
 | Dependencies, security, CI | `make quality` |
 | Before pushing | `make prepush` (`test-all` + `quality-gate`) |
 | Canonical CI gate (plan 041) | `make verify-ci` |
@@ -48,6 +49,7 @@ Additional gates by change type:
 |---|---|
 | First-time setup | `make bootstrap` (Python 3.13; hash-pinned installs from `requirements.lock`) |
 | Validate config | `make config-validate` |
+| Check/refresh the inventory baseline | `make inventory-check` / `make inventory-refresh` (weekly `inventory-autorefresh.yml` heals `main` automatically) |
 | Run collector dry-run (see runbook limits) | `python scripts/run_collector.py --dry-run` |
 | Launch Refinery admin (current, Astro) | `make admin` (runs the serving API `:8000` + GUI `:4321` together, one Ctrl+C stops both; login gate skipped in dev). Split form: `make serve` + `make admin-dev`. |
 | Launch Refinery admin (legacy, Streamlit) | `make refinery` (isolated `.venv-refinery`; runs migrations first) |

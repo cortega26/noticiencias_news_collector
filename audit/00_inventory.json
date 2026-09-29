@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-29T12:50:11.004786+00:00",
-  "python_version": "3.12.3",
+  "generated_at": "2026-09-29T13:10:08.281756+00:00",
+  "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
       "rules"
@@ -336,6 +336,7 @@
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
     "spec-inventory-baseline-refresh.md": null,
+    "spec-inventory-self-healing.md": null,
     "spec-llm-canary.md": null,
     "spec-llm-health-weights-fix.md": null,
     "spec-llm-provider-chain.md": null,
@@ -465,6 +466,7 @@
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
     "todo-inventory-baseline-refresh.md": null,
+    "todo-inventory-self-healing.md": null,
     "todo-llm-canary.md": null,
     "todo-llm-health-weights-fix.md": null,
     "todo-llm-provider-chain.md": null,
@@ -763,6 +765,14 @@
     {
       "target": "config-docs-check",
       "description": "Ensure docs/config_fields.md matches schema output"
+    },
+    {
+      "target": "inventory-refresh",
+      "description": "Regenerate the committed repository inventory baseline (audit/00_inventory.json)"
+    },
+    {
+      "target": "inventory-check",
+      "description": "Fail if audit/00_inventory.json is stale (inventory drift gate)"
     },
     {
       "target": "clean",
@@ -1362,6 +1372,7 @@
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
     "spec-inventory-baseline-refresh.md",
+    "spec-inventory-self-healing.md",
     "spec-llm-canary.md",
     "spec-llm-health-weights-fix.md",
     "spec-llm-provider-chain.md",
@@ -1396,6 +1407,7 @@
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
     "todo-inventory-baseline-refresh.md",
+    "todo-inventory-self-healing.md",
     "todo-llm-canary.md",
     "todo-llm-health-weights-fix.md",
     "todo-llm-provider-chain.md",
