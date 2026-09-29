@@ -242,7 +242,7 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
-verify-ci: lint type test test-contracts test-boundaries security config-docs-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
@@ -425,6 +425,16 @@ config-docs-check: bootstrap ## Ensure docs/config_fields.md matches schema outp
 		exit 1; \
 	fi; \
 	rm -f "$$TMP_FILE"
+
+inventory-refresh: bootstrap ## Regenerate the committed repository inventory baseline (audit/00_inventory.json)
+	@$(PYTHON_BIN) scripts/generate_inventory.py --output audit/00_inventory.json --sample-size 10
+
+inventory-check: bootstrap ## Fail if audit/00_inventory.json is stale (inventory drift gate)
+	@$(PYTHON_BIN) scripts/generate_inventory.py \
+		--output reports/audit/00_inventory.generated.json \
+		--sample-size 10 \
+		--compare-to audit/00_inventory.json \
+		--fail-on-drift
 
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) $(VENV_REFINERY) .pytest_cache .mypy_cache

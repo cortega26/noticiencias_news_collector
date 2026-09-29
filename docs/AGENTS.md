@@ -360,6 +360,13 @@ make quality-gate
 make config-docs-check
 ```
 
+- Repository inventory baseline changes (new/removed top-level files, Make
+  targets, or markdown files):
+
+```bash
+make inventory-check   # then: make inventory-refresh
+```
+
 - Dependency, security, or CI-hardening changes:
 
 ```bash
