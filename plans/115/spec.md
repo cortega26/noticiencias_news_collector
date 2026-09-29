@@ -356,3 +356,25 @@ commit. Spec/ledger edits are docs-only and need no rollback.
 First failure opens exactly one incident; identical fingerprint within 24h stays
 silent; cancellation ≤30h stays silent; next success records recovery and
 closes — owner watches the next scheduled runs (Mon/Wed/Fri) and reports.
+
+## Post-merge defect record (2026-09-29)
+
+- Live proof attempt: `gh run rerun 36423761111` (the 2026-09-28 scheduled
+  success) completed 2026-09-29T18:32:19Z and fired the watcher
+  (`workflow_run`) as run 36612763209 at 18:32:22Z.
+- Defect: the watcher's first live run FAILED before any decision logic —
+  `failed to run git: fatal: not a git repository (or any of the parent
+  directories): .git`. Root cause: the workflow intentionally has no checkout,
+  and `gh` infers the repository from a git remote; without one, every
+  repo-scoped command (`gh issue list`, `gh run list`, so on) fails. The
+  fixture tests stubbed `gh`, so they could not catch this environment gap.
+- Fix (staged, uncommitted): add `GH_REPO: ${{ github.repository }}` to the step
+  env (one line). `gh` uses `GH_REPO` when no git context is available.
+- Verification: extracted the `run:` block and executed it from a non-git
+  directory with `GH_REPO` set and `CONCLUSION=success` → printed
+  `Success with no open incident — no-op.` and exited 0 (zero writes; the
+  search found 0 open "Collector incident" issues, read-only). `yaml.safe_load`
+  exit 0; `make lint` exit 0; `git diff --check` exit 0.
+- Not yet proven: the next live Daily News Collection completion (scheduled
+  Wed 2026-09-30 06:00 UTC). Until this fix is merged, the watcher fails again
+  on every collector completion and the live proof stays blocked.
