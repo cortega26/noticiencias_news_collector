@@ -38,7 +38,8 @@ see `scripts/validate_plans_ledger.py`.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 115 | [Stateful collector incident watcher + newsletter seed validation](115/spec.md) | P1 | M | None (control-plane spike 006 evidence in hand; owner approvals G1/G2/G3 are entry gates) | DONE — KEEP: Phase A merged (PR #352); post-merge live watch (first failure/recovery transitions) and Phase B gates G2/G3 pending |
-| 116 | [Per-host pacing for article enrichment](116/spec.md) | P2 | M | None (2026-09-29 rss_only remediation removed four burst offenders) | TODO |
+| 116 | [Per-host pacing for article enrichment](116/spec.md) | P2 | M | None (2026-09-29 discovery_only remediation removed five burst offenders) | TODO |
+| 117 | [Hosted fetch fallback evaluation (standby)](117/spec.md) | P2 | M | 116 (pacing) + a source that defeats the full local ladder | TODO (standby — entry gate enforced by the spec) |
 
 ### First-pass plans (2026-06-12)
 
