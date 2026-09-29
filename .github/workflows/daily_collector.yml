@@ -46,13 +46,3 @@ jobs:
       - name: Verify export was produced (not committed)
         run: |
           test -f data/exports/latest_articles.json && echo "export OK (local only, not committed)."
-
-      - name: Alert on Failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh issue create \
-            --title "🚨 Collector Failed: $(date -u +'%Y-%m-%d')" \
-            --body "The daily news collector failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --assignee ${{ github.actor }}

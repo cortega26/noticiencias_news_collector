@@ -1,0 +1,212 @@
+name: Collector Incident Watcher
+
+# Plan 115 (Phase A): one stateful incident + recovery capture for the Daily News
+# Collection runs. Retires the per-run `Alert on Failure` dated-issue pattern
+# (37 noise issues in July; in-job alerts cannot fire pre-step).
+# Contract: aut_collector_incident_dedupe_recovery — trigger on completed runs on
+# the default branch; ONE stable incident on first failure after healthy; at most
+# one update per 24h per identical fingerprint; cancellation counts only when
+# last-success age > 30h; success records recovery + closes; never touch
+# historical dated issues or any issue lacking the watcher fingerprint marker.
+#
+# The `run:` block below is embedded VERBATIM from the fixture-tested script
+# (/tmp scratch during the build; logic tested against 10 stubbed-gh cases
+# before commit). gh + jq only, no custom actions, no checkout.
+
+on:
+  workflow_run:
+    workflows: ["Daily News Collection"]
+    types: [completed]
+
+permissions:
+  issues: write
+  actions: read
+  contents: read
+
+# Serialize watcher runs so two completed collector runs cannot race on
+# create-vs-reopen of the stable incident.
+concurrency:
+  group: collector-incident-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Maintain stable collector incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          #!/bin/bash
+          # Collector incident watcher — decision logic.
+          # PROVENANCE: fixture-tested copy lives at /tmp/watcher-test/decision.sh (scratch,
+          # never committed). The `run:` block of
+          # .github/workflows/collector-incident-watcher.yml embeds this file verbatim;
+          # only the env wiring differs (GitHub contexts vs fixture env).
+          #
+          # Inputs (env): CONCLUSION, HEAD_BRANCH, DEFAULT_BRANCH, RUN_URL, RUN_ID, REPO,
+          #               NOW_ISO (optional; defaults to current UTC time).
+          # Contract: aut_collector_incident_dedupe_recovery (control-plane
+          # automation-registry.json:79-100): trigger on completed Daily News Collection
+          # runs on the default branch; ONE stable incident on first failure after
+          # healthy; <=1 update/24h per identical fingerprint; cancellation counts only
+          # when last-success age > 30h; success records recovery + closes; never
+          # auto-close (or otherwise touch) historical dated issues.
+          set -euo pipefail
+
+          SEARCH="Collector incident in:title"
+          NOW_ISO="${NOW_ISO:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+          NOW_EPOCH="$(date -u -d "$NOW_ISO" +%s)"
+          TODAY="$(date -u -d "$NOW_ISO" +%F)"
+
+          marker_of() { # $1 = issue body -> fingerprint marker value or empty
+            echo "$1" | grep -o '<!-- watcher-fingerprint: .* -->' | head -n 1 \
+              | sed 's/^<!-- watcher-fingerprint: //; s/ -->$//' || true
+          }
+
+          # 1. Default branch only (contract: "trigger on completed Daily News Collection
+          # runs on the default branch").
+          if [ "$HEAD_BRANCH" != "$DEFAULT_BRANCH" ]; then
+            echo "Ignoring run on non-default branch '$HEAD_BRANCH' (default: '$DEFAULT_BRANCH')."
+            exit 0
+          fi
+
+          # 2. Find the stable incident by title search (NOT a new label — avoids
+          # label-creation admin). Zero or one expected; >1 means state needs owner
+          # triage, so STOP instead of auto-picking.
+          OPEN_JSON="$(gh issue list --state open --search "$SEARCH" --json number,title,updatedAt)"
+          OPEN_COUNT="$(echo "$OPEN_JSON" | jq 'length')"
+          if [ "$OPEN_COUNT" -gt 1 ]; then
+            echo "::error::Found $OPEN_COUNT open 'Collector incident' issues — state needs owner triage; refusing to auto-pick."
+            exit 1
+          fi
+          ISSUE_NUMBER="$(echo "$OPEN_JSON" | jq -r '.[0].number // empty')"
+          ISSUE_UPDATED_AT="$(echo "$OPEN_JSON" | jq -r '.[0].updatedAt // empty')"
+
+          # A found issue is only ours if it carries the watcher fingerprint marker;
+          # otherwise it may be a human-titled collision — never touch it, STOP instead.
+          OPEN_MARKER=""
+          if [ -n "$ISSUE_NUMBER" ]; then
+            OPEN_BODY="$(gh issue view "$ISSUE_NUMBER" --json body --jq .body)"
+            OPEN_MARKER="$(marker_of "$OPEN_BODY")"
+            if [ -z "$OPEN_MARKER" ]; then
+              echo "::error::Open issue #$ISSUE_NUMBER matches the title search but carries no watcher fingerprint marker — possible human-titled collision; needs owner triage."
+              exit 1
+            fi
+          fi
+
+          # Fingerprint: <conclusion>/<failed-job-names-or-none>, stored as
+          # <!-- watcher-fingerprint: X --> in the issue body.
+          FAILED_JOBS="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate --jq '[.jobs[] | select(.conclusion=="failure") | .name] | sort | join(",")')"
+          [ -n "$FAILED_JOBS" ] || FAILED_JOBS="none"
+          FINGERPRINT="$CONCLUSION/$FAILED_JOBS"
+
+          last_success_epoch() { # epoch of newest success run, or empty if none recorded
+            local ts
+            ts="$(gh run list --workflow=daily_collector.yml --branch "$DEFAULT_BRANCH" --limit 20 --json conclusion,createdAt --jq '[.[] | select(.conclusion=="success")][0].createdAt // empty')"
+            if [ -z "$ts" ]; then echo ""; else date -u -d "$ts" +%s; fi
+          }
+
+          write_body() { # $1 = human section, $2 = fingerprint -> prints full body
+            printf '%s\n\n<!-- watcher-fingerprint: %s -->\n' "$1" "$2"
+          }
+
+          open_incident() { # create new, or reopen most recent closed marker-bearing one
+            local kind="$1" section title body
+            section="The Daily News Collection run did not succeed (conclusion: $kind).
+
+          - Run: $RUN_URL
+          - Head branch: $HEAD_BRANCH (default branch)
+          - Fingerprint: \`$FINGERPRINT\`
+          - Observed: $NOW_ISO
+
+          The watcher updates this issue at most once per 24h per identical fingerprint, and records recovery + closes it on the next success. Historical dated failure issues are never touched by this automation."
+            title="Collector incident: Daily News Collection $kind ($TODAY)"
+            body="$(write_body "$section" "$FINGERPRINT")"
+            local closed_nums n cbody
+            closed_nums="$(gh issue list --state closed --search "$SEARCH" --json number | jq -r '.[].number')"
+            for n in $closed_nums; do
+              cbody="$(gh issue view "$n" --json body --jq .body)"
+              if [ -n "$(marker_of "$cbody")" ]; then
+                echo "$body" > /tmp/watcher_body.txt
+                gh issue comment "$n" --body "Reopened $NOW_ISO: conclusion \`$FINGERPRINT\`, run $RUN_URL."
+                gh issue edit "$n" --body-file /tmp/watcher_body.txt
+                gh issue reopen "$n"
+                echo "Reopened stable incident #$n (fingerprint $FINGERPRINT)."
+                return 0
+              fi
+            done
+            echo "$body" > /tmp/watcher_body.txt
+            gh issue create --title "$title" --body-file /tmp/watcher_body.txt
+            echo "Created stable incident (fingerprint $FINGERPRINT)."
+          }
+
+          update_incident() { # comment + refresh marker (resets the 24h silence window)
+            local why="$1" section body
+            gh issue comment "$ISSUE_NUMBER" --body "Watcher update $NOW_ISO ($why): conclusion \`$FINGERPRINT\`, run $RUN_URL."
+            section="$(echo "$OPEN_BODY" | grep -v 'watcher-fingerprint:' || true)"
+            body="$(write_body "$section" "$FINGERPRINT")"
+            echo "$body" > /tmp/watcher_body.txt
+            gh issue edit "$ISSUE_NUMBER" --body-file /tmp/watcher_body.txt
+            echo "Updated stable incident #$ISSUE_NUMBER (fingerprint $FINGERPRINT)."
+          }
+
+          case "$CONCLUSION" in
+            success)
+              if [ -n "$ISSUE_NUMBER" ]; then
+                gh issue comment "$ISSUE_NUMBER" --body "Recovery recorded $NOW_ISO: Daily News Collection succeeded — run $RUN_URL. Closing the stable incident."
+                gh issue close "$ISSUE_NUMBER" --reason completed
+                echo "Recorded recovery and closed stable incident #$ISSUE_NUMBER."
+              else
+                echo "Success with no open incident — no-op."
+              fi
+              ;;
+            failure | timed_out) # timed_out is failure-like: the 15-min job never finished
+              if [ -n "$ISSUE_NUMBER" ]; then
+                if [ "$OPEN_MARKER" = "$FINGERPRINT" ]; then
+                  UPDATED_EPOCH="$(date -u -d "$ISSUE_UPDATED_AT" +%s)"
+                  if [ $((NOW_EPOCH - UPDATED_EPOCH)) -lt 86400 ]; then
+                    echo "Identical fingerprint within 24h — silent no-op."
+                    exit 0
+                  fi
+                fi
+                update_incident "same incident, new or stale fingerprint"
+              else
+                open_incident "$CONCLUSION"
+              fi
+              ;;
+            cancelled)
+              # Contract aut_collector_incident_dedupe_recovery (control-plane
+              # automation-registry.json:79-100): "cancellation counts only when
+              # last-success age > 30h".
+              SUCCESS_EPOCH="$(last_success_epoch)"
+              if [ -z "$SUCCESS_EPOCH" ] || [ $((NOW_EPOCH - SUCCESS_EPOCH)) -gt 108000 ]; then
+                if [ -n "$ISSUE_NUMBER" ]; then
+                  if [ "$OPEN_MARKER" = "$FINGERPRINT" ]; then
+                    UPDATED_EPOCH="$(date -u -d "$ISSUE_UPDATED_AT" +%s)"
+                    if [ $((NOW_EPOCH - UPDATED_EPOCH)) -lt 86400 ]; then
+                      echo "Identical fingerprint within 24h — silent no-op."
+                      exit 0
+                    fi
+                  fi
+                  update_incident "same incident, new or stale fingerprint"
+                else
+                  open_incident "cancelled-stale"
+                fi
+              else
+                echo "Cancelled but last success is recent (<=30h) — silent no-op."
+              fi
+              ;;
+            *)
+              echo "Conclusion '$CONCLUSION' is not success/failure/cancelled/timed_out — no-op."
+              ;;
+          esac
+          exit 0

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T15:22:08.696525+00:00",
+  "generated_at": "2026-09-29T16:37:47.405630+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -222,6 +222,7 @@
       "112",
       "113",
       "114",
+      "115",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1215,6 +1216,7 @@
     "plans/113/todo.md",
     "plans/114/spec.md",
     "plans/114/todo.md",
+    "plans/115/spec.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

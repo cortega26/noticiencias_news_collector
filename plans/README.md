@@ -33,6 +33,12 @@ see `scripts/validate_plans_ledger.py`.
 | 080 | [Targeted reliability, API contracts, and editorial evaluation](080/spec.md) | P2 | M | 078; complements 060 Phase 6 | PARTIAL — Phases 0-2 done: stateful workflow tests (Phase 1) and the four generated admin response aliases with the drift gate (Phase 2, `plans/080/tests/phase-2-results.md`); Phase 3 (offline editorial replay pilot) and Phase 4 (delivery) pending; other technology adoption deferred behind evidence gates. |
 | 081 | [Workspace documentation reconciliation](081/spec.md) | P1 | M | None | IN_PROGRESS — reconcile both repositories' governance, contracts, onboarding, operational guidance and derived context with current source; preserve historical records. High-authority docs, contracts and invariants reconciled; the long tail of leaf docs remains per `plans/081/todo.md` (re-checked 2026-09-26). |
 
+### Reliability follow-ups (2026-09-29)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 115 | [Stateful collector incident watcher + newsletter seed validation](115/spec.md) | P1 | M | None (control-plane spike 006 evidence in hand; owner approvals G1/G2/G3 are entry gates) | BLOCKED — Phase A built + fixture-tested (10/10); verify-ci blocked by pre-existing inventory drift (registration added plans/115/ without refreshing audit/00_inventory.json); reviewer call needed on inventory-refresh, which is out of scope for this plan |
+
 ### First-pass plans (2026-06-12)
 
 > Plans 001–017 are DONE and archived. Plan 017 (bulk despublicar/reset spike) shipped
