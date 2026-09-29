@@ -6,14 +6,21 @@ do not implement from this checklist alone.
 
 ## Program controls
 
-- [ ] Create a small implementation `spec.md` and `todo.md` for each phase.
+- [x] Create a small implementation `spec.md` and `todo.md` for each phase.
+      (Phases 0-7 each have a folder with spec/todo; reconciled 2026-09-26.)
 - [ ] Run the phase drift check against backend `d63cbea` and frontend
       `237cd13`; update plan evidence if current code differs.
-- [ ] Use S/M pull requests; keep both repositories deployable after every
-      merge.
-- [ ] Record tests actually executed and SHAs/PRs in the master execution
-      record.
-- [ ] Keep plan 048 independent and do not reopen rejected/completed work.
+      (Each phase spec ran its own drift check at its own baseline; the
+      program-level check against `d63cbea`/`237cd13` was a planning control
+      and is superseded by those per-phase checks — annotate as closed in
+      practice, not re-run.)
+- [x] Use S/M pull requests; keep both repositories deployable after every
+      merge. (All phases landed via PRs; every merge left both repos green.)
+- [x] Record tests actually executed and SHAs/PRs in the master execution
+      record. (Recorded per phase in each `spec.md`/`todo.md` and in the
+      `plans/README.md` plan-060 ledger row; no separate master file exists.)
+- [x] Keep plan 048 independent and do not reopen rejected/completed work.
+      (048 untouched; no archived/rejected plan reopened.)
 
 ## Wave A — immediate trust gates
 
@@ -174,49 +181,160 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `scripts/ops/prune_workflow_runs.py`, on-demand ops script following
       `scripts/ops/purge_short_articles.py`'s shape; `queued`/`running` rows
       are never eligible regardless of age.)
-- [ ] Add atomic/locked `SourceCatalogWorkflow` with compensation and visible
-      reconciliation failure. (Phase 4b — not started.)
-- [ ] Batch source circuit-state reads. (Phase 4b — not started.)
-- [ ] Move workflow coordination out of HTTP routes and add concurrency/failure
+- [x] Add atomic/locked `SourceCatalogWorkflow` with compensation and visible
+      reconciliation failure. (Phase 4b — `news_collector/logic/workflows/source_catalog_workflow.py`;
+      N+1 was already fixed by plan 110 so the batch-half below needed no new
+      code; toggle/reset stay repository-direct as they are DB-only —
+      see `phase-4b-source-catalog-workflow/spec.md` implementation record.)
+- [x] Batch source circuit-state reads. (Satisfied by plan 110's
+      `get_all_circuit_states()`; proven equivalent to the per-source loop
+      by `test_bulk_states_match_per_source_lookup_for_the_same_inputs`.)
+- [x] Move workflow coordination out of HTTP routes and add concurrency/failure
       tests. (Collection-run half done in Phase 4a; the source-catalog half
-      of this bullet is Phase 4b — not started.)
+      done in Phase 4b — upsert/delete dispatch to the workflow, routes keep
+      only request parsing/response mapping.)
 
 ### Phase 5 — callback reconciliation and truthful health
 
-- [ ] Version callback delivery IDs and add bounded frontend retry diagnostics.
-- [ ] Persist authenticated receipts before processing and deduplicate retries.
-- [ ] Apply legal publication-attempt transitions and retain processing errors.
-- [ ] Add stale-attempt reconciliation without duplicate PR creation.
-- [ ] Drive dashboard health from stored evidence; missing evidence is unknown.
-- [ ] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
+- [x] Version callback delivery IDs and add bounded frontend retry diagnostics.
+      (Phase 5a, 2026-09-25: backend accepts an optional `delivery_id` and
+      derives a stable identity key when absent. Phase 5e, 2026-09-26
+      (frontend PR `noticiencias#226`): the sender emits
+      `delivery_id = v1:<run_id>:<event>`, retries transient failures
+      (network/429/5xx) with exponential backoff (3 attempts, 1 s/2 s,
+      env-bounded), writes a JSON diagnostic artifact on final failure which
+      six caller workflows upload, and `bot-health.yml` now probes the
+      backend readiness endpoint. Deploy stays non-blocking. See
+      `plans/060/phase-5e-callback-sender-retries/`.)
+- [x] Persist authenticated receipts before processing and deduplicate retries.
+      (Phase 5a, 2026-09-25 — `webhook_receipts` table + typed
+      `db.webhook_receipts` repository; receipt-first handling in
+      `serving/webhook_handler.handle_webhook_event`; processed duplicates
+      return the stored result, `received`/`failed` receipts are reprocessed.
+      See `plans/060/phase-5a-webhook-receipts/`.)
+- [x] Apply legal publication-attempt transitions and retain processing errors.
+      (Phase 5a retained processing errors on the receipt — `failed` + `error`
+      + `attempts`; Phase 5b, 2026-09-25 adds the per-attempt
+      `publication_events` audit — `apply_publication_transition` writes the
+      legality-checked CAS and its event in one transaction, with
+      `pr_created`/`check_passed`/`rejected`/`deployed` events recorded at the
+      dual-write and callback seams. See
+      `plans/060/phase-5b-attempt-events-reconciler/`.)
+- [x] Add stale-attempt reconciliation without duplicate PR creation.
+      (Phase 5b, 2026-09-25 — `logic/workflows/publication_reconciliation.py`
+      + `scripts/ops/reconcile_publication_attempts.py`: replays unprocessed
+      `received`/`failed` receipts through the real callback effects, repairs
+      a legacy-terminal attempt only with deploy/rejection evidence, reports a
+      stale open PR as actionable, and never creates a PR or marks an attempt
+      COMPLETED without a deploy URL.)
+- [x] Drive dashboard health from stored evidence; missing evidence is unknown.
+      (Phase 5c, 2026-09-25 — backend `70d7137`:
+      `GET /v1/admin/dashboard/health` exposes publication/callback/validation
+      evidence with explicit unknown-on-no-evidence semantics. Phase 5d
+      (frontend, 2026-09-25): the metrics bot now derives schema/editorial/
+      hero-image/derivative/lint health from real local records and fetches
+      the backend sections when `BACKEND_ADMIN_URL`/`BACKEND_ADMIN_TOKEN` are
+      configured — otherwise every backend check stays `unknown`, never
+      `pass`. The new schema check also surfaced a stale contract snapshot
+      (pre-Wave-3), now regenerated. See
+      `plans/060/phase-5c-dashboard-health-api/` and
+      `plans/060/phase-5d-dashboard-wiring/`.)
+- [x] Cover lost, duplicate, out-of-order, restart, error, and stale-PR cases.
+      (Phase 5a covered lost/duplicate/restart/error with integration tests;
+      Phase 5b adds out-of-order repair and stale-open-PR integration tests in
+      `tests/integration/test_publication_reconciliation.py`.)
 
 ## Wave C — typed boundaries and smaller modules
 
 ### Phase 6 — generated contracts
 
-- [ ] Generate deterministic admin OpenAPI from FastAPI/Pydantic.
+- [x] Generate deterministic admin OpenAPI from FastAPI/Pydantic.
+      (Delivered by plan 080 Phase 2, 2026-09-23 — `scripts/export_admin_openapi.py`,
+      committed `apps/admin/openapi.json` + generated TS, `admin-contracts` CI job.)
 - [ ] Pin `openapi-typescript`/`openapi-fetch`; generate and adopt admin client
       endpoint by endpoint.
-- [ ] Fail CI on stale OpenAPI/TypeScript artifacts.
+      (Partial, re-checked 2026-09-26: `openapi-typescript` is pinned (7.13.0)
+      and the generated TS is consumed; `openapi-fetch` is not a dependency and
+      no endpoint has been migrated to it yet.)
+- [x] Fail CI on stale OpenAPI/TypeScript artifacts.
+      (Delivered by plan 080 Phase 2 — `.github/workflows/ci.yml` →
+      `admin-contracts` job runs `make admin-contracts-check`.)
 - [ ] Split frontend structural Zod schema from Astro runtime/date/semantic
       validation.
+      (Pending, re-checked 2026-09-26: the frontend keeps the full Zod schema
+      inline in `src/content.config.ts`; no schema module/script exists yet.)
 - [ ] Generate neutral JSON Schema with stable Zod 4 APIs and explicit date
-      handling.
-- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus.
+      handling. (Pending; no JSON-Schema generation script in the frontend.)
+- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus. (Pending.)
 - [ ] Retire the regex parser only after one release window of parity.
+      (Pending; the frontend contract-sync parser is still in use.)
 
 ### Phase 7 — backend decomposition
 
-- [ ] Extract publication-attempt recording and target-repository publication
-      workflow while reusing existing collaborators.
-- [ ] Extract audit scheduling/recording only where independently testable.
+- [x] Extract publication-attempt recording while reusing existing
+      collaborators. (Phase 7a, 2026-09-25 — NEW
+      `news_collector/logic/workflows/publication_attempts.py` owns artifact
+      naming + JSON persistence + interrupted-attempt preservation + read-back;
+      `publication_run_workflow`/`pipeline_e2e` rewired; engine keeps
+      compatibility delegates. See
+      `plans/060/phase-7a-refinery-recording-audit/`.)
+- [x] Extract the target-repository publication workflow collaborator of
+      Phase 7. (Phase 7b, 2026-09-25 — NEW
+      `news_collector/logic/workflows/target_repo_publication.py` owns branch →
+      write → validate → commit/push → PR behind a typed
+      `PublicationRequest`/`PublicationDeps`/`PublicationOutcome`; the engine
+      delegates and keeps audit + attempt persistence. Identity/image remain
+      upstream because the AI editor sits between them (documented deviation).
+      See `plans/060/phase-7b-target-repo-publication/`.)
+- [x] Extract audit scheduling/recording only where independently testable.
+      (Phase 7a, 2026-09-25 — NEW
+      `news_collector/logic/workflows/audit_scheduler.py`; the engine
+      delegates inject auditor/executor/status-recorder per call so existing
+      test seams (`engine.executor`, `engine._last_audit_future`,
+      `patch.object(engine, "_record_audit_status")`) keep working. Gates:
+      `make lint`, `make type` (3229 passed, ratchet OK), `make test`
+      (3216 passed), `make test-boundaries`.)
 - [ ] Extract typed EditorAgent stages while keeping `process_article` façade.
+      (Phase 7c-1 landed 2026-09-25: typed normalized input
+      `editorial_input.py` + `EditorialStage` cache identities
+      `editorial_stages.py`, five cache call sites rewired, no behavior
+      change. Phase 7c-2 landed 2026-09-26: NEW `editorial_critic_gate.py`
+      owns the shared Stage 3/4 evaluate → repair → re-evaluate loop plus the
+      declared `CriticGatePolicy` retry budgets, cache identity and
+      `CriticFailureCode` terminal outcomes; raise/caveat policy, prompts,
+      cache writes and log text stay in the agent; no behavior change. See
+      `plans/060/phase-7c1-editorial-input-contract/` and
+      `plans/060/phase-7c2-critic-gate/`. Phase 7c-3 landed 2026-09-26: NEW
+      `editorial_cached_stage.py` types the cache-backed translated-draft
+      (Stage 1) and enrichment-result (Stage 6) stages — one
+      load-or-generate-and-persist runner with a typed `CachedStageOutcome`
+      and the duplicated generate+persist body removed; parsing, warnings and
+      cache I/O stay in the agent closures; no behavior change. See
+      `plans/060/phase-7c3-cached-stages/`. Phase 7c-4 landed 2026-09-26: NEW
+      `editorial_publication_artifact.py` types the final publication artifact
+      (frontmatter build + plan-083/111, V2 and fact-check gates + Markdown
+      serialization) behind `PublicationArtifactInput`/`Hooks`/`Artifact`;
+      `GeneratedArticleValidationError` and `_capability_overclaim_block`
+      moved with re-exports from `ai_editor`; `process_article` is now a
+      façade over the five typed stages. See
+      `plans/060/phase-7c4-publication-artifact/`. Remaining declaration:
+      provider/model provenance — deliberately deferred (per LAW-B9 the
+      capture has no consumer yet; `_send_prompt` already logs provider/model
+      and `llm_run_stats` aggregates phase counts, not per-model); revisit
+      when a per-stage model report exists. Item stays open only for that
+      declaration.)
 - [ ] Split bounded admin route modules after wire characterization.
-- [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift.
+      (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
+      `api.py` plus `dashboard_health.py`/`webhook_handler.py`.)
+- [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift. (Pending.)
 
 ## Wave D — assets and frontend growth
 
 ### Phase 8 — media finalization
+
+> Not started (re-checked 2026-09-26: `components/publishing/` holds only
+> `github_publisher.py`; no derivative-publisher extraction, media descriptor,
+> or R2-read-only build path exists yet).
 
 - [ ] Extract/test derivative publisher with injected filesystem/Sharp/S3.
 - [ ] Reuse attested manifest entries and add bounded concurrency/full
@@ -227,6 +345,12 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [ ] Retire the sync path only after the compatibility window.
 
 ### Phase 9 — frontend growth and UI convergence
+
+> Status re-checked 2026-09-26: the reachability checker exists but no
+> allowlist file or CI/package wiring was found (gate not enforced); related
+> posts have a ranking helper (`src/utils/related.ts`) but no precomputed
+> top-four; no record of the four unused dependencies being removed; template
+> migration and two-layer-governance supersession not started.
 
 - [ ] Fix relative reachability allowlisting; review/delete the 37 findings in
       cohorts; enforce the gate.
@@ -241,6 +365,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 10 — reader correction lifecycle
 
+> Not started (re-checked 2026-09-26: no reader-report/correction tables or
+> decision records exist in the backend; the frontend Worker report intake
+> exists from plan 023 but nothing reconciles it into backend records yet).
+
 - [ ] Resolve refinery/content revision identity server-side.
 - [ ] Separate and delete contact data according to the privacy contract.
 - [ ] Reconcile Worker intake idempotently into backend report/decision records.
@@ -250,6 +378,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 11 — release proof and repository decision
 
+> Not started (re-checked 2026-09-26); the docs/drift-gate portion is partially
+> covered by plans 043/081, but the release smoke, overhead measurement, and
+> repository-shape ADR remain open.
+
 - [ ] Consolidate duplicated CI steps behind repository-owned commands.
 - [ ] Add the side-effect-free complete-v2 cross-repo release smoke.
 - [ ] Reconcile all active docs and drift gates.
@@ -258,6 +390,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [ ] Run both repositories' complete required gates from clean checkouts.
 
 ## Final closeout
+
+> Not started — plan 060 stays open (re-checked 2026-09-26). Phases 0-4 and 5
+> are done; Phase 6 is partial; Phase 7 is partial (7a/7b/7c-1/7c-2/7c-3/7c-4,
+> provenance declaration deferred); Phases 8-11 are pending.
 
 - [ ] Every master-spec done criterion is checked with evidence.
 - [ ] Operator runbooks and metrics cover every nonterminal/reconciliation path.

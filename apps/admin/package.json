@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "astro": "astro",
-    "check": "astro check"
+    "check": "astro check",
+    "contracts:generate": "openapi-typescript openapi.json --output src/lib/generated/api.d.ts",
+    "contracts:check": "openapi-typescript openapi.json --output src/lib/generated/api.d.ts --check"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -23,6 +25,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.1.0",
     "@fontsource-variable/manrope": "^5.1.0",
     "happy-dom": "^20.11.2",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.7.0",
     "vitest": "^5.0.0"
   }

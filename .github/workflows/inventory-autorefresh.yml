@@ -1,0 +1,107 @@
+name: inventory autorefresh
+
+# Self-healing companion to audit-inventory-weekly.yml:
+#   - this workflow runs one hour BEFORE the weekly audit, regenerates the
+#     committed baseline and pushes it when it drifted, so the audit never
+#     sees ordinary merge-time drift;
+#   - the audit stays as an independent detector/alarm: if this heal fails
+#     (permissions, disablement, API outage), the audit opens the issue.
+# Pushes made with the default GITHUB_TOKEN do not trigger new workflow
+# runs, so the auto-commit cannot loop back into push workflows.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: inventory-autorefresh
+  cancel-in-progress: false
+
+
+jobs:
+  refresh:
+    name: heal inventory baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+
+      - name: Heal baseline from main
+        id: heal
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B inventory-autorefresh origin/main
+            # Compare semantically, not textually: the script sanitizes
+            # generated_at/python_version, so a plain `git diff` would report
+            # drift on every run (this caused a timestamp-only auto-commit on
+            # the first live dispatch).
+            python scripts/generate_inventory.py \
+              --output reports/audit/00_inventory.generated.json \
+              --sample-size 10 \
+              --compare-to audit/00_inventory.json \
+              --summary-output reports/audit/00_inventory.summary.json
+            drift_count="$(python -c "import json; print(json.load(open('reports/audit/00_inventory.summary.json'))['drift_count'])")"
+            if [ "${drift_count}" = "0" ]; then
+              echo "No drift: inventory baseline already current." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            cp reports/audit/00_inventory.generated.json audit/00_inventory.json
+            git add audit/00_inventory.json
+            git commit -m "chore(audit): auto-refresh inventory baseline"
+            if git push origin HEAD:main; then
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+              echo "Inventory baseline refreshed (drift_count=${drift_count}) and pushed to main." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Push attempt ${attempt} lost a race; retrying from fresh origin/main."
+            sleep 5
+          done
+          echo "::error::Could not push the refreshed inventory baseline after 3 attempts."
+          exit 1
+
+      - name: Close recovered drift issues
+        if: success()
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        env:
+          HEALED_SHA: ${{ steps.heal.outputs.sha }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = 'Inventory drift detected';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "${title}"`;
+            const search = await github.rest.search.issuesAndPullRequests({ q: query });
+            const sha = process.env.HEALED_SHA;
+            const note = sha
+              ? `Auto-healed: \`audit/00_inventory.json\` refreshed in ${sha}.`
+              : 'Inventory baseline is current; closing this drift report.';
+            for (const issue of search.data.items) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: note,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }

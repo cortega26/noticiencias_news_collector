@@ -18,6 +18,8 @@ from news_collector.contracts.webhook import (
     FrontendWebhookEvent,
     PublishCompleteEvent,
     ValidationResultEvent,
+    compute_delivery_key,
+    extract_deploy_url,
     parse_webhook_payload,
 )
 
@@ -127,3 +129,80 @@ def test_missing_required_field_rejected():
     del payload["run_url"]
     with pytest.raises(ValidationError):
         ValidationResultEvent.model_validate(payload)
+
+
+# ---------------------------------------------------------------------------
+# Delivery identity (Plan 060 / Phase 5a)
+# ---------------------------------------------------------------------------
+
+
+def _publish_payload_with_deploy(deploy_url: str = "https://noticiencias.com") -> dict:
+    payload = _base_payload("publish_complete")
+    payload["status"] = "success"
+    payload["diagnostics"] = [
+        {"check": "deploy", "status": "pass", "deploy_url": deploy_url}
+    ]
+    return payload
+
+
+def test_delivery_id_optional_and_preserved():
+    assert ValidationResultEvent.model_validate(_base_payload()).delivery_id is None
+    payload = _base_payload()
+    payload["delivery_id"] = "delivery-123"
+    assert ValidationResultEvent.model_validate(payload).delivery_id == "delivery-123"
+
+
+def test_delivery_id_rejects_blank_and_overlong():
+    for bad in ("", "   ", "x" * 129):
+        payload = _base_payload()
+        payload["delivery_id"] = bad
+        with pytest.raises(ValidationError):
+            ValidationResultEvent.model_validate(payload)
+
+
+def test_delivery_key_prefers_sender_id():
+    payload = _base_payload()
+    payload["delivery_id"] = "delivery-123"
+    event = ValidationResultEvent.model_validate(payload)
+    assert compute_delivery_key(event) == "id:delivery-123"
+
+
+def test_delivery_key_stable_across_timestamps():
+    first = ValidationResultEvent.model_validate(
+        {**_base_payload(), "timestamp": "2026-09-25T10:00:00Z"}
+    )
+    second = ValidationResultEvent.model_validate(
+        {**_base_payload(), "timestamp": "2026-09-25T10:05:00Z"}
+    )
+    assert compute_delivery_key(first) == compute_delivery_key(second)
+
+
+def test_delivery_key_differs_by_commit_and_ids():
+    first = ValidationResultEvent.model_validate(_base_payload())
+    other_commit = ValidationResultEvent.model_validate(
+        {**_base_payload(), "commit_sha": "def456"}
+    )
+    other_ids = ValidationResultEvent.model_validate(
+        {**_base_payload(), "publication_ids": ["refinery-2"]}
+    )
+    assert compute_delivery_key(first) != compute_delivery_key(other_commit)
+    assert compute_delivery_key(first) != compute_delivery_key(other_ids)
+
+
+def test_delivery_key_includes_deploy_url():
+    first = PublishCompleteEvent.model_validate(
+        _publish_payload_with_deploy("https://a.example")
+    )
+    second = PublishCompleteEvent.model_validate(
+        _publish_payload_with_deploy("https://b.example")
+    )
+    assert compute_delivery_key(first) != compute_delivery_key(second)
+
+
+def test_extract_deploy_url():
+    event = PublishCompleteEvent.model_validate(_publish_payload_with_deploy())
+    assert extract_deploy_url(event) == "https://noticiencias.com"
+    no_deploy = PublishCompleteEvent.model_validate(
+        {**_base_payload("publish_complete"), "status": "success", "diagnostics": []}
+    )
+    assert extract_deploy_url(no_deploy) is None

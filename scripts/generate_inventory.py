@@ -10,6 +10,7 @@ import json
 import platform
 import shutil
 import subprocess  # nosec B404 - deliberate: fixed git ls-files argv (no user input), timeout+check
+import sys
 import tomllib
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -315,6 +316,14 @@ def main() -> None:
         type=Path,
         help="Optional file to store drift metadata as JSON.",
     )
+    parser.add_argument(
+        "--fail-on-drift",
+        action="store_true",
+        help=(
+            "Exit non-zero when drift is detected or the comparison baseline "
+            "is missing (CI/local gate)."
+        ),
+    )
     args = parser.parse_args()
 
     options = InventoryOptions(sample_size=args.sample_size)
@@ -326,6 +335,13 @@ def main() -> None:
         json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
 
+    if args.compare_to and not args.compare_to.exists():
+        if args.fail_on_drift:
+            print(
+                f"Inventory baseline not found: {args.compare_to}",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
     if args.compare_to and args.compare_to.exists():
         previous = json.loads(args.compare_to.read_text(encoding="utf-8"))
         drift_count, changed_paths, diff_text = _diff_summary(
@@ -357,6 +373,14 @@ def main() -> None:
                 ensure_ascii=False,
             )
         )
+        if drift_count and args.fail_on_drift:
+            print(
+                "Inventory drift detected: "
+                f"{drift_count} changed line(s) across {len(changed_paths)} key(s). "
+                "Run `make inventory-refresh` and commit audit/00_inventory.json.",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
     else:
         print(json.dumps({"drift_count": 0, "changed_paths": []}, ensure_ascii=False))
 

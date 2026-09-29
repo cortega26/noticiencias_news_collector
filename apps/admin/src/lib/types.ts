@@ -3,7 +3,12 @@
  * (`news_collector/contracts/admin.py`). Field-for-field copies of the
  * Pydantic models; the backend contract tests are the source of truth and
  * the runtime responses validate these shapes on every fetch.
+ *
+ * The four workflow run contracts (collect/publish started+status) are now
+ * generated from the committed OpenAPI artifact instead of handwritten:
+ * `npm run contracts:generate` / `contracts:check` (plan 080 Phase 2).
  */
+import type { components } from "./generated/api";
 
 export interface AdminSource {
   id: string;
@@ -94,6 +99,9 @@ export type ArticleStatus =
   | "publishing"
   | "rejected"
   | "completed"
+  // Collected and validated, but not scored yet (plan 113): where the last
+  // fetch's fresh articles land until scoring commits.
+  | "validated"
   // Virtual filter (not a real processing_status): the current export
   // shortlist minus anything already in flight / deployed — the "Refine &
   // publish" candidate list.
@@ -101,46 +109,17 @@ export type ArticleStatus =
 
 export const ARTICLE_STATUSES: ArticleStatus[] = [
   "publishable",
+  "validated",
   "pending",
   "publishing",
   "rejected",
   "completed",
 ];
 
-export interface AdminCollectStarted {
-  run_id: string;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
-  detail: string;
-}
-
-export interface AdminCollectStatus {
-  run_id: string | null;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
-  started_at: string | null;
-  finished_at: string | null;
-  error: string | null;
-  summary: Record<string, unknown>;
-  active: boolean;
-}
-
-export interface AdminPublishStarted {
-  run_id: string;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
-  detail: string;
-}
-
-export interface AdminPublishStatus {
-  run_id: string | null;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
-  started_at: string | null;
-  finished_at: string | null;
-  error: string | null;
-  summary: Record<string, unknown>;
-  active: boolean;
-  pr_url: string | null;
-  failure_class: string | null;
-  final_slug: string | null;
-}
+export type AdminCollectStarted = components["schemas"]["AdminCollectStarted"];
+export type AdminCollectStatus = components["schemas"]["AdminCollectStatus"];
+export type AdminPublishStarted = components["schemas"]["AdminPublishStarted"];
+export type AdminPublishStatus = components["schemas"]["AdminPublishStatus"];
 
 export interface AdminPublishBatchItem {
   article_id: number;

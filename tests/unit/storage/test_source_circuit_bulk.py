@@ -60,3 +60,23 @@ def test_unknown_source_absent_and_single_lookup_agrees(tmp_path):
         assert manager.get_source_circuit_state("ghost") is None
     finally:
         manager.close()
+
+
+def test_bulk_states_match_per_source_lookup_for_the_same_inputs(tmp_path):
+    """Plan 060 / Phase 4b regression-equivalence: swapping the admin list
+    route from the per-source loop to the bulk query must not change any
+    returned value."""
+    manager = _manager(tmp_path)
+    try:
+        manager.update_source_circuit_state(
+            "b",
+            success=False,
+            force_cooldown_until=datetime(2026, 9, 20, tzinfo=timezone.utc),
+        )
+
+        bulk = manager.get_all_circuit_states()
+        per_source = {sid: manager.get_source_circuit_state(sid) for sid in bulk}
+
+        assert per_source == bulk
+    finally:
+        manager.close()

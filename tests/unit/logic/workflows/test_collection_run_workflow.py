@@ -14,6 +14,7 @@ it dispatches.
 """
 
 import inspect
+import os
 import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -619,6 +620,89 @@ def test_run_drives_the_real_system_shutdown_without_closing_the_cached_db(
     with db_manager.get_session() as session:
         session.execute(select(WorkflowRun.id)).all()
     assert workflow.get_status(run_id).run_status == "succeeded"
+
+
+def test_start_stamps_worker_pid(db_manager, workflow, monkeypatch) -> None:
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+
+    result = workflow.start(dry_run=True)
+
+    with db_manager.get_session() as session:
+        row = session.get(WorkflowRun, result.run_id)
+        assert row.run_metadata["worker_pid"] == os.getpid()
+
+
+def test_recover_expired_leases_recovers_dead_worker_with_fresh_heartbeat(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """Plan 113: a reload/kill orphans a `running` row while its heartbeat
+    is still fresh. A recorded worker pid that is no longer alive must be
+    reaped immediately instead of waiting out the one-hour lease."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        row = WorkflowRun(
+            run_type="collection",
+            status="running",
+            started_at=now,
+            heartbeat_at=now,
+            run_metadata={"dry_run": False, "worker_pid": 424242},
+        )
+        session.add(row)
+        session.flush()
+        run_id = row.id
+    monkeypatch.setattr(
+        CollectionRunWorkflow, "_pid_alive", staticmethod(lambda pid: False)
+    )
+
+    recovered = workflow.recover_expired_leases()
+
+    assert recovered == [run_id]
+    with db_manager.get_session() as session:
+        recovered_row = session.get(WorkflowRun, run_id)
+        assert recovered_row.status == "interrupted"
+        assert recovered_row.error_code == "process_restarted"
+        assert "424242" in (recovered_row.error_detail or "")
+
+
+def test_pid_alive_rejects_nonpositive_pids() -> None:
+    assert CollectionRunWorkflow._pid_alive(0) is False
+    assert CollectionRunWorkflow._pid_alive(-1) is False
+
+
+def test_pid_alive_fails_safe_on_windows(monkeypatch) -> None:
+    """`os.kill(pid, 0)` terminates on Windows (Codex P1, PR #344): the
+    helper must never claim a pid is dead there — the lease still recovers."""
+    monkeypatch.setattr(os, "name", "nt")
+
+    assert CollectionRunWorkflow._pid_alive(424242) is True
+
+
+def test_recover_expired_leases_keeps_fresh_running_row_with_live_worker(
+    db_manager, workflow, monkeypatch
+) -> None:
+    """A healthy long run (fresh heartbeat, live worker) must never be
+    reaped just because it outlived a shorter expectation."""
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        row = WorkflowRun(
+            run_type="collection",
+            status="running",
+            started_at=now,
+            heartbeat_at=now,
+            run_metadata={"dry_run": False, "worker_pid": 424242},
+        )
+        session.add(row)
+        session.flush()
+        run_id = row.id
+    monkeypatch.setattr(
+        CollectionRunWorkflow, "_pid_alive", staticmethod(lambda pid: True)
+    )
+
+    recovered = workflow.recover_expired_leases()
+
+    assert recovered == []
+    with db_manager.get_session() as session:
+        assert session.get(WorkflowRun, run_id).status == "running"
 
 
 _WORKFLOW_SYSTEM_CALLS = [

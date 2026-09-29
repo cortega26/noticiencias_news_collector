@@ -7,12 +7,14 @@ frontend CI pipelines (Content Guard, GitHub Pages deploy).
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
 _MAX_PUBLICATION_IDS = 200
+_MAX_DELIVERY_ID_LENGTH = 128
 
 
 class DiagnosticResult(BaseModel):
@@ -44,6 +46,13 @@ class FrontendWebhookEvent(BaseModel):
         description="Stable refinery_ids identifying articles in this callback event. "
         "Required for publication-state mutations.",
     )
+    delivery_id: Optional[str] = Field(
+        default=None,
+        alias="delivery_id",
+        description="Optional sender-generated idempotency id for this delivery. "
+        "When absent the backend derives a deterministic key from the stable "
+        "event fields, so replays still deduplicate.",
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -57,6 +66,18 @@ class FrontendWebhookEvent(BaseModel):
         for item in v:
             if not isinstance(item, str) or not item.strip():
                 raise ValueError("publication_ids must contain non-empty strings")
+        return v
+
+    @field_validator("delivery_id")
+    @classmethod
+    def _validate_delivery_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not isinstance(v, str) or not v.strip() or len(v) > _MAX_DELIVERY_ID_LENGTH:
+            raise ValueError(
+                "delivery_id must be a non-empty string of at most "
+                f"{_MAX_DELIVERY_ID_LENGTH} characters"
+            )
         return v
 
 
@@ -90,3 +111,33 @@ def parse_webhook_payload(payload: Dict[str, Any]) -> AnyWebhookEvent:
         return PublishCompleteEvent.model_validate(payload)
     else:
         raise ValueError(f"Unknown webhook event type: {event_type!r}")
+
+
+def extract_deploy_url(event: FrontendWebhookEvent) -> Optional[str]:
+    """Extract the deployment URL from the diagnostics list."""
+    for diag in event.diagnostics:
+        if diag.check == "deploy" and diag.deploy_url:
+            return diag.deploy_url
+    return None
+
+
+def compute_delivery_key(event: AnyWebhookEvent) -> str:
+    """Deterministic idempotency key for one webhook delivery.
+
+    Prefers the sender-generated ``delivery_id``. When absent, hashes only the
+    stable identity fields (never ``timestamp``) so a rebuilt retry of the
+    same delivery dedupes while genuinely different events do not collide.
+    """
+    if event.delivery_id:
+        return f"id:{event.delivery_id}"
+    canonical = "\x1f".join(
+        [
+            event.event,
+            event.commit_sha,
+            event.branch,
+            event.status,
+            ",".join(sorted(event.publication_ids)),
+            extract_deploy_url(event) or "",
+        ]
+    )
+    return "derived:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()

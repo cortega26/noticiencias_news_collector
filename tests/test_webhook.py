@@ -456,3 +456,41 @@ def test_publication_ids_preserves_commit_sha_as_audit_context() -> None:
     assert event.commit_sha == "abc123def"
     assert event.branch == "publish/test-article-123"
     assert event.publication_ids == ["refinery-1"]
+
+
+# ---------------------------------------------------------------------------
+# Durable receipts (Plan 060 / Phase 5a)
+# ---------------------------------------------------------------------------
+
+
+def test_webhook_duplicate_delivery_returns_stored_result(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Replaying the same delivery returns the stored result and does not
+    reapply the transition."""
+    with patch.dict(os.environ, {"WEBHOOK_API_KEY": "secret-token"}):
+        payload = _make_publish_payload(publication_ids=["refinery-test-123"])
+        headers = {"Authorization": "Bearer secret-token"}
+        first = api_client.post(
+            "/api/v1/webhook/frontend", json=payload, headers=headers
+        )
+        second = api_client.post(
+            "/api/v1/webhook/frontend", json=payload, headers=headers
+        )
+
+    assert first.status_code == 202
+    assert first.json()["result"]["action"] == "completed"
+    assert second.status_code == 202
+    body = second.json()
+    assert body.get("duplicate") is True
+    assert body["result"] == first.json()["result"]
+
+    with db_manager.get_session() as session:
+        article = (
+            session.query(Article)
+            .filter_by(url="https://example.com/test-webhook")
+            .first()
+        )
+        assert article is not None
+        assert article.processing_status == "completed"
+        assert article.published_url == "https://noticiencias.com"

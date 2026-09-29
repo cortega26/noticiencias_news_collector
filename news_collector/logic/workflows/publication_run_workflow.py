@@ -38,7 +38,6 @@ single-flight enforcement.
 
 from __future__ import annotations
 
-import json
 import os
 import threading
 import uuid
@@ -51,6 +50,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
+from news_collector.logic.workflows.publication_attempts import read_publication_attempt
 from news_collector.storage.models import WorkflowRun
 from news_collector.utils.logger import get_logger
 
@@ -484,23 +484,11 @@ class PublicationRunWorkflow:
         return safe if isinstance(safe, dict) else {}
 
     def _read_attempt_for_id(self, resolved_id: str) -> dict[str, Any] | None:
-        """Read `publication_attempts/{safe_id}.json` — the summary
-        `RefineryEngine._persist_publication_attempt_summary` writes, keyed
-        by `RefineryEngine._safe_publication_artifact_name(article_id)`.
-        Exact match only; a missing file means this run wrote no attempt.
+        """Read `publication_attempts/{artifact_name(resolved_id)}.json` — the
+        summary `PublicationAttempts` persists. Exact match only; a missing
+        file means this run wrote no attempt.
         """
-        from news_collector.logic.workflows.refinery_engine import RefineryEngine
-
-        safe = RefineryEngine._safe_publication_artifact_name(resolved_id)
-        path = self._attempts_dir / f"{safe}.json"
-        try:
-            if not path.is_file():
-                return None
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return data if isinstance(data, dict) else None
-        except (OSError, ValueError) as exc:
-            logger.warning("Could not read publication attempt summary: {}", exc)
-            return None
+        return read_publication_attempt(self._attempts_dir, resolved_id)
 
     def _heartbeat_loop(self, run_id: int, stop: threading.Event) -> None:
         interval = max(1, self._heartbeat_interval_seconds)

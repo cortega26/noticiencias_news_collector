@@ -1,0 +1,736 @@
+{
+  "model": "pattern_v1",
+  "model_version": "2025.02-pattern-v1",
+  "corpus_path": "tests/data/enrichment_eval.jsonl",
+  "corpus_sha256": "cb54f4efca79bbe5e570165c0fd88ab9ac6e22593976a5ea9dea02f5f39bd48b",
+  "record_count": 44,
+  "sufficient_evidence": false,
+  "evidence_note": "44 reviewed record(s) — per plan 048's own Step 3 Verify line, fewer than 200 reviewed records is NOT sufficient evaluation evidence. Treat these numbers as a small-sample sanity check, not a baseline to make an adoption decision against.",
+  "topics": {
+    "precision": 0.9091,
+    "recall": 0.8545,
+    "f1": 0.8655,
+    "micro_precision": 0.9057,
+    "micro_recall": 0.8,
+    "micro_f1": 0.8496
+  },
+  "entities": {
+    "precision": 0.8864,
+    "recall": 0.8864,
+    "f1": 0.7727,
+    "micro_precision": 0.7917,
+    "micro_recall": 0.7917,
+    "micro_f1": 0.7917
+  },
+  "by_language": {
+    "en": {
+      "precision": 0.9545,
+      "recall": 0.8727,
+      "f1": 0.8864,
+      "micro_precision": 0.9333,
+      "micro_recall": 0.7778,
+      "micro_f1": 0.8485
+    },
+    "es": {
+      "precision": 0.9167,
+      "recall": 0.8333,
+      "f1": 0.8611,
+      "micro_precision": 0.9286,
+      "micro_recall": 0.7647,
+      "micro_f1": 0.8387
+    },
+    "pt": {
+      "precision": 0.9091,
+      "recall": 0.8636,
+      "f1": 0.8788,
+      "micro_precision": 0.9231,
+      "micro_recall": 0.8571,
+      "micro_f1": 0.8889
+    },
+    "fr": {
+      "precision": 0.85,
+      "recall": 0.85,
+      "f1": 0.8333,
+      "micro_precision": 0.8182,
+      "micro_recall": 0.8182,
+      "micro_f1": 0.8182
+    }
+  },
+  "general_rate": 0.2273,
+  "multi_label_rate": 0.1818,
+  "latency_ms": {
+    "mean": 0.722,
+    "max": 1.786
+  },
+  "top_false_positive_topics": [
+    [
+      "science",
+      3
+    ],
+    [
+      "general",
+      1
+    ],
+    [
+      "technology",
+      1
+    ]
+  ],
+  "top_false_negative_topics": [
+    [
+      "science",
+      7
+    ],
+    [
+      "economy",
+      2
+    ],
+    [
+      "health",
+      1
+    ],
+    [
+      "technology",
+      1
+    ],
+    [
+      "general",
+      1
+    ]
+  ],
+  "top_false_positive_entities": [
+    [
+      "ESA",
+      4
+    ],
+    [
+      "NASA",
+      1
+    ]
+  ],
+  "top_false_negative_entities": [
+    [
+      "FMI",
+      4
+    ],
+    [
+      "Ministerio da Saude",
+      1
+    ]
+  ],
+  "changed_examples": [
+    {
+      "id": "en-space-pos-001",
+      "language": "en",
+      "predicted_topics": [
+        "space"
+      ],
+      "gold_topics": [
+        "space",
+        "science"
+      ],
+      "predicted_entities": [
+        "NASA",
+        "Orion"
+      ],
+      "gold_entities": [
+        "NASA",
+        "Orion"
+      ]
+    },
+    {
+      "id": "es-space-pos-002",
+      "language": "es",
+      "predicted_topics": [
+        "space"
+      ],
+      "gold_topics": [
+        "space",
+        "science"
+      ],
+      "predicted_entities": [
+        "NASA"
+      ],
+      "gold_entities": [
+        "NASA"
+      ]
+    },
+    {
+      "id": "pt-space-pos-003",
+      "language": "pt",
+      "predicted_topics": [
+        "space"
+      ],
+      "gold_topics": [
+        "space",
+        "science"
+      ],
+      "predicted_entities": [
+        "ESA"
+      ],
+      "gold_entities": [
+        "ESA"
+      ]
+    },
+    {
+      "id": "fr-space-pos-004",
+      "language": "fr",
+      "predicted_topics": [
+        "space"
+      ],
+      "gold_topics": [
+        "space",
+        "science"
+      ],
+      "predicted_entities": [
+        "Agence spatiale européenne",
+        "Ariane 6"
+      ],
+      "gold_entities": [
+        "Agence spatiale europeenne",
+        "Ariane 6"
+      ]
+    },
+    {
+      "id": "en-science-pos-005",
+      "language": "en",
+      "predicted_topics": [
+        "science"
+      ],
+      "gold_topics": [
+        "science",
+        "health"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "es-science-pos-006",
+      "language": "es",
+      "predicted_topics": [
+        "general"
+      ],
+      "gold_topics": [
+        "science"
+      ],
+      "predicted_entities": [
+        "Universidad Nacional Autónoma de México"
+      ],
+      "gold_entities": [
+        "Universidad Nacional Autonoma de Mexico"
+      ]
+    },
+    {
+      "id": "pt-health-pos-011",
+      "language": "pt",
+      "predicted_topics": [
+        "health"
+      ],
+      "gold_topics": [
+        "health"
+      ],
+      "predicted_entities": [],
+      "gold_entities": [
+        "Ministerio da Saude"
+      ]
+    },
+    {
+      "id": "en-tech-pos-013",
+      "language": "en",
+      "predicted_topics": [
+        "science",
+        "technology"
+      ],
+      "gold_topics": [
+        "technology"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "fr-tech-pos-016",
+      "language": "fr",
+      "predicted_topics": [
+        "science"
+      ],
+      "gold_topics": [
+        "technology"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "fr-climate-pos-020",
+      "language": "fr",
+      "predicted_topics": [
+        "science",
+        "climate"
+      ],
+      "gold_topics": [
+        "climate"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "es-economy-pos-022",
+      "language": "es",
+      "predicted_topics": [
+        "economy"
+      ],
+      "gold_topics": [
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": [
+        "FMI"
+      ]
+    },
+    {
+      "id": "pt-economy-pos-023",
+      "language": "pt",
+      "predicted_topics": [
+        "economy"
+      ],
+      "gold_topics": [
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": [
+        "FMI"
+      ]
+    },
+    {
+      "id": "fr-economy-pos-024",
+      "language": "fr",
+      "predicted_topics": [
+        "economy"
+      ],
+      "gold_topics": [
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": [
+        "FMI"
+      ]
+    },
+    {
+      "id": "es-general-026",
+      "language": "es",
+      "predicted_topics": [
+        "general"
+      ],
+      "gold_topics": [
+        "general"
+      ],
+      "predicted_entities": [
+        "ESA"
+      ],
+      "gold_entities": []
+    },
+    {
+      "id": "pt-general-027",
+      "language": "pt",
+      "predicted_topics": [
+        "general"
+      ],
+      "gold_topics": [
+        "general"
+      ],
+      "predicted_entities": [
+        "ESA"
+      ],
+      "gold_entities": []
+    },
+    {
+      "id": "pt-adversarial-ia-case-029",
+      "language": "pt",
+      "predicted_topics": [
+        "technology"
+      ],
+      "gold_topics": [
+        "general"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "es-adversarial-substring-030",
+      "language": "es",
+      "predicted_topics": [
+        "health"
+      ],
+      "gold_topics": [
+        "health"
+      ],
+      "predicted_entities": [
+        "NASA"
+      ],
+      "gold_entities": []
+    },
+    {
+      "id": "es-adversarial-multitopic-033",
+      "language": "es",
+      "predicted_topics": [
+        "technology",
+        "climate"
+      ],
+      "gold_topics": [
+        "science",
+        "climate",
+        "technology",
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    },
+    {
+      "id": "es-adversarial-negation-041",
+      "language": "es",
+      "predicted_topics": [
+        "economy"
+      ],
+      "gold_topics": [
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": [
+        "FMI"
+      ]
+    },
+    {
+      "id": "en-adversarial-multitopic-042",
+      "language": "en",
+      "predicted_topics": [
+        "health",
+        "technology",
+        "climate"
+      ],
+      "gold_topics": [
+        "technology",
+        "health",
+        "climate",
+        "science",
+        "economy"
+      ],
+      "predicted_entities": [],
+      "gold_entities": []
+    }
+  ],
+  "candidate": {
+    "model": "curated_candidate",
+    "model_version": "2026.08-curated-candidate",
+    "record_count": 44,
+    "sufficient_evidence": false,
+    "evidence_note": "44 reviewed record(s) — per plan 048's own Step 3 Verify line, fewer than 200 reviewed records is NOT sufficient evaluation evidence. Treat these numbers as a small-sample sanity check, not a baseline to make an adoption decision against.",
+    "topics": {
+      "precision": 0.9432,
+      "recall": 0.9216,
+      "f1": 0.9185,
+      "micro_precision": 0.9298,
+      "micro_recall": 0.8833,
+      "micro_f1": 0.906
+    },
+    "entities": {
+      "precision": 0.9545,
+      "recall": 0.9659,
+      "f1": 0.9242,
+      "micro_precision": 0.9167,
+      "micro_recall": 0.9167,
+      "micro_f1": 0.9167
+    },
+    "by_language": {
+      "en": {
+        "precision": 0.9545,
+        "recall": 0.9364,
+        "f1": 0.9293,
+        "micro_precision": 0.9412,
+        "micro_recall": 0.8889,
+        "micro_f1": 0.9143
+      },
+      "es": {
+        "precision": 1.0,
+        "recall": 0.9375,
+        "f1": 0.9603,
+        "micro_precision": 1.0,
+        "micro_recall": 0.8824,
+        "micro_f1": 0.9375
+      },
+      "pt": {
+        "precision": 0.9091,
+        "recall": 0.8636,
+        "f1": 0.8788,
+        "micro_precision": 0.9231,
+        "micro_recall": 0.8571,
+        "micro_f1": 0.8889
+      },
+      "fr": {
+        "precision": 0.9,
+        "recall": 0.95,
+        "f1": 0.9,
+        "micro_precision": 0.8333,
+        "micro_recall": 0.9091,
+        "micro_f1": 0.8696
+      }
+    },
+    "general_rate": 0.2045,
+    "multi_label_rate": 0.2273,
+    "latency_ms": {
+      "mean": 0.821,
+      "max": 1.492
+    },
+    "top_false_positive_topics": [
+      [
+        "science",
+        3
+      ],
+      [
+        "technology",
+        1
+      ]
+    ],
+    "top_false_negative_topics": [
+      [
+        "science",
+        4
+      ],
+      [
+        "economy",
+        2
+      ],
+      [
+        "general",
+        1
+      ]
+    ],
+    "top_false_positive_entities": [
+      [
+        "Ministere de la Sante",
+        1
+      ],
+      [
+        "NASA",
+        1
+      ]
+    ],
+    "top_false_negative_entities": [
+      [
+        "ESA",
+        1
+      ],
+      [
+        "Amazonia",
+        1
+      ]
+    ],
+    "changed_examples": [
+      {
+        "id": "en-space-pos-001",
+        "language": "en",
+        "predicted_topics": [
+          "space"
+        ],
+        "gold_topics": [
+          "space",
+          "science"
+        ],
+        "predicted_entities": [
+          "NASA",
+          "Orion"
+        ],
+        "gold_entities": [
+          "NASA",
+          "Orion"
+        ]
+      },
+      {
+        "id": "es-space-pos-002",
+        "language": "es",
+        "predicted_topics": [
+          "space"
+        ],
+        "gold_topics": [
+          "space",
+          "science"
+        ],
+        "predicted_entities": [
+          "NASA"
+        ],
+        "gold_entities": [
+          "NASA"
+        ]
+      },
+      {
+        "id": "pt-space-pos-003",
+        "language": "pt",
+        "predicted_topics": [
+          "space"
+        ],
+        "gold_topics": [
+          "space",
+          "science"
+        ],
+        "predicted_entities": [],
+        "gold_entities": [
+          "ESA"
+        ]
+      },
+      {
+        "id": "fr-space-pos-004",
+        "language": "fr",
+        "predicted_topics": [
+          "space"
+        ],
+        "gold_topics": [
+          "space",
+          "science"
+        ],
+        "predicted_entities": [
+          "Agence spatiale européenne",
+          "Ariane 6"
+        ],
+        "gold_entities": [
+          "Agence spatiale europeenne",
+          "Ariane 6"
+        ]
+      },
+      {
+        "id": "fr-health-pos-012",
+        "language": "fr",
+        "predicted_topics": [
+          "health"
+        ],
+        "gold_topics": [
+          "health"
+        ],
+        "predicted_entities": [
+          "Ministère de la Santé"
+        ],
+        "gold_entities": []
+      },
+      {
+        "id": "en-tech-pos-013",
+        "language": "en",
+        "predicted_topics": [
+          "science",
+          "technology"
+        ],
+        "gold_topics": [
+          "technology"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      },
+      {
+        "id": "fr-tech-pos-016",
+        "language": "fr",
+        "predicted_topics": [
+          "science",
+          "technology"
+        ],
+        "gold_topics": [
+          "technology"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      },
+      {
+        "id": "pt-climate-pos-019",
+        "language": "pt",
+        "predicted_topics": [
+          "science",
+          "climate"
+        ],
+        "gold_topics": [
+          "climate",
+          "science"
+        ],
+        "predicted_entities": [
+          "Universidade de São Paulo"
+        ],
+        "gold_entities": [
+          "Universidade de Sao Paulo",
+          "Amazonia"
+        ]
+      },
+      {
+        "id": "fr-climate-pos-020",
+        "language": "fr",
+        "predicted_topics": [
+          "science",
+          "climate"
+        ],
+        "gold_topics": [
+          "climate"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      },
+      {
+        "id": "pt-adversarial-ia-case-029",
+        "language": "pt",
+        "predicted_topics": [
+          "technology"
+        ],
+        "gold_topics": [
+          "general"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      },
+      {
+        "id": "es-adversarial-substring-030",
+        "language": "es",
+        "predicted_topics": [
+          "health"
+        ],
+        "gold_topics": [
+          "health"
+        ],
+        "predicted_entities": [
+          "NASA"
+        ],
+        "gold_entities": []
+      },
+      {
+        "id": "es-adversarial-multitopic-033",
+        "language": "es",
+        "predicted_topics": [
+          "science",
+          "technology",
+          "climate"
+        ],
+        "gold_topics": [
+          "science",
+          "climate",
+          "technology",
+          "economy"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      },
+      {
+        "id": "en-adversarial-multitopic-042",
+        "language": "en",
+        "predicted_topics": [
+          "science",
+          "health",
+          "technology",
+          "climate"
+        ],
+        "gold_topics": [
+          "technology",
+          "health",
+          "climate",
+          "science",
+          "economy"
+        ],
+        "predicted_entities": [],
+        "gold_entities": []
+      }
+    ],
+    "delta_topics_f1": 0.053,
+    "delta_topics_precision": 0.0341,
+    "delta_topics_recall": 0.0671
+  }
+}

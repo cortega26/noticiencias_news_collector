@@ -102,6 +102,30 @@ jobs:
             news_collector/contracts/frontend_schema.py \
             .tmp/frontend-contract/src/content.config.ts
 
+  admin-contracts:
+    name: Admin contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python-env
+        with:
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+      - name: Install admin dependencies
+        # Committed artifacts mean the admin build needs no Python/server; this
+        # job only adds the drift gate around them (plan 080 Phase 2).
+        run: npm ci --legacy-peer-deps
+        working-directory: apps/admin
+      - name: Admin contract drift check
+        run: make admin-contracts-check
+      - name: Admin tests and build
+        run: make admin-test && make admin-build
+
   test:
     name: test
     runs-on: ubuntu-24.04

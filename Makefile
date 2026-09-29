@@ -140,6 +140,14 @@ admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
 admin-test: ## Run the Refinery admin GUI client unit tests (vitest)
 	@cd apps/admin && npm test
 
+admin-contracts-generate: bootstrap ## Regenerate the admin OpenAPI artifact and generated TS types (plan 080 Phase 2)
+	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --output apps/admin/openapi.json
+	@cd apps/admin && npm run contracts:generate
+
+admin-contracts-check: bootstrap ## Fail if the admin OpenAPI artifact or generated TS types are stale (plan 080 Phase 2)
+	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --check apps/admin/openapi.json
+	@cd apps/admin && npm run contracts:check
+
 
 enrichment-eval: bootstrap ## Plan 048: evaluate production pattern_v1 + curated candidate against the reviewed corpus (reports/evaluation/)
 	@mkdir -p reports/evaluation
@@ -234,7 +242,7 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
-verify-ci: lint type test test-contracts test-boundaries security config-docs-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
@@ -420,6 +428,16 @@ config-docs-check: bootstrap ## Ensure docs/config_fields.md matches schema outp
 		exit 1; \
 	fi; \
 	rm -f "$$TMP_FILE"
+
+inventory-refresh: bootstrap ## Regenerate the committed repository inventory baseline (audit/00_inventory.json)
+	@$(PYTHON_BIN) scripts/generate_inventory.py --output audit/00_inventory.json --sample-size 10
+
+inventory-check: bootstrap ## Fail if audit/00_inventory.json is stale (inventory drift gate)
+	@$(PYTHON_BIN) scripts/generate_inventory.py \
+		--output reports/audit/00_inventory.generated.json \
+		--sample-size 10 \
+		--compare-to audit/00_inventory.json \
+		--fail-on-drift
 
 clean: ## Remove virtual environment and caches
 	@rm -rf $(VENV) $(VENV_REFINERY) .pytest_cache .mypy_cache

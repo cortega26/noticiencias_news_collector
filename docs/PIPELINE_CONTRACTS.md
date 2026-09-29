@@ -19,7 +19,7 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
 | Admin API (Phase 1) | `news_collector/serving/api.py` | Astro admin GUI | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing storage/workflow modules |
-| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py` | token in localStorage with `PUBLIC_ADMIN_API_KEY` build-time fallback; Bearer header; CORS allowlist via `ADMIN_CORS_ORIGINS` |
+| Admin GUI (Phase 2) | `apps/admin/` (Astro 7 + Tailwind 4) | `news_collector/serving/api.py` `/v1/admin/*` | typed TS mirrors of `contracts/admin.py`; the four workflow run models are generated from `apps/admin/openapi.json` (plan 080 Phase 2) | token in localStorage with `PUBLIC_ADMIN_API_KEY` build-time fallback; Bearer header; CORS allowlist via `ADMIN_CORS_ORIGINS` |
 
 ## Export To Refinery
 
@@ -60,6 +60,10 @@ The render authority is:
 - refinery-generated posts must publish exactly one primary category from the current editorial taxonomy
 - `Editorial` is reserved for first-party Noticiencias-authored pieces; translated third-party articles must resolve to a non-`Editorial` category
 - optional `social` object (`{publish: bool = false, id?: 64-char lowercase hex}`): social-distribution opt-in stamped deterministically by `contracts/social_publication.py` at Markdown write time (absent by default; explicit `null` rejected on both sides; the LLM never decides it)
+- `sources[]` items accept optional `role` (`primary` | `secondary`) and `doi` (`10.xxxx/...`): producer stamps `role: primary` + DOI only for a verified primary paper/preprint; absent role renders as secondary (frontend Wave 2 P0-01; no backfill required)
+- optional `evidence_subject_type` (humans | animals | in_vitro | computational | observational | experimental | mixed | unknown) + `evidence_detail` (≤280 chars): producer records the verified experimental model, never inferred (frontend Wave 2 P0-02)
+- `why_it_matters` allows 0–3 items with no minimum: producer omits implications rather than fabricating them (frontend Wave 2 P0-06 / DEC-003; `max_length=3` enforced on both sides)
+- Wave 3 accountability fields (all optional; producer stamps only verified data, reviewer identity never invented): `institution`, `publication_status` (peer_reviewed | preprint | conference | other), `reviewer_name`/`reviewer_role`/`reviewer_profile_url`/`review_date`, `known_points`/`open_questions` (≤3 each), `corrected_at` + `correction_summary` (travel together)
 
 ### Current Identity Reuse Order
 
@@ -121,8 +125,17 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   upload (multipart), source delete (sources.yaml + DB)
 - source editor (Phase 4 addendum): add/update sources via
   POST /v1/admin/sources (merge preserves blacklist/etag keys; create
-  seeds the old GUI defaults); CORS now allows PUT/DELETE for the
-  unpublish/upload/delete flows
+  seeds the old GUI defaults plus the catalog-required
+  `tier`/`fetchability_score`/`crawl_interval_seconds`); CORS now allows
+  PUT/DELETE for the unpublish/upload/delete flows. Catalog writes
+  (upsert/delete) are now serialized and atomic via
+  `SourceCatalogWorkflow` (Plan 060 Phase 4b) under a documented
+  single-writer assumption (`docs/database_deployment.md`); their new
+  failure contracts are `409` (catalog locked by a concurrent mutation)
+  and `500` with a `reconciliation_required` marker row in
+  `workflow_runs` when a DB-sync failure could not be compensated.
+  Toggle/reset are DB-only (active/circuit state never lives in
+  `sources.yaml`).
 
 The serving layer is not the owner of editorial mutation workflows.
 
@@ -130,6 +143,10 @@ The serving layer is not the owner of editorial mutation workflows.
 
 - The backend's own parity test (`tests/test_contracts_sync.py`) covers only top-level field names; the full type/constraint/optionality comparison is enforced by the frontend's checker, which backend CI runs in strict mode (`.github/workflows/ci.yml` → `contract-parity` job) and the frontend runs on every push (Content Guard).
 - Frontend validation-failure notifications (`POST /api/v1/webhook/frontend`, `serving/api.py`) depend on `BACKEND_WEBHOOK_URL`/`BACKEND_WEBHOOK_TOKEN` being configured in the frontend repository — they must be set for the failure loop to close.
+- Webhook deliveries are persisted as durable receipts before processing (plan 060 Phase 5a, `webhook_receipts`): the endpoint answers 202 only after the receipt exists, an optional `delivery_id` (or a stable derived key when absent) makes replays idempotent — a duplicate of a processed delivery returns its stored result without reapplying transitions — and a processing exception leaves a `failed` receipt with its error and attempt count. The frontend sender does not yet emit `delivery_id` or bounded retries; the derived key covers that gap until it does.
+- Publication-attempt transitions are audited (plan 060 Phase 5b, `publication_events`) and restricted to the explicit legal map `PUBLISHING → {PR_CREATED, REJECTED, COMPLETED}`, `PR_CREATED → {REJECTED, COMPLETED}`, terminal states permit nothing; the state change and its event are written in one transaction. A validation *pass* appends `check_passed` without changing state.
+- Stale `PR_CREATED` attempts are reconciled on demand by `scripts/ops/reconcile_publication_attempts.py` (plan 060 Phase 5b): it replays unprocessed receipts (`received`/`failed`) whose `publication_ids` name a candidate, repairs an attempt whose legacy article is already `completed` **with a real deploy URL** or already `rejected`, and reports an otherwise-stale open PR as actionable. It never creates a pull request and never marks an attempt `COMPLETED` without deploy evidence.
+- The dashboard's backend-owned health evidence is read at `GET /v1/admin/dashboard/health` (plan 060 Phase 5c, admin-token protected): publication attempts, webhook receipts, and Content Guard outcomes, each with `evidence: "none"`/`status: "unknown"` when no record exists to judge from — a zero-row query is never reported as `pass`. The frontend dashboard combines it with its own schema/hero-image/lint records (phase 5d) and keeps any area without evidence `unknown`.
 - Publication identity reuse is strong but still has fallback branches that can use non-source dates.
 - `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.
 

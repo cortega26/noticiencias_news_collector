@@ -54,6 +54,20 @@ The older `docker-compose.yml` includes PostgreSQL and Streamlit services;
 it is legacy scaffolding, not a production-parity or current Astro admin stack.
 No live deployment, backup or restoration was verified by this documentation audit.
 
+## Single-writer assumption (source catalog)
+
+`SourceCatalogWorkflow` (plan 060 / Phase 4b) serializes `sources.yaml`
+mutations with an advisory `fcntl.flock` on a `sources.yaml.lock` file and
+writes atomically (same-directory temp file + `os.replace`). This assumes a
+**single writer process**: the tracked deployment (`Dockerfile.serving` runs
+plain uvicorn, `docker-compose.serving.yml` defines one `serving` service,
+SQLite is the chosen production database) satisfies it, but the advisory
+lock does **not** protect against a second concurrently-deployed instance.
+
+If the deployment ever becomes multi-instance, catalog mutation must be
+revisited first — a Git-backed write path or a real distributed lock —
+before re-enabling concurrent catalog edits.
+
 ## Operational procedure
 
 1. Identify the configured SQLite file, its owner process and current revision.

@@ -765,10 +765,13 @@ class ProductionReadonlyStore:
     regardless of the current running environment (e.g. dry-run).
     """
 
-    def __init__(self):
-        # Force Production Path
-        self.db_path = "data/metrics/production/enrichment_metrics.db"
+    def __init__(self, db_path: Optional[str] = None):
+        # Force Production Path unless a caller (tests) injects one.
+        self.db_path = db_path or "data/metrics/production/enrichment_metrics.db"
         self.conn = None
+        # One connection can be shared across worker threads; every read
+        # holds this lock so concurrent callers never interleave on it.
+        self._lock = threading.Lock()
         # Lazy connect on first access to handle cases where DB is created after init
 
     def _connect(self):
@@ -784,43 +787,66 @@ class ProductionReadonlyStore:
                 logger.error(f"Failed to connect to production DB: {e}")
         return False
 
+    def _reset_connection(self) -> None:
+        """Drop a connection a read just failed on.
+
+        Without this, one "bad parameter or other API misuse" leaves
+        `self.conn` set, `_connect()` returns True forever and every later
+        read fails the same way until the process restarts (plan 113).
+        """
+        conn, self.conn = self.conn, None
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
+
     def get_metrics(self, source_id: str) -> Optional[Dict[str, Any]]:
-        if not self._connect():
-            return None
-        cur = self.conn.cursor()
-        try:
-            cur.execute(
-                "SELECT * FROM enrichment_metrics WHERE source_id = ?", (source_id,)
-            )
-            row = cur.fetchone()
-            if row:
-                cols = [description[0] for description in cur.description]
-                return dict(zip(cols, row, strict=False))
-        except Exception as e:
-            logger.error(f"Error reading prod metrics: {e}")
-        finally:
-            cur.close()
-        return None
+        with self._lock:
+            if not self._connect():
+                return None
+            conn = self.conn
+            if conn is None:
+                return None
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT * FROM enrichment_metrics WHERE source_id = ?",
+                    (source_id,),
+                )
+                row = cur.fetchone()
+                result = None
+                if row:
+                    cols = [description[0] for description in cur.description]
+                    result = dict(zip(cols, row, strict=False))
+                cur.close()
+                return result
+            except Exception as e:
+                logger.error(f"Error reading prod metrics: {e}")
+                self._reset_connection()
+                return None
 
     def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
-        if not self._connect():
-            return {}
-        cur = self.conn.cursor()
-        try:
-            cur.execute("SELECT * FROM enrichment_metrics")
-            rows = cur.fetchall()
-            cols = [description[0] for description in cur.description]
-            return {row[0]: dict(zip(cols, row, strict=False)) for row in rows}
-        except Exception:
-            return {}
-        finally:
-            cur.close()
+        with self._lock:
+            if not self._connect():
+                return {}
+            conn = self.conn
+            if conn is None:
+                return {}
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM enrichment_metrics")
+                rows = cur.fetchall()
+                cols = [description[0] for description in cur.description]
+                result = {row[0]: dict(zip(cols, row, strict=False)) for row in rows}
+                cur.close()
+                return result
+            except Exception:
+                self._reset_connection()
+                return {}
 
     def close(self):
         # Closes the production database connection.
-        if hasattr(self, "conn") and self.conn:
-            self.conn.close()
-            self.conn = None
+        with self._lock:
+            self._reset_connection()
 
 
 # Global instance for optimizer

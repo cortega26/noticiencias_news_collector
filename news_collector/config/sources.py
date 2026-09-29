@@ -51,6 +51,8 @@ CATEGORY_CONFIG = {
     },
 }
 
+SOURCES_YAML_PATH = Path(__file__).parent / "sources.yaml"
+
 # Globals to be populated
 ELITE_JOURNALS: Dict[str, Any] = {}
 SCIENCE_MEDIA: Dict[str, Any] = {}
@@ -65,8 +67,7 @@ def load_sources():
     """Carga las fuentes desde sources.yaml y popula las variables globales."""
     global ELITE_JOURNALS, SCIENCE_MEDIA, INSTITUTIONAL_SOURCES, PREPRINT_SOURCES, COMMUNITY_FEEDS, AI_LABS, ALL_SOURCES
 
-    current_dir = Path(__file__).parent
-    yaml_path = current_dir / "sources.yaml"
+    yaml_path = SOURCES_YAML_PATH
 
     if not yaml_path.exists():
         # Fallback or error? For now, empty or raise
@@ -120,10 +121,7 @@ load_sources()
 # Helper Functions
 def save_sources(new_sources: Dict[str, Any]):
     """Guarda el diccionario completo de fuentes en sources.yaml"""
-    current_dir = Path(__file__).parent
-    yaml_path = current_dir / "sources.yaml"
-
-    with open(yaml_path, "w", encoding="utf-8") as f:
+    with open(SOURCES_YAML_PATH, "w", encoding="utf-8") as f:
         yaml.dump(
             new_sources,
             f,
@@ -167,12 +165,26 @@ TIER_D_INTERVAL = 86400  # 24 hours (Manual/Restricted)
 VALID_TIERS = ["A", "B", "C", "D"]
 
 
-def validate_sources():  # noqa: C901
+def validate_source_catalog(sources: Dict[str, Any]) -> list[str]:
+    """Validate an arbitrary source catalog dict and return its errors.
+
+    Pure: reads no globals and touches no disk, so callers that build a
+    candidate catalog (e.g. `SourceCatalogWorkflow`) can validate it before
+    writing. `validate_sources()` keeps its original load-then-raise
+    behavior for the on-disk catalog. Each numbered check lives in its own
+    helper so the linter's complexity budget holds per rule.
     """
-    Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
-    Raises ValueError if any source is invalid.
-    """
-    load_sources()  # Ensure fresh check
+    errors = []
+
+    for source_id, config in sources.items():
+        for check in _CATALOG_CHECKS:
+            errors.extend(check(source_id, config))
+        errors.extend(audit_source_strategy_consistency(source_id, config))
+
+    return errors
+
+
+def _check_required_fields(source_id: str, config: Dict[str, Any]) -> list[str]:
     required_fields = [
         "name",
         "url",
@@ -182,83 +194,111 @@ def validate_sources():  # noqa: C901
         "fetchability_score",
         "crawl_interval_seconds",
     ]
+    return [
+        f"Source '{source_id}' missing required field: '{field}'"
+        for field in required_fields
+        if field not in config
+    ]
 
-    errors = []
 
-    for source_id, config in ALL_SOURCES.items():
-        # 1. Check required fields
-        for field in required_fields:
-            if field not in config:
-                errors.append(f"Source '{source_id}' missing required field: '{field}'")
-
-        # 2. Check Tier Validity
-        tier = config.get("tier")
-        if tier and tier not in VALID_TIERS:
-            errors.append(
-                f"Source '{source_id}' has invalid tier: '{tier}'. Must be one of {VALID_TIERS}"
-            )
-
-        # 3. Check Fetchability Score
-        f_score = config.get("fetchability_score")
-        if f_score is not None and (
-            not isinstance(f_score, (int, float)) or not (0 <= f_score <= 100)
-        ):
-            errors.append(
-                f"Source '{source_id}' has invalid fetchability_score: {f_score}. Must be 0-100."
-            )
-
-        # 4. Check Interval
-        interval = config.get("crawl_interval_seconds")
-        if interval is not None and (not isinstance(interval, int) or interval <= 0):
-            errors.append(
-                f"Source '{source_id}' has invalid crawl_interval_seconds: {interval}. Must be positive int."
-            )
-
-        # 5. Check Enrichment Strategy
-        strategy = config.get(
-            "enrichment_strategy", "http"
-        )  # Default to http if missing
-        valid_strategies = [
-            "scholarly",
-            "http",
-            "headless_fallback",
-            "scrapling_stealth",
-            "scrapling_http",
-            "discovery_only",
+def _check_tier(source_id: str, config: Dict[str, Any]) -> list[str]:
+    tier = config.get("tier")
+    if tier and tier not in VALID_TIERS:
+        return [
+            f"Source '{source_id}' has invalid tier: '{tier}'. Must be one of {VALID_TIERS}"
         ]
-        if strategy not in valid_strategies:
-            errors.append(
-                f"Source '{source_id}' has invalid enrichment_strategy: '{strategy}'. Must be one of {valid_strategies}"
-            )
+    return []
 
-        # 6. Check Headless Configuration
-        if strategy in ("headless_fallback", "scrapling_stealth"):
-            if not isinstance(config.get("headless_enabled"), bool):
-                errors.append(
-                    f"Source '{source_id}' must specify 'headless_enabled' (bool) when using headless_fallback."
-                )
 
-            max_seconds = config.get("headless_max_seconds")
-            if max_seconds is not None and (
-                not isinstance(max_seconds, int) or max_seconds <= 0
-            ):
-                errors.append(
-                    f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int."
-                )
+def _check_fetchability(source_id: str, config: Dict[str, Any]) -> list[str]:
+    f_score = config.get("fetchability_score")
+    if f_score is not None and (
+        not isinstance(f_score, (int, float)) or not (0 <= f_score <= 100)
+    ):
+        return [
+            f"Source '{source_id}' has invalid fetchability_score: {f_score}. Must be 0-100."
+        ]
+    return []
 
-        # 7. Blacklist consistency check
-        bl = config.get("blacklisted", False)
-        if bl:
-            if not config.get("blacklist_reason"):
-                errors.append(
-                    f"Source '{source_id}' is blacklisted=true but missing 'blacklist_reason'"
-                )
-            if not config.get("blacklisted_date"):
-                errors.append(
-                    f"Source '{source_id}' is blacklisted=true but missing 'blacklisted_date'"
-                )
 
-        errors.extend(audit_source_strategy_consistency(source_id, config))
+def _check_interval(source_id: str, config: Dict[str, Any]) -> list[str]:
+    interval = config.get("crawl_interval_seconds")
+    if interval is not None and (not isinstance(interval, int) or interval <= 0):
+        return [
+            f"Source '{source_id}' has invalid crawl_interval_seconds: {interval}. Must be positive int."
+        ]
+    return []
+
+
+def _check_enrichment_strategy(source_id: str, config: Dict[str, Any]) -> list[str]:
+    strategy = config.get("enrichment_strategy", "http")  # Default to http if missing
+    valid_strategies = [
+        "scholarly",
+        "http",
+        "headless_fallback",
+        "scrapling_stealth",
+        "scrapling_http",
+        "discovery_only",
+    ]
+    if strategy not in valid_strategies:
+        return [
+            f"Source '{source_id}' has invalid enrichment_strategy: '{strategy}'. Must be one of {valid_strategies}"
+        ]
+    return []
+
+
+def _check_headless(source_id: str, config: Dict[str, Any]) -> list[str]:
+    strategy = config.get("enrichment_strategy", "http")
+    if strategy not in ("headless_fallback", "scrapling_stealth"):
+        return []
+    issues = []
+    if not isinstance(config.get("headless_enabled"), bool):
+        issues.append(
+            f"Source '{source_id}' must specify 'headless_enabled' (bool) when using headless_fallback."
+        )
+    max_seconds = config.get("headless_max_seconds")
+    if max_seconds is not None and (
+        not isinstance(max_seconds, int) or max_seconds <= 0
+    ):
+        issues.append(
+            f"Source '{source_id}' has invalid headless_max_seconds: {max_seconds}. Must be positive int."
+        )
+    return issues
+
+
+def _check_blacklist(source_id: str, config: Dict[str, Any]) -> list[str]:
+    if not config.get("blacklisted", False):
+        return []
+    issues = []
+    if not config.get("blacklist_reason"):
+        issues.append(
+            f"Source '{source_id}' is blacklisted=true but missing 'blacklist_reason'"
+        )
+    if not config.get("blacklisted_date"):
+        issues.append(
+            f"Source '{source_id}' is blacklisted=true but missing 'blacklisted_date'"
+        )
+    return issues
+
+
+_CATALOG_CHECKS = (
+    _check_required_fields,
+    _check_tier,
+    _check_fetchability,
+    _check_interval,
+    _check_enrichment_strategy,
+    _check_headless,
+    _check_blacklist,
+)
+
+
+def validate_sources():
+    """
+    Validates that all sources conform to the strict High-Reliability Source Onboarding Protocol.
+    Raises ValueError if any source is invalid.
+    """
+    load_sources()  # Ensure fresh check
+    errors = validate_source_catalog(ALL_SOURCES)
 
     if errors:
         error_msg = (

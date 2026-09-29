@@ -496,6 +496,15 @@ duplicate PR is created.
 **Purpose:** remove handwritten cross-language drift without creating a second
 source of truth.
 
+> **Partial progress (plan 080 Phase 2, 2026-09-23):** the admin half's first
+> slice is delivered — deterministic export/check CLI
+> (`scripts/export_admin_openapi.py`), committed `apps/admin/openapi.json`,
+> generated `apps/admin/src/lib/generated/api.d.ts`, the four workflow
+> response mirrors replaced by aliases, Make targets and the `admin-contracts`
+> CI job. Not delivered here (still Phase 6 scope): `openapi-fetch`,
+> `noUncheckedIndexedAccess`, the remaining handwritten mirrors, and the whole
+> publication-contract half. See `plans/080/tests/phase-2-results.md`.
+
 **Admin contract:**
 
 1. Generate deterministic OpenAPI from `create_app(...).openapi()` using FastAPI
