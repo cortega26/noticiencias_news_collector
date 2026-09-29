@@ -283,12 +283,13 @@ class RSSCollector(BaseCollector):
             stats["articles_found"] = len(raw_articles)
 
             if not raw_articles:
-                self._emit_log(
-                    "info",
-                    "collector.feed.empty",
-                    source_id=source_id,
-                    details={"url": source_config.get("url")},
-                )
+                if getattr(parsed_feed, "entries", []):
+                    self._emit_log(
+                        "info",
+                        "collector.feed.no_new_items",
+                        source_id=source_id,
+                        details={"url": source_config.get("url")},
+                    )
                 stats["success"] = True
                 return stats
 

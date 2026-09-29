@@ -88,7 +88,7 @@ scitechdaily:
   typical_delay: 0
   content_mode: summary_only
   fetch_mode: rss_only
-  enrichment_strategy: http
+  enrichment_strategy: discovery_only
   headless_enabled: false
   etag: null
   last_modified: null
@@ -702,6 +702,7 @@ caltech_news:
   description: News from California Institute of Technology
   typical_delay: 0
   content_mode: summary_only
+  enrichment_strategy: discovery_only
   etag: null
   last_modified: null
   _group: INSTITUTIONAL_SOURCES
@@ -721,7 +722,7 @@ michigan_news:
   typical_delay: 0
   content_mode: summary_only
   fetch_mode: rss_only
-  enrichment_strategy: http
+  enrichment_strategy: discovery_only
   headless_enabled: false
   etag: null
   last_modified: null
@@ -787,7 +788,7 @@ medicalxpress:
   min_delay_seconds: 60
   content_mode: summary_only
   fetch_mode: rss_only
-  enrichment_strategy: http
+  enrichment_strategy: discovery_only
   headless_enabled: false
   etag: null
   last_modified: null
@@ -809,7 +810,7 @@ techxplore:
   min_delay_seconds: 60
   content_mode: summary_only
   fetch_mode: rss_only
-  enrichment_strategy: http
+  enrichment_strategy: discovery_only
   headless_enabled: false
   etag: null
   last_modified: null
@@ -871,8 +872,9 @@ microsoft_research:
 #   description: string
 #   typical_delay: int (seconds, optional)
 #   content_mode: string (full_text, summary_only)
+#   fetch_mode: string (optional; rss_only = feed-only collection mode; does not gate enrichment)
 #   headers: dict (optional custom headers)
-#   enrichment_strategy: string (http, scholarly, headless_fallback)
+#   enrichment_strategy: string (http, scholarly, headless_fallback, discovery_only — no article fetch, use the feed summary)
 #   strategy_justification: string (required when summary_only or rss_only sources still use headless/Scrapling paths)
 #   headless_enabled: boolean (optional, enables headless fallback)
 #   manual_only: boolean (optional, excludes source from scheduled collection)
