@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T16:37:47.405630+00:00",
+  "generated_at": "2026-09-29T22:25:56.341301+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -223,6 +223,7 @@
       "113",
       "114",
       "115",
+      "116",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -336,6 +337,7 @@
     "spec-collection-recovery-and-scoring.md": null,
     "spec-curation-desk-revamp.md": null,
     "spec-editorial-grounding.md": null,
+    "spec-fetch-warning-remediation.md": null,
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
     "spec-internal-review-guardrails.md": null,
@@ -468,6 +470,7 @@
     "todo-admin-stack-ports.md": null,
     "todo-collection-recovery-and-scoring.md": null,
     "todo-editorial-grounding.md": null,
+    "todo-fetch-warning-remediation.md": null,
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
     "todo-internal-review-guardrails.md": null,
@@ -1217,6 +1220,8 @@
     "plans/114/spec.md",
     "plans/114/todo.md",
     "plans/115/spec.md",
+    "plans/116/spec.md",
+    "plans/116/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
@@ -1386,6 +1391,7 @@
     "spec-collection-recovery-and-scoring.md",
     "spec-curation-desk-revamp.md",
     "spec-editorial-grounding.md",
+    "spec-fetch-warning-remediation.md",
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
     "spec-internal-review-guardrails.md",
@@ -1423,6 +1429,7 @@
     "todo-admin-stack-ports.md",
     "todo-collection-recovery-and-scoring.md",
     "todo-editorial-grounding.md",
+    "todo-fetch-warning-remediation.md",
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
     "todo-internal-review-guardrails.md",
