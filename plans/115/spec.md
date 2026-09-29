@@ -107,12 +107,14 @@ unmodified checkout is a broken baseline → STOP, don't repair it.
 ## Scope
 
 **In scope** (the only files you may create/modify):
+
 - `plans/115/spec.md` (this file — already created by the advisor; append implementation record only)
 - `plans/README.md` (the plan-115 row status cell only)
 - `.github/workflows/collector-incident-watcher.yml` (create — Phase A)
 - `.github/workflows/daily_collector.yml` (remove the `Alert on Failure` step only — Phase A; nothing else in the file)
 
 **Out of scope**:
+
 - `data/exports/*`, collector source, requirements/locks, Dockerfile/env config.
 - Historical dated failure issues (read-only references at most; never close/edit).
 - GA/GSC activation, social automation, newsletter provider changes, frontend
@@ -253,7 +255,7 @@ Stop and report (do not improvise) if:
 - Drift check: `git diff --stat 497b2f1..HEAD -- .github/workflows/daily_collector.yml plans/README.md`
   → `plans/README.md | 6 ++++++` only (registration row). `daily_collector.yml`
   byte-identical to the 58-line version quoted in Current state (re-read: schedule
-  0 6 * * 1,3,5 + workflow_dispatch, concurrency cancel-in-progress:false,
+  `0 6 * * 1,3,5` + workflow_dispatch, concurrency cancel-in-progress:false,
   permissions contents:write + issues:write, Alert on Failure lines 50-58 present).
   HEAD = `66e8c42`.
 - Green sample: `gh run list --workflow=daily_collector.yml --limit 5 --json
