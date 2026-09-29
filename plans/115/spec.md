@@ -247,3 +247,110 @@ Stop and report (do not improvise) if:
 - **Deferred:** Monday-pileup consolidation (harmless while green; needs a
   sustained-cancellation threshold, never aesthetics).
 - **Deferred:** auto-closing historical dated issues (never — explicit contract).
+
+## Step-0 execution record (executor, 2026-09-29, worktree /tmp/opencode/exec-008)
+
+- Drift check: `git diff --stat 497b2f1..HEAD -- .github/workflows/daily_collector.yml plans/README.md`
+  → `plans/README.md | 6 ++++++` only (registration row). `daily_collector.yml`
+  byte-identical to the 58-line version quoted in Current state (re-read: schedule
+  0 6 * * 1,3,5 + workflow_dispatch, concurrency cancel-in-progress:false,
+  permissions contents:write + issues:write, Alert on Failure lines 50-58 present).
+  HEAD = `66e8c42`.
+- Green sample: `gh run list --workflow=daily_collector.yml --limit 5 --json
+  conclusion,event,createdAt` → 5/5 `success` (schedule events 2026-09-28,
+  2026-09-25, 2026-09-23, 2026-09-21, 2026-09-18), incl. 2026-09-28 within 10 days.
+  Criterion (≥4/5 incl. one within 10 days) MET.
+- `newsletter_endpoint`: SET (non-empty, sibling frontend `src/config.yaml:95`;
+  presence only, value not recorded). Phase B stops here — no seed inbox nominated.
+- Owner gates (reviewer-recorded): G1 APPROVED 2026-09-29 (adding
+  `.github/workflows/collector-incident-watcher.yml` AND removing the per-run
+  `Alert on Failure` step). G2 UNANSWERED (`runs_real_or_unknown?` stays unknown;
+  Phase B waits). G3 UNANSWERED (no seed inbox nominated; Phase B waits).
+- Verdict: Phase A proceeds; Phase B ends at the SET reconfirmation above.
+
+## Step-1 baseline record (executor, 2026-09-29, unmodified tree)
+
+- `python3 scripts/validate_plans_ledger.py` → `validate_plans_ledger: OK` (exit 0).
+- `make lint` → exit 0 (`All checks passed!`).
+- `git diff --check` → exit 0.
+
+## Step-2 implementation record (executor, 2026-09-29)
+
+- Created `.github/workflows/collector-incident-watcher.yml`: `on.workflow_run`
+  (`workflows: ["Daily News Collection"]`, `types: [completed]`); permissions
+  `issues: write` + `actions: read` + `contents: read`; own concurrency group
+  (`collector-incident-watcher`, `cancel-in-progress: false`) so watcher runs
+  serialize; single step, `gh` + `jq` only, no custom actions, no checkout.
+  Behavior per contract `aut_collector_incident_dedupe_recovery`: default-branch
+  filter in-job; stable incident found by title search
+  (`Collector incident in:title`, no new label); `>1` open match → job fails
+  instead of auto-picking; found issue without the
+  `<!-- watcher-fingerprint: X -->` body marker → job fails (human-collision
+  guard, never touch other issues); fingerprint `<conclusion>/<failed-jobs>`;
+  identical fingerprint + update <24h → silent no-op; cancellation opens an
+  incident only if last-success age >30h (rule quoted in a code comment with its
+  source); success comments recovery (run URL + timestamp) + closes with
+  `--reason completed`; `timed_out` treated as failure-like (the 15-min job
+  never finished; the retired `if: failure()` alert also fired on timeouts);
+  other conclusions → logged no-op; no open incident on failure → reopen the
+  most recent closed marker-bearing stable incident if one exists, else create.
+- The `run:` block is byte-identical to the fixture-tested script (verified by
+  extracting the block from the YAML and `diff`ing: identical).
+- Fixture tests (`/tmp` scratch, stubbed `gh`, `NOW_ISO=2026-09-29T12:00:00Z`,
+  never committed): 10/10 cases pass, 21/21 assertions —
+  (1) success+open→recovery comment+close; (2) failure+clean→create with marker;
+  (3) cancelled+last-success-5h→silent; (4) cancelled+last-success-40h→create;
+  (5) two open incidents→exit 1, zero writes; (6) success+clean→silent;
+  (7) failure+same-fingerprint-2h→silent; (8) failure+changed-fingerprint→comment
+  +body refresh, no create/close; (9) failure+closed prior→reopen+comment, no
+  create; (10) open issue without marker→exit 1, zero writes. Fixture testing
+  caught and fixed two script bugs before commit: `grep -o` no-match exiting
+  nonzero under `pipefail`+`set -e` (now `|| true`), and reliance on gh-side
+  `--jq` for the closed-issue list (now pipes raw JSON through local `jq`).
+- `daily_collector.yml`: deleted ONLY the `Alert on Failure` step (lines 50-58);
+  `git diff` shows the 10-line removal and nothing else (58→48 lines; schedule,
+  concurrency, permissions, job, and the 071/073 NOTE byte-identical).
+- Verifications: `yaml.safe_load` on the new workflow → exit 0; structure
+  re-checked from parsed YAML (trigger, permissions, concurrency, 1 step, zero
+  `uses:` entries).
+
+## Step-3 verification record (executor, 2026-09-29) — STOPPED at the full gate
+
+- `make lint` → exit 0. `validate_plans_ledger.py` → `OK` (row↔file consistent).
+  Targeted pytest: N/A (no test files touched — workflow YAML + plans docs only).
+- `make verify-ci` run 1: failed in the `typecheck` target's suite run —
+  `FAILED tests/property/test_workflow_lifecycle_stateful.py::TestWorkflowLifecycle::runTest`
+  (`1 failed, 3419 passed`). That test is a Hypothesis stateful machine over
+  `CollectionRunWorkflow`/`PublicationRunWorkflow` SQLite lease logic; it reads
+  no workflow YAML, no plans docs, and shares no code path with this change. It
+  passes in isolation (`10 passed`); the full-suite-only failure under
+  `pytest-randomly` ordering is the known order-dependent flake shape the
+  Makefile itself documents elsewhere. Unrelated — not fixed, per plan.
+- `make verify-ci` run 2 (teed to a log): pytest green all the way through,
+  then `inventory-check` FAILED: `Inventory drift detected: 2 changed line(s)
+  across 2 key(s)` (`markdown_files`, `top_level_inventory.plans/`); committed
+  `audit/00_inventory.json` lacks the `115` / `plans/115/spec.md` entries the
+  live tree has. Proven pre-existing and not caused by this build:
+  `git show 66e8c42:audit/00_inventory.json` contains zero `115` references
+  while `66e8c42` itself added `plans/115/spec.md` — the registration commit
+  added the plan without refreshing the baseline, and this build adds/removes
+  no files under `plans/`. Per plan (unrelated gate failure → STOP verbatim,
+  fix nothing unrelated) and scope (`audit/00_inventory.json` out of scope),
+  the demanded `make inventory-refresh` was NOT run. Needs a reviewer call:
+  refresh + commit the inventory baseline (separate commit), then re-run
+  `make verify-ci`.
+- Row set to BLOCKED with reason (ledger validator accepts BLOCKED; DONE would
+  be false and TODO would hide the completed build).
+
+## Rollback
+
+Revert the two workflow changes (delete
+`.github/workflows/collector-incident-watcher.yml`, restore the `Alert on
+Failure` step in `.github/workflows/daily_collector.yml`) — single revert
+commit. Spec/ledger edits are docs-only and need no rollback.
+
+## Post-merge live proof (owner-observed on scheduled runs — never claimed pre-merge)
+
+First failure opens exactly one incident; identical fingerprint within 24h stays
+silent; cancellation ≤30h stays silent; next success records recovery and
+closes — owner watches the next scheduled runs (Mon/Wed/Fri) and reports.
