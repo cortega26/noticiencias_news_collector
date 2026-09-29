@@ -37,7 +37,7 @@ see `scripts/validate_plans_ledger.py`.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 115 | [Stateful collector incident watcher + newsletter seed validation](115/spec.md) | P1 | M | None (control-plane spike 006 evidence in hand; owner approvals G1/G2/G3 are entry gates) | BLOCKED — Phase A built + fixture-tested (10/10); verify-ci blocked by pre-existing inventory drift (registration added plans/115/ without refreshing audit/00_inventory.json); reviewer call needed on inventory-refresh, which is out of scope for this plan |
+| 115 | [Stateful collector incident watcher + newsletter seed validation](115/spec.md) | P1 | M | None (control-plane spike 006 evidence in hand; owner approvals G1/G2/G3 are entry gates) | DONE — KEEP: Phase A merged (PR #352); post-merge live watch (first failure/recovery transitions) and Phase B gates G2/G3 pending |
 
 ### First-pass plans (2026-06-12)
 
