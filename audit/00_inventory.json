@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T14:51:10.567403+00:00",
+  "generated_at": "2026-09-29T15:22:08.696525+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -353,6 +353,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md": null,
     "spec-refinery-gui-phase4.md": null,
     "spec-refinery-gui.md": null,
+    "spec-source-alt-extraction.md": null,
     "spec-test-suite-audit.md": null,
     "spec.md": null,
     "temp_auditor_regressions/": [
@@ -484,6 +485,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md": null,
     "todo-refinery-gui-phase4.md": null,
     "todo-refinery-gui.md": null,
+    "todo-source-alt-extraction.md": null,
     "todo-test-suite-audit.md": null,
     "todo.md": null,
     "tools/": [
@@ -1400,6 +1402,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md",
     "spec-refinery-gui-phase4.md",
     "spec-refinery-gui.md",
+    "spec-source-alt-extraction.md",
     "spec-test-suite-audit.md",
     "spec.md",
     "spec/frontend-wave2-contract-mirror.md",
@@ -1436,6 +1439,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md",
     "todo-refinery-gui-phase4.md",
     "todo-refinery-gui.md",
+    "todo-source-alt-extraction.md",
     "todo-test-suite-audit.md",
     "todo.md"
   ],

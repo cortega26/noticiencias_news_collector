@@ -22,6 +22,7 @@ def test_rss_collector_image_fallback_to_dom(collector):
         "raw_content": """
         <html>
             <meta property="og:image" content="https://example.com/og_extracted.jpg" />
+            <meta property="og:image:alt" content="Vista del laboratorio desde el pasillo." />
             <body><article><p>{long_content}</p></article></body>
         </html>
         """,
@@ -126,6 +127,72 @@ def test_rss_collector_image_fallback_to_dom(collector):
     # Image tracking is done via image_status and image_source fields.
     assert article.article_metadata.image_status == "IMAGE_OK"
     assert article.article_metadata.image_source == "meta:og:image"
+    # The real source description is carried through to the article.
+    assert article.image_alt == "Vista del laboratorio desde el pasillo."
+
+
+def test_rss_collector_ignores_boilerplate_source_alt(collector):
+    collector.router = MagicMock()
+    collector.router.route_enrichment.return_value = {
+        "success": True,
+        "content": "Long enough summary to pass validation for testing",
+        "raw_content": """
+        <html><body><article>
+            <img src="https://example.com/photo.jpg" width="800" height="600"
+                 alt="Imagen de un laboratorio" />
+        </article></body></html>
+        """,
+        "strategy_used": "http",
+    }
+    source_config = {
+        "name": "Test Source",
+        "url": "https://example.com/rss",
+        "category": "Tech",
+        "credibility_score": 1.0,
+    }
+    collector.parser.extract_items = MagicMock(
+        return_value=[
+            {
+                "title": "Test Article",
+                "url": "https://example.com/article",
+                "original_url": "https://example.com/article",
+                "published_date": datetime.now(timezone.utc),
+                "image_url": None,
+                "source_metadata": {},
+                "summary": "Long enough summary to pass validation for testing",
+            }
+        ]
+    )
+    collector.pre_scorer.select_top_candidates = MagicMock(side_effect=lambda x, **k: x)
+    collector.db_manager = MagicMock()
+    collector.db_manager.article_exists.return_value = False
+
+    collector.session = MagicMock()
+    collector.client.session = collector.session
+    feed_response = MagicMock(
+        status_code=200,
+        text="<rss></rss>",
+        content=b"<rss></rss>",
+        headers={"content-type": "application/rss+xml"},
+    )
+    head_response = MagicMock(
+        status_code=200,
+        headers={"Content-Type": "image/jpeg", "Content-Length": "10000"},
+    )
+    collector.session.get.return_value = feed_response
+    collector.session.head.return_value = head_response
+    collector.image_extractor.session = collector.session
+    collector._filter_and_save_articles = MagicMock(return_value=1)
+
+    collector.collect_from_source("test_src", source_config)
+
+    args, _ = collector._filter_and_save_articles.call_args
+    article = args[1][0]
+
+    assert article.article_metadata.image_status == "IMAGE_OK"
+    # A boilerplate source alt must not be published; the Images desk still
+    # has to provide a real description.
+    assert not article.image_alt
 
 
 def test_rss_collector_image_missing_source(collector):

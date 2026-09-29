@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from news_collector.editorial.hero_alt import is_boilerplate_alt
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -18,9 +19,47 @@ class ImageCandidate:
     score: float = 0.0
     width: Optional[int] = None
     height: Optional[int] = None
+    alt: Optional[str] = None
 
 
 _SITE_LOGO_RE = re.compile(r"(?<![a-z])logo(?![a-z]{3})")
+_MAX_ALT_LENGTH = 300
+
+
+def _clean_alt(value: Any) -> Optional[str]:
+    """Normalize a source description; reject unusable alt text.
+
+    Empty, sub-5-char, or boilerplate values are dropped so the Images-desk
+    block still applies when the source has no real description.
+    """
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split())
+    if len(text) < 5 or is_boilerplate_alt(text):
+        return None
+    return text[:_MAX_ALT_LENGTH].rstrip()
+
+
+def _meta_content(soup: BeautifulSoup, attrs: Dict[str, Any]) -> Optional[str]:
+    tag = soup.find("meta", attrs=attrs)
+    if not tag:
+        return None
+    content = tag.get("content")
+    return str(content) if content else None
+
+
+def _dom_alt(img: Any) -> Optional[str]:
+    """Alt from the `img` attribute, else the nearest figure caption."""
+    alt = _clean_alt(img.get("alt"))
+    if alt:
+        return alt
+    figure = img.find_parent("figure")
+    if figure is None:
+        return None
+    caption = figure.find("figcaption")
+    if caption is None:
+        return None
+    return _clean_alt(caption.get_text(" ", strip=True))
 
 
 def is_site_logo_url(url: str) -> bool:
@@ -93,6 +132,8 @@ class ImageExtractor:
             {"name": "twitter:image:src"},
             {"itemprop": "image"},
         ]
+        og_alt = _clean_alt(_meta_content(soup, {"property": "og:image:alt"}))
+        twitter_alt = _clean_alt(_meta_content(soup, {"name": "twitter:image:alt"}))
 
         for tag_query in meta_tags:
             tag = soup.find("meta", attrs=tag_query)
@@ -104,11 +145,19 @@ class ImageExtractor:
                     if url and self._is_site_logo(url):
                         continue
                     if url and url not in seen:
+                        key = str(list(tag_query.values())[0])
+                        if key.startswith("og:"):
+                            alt = og_alt
+                        elif key.startswith("twitter:"):
+                            alt = twitter_alt
+                        else:
+                            alt = None
                         candidates.append(
                             ImageCandidate(
                                 url=url,
-                                source=f"meta:{list(tag_query.values())[0]}",
+                                source=f"meta:{key}",
                                 score=10.0,
+                                alt=alt,
                             )
                         )
                         seen.add(url)
@@ -186,6 +235,7 @@ class ImageExtractor:
                             score=score,
                             width=width,
                             height=height,
+                            alt=_dom_alt(img),
                         )
                     )
                     seen.add(url)

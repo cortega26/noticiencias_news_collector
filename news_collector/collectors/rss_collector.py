@@ -934,6 +934,8 @@ class RSSCollector(BaseCollector):
                     for img_cand in image_candidates:
                         if self.image_extractor.validate_image(img_cand):
                             cand["image_url"] = img_cand.url
+                            if img_cand.alt:
+                                cand["image_alt"] = img_cand.alt
                             image_status = "IMAGE_OK"
                             image_source = img_cand.source
                             break
@@ -1015,6 +1017,7 @@ class RSSCollector(BaseCollector):
                     "image_status": raw_article.get("_image_status"),
                     "image_source": raw_article.get("_image_source"),
                 },
+                "image_alt": raw_article.get("image_alt"),
                 "content_mode": raw_article.get("content_mode", "full_text"),
                 "min_summary_length_override": source_config.get("min_summary_length"),
                 "min_content_length_override": source_config.get("min_content_length"),
