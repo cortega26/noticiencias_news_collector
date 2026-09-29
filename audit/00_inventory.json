@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-21T01:59:53.690860+00:00",
-  "python_version": "3.13.12",
+  "generated_at": "2026-09-29T12:50:11.004786+00:00",
+  "python_version": "3.12.3",
   "top_level_inventory": {
     ".agent/": [
       "rules"
@@ -15,9 +15,7 @@
       "cli.sh",
       "codacy.yaml"
     ],
-    ".contract-snapshots/": [
-      "admin_openapi.snapshot.json"
-    ],
+    ".codacy.yaml": null,
     ".coverage-baseline": null,
     ".dockerignore": null,
     ".env.example": null,
@@ -235,6 +233,7 @@
     ],
     "reports/": [
       ".gitkeep",
+      "evaluation",
       "ops",
       "perf"
     ],
@@ -268,7 +267,7 @@
       "dev",
       "enrichment_candidate.py",
       "evaluate_enrichment_registry.py",
-      "generate_admin_openapi_snapshot.py",
+      "export_admin_openapi.py",
       "generate_api_docs.py",
       "generate_autonomous_report.py",
       "generate_fixture_post.py",
@@ -281,6 +280,8 @@
       "lint_changed.py",
       "llm_canary.py",
       "llm_health_report.py",
+      "llm_routing_dataset.py",
+      "llm_routing_replay.py",
       "mark_published.py",
       "migrate.py",
       "migrate_metrics_db.py",
@@ -322,16 +323,27 @@
       "weekly_quality_report.py"
     ],
     "security_status.txt": null,
+    "spec/": [
+      "frontend-wave2-contract-mirror.md",
+      "frontend-wave3-contract-mirror.md"
+    ],
     "spec-admin-api-surface.md": null,
+    "spec-admin-stack-ports.md": null,
+    "spec-alt-text-brief-flow.md": null,
+    "spec-collection-recovery-and-scoring.md": null,
+    "spec-curation-desk-revamp.md": null,
     "spec-editorial-grounding.md": null,
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
+    "spec-inventory-baseline-refresh.md": null,
     "spec-llm-canary.md": null,
     "spec-llm-health-weights-fix.md": null,
     "spec-llm-provider-chain.md": null,
+    "spec-llm-routing-benchmark.md": null,
     "spec-llm-run-report.md": null,
     "spec-logs-warnings-concurrency.md": null,
     "spec-nvidia-routing-fix.md": null,
+    "spec-oci-hosting-migration.md": null,
     "spec-plans-ledger-hygiene.md": null,
     "spec-refinery-gui-phase3.md": null,
     "spec-refinery-gui-phase4-addendum-source-editor.md": null,
@@ -447,15 +459,20 @@
       "test_admin_panel_weights.py"
     ],
     "todo-admin-api-surface.md": null,
+    "todo-admin-stack-ports.md": null,
+    "todo-collection-recovery-and-scoring.md": null,
     "todo-editorial-grounding.md": null,
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
+    "todo-inventory-baseline-refresh.md": null,
     "todo-llm-canary.md": null,
     "todo-llm-health-weights-fix.md": null,
     "todo-llm-provider-chain.md": null,
+    "todo-llm-routing-benchmark.md": null,
     "todo-llm-run-report.md": null,
     "todo-logs-warnings-concurrency.md": null,
     "todo-nvidia-routing-fix.md": null,
+    "todo-oci-hosting-migration.md": null,
     "todo-plans-ledger-hygiene.md": null,
     "todo-refinery-gui-phase3.md": null,
     "todo-refinery-gui-phase4-addendum-source-editor.md": null,
@@ -509,7 +526,7 @@
     },
     {
       "target": "serve",
-      "description": "Run the serving API (FastAPI on :8000, autoreload) — the admin GUI's backend"
+      "description": "Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `make serve API_PORT=9000` (default 8000, honored strictly)"
     },
     {
       "target": "admin-install",
@@ -517,11 +534,11 @@
     },
     {
       "target": "admin-dev",
-      "description": "Run ONLY the admin GUI (Astro :4321). You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`."
+      "description": "Run ONLY the admin GUI (default :4321, proxying /v1/* at the API port). Overrides: `make admin-dev API_PORT=8001 GUI_PORT=4330`. You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`."
     },
     {
       "target": "admin",
-      "description": "Run the full Refinery admin stack: serving API (:8000) + GUI (:4321). One Ctrl+C stops both."
+      "description": "Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both."
     },
     {
       "target": "admin-build",
@@ -530,6 +547,14 @@
     {
       "target": "admin-test",
       "description": "Run the Refinery admin GUI client unit tests (vitest)"
+    },
+    {
+      "target": "admin-contracts-generate",
+      "description": "Regenerate the admin OpenAPI artifact and generated TS types (plan 080 Phase 2)"
+    },
+    {
+      "target": "admin-contracts-check",
+      "description": "Fail if the admin OpenAPI artifact or generated TS types are stale (plan 080 Phase 2)"
     },
     {
       "target": "enrichment-eval",
@@ -1005,6 +1030,7 @@
     "docs/adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md",
     "docs/adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md",
     "docs/adr/0009-multi-provider-llm-chain.md",
+    "docs/adr/0010-llm-routing.md",
     "docs/api_examples.md",
     "docs/archive/s1_refactor/S1C_AUDIT.md",
     "docs/archive/s1_refactor/historical_walkthrough.md",
@@ -1107,6 +1133,28 @@
     "plans/060/phase-4b-source-catalog-workflow/todo.md",
     "plans/060/phase-4c-publication-run-workflow/spec.md",
     "plans/060/phase-4c-publication-run-workflow/todo.md",
+    "plans/060/phase-5a-webhook-receipts/spec.md",
+    "plans/060/phase-5a-webhook-receipts/todo.md",
+    "plans/060/phase-5b-attempt-events-reconciler/spec.md",
+    "plans/060/phase-5b-attempt-events-reconciler/todo.md",
+    "plans/060/phase-5c-dashboard-health-api/spec.md",
+    "plans/060/phase-5c-dashboard-health-api/todo.md",
+    "plans/060/phase-5d-dashboard-wiring/spec.md",
+    "plans/060/phase-5d-dashboard-wiring/todo.md",
+    "plans/060/phase-5e-callback-sender-retries/spec.md",
+    "plans/060/phase-5e-callback-sender-retries/todo.md",
+    "plans/060/phase-7a-refinery-recording-audit/spec.md",
+    "plans/060/phase-7a-refinery-recording-audit/todo.md",
+    "plans/060/phase-7b-target-repo-publication/spec.md",
+    "plans/060/phase-7b-target-repo-publication/todo.md",
+    "plans/060/phase-7c1-editorial-input-contract/spec.md",
+    "plans/060/phase-7c1-editorial-input-contract/todo.md",
+    "plans/060/phase-7c2-critic-gate/spec.md",
+    "plans/060/phase-7c2-critic-gate/todo.md",
+    "plans/060/phase-7c3-cached-stages/spec.md",
+    "plans/060/phase-7c3-cached-stages/todo.md",
+    "plans/060/phase-7c4-publication-artifact/spec.md",
+    "plans/060/phase-7c4-publication-artifact/todo.md",
     "plans/060/spec.md",
     "plans/060/todo.md",
     "plans/080/00-evidence.md",
@@ -1118,6 +1166,7 @@
     "plans/080/tests/README.md",
     "plans/080/tests/baseline.md",
     "plans/080/tests/phase-1-results.md",
+    "plans/080/tests/phase-2-results.md",
     "plans/080/tests/planning-results.md",
     "plans/080/todo.md",
     "plans/081/spec.md",
@@ -1302,17 +1351,25 @@
     "quality_gate/snapshots/01_frog/output.md",
     "quality_gate/snapshots/02_printing/output.md",
     "quality_gate/snapshots/03_battery/output.md",
+    "reports/evaluation/llm-routing-2026-09.md",
     "scripts/debugging/README.md",
     "spec-admin-api-surface.md",
+    "spec-admin-stack-ports.md",
+    "spec-alt-text-brief-flow.md",
+    "spec-collection-recovery-and-scoring.md",
+    "spec-curation-desk-revamp.md",
     "spec-editorial-grounding.md",
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
+    "spec-inventory-baseline-refresh.md",
     "spec-llm-canary.md",
     "spec-llm-health-weights-fix.md",
     "spec-llm-provider-chain.md",
+    "spec-llm-routing-benchmark.md",
     "spec-llm-run-report.md",
     "spec-logs-warnings-concurrency.md",
     "spec-nvidia-routing-fix.md",
+    "spec-oci-hosting-migration.md",
     "spec-plans-ledger-hygiene.md",
     "spec-refinery-gui-phase3.md",
     "spec-refinery-gui-phase4-addendum-source-editor.md",
@@ -1320,6 +1377,8 @@
     "spec-refinery-gui.md",
     "spec-test-suite-audit.md",
     "spec.md",
+    "spec/frontend-wave2-contract-mirror.md",
+    "spec/frontend-wave3-contract-mirror.md",
     "tests/fixtures/doc-drift/broken/README.md",
     "tests/fixtures/doc-drift/make-target/AGENTS.md",
     "tests/fixtures/doc-drift/make-target/README.md",
@@ -1331,15 +1390,20 @@
     "tests/fixtures/doc-drift/valid/README.md",
     "tests/placeholder_audit/fixtures/doc_page.md",
     "todo-admin-api-surface.md",
+    "todo-admin-stack-ports.md",
+    "todo-collection-recovery-and-scoring.md",
     "todo-editorial-grounding.md",
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
+    "todo-inventory-baseline-refresh.md",
     "todo-llm-canary.md",
     "todo-llm-health-weights-fix.md",
     "todo-llm-provider-chain.md",
+    "todo-llm-routing-benchmark.md",
     "todo-llm-run-report.md",
     "todo-logs-warnings-concurrency.md",
     "todo-nvidia-routing-fix.md",
+    "todo-oci-hosting-migration.md",
     "todo-plans-ledger-hygiene.md",
     "todo-refinery-gui-phase3.md",
     "todo-refinery-gui-phase4-addendum-source-editor.md",
