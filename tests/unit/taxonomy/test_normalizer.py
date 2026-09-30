@@ -20,6 +20,7 @@ class TestTagNormalizer(unittest.TestCase):
             "alias_map": {
                 "ia": "inteligencia artificial",
                 "ai": "inteligencia artificial",
+                "ciencia": "ciencia",
             },
             "whitelist_short": ["ia"],
             "max_tags_per_article": 5,
@@ -29,6 +30,7 @@ class TestTagNormalizer(unittest.TestCase):
             "corrections": {
                 "salud publica": "salud pública",
                 "energia oscura": "energía oscura",
+                "identidad": "identidad",
             }
         }
 
@@ -127,6 +129,47 @@ class TestTagNormalizer(unittest.TestCase):
         result = self.normalizer.sanitize_tags(["energía oscura/gravedad"])
         self.assertEqual(result.tags, ["energía oscura gravedad"])
         self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+
+    def test_missing_config_files_load_as_empty(self):
+        normalizer = TagNormalizer(str(Path(self.test_dir.name) / "missing.yml"))
+        result = normalizer.sanitize_tags(["Valid Tag"])
+        self.assertEqual(result.tags, ["valid tag"])
+
+    def test_non_string_and_punctuation_only_tags(self):
+        result = self.normalizer.sanitize_tags([1234, "..."])
+        self.assertEqual(result.tags, ["1234"])
+        self.assertIn("...", result.removed)
+
+    def test_max_tags_truncation(self):
+        result = self.normalizer.sanitize_tags(
+            ["uno", "dos", "tres", "cuatro", "cinco", "seis"]
+        )
+        self.assertEqual(result.tags, ["uno", "dos", "tres", "cuatro", "cinco"])
+        self.assertTrue(any("truncated" in warning for warning in result.warnings))
+
+    def test_dedupe_merges_accent_variants(self):
+        result = self.normalizer.sanitize_tags(["accion", "acción"])
+        self.assertEqual(result.tags, ["accion"])
+        self.assertEqual(result.merged, [{"kept": "accion", "dropped": "acción"}])
+
+    def test_self_mapped_orthography_and_alias_are_noops(self):
+        result = self.normalizer.sanitize_tags(["identidad", "ciencia"])
+        self.assertEqual(result.tags, ["identidad", "ciencia"])
+        self.assertEqual(result.replaced, [])
+
+    def test_validate_tags_direct_contract_errors(self):
+        long_tag = "a" * 41
+        result = self.normalizer.validate_tags(
+            ["bad/tag", "other", "ab", long_tag, "uno", "dos"]
+        )
+        self.assertFalse(result.is_valid)
+        self.assertTrue(result.needs_review)
+        self.assertEqual(len(result.warnings), 1)
+        messages = " ".join(result.errors)
+        self.assertIn("Invalid characters", messages)
+        self.assertIn("Forbidden stop tag", messages)
+        self.assertIn("Tag too short", messages)
+        self.assertIn("Tag too long", messages)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ targeted contract invariant is restored, and must never raise.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import yaml
 
 from news_collector.taxonomy.normalizer import TagNormalizer
@@ -102,3 +104,45 @@ def test_repairable_failure_classes_exposed():
 
 def test_empty_content_returns_none():
     assert repair_post_content("", "taxonomy_contract_violation") is None
+
+
+def test_non_mapping_frontmatter_returns_none():
+    assert (
+        repair_post_content("---\n- a\n- b\n---\nBody", "taxonomy_contract_violation")
+        is None
+    )
+
+
+def test_strategy_that_still_violates_contract_is_rejected(monkeypatch):
+    class IncompleteNormalizer:
+        def sanitize_tags(self, tags):
+            return SimpleNamespace(tags=["still/bad"])
+
+        def validate_tags(self, tags):
+            return SimpleNamespace(is_valid=False)
+
+    monkeypatch.setattr(
+        "news_collector.validation.publication_repairs.TagNormalizer",
+        IncompleteNormalizer,
+    )
+    assert repair_post_content(POST, "taxonomy_contract_violation") is None
+
+
+def test_dump_failure_returns_none(monkeypatch):
+    def boom(*args, **kwargs):
+        raise yaml.YAMLError("cannot dump")
+
+    monkeypatch.setattr(
+        "news_collector.validation.publication_repairs.yaml.safe_dump", boom
+    )
+    assert repair_post_content(POST, "taxonomy_contract_violation") is None
+
+
+def test_raising_strategy_is_swallowed(monkeypatch):
+    import news_collector.validation.publication_repairs as repairs
+
+    def boom(content):
+        raise RuntimeError("strategy exploded")
+
+    monkeypatch.setitem(repairs._REPAIRERS, "taxonomy_contract_violation", boom)
+    assert repair_post_content(POST, "taxonomy_contract_violation") is None
