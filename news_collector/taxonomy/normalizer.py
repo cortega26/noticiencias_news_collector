@@ -171,6 +171,12 @@ class TagNormalizer:
                     replaced.append({"from": t_sanitized, "to": new_t})
                     t_sanitized = new_t
 
+            # Canonical maps can reintroduce forbidden characters
+            # (e.g. tags.yml maps covid19 -> covid-19 and '-' is rejected
+            # by the allowed charset): repair the final canonical value too,
+            # so the emitted tag always satisfies the frontend contract.
+            t_sanitized = self._repair_charset_with_audit(t_sanitized, replaced)
+
             cleaned.append(t_sanitized)
 
         # Pass 2: Deduplication

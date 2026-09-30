@@ -21,6 +21,7 @@ class TestTagNormalizer(unittest.TestCase):
                 "ia": "inteligencia artificial",
                 "ai": "inteligencia artificial",
                 "ciencia": "ciencia",
+                "covid19": "covid-19",
             },
             "whitelist_short": ["ia"],
             "max_tags_per_article": 5,
@@ -124,6 +125,13 @@ class TestTagNormalizer(unittest.TestCase):
         twice = self.normalizer.sanitize_tags(once.tags)
         self.assertEqual(once.tags, twice.tags)
         self.assertEqual(twice.replaced, [])
+
+    def test_charset_repair_applies_after_alias_substitution(self):
+        """Canonical maps can reintroduce forbidden chars (covid19 -> covid-19)."""
+        result = self.normalizer.sanitize_tags(["covid19"])
+        self.assertEqual(result.tags, ["covid 19"])
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+        self.assertIn({"from": "covid-19", "to": "covid 19"}, result.replaced)
 
     def test_accents_survive_charset_repair(self):
         result = self.normalizer.sanitize_tags(["energía oscura/gravedad"])
