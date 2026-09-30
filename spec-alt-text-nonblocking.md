@@ -25,8 +25,10 @@ was the workaround.
      recompute happens later in frontmatter assembly (plan 079).
 2. `hero_alt.resolve_hero_alt_text`: replace the boilerplate fallback
    `Ilustración editorial relacionada con {título}` with the Spanish
-   headline itself. Good alts and human brief alts still pass through
-   untouched; without a title, keep current value (parity).
+   headline itself. A headline (or, when no headline exists, the current
+   placeholder) that starts with a rejected prefix is stripped of it, so
+   the function never returns a gate-rejected string. Good alts and
+   human brief alts still pass through untouched.
    This is what keeps the frontend gate green: title-as-alt already
    exists in the published corpus and `check-image-alt` only rejects
    empty, `Imagen de …`, and the old boilerplate prefix.

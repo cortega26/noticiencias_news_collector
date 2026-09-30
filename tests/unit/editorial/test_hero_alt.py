@@ -50,11 +50,34 @@ def test_resolve_empty_alt_uses_spanish_title():
     assert resolve_hero_alt_text(None, "Titular español") == "Titular español"
 
 
-def test_resolve_without_title_keeps_current():
+def test_resolve_without_title_falls_back_safely():
     assert resolve_hero_alt_text("", "") is None
     assert resolve_hero_alt_text(None, None) is None
     boilerplate = "Ilustración editorial relacionada con X"
-    assert resolve_hero_alt_text(boilerplate, "") == boilerplate
+    assert resolve_hero_alt_text(boilerplate, "") == "X"
+
+
+def test_resolve_sanitizes_boilerplate_shaped_headline():
+    assert (
+        resolve_hero_alt_text("Imagen de algo", "Imagen de un laboratorio")
+        == "Un laboratorio"
+    )
+    assert (
+        resolve_hero_alt_text("", "Ilustración editorial relacionada con Rayos")
+        == "Rayos"
+    )
+    assert resolve_hero_alt_text("", "Imagen de") == "Ilustración del artículo"
+
+
+def test_resolve_never_returns_gate_rejected_value():
+    rejected = ("imagen de ", "ilustración editorial relacionada con ")
+    for _, title in (
+        ("ignored", "Imagen de un laboratorio"),
+        ("ignored", "Ilustración editorial relacionada con algo"),
+        ("ignored", "Titular normal"),
+    ):
+        result = resolve_hero_alt_text("", title)
+        assert result and not result.casefold().startswith(rejected)
 
 
 def test_resolve_list_input_takes_first():
