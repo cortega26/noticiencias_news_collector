@@ -632,6 +632,61 @@ class ArticleRepository:
                 "publishing_branch": metadata.get("publishing_branch"),
             }
 
+    def release_article_publishing(
+        self,
+        article_id: int,
+        *,
+        reason: str,
+        branch_name: str | None = None,
+    ) -> bool:
+        """Undo ``mark_article_publishing`` after a clean pre-PR failure.
+
+        Restores the publishable ``completed`` status (the state candidates
+        carry when selected for publication) and clears the publishing
+        window metadata, so the next attempt starts from scratch instead of
+        entering crash recovery for a branch that was never committed
+        (run 59).
+
+        ``branch_name`` is the ownership token: when given, the release only
+        applies if the article's stored ``publishing_branch`` matches it, so
+        a stale run cannot release an article that a newer run has already
+        re-marked (overlapping publishers). Idempotent: an article that is
+        not in ``publishing`` (or is owned by another branch) returns
+        ``False`` and is left untouched.
+        """
+        with self._session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is None or article.processing_status != "publishing":
+                return False
+
+            metadata = dict(article.article_metadata or {})
+            if (
+                branch_name is not None
+                and metadata.get("publishing_branch") != branch_name
+            ):
+                logger.warning(
+                    "Release skipped for article {}: owned by branch {!r}, "
+                    "not {!r}.",
+                    article_id,
+                    metadata.get("publishing_branch"),
+                    branch_name,
+                )
+                return False
+
+            article.processing_status = "completed"
+            metadata.pop("publishing_started_at", None)
+            metadata.pop("publishing_branch", None)
+            metadata["publication_released"] = {
+                "reason": reason,
+                "at": datetime.now(timezone.utc).isoformat(),
+            }
+            article.article_metadata = metadata
+            session.add(article)
+            logger.info(
+                "Article {} released from publishing (reason={}).", article_id, reason
+            )
+            return True
+
     def is_processed(self, identifier: str | int) -> bool:
         """
         Backwards-compatible helper used by Refinery for file-based workflows.

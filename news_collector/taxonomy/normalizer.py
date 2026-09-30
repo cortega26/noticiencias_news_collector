@@ -98,6 +98,28 @@ class TagNormalizer:
         tag = re.sub(r"\s+", " ", tag)
         return tag
 
+    def _repair_charset(self, tag: str) -> str:
+        """Replace characters outside the allowed charset with spaces.
+
+        Enforces the same cross-repo contract as `validate_tags` and the
+        frontend `check:tags` gate (`allowed_chars_regex`): a tag like
+        `ads/cft` becomes `ads cft` instead of reaching the last validation
+        gate with a slash and failing the whole publication (run 59).
+        """
+        repaired = "".join(
+            ch if self.allowed_chars_pattern.match(ch) else " " for ch in tag
+        )
+        return re.sub(r"\s+", " ", repaired).strip()
+
+    def _repair_charset_with_audit(
+        self, tag: str, replaced: List[Dict[str, str]]
+    ) -> str:
+        """Charset repair that records the before/after in the audit list."""
+        repaired = self._repair_charset(tag)
+        if repaired != tag:
+            replaced.append({"from": tag, "to": repaired})
+        return repaired
+
     def sanitize_tags(self, tags: List[str]) -> NormalizeResult:  # noqa: C901
         """
         Main entry point for sanitization.
@@ -118,6 +140,11 @@ class TagNormalizer:
         for t in tags:
             original = t
             t_sanitized = self._basic_sanitize(t)
+
+            # Charset repair (cross-repo tag contract, self-healing): any
+            # character the frontend gate rejects is neutralized here, so the
+            # publication never burns a full run to fail at check:tags.
+            t_sanitized = self._repair_charset_with_audit(t_sanitized, replaced)
 
             # Empty check
             if not t_sanitized:
@@ -143,6 +170,12 @@ class TagNormalizer:
                 if new_t != t_sanitized:
                     replaced.append({"from": t_sanitized, "to": new_t})
                     t_sanitized = new_t
+
+            # Canonical maps can reintroduce forbidden characters
+            # (e.g. tags.yml maps covid19 -> covid-19 and '-' is rejected
+            # by the allowed charset): repair the final canonical value too,
+            # so the emitted tag always satisfies the frontend contract.
+            t_sanitized = self._repair_charset_with_audit(t_sanitized, replaced)
 
             cleaned.append(t_sanitized)
 

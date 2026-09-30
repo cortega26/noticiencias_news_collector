@@ -673,6 +673,62 @@ class DatabaseManager:
     def get_publishing_state(self, article_id: int) -> dict | None:
         return self.articles.get_publishing_state(article_id)
 
+    def _latest_publishing_attempt(
+        self, article_id: int, branch_name: str | None
+    ) -> Any | None:
+        """Newest still-``PUBLISHING`` attempt, optionally scoped to a branch."""
+        attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
+        publishing = [a for a in attempts if a.state == "PUBLISHING"]
+        if branch_name is not None:
+            publishing = [a for a in publishing if a.branch_name == branch_name]
+        if not publishing:
+            return None
+        return max(publishing, key=lambda a: (a.attempt_number, a.id))
+
+    def release_article_publishing(
+        self,
+        article_id: int,
+        *,
+        reason: str,
+        failure_class: str | None = None,
+        branch_name: str | None = None,
+    ) -> bool:
+        """Release an article from a clean pre-PR ``publishing`` window.
+
+        Delegates the legacy status/metadata restore to the article
+        repository and dual-writes the ``PUBLISHING`` attempt row that owns
+        ``branch_name`` (or the latest one when no token is given) to
+        ``REJECTED`` — the existing legal CAS transition; retries create a
+        new attempt row. Scoping by branch keeps an overlapping/stale run
+        from rejecting the row a newer run just created. The lifecycle write
+        is best-effort: a failure is logged and swallowed, matching the
+        other dual-writes in this facade.
+        """
+        result = self.articles.release_article_publishing(
+            article_id, reason=reason, branch_name=branch_name
+        )
+        if not result:
+            return False
+        try:
+            latest = self._latest_publishing_attempt(article_id, branch_name)
+            if latest is not None:
+                self.lifecycle.apply_publication_transition(
+                    latest.id,
+                    from_state="PUBLISHING",
+                    to_state="REJECTED",
+                    event_type="rejected",
+                    details={"reason": reason, "failure_class": failure_class},
+                    finished_at=datetime.now(timezone.utc),
+                )
+        except Exception:
+            logger.exception(
+                "Dual-write to publication_attempts failed for article {} "
+                "(state=REJECTED); legacy release already succeeded and is "
+                "unaffected.",
+                article_id,
+            )
+        return True
+
     def is_processed(self, identifier: str | int) -> bool:
         return self.articles.is_processed(identifier)
 

@@ -20,6 +20,8 @@ class TestTagNormalizer(unittest.TestCase):
             "alias_map": {
                 "ia": "inteligencia artificial",
                 "ai": "inteligencia artificial",
+                "ciencia": "ciencia",
+                "covid19": "covid-19",
             },
             "whitelist_short": ["ia"],
             "max_tags_per_article": 5,
@@ -29,6 +31,7 @@ class TestTagNormalizer(unittest.TestCase):
             "corrections": {
                 "salud publica": "salud pública",
                 "energia oscura": "energía oscura",
+                "identidad": "identidad",
             }
         }
 
@@ -107,6 +110,74 @@ class TestTagNormalizer(unittest.TestCase):
         result = self.normalizer.sanitize_tags(tags)
         expected = ["agujeros negros", "materia oscura", "inteligencia artificial"]
         self.assertEqual(result.tags, expected)
+
+    def test_charset_repair_matches_frontend_contract(self):
+        """Characters the frontend check:tags gate rejects are neutralized."""
+        tags = ["ads/cft", "h²maf", "mit sa+p", "c++"]
+        result = self.normalizer.sanitize_tags(tags)
+        self.assertEqual(result.tags, ["ads cft", "h maf", "mit sa p"])
+        self.assertIn({"from": "ads/cft", "to": "ads cft"}, result.replaced)
+        self.assertIn("c", result.removed)  # "c++" collapses to a short tag
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+
+    def test_charset_repair_is_idempotent(self):
+        once = self.normalizer.sanitize_tags(["ads/cft", "mit sa+p"])
+        twice = self.normalizer.sanitize_tags(once.tags)
+        self.assertEqual(once.tags, twice.tags)
+        self.assertEqual(twice.replaced, [])
+
+    def test_charset_repair_applies_after_alias_substitution(self):
+        """Canonical maps can reintroduce forbidden chars (covid19 -> covid-19)."""
+        result = self.normalizer.sanitize_tags(["covid19"])
+        self.assertEqual(result.tags, ["covid 19"])
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+        self.assertIn({"from": "covid-19", "to": "covid 19"}, result.replaced)
+
+    def test_accents_survive_charset_repair(self):
+        result = self.normalizer.sanitize_tags(["energía oscura/gravedad"])
+        self.assertEqual(result.tags, ["energía oscura gravedad"])
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+
+    def test_missing_config_files_load_as_empty(self):
+        normalizer = TagNormalizer(str(Path(self.test_dir.name) / "missing.yml"))
+        result = normalizer.sanitize_tags(["Valid Tag"])
+        self.assertEqual(result.tags, ["valid tag"])
+
+    def test_non_string_and_punctuation_only_tags(self):
+        result = self.normalizer.sanitize_tags([1234, "..."])
+        self.assertEqual(result.tags, ["1234"])
+        self.assertIn("...", result.removed)
+
+    def test_max_tags_truncation(self):
+        result = self.normalizer.sanitize_tags(
+            ["uno", "dos", "tres", "cuatro", "cinco", "seis"]
+        )
+        self.assertEqual(result.tags, ["uno", "dos", "tres", "cuatro", "cinco"])
+        self.assertTrue(any("truncated" in warning for warning in result.warnings))
+
+    def test_dedupe_merges_accent_variants(self):
+        result = self.normalizer.sanitize_tags(["accion", "acción"])
+        self.assertEqual(result.tags, ["accion"])
+        self.assertEqual(result.merged, [{"kept": "accion", "dropped": "acción"}])
+
+    def test_self_mapped_orthography_and_alias_are_noops(self):
+        result = self.normalizer.sanitize_tags(["identidad", "ciencia"])
+        self.assertEqual(result.tags, ["identidad", "ciencia"])
+        self.assertEqual(result.replaced, [])
+
+    def test_validate_tags_direct_contract_errors(self):
+        long_tag = "a" * 41
+        result = self.normalizer.validate_tags(
+            ["bad/tag", "other", "ab", long_tag, "uno", "dos"]
+        )
+        self.assertFalse(result.is_valid)
+        self.assertTrue(result.needs_review)
+        self.assertEqual(len(result.warnings), 1)
+        messages = " ".join(result.errors)
+        self.assertIn("Invalid characters", messages)
+        self.assertIn("Forbidden stop tag", messages)
+        self.assertIn("Tag too short", messages)
+        self.assertIn("Tag too long", messages)
 
 
 if __name__ == "__main__":
