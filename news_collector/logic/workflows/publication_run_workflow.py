@@ -567,26 +567,13 @@ class PublicationRunWorkflow:
         ).all()
         durations: list[float] = []
         for started, finished, metadata in rows:
-            summary = metadata.get("summary") if isinstance(metadata, dict) else None
-            if isinstance(summary, dict) and summary.get("mode") == "batch":
-                continue
-            if started is None or finished is None:
-                continue
-            seconds = (_as_utc(finished) - _as_utc(started)).total_seconds()
-            if seconds > 0:
+            seconds = _run_duration_seconds(started, finished, metadata)
+            if seconds is not None:
                 durations.append(seconds)
             if len(durations) >= TYPICAL_DURATION_SAMPLE:
                 break
-        if not durations:
-            return None
-        durations.sort()
-        mid = len(durations) // 2
-        median = (
-            durations[mid]
-            if len(durations) % 2
-            else (durations[mid - 1] + durations[mid]) / 2
-        )
-        return int(round(median))
+        median = _median_seconds(durations)
+        return int(round(median)) if median is not None else None
 
     def _heartbeat_loop(self, run_id: int, stop: threading.Event) -> None:
         interval = max(1, self._heartbeat_interval_seconds)
@@ -814,3 +801,31 @@ class PublicationRunWorkflow:
 def _as_utc(value: datetime) -> datetime:
     """SQLite hands back naive datetimes; treat them as UTC."""
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _run_duration_seconds(
+    started: datetime | None,
+    finished: datetime | None,
+    metadata: Any,
+) -> float | None:
+    """Wall time of a completed run, or None when it must not contribute:
+    missing timestamps, non-positive durations, or batch runs (their duration
+    scales with the item count, so they are not a per-article baseline)."""
+    summary = metadata.get("summary") if isinstance(metadata, dict) else None
+    if isinstance(summary, dict) and summary.get("mode") == "batch":
+        return None
+    if started is None or finished is None:
+        return None
+    seconds = (_as_utc(finished) - _as_utc(started)).total_seconds()
+    return seconds if seconds > 0 else None
+
+
+def _median_seconds(durations: list[float]) -> float | None:
+    """Median of the samples, or None when there are no samples."""
+    if not durations:
+        return None
+    durations.sort()
+    mid = len(durations) // 2
+    if len(durations) % 2:
+        return durations[mid]
+    return (durations[mid - 1] + durations[mid]) / 2
