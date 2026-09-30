@@ -303,8 +303,8 @@ class TestResolve:
     def test_img_auto_alt_text_set_when_missing(
         self, handler, image_briefs_stub, target_dir
     ):
-        """Missing source alt no longer stamps boilerplate: a missing_alt_text
-        brief is queued and resolution fails with the Images-desk message."""
+        """Missing source alt no longer blocks: the image resolves with the
+        placeholder and a missing_alt_text brief is queued for the desk."""
         image_briefs_stub.find_for_article.return_value = None
         response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
 
@@ -317,9 +317,11 @@ class TestResolve:
                 target_dir=target_dir,
             )
 
-        assert result.resolved is False
+        assert result.resolved is True
         assert result.queued_brief is True
-        assert result.message is not None and "Images" in result.message
+        assert result.image_url is not None
+        assert result.image_alt == publication_safe_image_alt(None, "Test Article")
+        image_briefs_stub.save_brief.assert_called_once()
 
     def test_site_logo_image_skips_download_and_queues_brief(
         self, handler, image_briefs_stub, target_dir
@@ -371,11 +373,11 @@ class TestResolve:
         assert result.queued_brief is False
         image_briefs_stub.save_brief.assert_not_called()
 
-    def test_img_10_boilerplate_alt_without_brief_queues_and_fails_actionable(
+    def test_img_10_boilerplate_alt_without_brief_resolves_and_queues_advisory(
         self, handler, image_briefs_stub, target_dir
     ):
         """Boilerplate source alt + no brief → missing_alt_text brief queued,
-        unresolved, message naming the Images-desk slug."""
+        yet the image resolves so publication never fails over alt text."""
         image_briefs_stub.find_for_article.return_value = None
         response = _make_mock_http_response(content=b"img", content_type="image/jpeg")
 
@@ -388,16 +390,18 @@ class TestResolve:
                 target_dir=target_dir,
             )
 
-        assert result.resolved is False
+        assert result.resolved is True
         assert result.queued_brief is True
-        assert result.message is not None and "Images" in result.message
+        assert result.image_url.startswith("~/assets/images/")
+        assert result.image_alt == publication_safe_image_alt(None, "Test Article")
         saved = image_briefs_stub.build_brief.call_args
         assert saved is not None and saved.kwargs.get("reason") == "missing_alt_text"
 
     def test_img_11_boilerplate_brief_alt_does_not_self_accept(
         self, handler, image_briefs_stub, target_dir
     ):
-        """An alt-brief carrying boilerplate text is unusable: queue + fail, never resolve."""
+        """An alt-brief carrying boilerplate text is unusable: keeps the
+        fallback alt and queues the advisory, never resolves with it."""
         image_briefs_stub.find_for_article.return_value = self._alt_brief(
             alt="Ilustración editorial relacionada con Algo"
         )
@@ -412,6 +416,6 @@ class TestResolve:
                 target_dir=target_dir,
             )
 
-        assert result.resolved is False
+        assert result.resolved is True
         assert result.queued_brief is True
-        assert result.message is not None
+        assert result.image_alt == publication_safe_image_alt(None, "Test Article")

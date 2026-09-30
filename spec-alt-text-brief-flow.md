@@ -1,5 +1,9 @@
 # Spec — alt-text brief flow (`missing_alt_text`)
 
+> Superseded (2026-09-29) by `spec-alt-text-nonblocking.md`: the
+> `missing_alt_text` brief queue stays, but a missing alt no longer fails
+> the run. Kept for history.
+
 ## Problem
 
 Articles whose source image ships no usable alt get a pipeline boilerplate

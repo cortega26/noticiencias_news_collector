@@ -269,10 +269,12 @@ class ArticleImageHandler:
     ) -> ImageResolution:
         """Resolve a successfully downloaded source image.
 
-        Descriptive source alts pass through. Boilerplate alts need a
-        human-written alt-brief; without one the brief is queued and the
-        run fails fast with an actionable message instead of dying later
-        at frontend lint on the boilerplate alt.
+        Descriptive source alts pass through. Boilerplate alts prefer a
+        human-written alt-brief; without one the image still resolves:
+        the `missing_alt_text` brief is queued as an Images-desk advisory
+        and frontmatter assembly replaces the placeholder with the
+        Spanish headline (`resolve_hero_alt_text`). A missing alt never
+        blocks publication.
         """
         logger.info("Updated article image to local asset: {}", local_ref)
         alt = publication_safe_image_alt(
@@ -296,14 +298,17 @@ class ArticleImageHandler:
         self._queue_brief(
             article, article_id, image_slug, "missing_alt_text", existing_brief
         )
+        logger.warning(
+            "No usable alt text for article {}: publishing with the "
+            "headline fallback; descriptive alt requested in brief '{}'.",
+            article_id,
+            image_slug,
+        )
         return ImageResolution(
-            resolved=False,
+            resolved=True,
+            image_url=local_ref,
+            image_alt=alt,
             queued_brief=True,
-            message=(
-                f"Hero alt text required for article {article_id}: open "
-                f"the Images desk, write a descriptive alt in brief "
-                f"'{image_slug}', then retry publish."
-            ),
         )
 
     def _resolve_alt_brief(self, article_id: str, image_slug: str) -> str | None:

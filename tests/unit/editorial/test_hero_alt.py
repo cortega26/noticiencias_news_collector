@@ -39,20 +39,15 @@ def test_resolve_replaces_english_boilerplate_with_spanish_title():
         "Ilustración editorial relacionada con Lightning strikes kill",
         "¿Qué efectos tiene un rayo sin rasguños visibles?",
     )
-    assert result == (
-        "Ilustración editorial relacionada con "
-        "¿Qué efectos tiene un rayo sin rasguños visibles?"
-    )
+    assert result == "¿Qué efectos tiene un rayo sin rasguños visibles?"
     assert "Lightning" not in result
+    # The frontend check-image-alt gate rejects the old boilerplate prefix.
+    assert not result.casefold().startswith("ilustración editorial")
 
 
 def test_resolve_empty_alt_uses_spanish_title():
-    assert resolve_hero_alt_text("", "Titular español") == (
-        "Ilustración editorial relacionada con Titular español"
-    )
-    assert resolve_hero_alt_text(None, "Titular español") == (
-        "Ilustración editorial relacionada con Titular español"
-    )
+    assert resolve_hero_alt_text("", "Titular español") == "Titular español"
+    assert resolve_hero_alt_text(None, "Titular español") == "Titular español"
 
 
 def test_resolve_without_title_keeps_current():
@@ -64,11 +59,9 @@ def test_resolve_without_title_keeps_current():
 
 def test_resolve_list_input_takes_first():
     assert resolve_hero_alt_text(["Alt buena", "otra"], "Título") == "Alt buena"
-    assert resolve_hero_alt_text([], "Título") == (
-        "Ilustración editorial relacionada con Título"
-    )
+    assert resolve_hero_alt_text([], "Título") == "Título"
 
 
 def test_resolve_imagen_de_prefix_is_replaced():
     result = resolve_hero_alt_text("Imagen de un laboratorio", "Titular")
-    assert result == "Ilustración editorial relacionada con Titular"
+    assert result == "Titular"

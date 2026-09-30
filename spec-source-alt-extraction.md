@@ -2,6 +2,8 @@
 
 Status: in progress · 2026-09-29
 Supersedes: the `spec-image-alt-nonblocking.md` approach (reverted).
+Partially superseded: acceptance item 5 (blocking) by
+`spec-alt-text-nonblocking.md` — the queue stays, the block is gone.
 
 ## Why the previous approach was wrong
 
@@ -37,8 +39,10 @@ Acceptance criteria:
    `article["image_alt"]` (which `model_dump_for_storage` mirrors into
    `article_metadata.image_alt`).
 4. Alt text is sanitized: whitespace collapsed, capped at 300 characters.
-5. Blocking behavior is unchanged: no description → `image_resolution`
-   still blocks with the Images-desk message. No frontend changes.
+5. When no description exists, the `missing_alt_text` brief is queued and
+   the run continues with the Spanish-headline fallback
+   (`spec-alt-text-nonblocking.md`); it no longer blocks. No frontend
+   changes.
 
 ## Implementation
 
