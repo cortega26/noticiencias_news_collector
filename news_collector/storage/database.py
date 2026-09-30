@@ -673,6 +673,18 @@ class DatabaseManager:
     def get_publishing_state(self, article_id: int) -> dict | None:
         return self.articles.get_publishing_state(article_id)
 
+    def _latest_publishing_attempt(
+        self, article_id: int, branch_name: str | None
+    ) -> Any | None:
+        """Newest still-``PUBLISHING`` attempt, optionally scoped to a branch."""
+        attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
+        publishing = [a for a in attempts if a.state == "PUBLISHING"]
+        if branch_name is not None:
+            publishing = [a for a in publishing if a.branch_name == branch_name]
+        if not publishing:
+            return None
+        return max(publishing, key=lambda a: (a.attempt_number, a.id))
+
     def release_article_publishing(
         self,
         article_id: int,
@@ -698,16 +710,8 @@ class DatabaseManager:
         if not result:
             return False
         try:
-            attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
-            publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
-            if branch_name is not None:
-                publishing_attempts = [
-                    a for a in publishing_attempts if a.branch_name == branch_name
-                ]
-            if publishing_attempts:
-                latest = max(
-                    publishing_attempts, key=lambda a: (a.attempt_number, a.id)
-                )
+            latest = self._latest_publishing_attempt(article_id, branch_name)
+            if latest is not None:
                 self.lifecycle.apply_publication_transition(
                     latest.id,
                     from_state="PUBLISHING",
