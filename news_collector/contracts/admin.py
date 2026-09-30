@@ -232,6 +232,15 @@ class AdminPublishStarted(BaseModel):
     detail: str
 
 
+class AdminPublishProgress(BaseModel):
+    """Live progress of an in-flight publication run (advisory)."""
+
+    stages: List[str] = Field(default_factory=list)
+    item_index: int = 0
+    item_count: int = 1
+    updated_at: Optional[str] = None
+
+
 class AdminPublishStatus(BaseModel):
     """Status of the most recent (or a named) publication run."""
 
@@ -246,6 +255,11 @@ class AdminPublishStatus(BaseModel):
     pr_url: Optional[str] = None
     failure_class: Optional[str] = None
     final_slug: Optional[str] = None
+    # Live progress for the GUI: completed stage names of the current article,
+    # last lease heartbeat, and the median duration of recent successful runs.
+    progress: Optional[AdminPublishProgress] = None
+    heartbeat_at: Optional[str] = None
+    typical_seconds: Optional[int] = None
 
 
 #: Batch publish cap (plan 109). One batch occupies the single-flight

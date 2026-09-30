@@ -463,6 +463,7 @@ def run_publication_pipeline(  # noqa: C901
     fast_mode=False,
     process_new_content=False,
     dry_run=False,
+    stage_listener=None,
 ):
     """
     Workflow-layer entry point for the Noticiencias publication pipeline.
@@ -479,6 +480,8 @@ def run_publication_pipeline(  # noqa: C901
         dev (bool): If True, enables development features like mock data injection.
         export_path (str): Optional path to a specific JSON export to use.
         dry_run (bool): If True, simulates collection without saving to DB.
+        stage_listener (callable): Optional `(article_id, stage, success)`
+            hook fired after each recorded publication stage (live progress).
 
     Returns:
         dict: Execution capabilities summary or status.
@@ -566,6 +569,7 @@ def run_publication_pipeline(  # noqa: C901
         config=config,
         contract_validator=validate_collector_payload,
     )
+    engine.stage_listener = stage_listener
 
     source_dir = SOURCE_DIR
     manual_ingest_result = None
@@ -848,6 +852,8 @@ def run_publication_batch(
     article_ids: "list[int]",
     *,
     skip_visuals: bool = False,
+    stage_listener: Any = None,
+    on_item_start: Any = None,
 ) -> Dict[str, Any]:
     """Thin batch fan-out over :func:`run_publication_pipeline` (plan 109).
 
@@ -869,11 +875,14 @@ def run_publication_batch(
         raise ValueError(f"article_ids must hold 1..{BATCH_MAX_IDS} ids")
 
     items: "list[Dict[str, Any]]" = []
-    for article_id in ids:
+    for index, article_id in enumerate(ids):
+        if on_item_start is not None:
+            on_item_start(index, len(ids), article_id)
         try:
             result = run_publication_pipeline(
                 process_id=str(article_id),
                 skip_visuals=skip_visuals,
+                stage_listener=stage_listener,
             )
         except Exception as exc:  # per-item crash -> explicit failed item
             logger.error(

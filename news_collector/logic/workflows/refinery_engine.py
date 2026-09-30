@@ -35,7 +35,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
@@ -123,6 +123,7 @@ class _PublicationRun:
             )
         )
         self._engine._last_publication_stages = self.stages
+        self._engine._notify_stage(self.article_id, name, success)
 
     def persist_attempt(
         self, success: bool, failure_class: PublicationFailureClass | None = None
@@ -277,6 +278,11 @@ class RefineryEngine:
             None
         )
 
+        # Optional live-progress hook (admin GUI): called after every
+        # `record_stage` with (article_id, stage_name, success). Advisory only —
+        # a listener failure is logged and never alters the publication.
+        self.stage_listener: Optional[Callable[[str, str, bool], None]] = None
+
         self.writer = TargetRepoWriter()
         self.identity_resolver = PublicationIdentityResolver(
             db=self.db, manifest=self.writer
@@ -392,6 +398,15 @@ class RefineryEngine:
             except Exception as stage_exc:  # noqa: BLE001 - still advisory
                 logger.warning(f"Could not record grounding error stage: {stage_exc!r}")
         return ""
+
+    def _notify_stage(self, article_id: str, name: str, success: bool) -> None:
+        listener = self.stage_listener
+        if listener is None:
+            return
+        try:
+            listener(article_id, name, success)
+        except Exception as exc:  # progress is advisory; never break publishing
+            logger.warning("Stage listener failed on {}: {}", name, exc)
 
     def process_single_article(
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path

@@ -88,6 +88,12 @@ class PublicationRunStatusResult:
     error_code: str | None = None
     error_detail: str | None = None
     summary: dict[str, Any] = field(default_factory=dict)
+    progress: dict[str, Any] = field(default_factory=dict)
+    typical_seconds: int | None = None
+
+
+#: How many recent successful single-article runs feed the duration estimate.
+TYPICAL_DURATION_SAMPLE = 10
 
 
 class PublicationRunWorkflow:
@@ -313,10 +319,12 @@ class PublicationRunWorkflow:
             # the serving singleton. It is blocking (runs its own asyncio
             # loop internally); fine on this daemon thread, same as
             # CollectionRunWorkflow._run.
+            self._reset_progress(run_id, item_index=0, item_count=1)
             result = run_publication_pipeline(
                 process_id=str(article_id) if article_id is not None else None,
                 article_url=article_url,
                 skip_visuals=False,
+                stage_listener=self._stage_listener(run_id),
             )
             summary = self._collect_publication_summary(
                 result, article_id=article_id, article_url=article_url
@@ -369,7 +377,14 @@ class PublicationRunWorkflow:
                 run_publication_batch,
             )
 
-            batch = run_publication_batch(article_ids, skip_visuals=False)
+            batch = run_publication_batch(
+                article_ids,
+                skip_visuals=False,
+                stage_listener=self._stage_listener(run_id),
+                on_item_start=lambda index, count, _id: self._reset_progress(
+                    run_id, item_index=index, item_count=count
+                ),
+            )
             items: list[dict[str, Any]] = []
             for entry in batch.get("items", []):
                 if not isinstance(entry, dict):
@@ -489,6 +504,89 @@ class PublicationRunWorkflow:
         file means this run wrote no attempt.
         """
         return read_publication_attempt(self._attempts_dir, resolved_id)
+
+    # ------------------------------------------------------------------
+    # live progress (admin GUI)
+    # ------------------------------------------------------------------
+
+    def _stage_listener(self, run_id: int) -> Any:
+        def listener(_article_id: str, name: str, _success: bool) -> None:
+            self.record_progress_stage(run_id, name)
+
+        return listener
+
+    def _write_progress(self, run_id: int, update_fn: Any) -> None:
+        """Read-modify-write `run_metadata['progress']`. Advisory: a failure is
+        logged and never affects the run."""
+        try:
+            with self._db.get_session() as session:
+                row = session.get(WorkflowRun, run_id)
+                if row is None:
+                    return
+                metadata = (
+                    dict(row.run_metadata) if isinstance(row.run_metadata, dict) else {}
+                )
+                current = metadata.get("progress")
+                progress = dict(current) if isinstance(current, dict) else {}
+                update_fn(progress)
+                progress["updated_at"] = datetime.now(timezone.utc).isoformat()
+                metadata["progress"] = progress
+                row.run_metadata = metadata
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not record progress for run {}: {}", run_id, exc)
+
+    def _reset_progress(self, run_id: int, *, item_index: int, item_count: int) -> None:
+        def reset(progress: dict[str, Any]) -> None:
+            progress.update(stages=[], item_index=item_index, item_count=item_count)
+
+        self._write_progress(run_id, reset)
+
+    def record_progress_stage(self, run_id: int, name: str) -> None:
+        def append(progress: dict[str, Any]) -> None:
+            stages = progress.get("stages")
+            progress["stages"] = [*(stages if isinstance(stages, list) else []), name]
+
+        self._write_progress(run_id, append)
+
+    def _typical_seconds(self, session: Any) -> int | None:
+        """Median wall time of the most recent successful single-article runs
+        (batch runs excluded: their duration scales with the item count)."""
+        rows = session.execute(
+            select(
+                WorkflowRun.started_at,
+                WorkflowRun.finished_at,
+                WorkflowRun.run_metadata,
+            )
+            .where(
+                WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
+                WorkflowRun.status == "succeeded",
+                WorkflowRun.finished_at.is_not(None),
+            )
+            .order_by(WorkflowRun.finished_at.desc())
+            .limit(TYPICAL_DURATION_SAMPLE * 3)
+        ).all()
+        durations: list[float] = []
+        for started, finished, metadata in rows:
+            summary = metadata.get("summary") if isinstance(metadata, dict) else None
+            if isinstance(summary, dict) and summary.get("mode") == "batch":
+                continue
+            if started is None or finished is None:
+                continue
+            seconds = (_as_utc(finished) - _as_utc(started)).total_seconds()
+            if seconds > 0:
+                durations.append(seconds)
+            if len(durations) >= TYPICAL_DURATION_SAMPLE:
+                break
+        if not durations:
+            return None
+        durations.sort()
+        mid = len(durations) // 2
+        median = (
+            durations[mid]
+            if len(durations) % 2
+            else (durations[mid - 1] + durations[mid]) / 2
+        )
+        return int(round(median))
 
     def _heartbeat_loop(self, run_id: int, stop: threading.Event) -> None:
         interval = max(1, self._heartbeat_interval_seconds)
@@ -688,6 +786,12 @@ class PublicationRunWorkflow:
 
             metadata = row.run_metadata or {}
             summary = metadata.get("summary") if isinstance(metadata, dict) else None
+            progress = metadata.get("progress") if isinstance(metadata, dict) else None
+            typical = (
+                self._typical_seconds(session)
+                if row.status in ("queued", "running")
+                else None
+            )
             return PublicationRunStatusResult(
                 status="found",
                 run_id=row.id,
@@ -698,8 +802,15 @@ class PublicationRunWorkflow:
                 error_code=row.error_code,
                 error_detail=row.error_detail,
                 summary=summary if isinstance(summary, dict) else {},
+                progress=progress if isinstance(progress, dict) else {},
+                typical_seconds=typical,
             )
 
     @staticmethod
     def generate_idempotency_key() -> str:
         return uuid.uuid4().hex
+
+
+def _as_utc(value: datetime) -> datetime:
+    """SQLite hands back naive datetimes; treat them as UTC."""
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)

@@ -100,6 +100,74 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   .score-chip {
     @apply font-mono text-xs font-semibold text-amber-400;
   }
+
+  /* Live publication progress (rendered via innerHTML, hence :global). */
+  :global(.pp-row) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+  }
+  :global(.pp-shimmer span) {
+    animation: pp-sweep 1.8s linear infinite;
+    color: var(--color-ink-400);
+  }
+  :global(.pp-stalled .pp-shimmer span) {
+    animation-play-state: paused;
+  }
+  @keyframes pp-sweep {
+    0%, 30%, 100% { color: var(--color-ink-400); }
+    10% { color: var(--color-amber-400); text-shadow: 0 0 6px color-mix(in srgb, var(--color-amber-400) 60%, transparent); }
+  }
+  :global(.pp-phase) {
+    color: var(--color-ink-100);
+  }
+  :global(.pp-time) {
+    margin-left: auto;
+    color: var(--color-ink-300);
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.pp-bar) {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 3px;
+    margin: 0.5rem 0 0.4rem;
+    padding: 0;
+    list-style: none;
+  }
+  :global(.pp-bar li) {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-ink-700);
+  }
+  :global(.pp-bar li.done) {
+    background: var(--color-amber-500);
+  }
+  :global(.pp-bar li.now) {
+    background: linear-gradient(90deg, var(--color-ink-700), var(--color-amber-400), var(--color-ink-700));
+    background-size: 200% 100%;
+    animation: pp-bar 1.4s linear infinite;
+  }
+  :global(.pp-stalled .pp-bar li.now) {
+    animation-play-state: paused;
+  }
+  @keyframes pp-bar {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
+  :global(.pp-meta) {
+    color: var(--color-ink-400);
+  }
+  :global(.pp-stalled .pp-meta) {
+    color: var(--color-amber-400);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.pp-shimmer span),
+    :global(.pp-bar li.now) {
+      animation: none;
+    }
+  }
 </style>
 
 <script>
@@ -119,10 +187,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     startPublishBatch,
     updateAuditStatus,
   } from "../lib/api";
+  import {
+    PUBLISH_PHASES,
+    STALL_AFTER_SECONDS,
+    currentPhaseIndex,
+    describeEta,
+    formatDuration,
+    parseServerTime,
+    secondsSinceLastSign,
+  } from "../lib/publishProgress";
   import type {
     AdminCollectStarted,
     AdminPublishBatchItem,
     AdminPublishStarted,
+    AdminPublishStatus,
   } from "../lib/types";
   import type {
     AdminArticleDetail,
@@ -751,8 +829,92 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   let publishPollTimer: number | undefined;
   let publishInFlight = false;
 
+  // Live progress panel: rebuilt only when the run changes, then patched in
+  // place so the CSS sweep never restarts; a 1 s ticker keeps the clock alive.
+  let progress: { runId: string; st: AdminPublishStatus; retrying: string | null } | null = null;
+  let progressTicker: number | undefined;
+
+  function stopProgress() {
+    window.clearInterval(progressTicker);
+    progressTicker = undefined;
+    progress = null;
+  }
+
+  function showProgress(runId: string, st: AdminPublishStatus, retrying: string | null = null) {
+    progress = { runId, st, retrying };
+    if (progressTicker === undefined) {
+      progressTicker = window.setInterval(paintProgress, 1000);
+    }
+    paintProgress();
+  }
+
+  function progressSkeleton(runId: string): string {
+    const letters = [..."Procesando…"]
+      .map((ch, i) => `<span style="animation-delay:${(i * 0.09).toFixed(2)}s">${ch}</span>`)
+      .join("");
+    const bars = PUBLISH_PHASES.map((p) => `<li title="${esc(p.label)}"></li>`).join("");
+    return `<div class="pp" data-pp-run="${esc(runId)}">
+      <div class="pp-row">
+        <span class="pp-shimmer" aria-hidden="true">${letters}</span>
+        <span class="pp-phase" data-pp="phase"></span>
+        <span class="pp-time" data-pp="time" aria-hidden="true"></span>
+      </div>
+      <ol class="pp-bar" aria-hidden="true">${bars}</ol>
+      <div class="pp-meta" data-pp="meta" aria-hidden="true"></div>
+    </div>`;
+  }
+
+  function paintProgress() {
+    if (!progress || !publishStatusEl) return;
+    const { runId, st, retrying } = progress;
+    let root = publishStatusEl.querySelector<HTMLElement>(".pp");
+    if (!root || root.dataset.ppRun !== runId) {
+      publishStatusEl.innerHTML = progressSkeleton(runId);
+      publishStatusEl.classList.remove("hidden");
+      root = publishStatusEl.querySelector<HTMLElement>(".pp");
+    }
+    if (!root) return;
+
+    const now = Date.now();
+    const p = st.progress;
+    const itemCount = p?.item_count ?? 1;
+    const idx = st.status === "queued" ? 0 : currentPhaseIndex(p?.stages);
+    const phase = PUBLISH_PHASES[idx];
+    const started = parseServerTime(st.started_at);
+    const elapsed = started ? (now - started) / 1000 : 0;
+    const quiet = secondsSinceLastSign(now, st.heartbeat_at, p?.updated_at, st.started_at);
+    const stalled = retrying !== null || (quiet !== null && quiet > STALL_AFTER_SECONDS);
+
+    const item = itemCount > 1 ? `Artículo ${(p?.item_index ?? 0) + 1}/${itemCount} · ` : "";
+    const phaseText =
+      st.status === "queued"
+        ? "En cola…"
+        : `${item}Fase ${idx + 1}/${PUBLISH_PHASES.length} · ${phase.label}`;
+    const phaseEl = root.querySelector('[data-pp="phase"]');
+    if (phaseEl && phaseEl.textContent !== phaseText) phaseEl.textContent = phaseText;
+
+    const timeEl = root.querySelector('[data-pp="time"]');
+    if (timeEl) timeEl.textContent = `${formatDuration(elapsed)} · ${describeEta(elapsed, st.typical_seconds, itemCount)}`;
+
+    root.querySelectorAll(".pp-bar li").forEach((li, i) => {
+      li.classList.toggle("done", i < idx);
+      li.classList.toggle("now", i === idx && st.status !== "queued");
+    });
+
+    let meta = `proceso ${runId}`;
+    if (retrying) meta += ` · API fuera de alcance, reintentando (${retrying})`;
+    else if (quiet !== null)
+      meta += stalled
+        ? ` · sin señales hace ${formatDuration(quiet)}; puede estar colgado`
+        : ` · última señal hace ${Math.round(quiet)} s`;
+    const metaEl = root.querySelector('[data-pp="meta"]');
+    if (metaEl) metaEl.textContent = meta;
+    root.classList.toggle("pp-stalled", stalled);
+  }
+
   function renderPublishStatus(html: string) {
     if (!publishStatusEl) return;
+    stopProgress();
     publishStatusEl.innerHTML = html;
     publishStatusEl.classList.remove("hidden");
   }
@@ -810,9 +972,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const st = await getPublishStatus(runId);
         transientFailures = 0;
         if (st.status === "running" || st.status === "queued") {
-          renderPublishStatus(
-            `Procesando… (proceso ${runId}) — editor → auditoría → imagen → PR. Tarda unos minutos.`,
-          );
+          showProgress(runId, st);
           return;
         }
         window.clearInterval(publishPollTimer);
@@ -843,6 +1003,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       } catch (e) {
         if (e instanceof Error && e.name === "AuthError") {
           window.clearInterval(publishPollTimer);
+          stopProgress();
           setPublishInFlight(false);
           clearToken();
           showAuthGate();
@@ -850,9 +1011,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         }
         if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
           transientFailures += 1;
-          renderPublishStatus(
-            `Procesando… (proceso ${runId}) — API fuera de alcance, reintentando (${transientFailures}/${MAX_TRANSIENT})`,
-          );
+          const retrying = `${transientFailures}/${MAX_TRANSIENT}`;
+          if (progress?.runId === runId) showProgress(runId, progress.st, retrying);
+          else
+            renderPublishStatus(
+              `Procesando… (proceso ${runId}) — API fuera de alcance, reintentando (${retrying})`,
+            );
           return;
         }
         window.clearInterval(publishPollTimer);

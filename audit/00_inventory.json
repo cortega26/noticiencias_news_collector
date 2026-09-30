@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-30T20:43:07.701922+00:00",
+  "generated_at": "2026-09-30T22:33:13.468260+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -345,6 +345,7 @@
     "spec-internal-review-guardrails.md": null,
     "spec-inventory-baseline-refresh.md": null,
     "spec-inventory-self-healing.md": null,
+    "spec-live-publication-progress.md": null,
     "spec-llm-canary.md": null,
     "spec-llm-health-weights-fix.md": null,
     "spec-llm-provider-chain.md": null,
@@ -481,6 +482,7 @@
     "todo-internal-review-guardrails.md": null,
     "todo-inventory-baseline-refresh.md": null,
     "todo-inventory-self-healing.md": null,
+    "todo-live-publication-progress.md": null,
     "todo-llm-canary.md": null,
     "todo-llm-health-weights-fix.md": null,
     "todo-llm-provider-chain.md": null,
@@ -1408,6 +1410,7 @@
     "spec-internal-review-guardrails.md",
     "spec-inventory-baseline-refresh.md",
     "spec-inventory-self-healing.md",
+    "spec-live-publication-progress.md",
     "spec-llm-canary.md",
     "spec-llm-health-weights-fix.md",
     "spec-llm-provider-chain.md",
@@ -1449,6 +1452,7 @@
     "todo-internal-review-guardrails.md",
     "todo-inventory-baseline-refresh.md",
     "todo-inventory-self-healing.md",
+    "todo-live-publication-progress.md",
     "todo-llm-canary.md",
     "todo-llm-health-weights-fix.md",
     "todo-llm-provider-chain.md",

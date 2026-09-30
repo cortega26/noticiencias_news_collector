@@ -309,6 +309,8 @@ def test_run_calls_pipeline_entry_point_with_expected_kwargs(
 
     workflow._run(run_id, 42, None)
 
+    listener = seen.pop("stage_listener")
+    assert callable(listener)
     assert seen == {"process_id": "42", "article_url": None, "skip_visuals": False}
 
 
@@ -440,3 +442,74 @@ def test_start_reaps_lease_old_unbeaten_running_row(
             (1, "interrupted"),
             (2, "queued"),
         ]
+
+
+# ---------------------------------------------------------------------------
+# Live progress + duration estimate for the admin GUI.
+# ---------------------------------------------------------------------------
+
+
+def test_stage_listener_records_progress_while_running(
+    db_manager, workflow, monkeypatch
+) -> None:
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(article_id=42).run_id
+    snapshots: list[dict] = []
+
+    def fake_pipeline(**kw):
+        kw["stage_listener"]("42", "image_resolution", True)
+        kw["stage_listener"]("42", "editor_refinement", True)
+        snapshots.append(workflow.get_status(run_id).progress)
+        return {"status": "noop", "processed_count": 0}
+
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        fake_pipeline,
+        raising=False,
+    )
+
+    workflow._run(run_id, 42, None)
+
+    progress = snapshots[0]
+    assert progress["stages"] == ["image_resolution", "editor_refinement"]
+    assert progress["item_index"] == 0
+    assert progress["item_count"] == 1
+    assert progress["updated_at"]
+
+
+def test_progress_write_failure_never_breaks_the_run(workflow, monkeypatch) -> None:
+    def boom(*_a, **_k):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(workflow._db, "get_session", boom)
+    workflow.record_progress_stage(999, "image_resolution")  # must not raise
+
+
+def test_typical_seconds_is_median_of_recent_single_runs(db_manager, workflow) -> None:
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        for i, (seconds, mode) in enumerate(
+            [(100, None), (200, None), (400, None), (5000, "batch")]
+        ):
+            session.add(
+                WorkflowRun(
+                    run_type="publication",
+                    status="succeeded",
+                    idempotency_key=f"typ-{i}",
+                    started_at=now - timedelta(seconds=seconds + i),
+                    finished_at=now - timedelta(seconds=i),
+                    run_metadata={"summary": {"mode": mode}} if mode else {},
+                )
+            )
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="running",
+                idempotency_key="typ-live",
+                started_at=now,
+            )
+        )
+
+    status = workflow.get_status(None)
+    assert status.run_status == "running"
+    assert status.typical_seconds == 200
