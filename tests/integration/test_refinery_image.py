@@ -98,6 +98,54 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
         )
 
 
+def test_downloaded_image_without_alt_still_publishes(mock_refinery_engine, tmp_path):
+    """A publish request never fails over missing alt text: the image
+    resolves with the headline fallback and an advisory brief is queued."""
+    target_dir = tmp_path / "target_repo"
+    target_dir.mkdir()
+
+    article = {
+        "id": "126",
+        "title": "Test Article Without Alt",
+        "url": "https://example.com/no-alt",
+        "summary": "A valid summary for an article whose source image has no alt.",
+        "source_id": "src",
+        "source_name": "src",
+        "category": "science",
+        "source_metadata": {},
+        "published_date": datetime(2024, 1, 4),
+        "image_url": "https://example.com/image.jpg",
+    }
+
+    with patch(
+        "news_collector.infrastructure.requests_client.RobustRequestsClient"
+    ) as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.__enter__.return_value = mock_instance
+        mock_response = MagicMock()
+        mock_response.content = b"fake-image-data"
+        mock_response.headers = {"Content-Type": "image/jpeg"}
+        mock_instance.get.return_value = mock_response
+
+        result = mock_refinery_engine.process_single_article(
+            article, MagicMock(), target_dir
+        )
+
+    assert result is True
+    mock_refinery_engine.editor.process_article.assert_called_once()
+    passed_article = mock_refinery_engine.editor.process_article.call_args[0][0]
+    assert passed_article["image_url"] == (
+        "~/assets/images/2024-01-04-test-article-without-alt.jpg"
+    )
+    brief_path = (
+        Path(mock_refinery_engine.data_dir)
+        / "image-briefs"
+        / "2024-01-04-test-article-without-alt.json"
+    )
+    assert brief_path.exists()
+    assert '"reason": "missing_alt_text"' in brief_path.read_text(encoding="utf-8")
+
+
 def test_missing_image_creates_editorial_brief_and_stops_publish(
     mock_refinery_engine, tmp_path
 ):

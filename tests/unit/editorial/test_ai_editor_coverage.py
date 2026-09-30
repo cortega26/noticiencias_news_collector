@@ -1022,7 +1022,8 @@ class TestProcessArticlePaths:
 
     def test_hero_alt_recomputed_in_spanish(self, tmp_path):
         """Plan 079, Codex P2 verbatim case: a boilerplate EN alt never
-        reaches frontmatter — it is recomputed with the Spanish headline."""
+        reaches frontmatter — it is recomputed with the Spanish headline,
+        which also keeps the frontend check-image-alt gate green."""
         agent = self._pipeline_agent(tmp_path)
         agent._generate_headlines = lambda *a, **k: {
             "direct": "¿Qué efectos tiene un rayo sin rasguños visibles?",
@@ -1041,11 +1042,12 @@ class TestProcessArticlePaths:
             },
             override_date="2026-03-02",
         )
-        assert (
-            "image_alt: Ilustración editorial relacionada con "
-            "¿Qué efectos tiene un rayo sin rasguños visibles?" in result
-        )
+        assert "image_alt: ¿Qué efectos tiene un rayo sin rasguños visibles?" in result
         assert "Lightning strikes kill" not in result
+        assert (
+            "Ilustración editorial relacionada con "
+            "¿Qué efectos tiene un rayo sin rasguños visibles?" not in result
+        )
 
     def test_tag_normalization_failure_falls_back(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
