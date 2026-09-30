@@ -679,21 +679,31 @@ class DatabaseManager:
         *,
         reason: str,
         failure_class: str | None = None,
+        branch_name: str | None = None,
     ) -> bool:
         """Release an article from a clean pre-PR ``publishing`` window.
 
         Delegates the legacy status/metadata restore to the article
-        repository and dual-writes the still-``PUBLISHING`` attempt row to
-        ``REJECTED`` (the existing legal CAS transition; retries create a
-        new attempt row). The lifecycle write is best-effort: a failure is
-        logged and swallowed, matching the other dual-writes in this facade.
+        repository and dual-writes the ``PUBLISHING`` attempt row that owns
+        ``branch_name`` (or the latest one when no token is given) to
+        ``REJECTED`` — the existing legal CAS transition; retries create a
+        new attempt row. Scoping by branch keeps an overlapping/stale run
+        from rejecting the row a newer run just created. The lifecycle write
+        is best-effort: a failure is logged and swallowed, matching the
+        other dual-writes in this facade.
         """
-        result = self.articles.release_article_publishing(article_id, reason=reason)
+        result = self.articles.release_article_publishing(
+            article_id, reason=reason, branch_name=branch_name
+        )
         if not result:
             return False
         try:
             attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
             publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
+            if branch_name is not None:
+                publishing_attempts = [
+                    a for a in publishing_attempts if a.branch_name == branch_name
+                ]
             if publishing_attempts:
                 latest = max(
                     publishing_attempts, key=lambda a: (a.attempt_number, a.id)

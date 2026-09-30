@@ -199,8 +199,18 @@ def test_release_article_publishing_restores_publishable_state(db_manager):
         "publishing_branch": "content/update-x",
     }
 
+    # Ownership token mismatch: a stale run must not release the article.
+    assert not db_manager.articles.release_article_publishing(
+        article_id,
+        reason="frontend_validation_failed",
+        branch_name="content/update-stale",
+    )
+    assert db_manager.articles.get_publishing_state(article_id) is not None
+
     assert db_manager.articles.release_article_publishing(
-        article_id, reason="frontend_validation_failed"
+        article_id,
+        reason="frontend_validation_failed",
+        branch_name="content/update-x",
     )
     released = db_manager.articles.get_article_by_id(article_id)
     assert released.processing_status == "completed"
@@ -219,24 +229,34 @@ def test_release_article_publishing_restores_publishable_state(db_manager):
     )
 
 
-def test_database_release_closes_publishing_attempt(db_manager):
+def test_database_release_is_scoped_to_the_owning_attempt(db_manager):
     saved = db_manager.articles.save_article(_payload("https://x.com/release-db"))
     article_id = int(saved.id)
     assert db_manager.mark_article_publishing(article_id, "content/update-y")
+    # A newer overlapping run re-marks the article (second PUBLISHING row).
+    assert db_manager.mark_article_publishing(article_id, "content/update-z")
 
     attempts = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
-    assert [a.state for a in attempts] == ["PUBLISHING"]
+    assert [a.state for a in attempts] == ["PUBLISHING", "PUBLISHING"]
 
+    # The stale run's release is a no-op: it does not own the article anymore.
+    assert not db_manager.release_article_publishing(
+        article_id, reason="frontend_validation_failed", branch_name="content/update-y"
+    )
+    attempts = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    assert [a.state for a in attempts] == ["PUBLISHING", "PUBLISHING"]
+
+    # The owning run releases: only its attempt is closed.
     assert db_manager.release_article_publishing(
         article_id,
         reason="frontend_validation_failed",
         failure_class="taxonomy_contract_violation",
+        branch_name="content/update-z",
     )
-
     attempts = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
-    assert [a.state for a in attempts] == ["REJECTED"]
-    assert attempts[0].finished_at is not None
-    events = db_manager.lifecycle.get_publication_events_for_attempt(attempts[0].id)
+    assert [a.state for a in attempts] == ["PUBLISHING", "REJECTED"]
+    assert attempts[1].finished_at is not None
+    events = db_manager.lifecycle.get_publication_events_for_attempt(attempts[1].id)
     assert [e.event_type for e in events] == ["rejected"]
     assert events[0].details["reason"] == "frontend_validation_failed"
     assert events[0].details["failure_class"] == "taxonomy_contract_violation"

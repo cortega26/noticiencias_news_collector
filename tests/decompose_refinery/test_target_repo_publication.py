@@ -188,7 +188,10 @@ class TestFailurePaths:
         deps.git.commit_and_push.assert_not_called()
         deps.pr_orchestrator.create_pr.assert_not_called()
         deps.db.release_article_publishing.assert_called_once_with(
-            42, reason="file_write_failed", failure_class=None
+            42,
+            reason="file_write_failed",
+            failure_class=None,
+            branch_name="content/update-2024-01-25-test",
         )
 
     def test_fast_frontmatter_failure_skips_full_validation(self, tmp_path: Path):
@@ -481,9 +484,34 @@ class TestSelfHealingRepair:
             42,
             reason="frontend_validation_failed",
             failure_class="frontend_build_failure",
+            branch_name="content/update-2024-01-25-test",
         )
         released = stages.get("publishing_state_released")
         assert released and released[0][1] is True
+
+    def test_release_skipped_when_another_run_owns_the_article(self, tmp_path: Path):
+        """A stale run must not release an article a newer run re-marked."""
+        request = self._prepared_request(tmp_path)
+        _write_post_file(request)
+        deps = _deps()
+        deps.db.release_article_publishing.return_value = False
+        stages = StageLog()
+        failed = _summary(
+            request.target_dir,
+            success=False,
+            failure_class="frontend_build_failure",
+        )
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(f"{MODULE}.run_frontend_publication_validation", return_value=failed),
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        assert "publishing_state_released" not in stages.names
 
     def test_release_skipped_without_db_method(self, tmp_path: Path):
         request = self._prepared_request(tmp_path)

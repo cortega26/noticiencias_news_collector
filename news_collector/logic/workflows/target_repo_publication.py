@@ -100,12 +100,16 @@ class TargetRepoPublicationWorkflow:
             return PublicationOutcome(success=False)
 
         output_filename = request.output_filename
-        branch_name = self._create_publication_branch(
+        branch_name, publishing_token = self._create_publication_branch(
             request, deps, output_filename, record_stage
         )
         if not self._write_post(request, deps, output_filename, record_stage):
             self._release_publishing_state(
-                request, deps, record_stage, reason="file_write_failed"
+                request,
+                deps,
+                record_stage,
+                reason="file_write_failed",
+                branch_name=publishing_token,
             )
             return PublicationOutcome(success=False, branch_name=branch_name)
         validation = self._validate_post_frontend(
@@ -118,6 +122,7 @@ class TargetRepoPublicationWorkflow:
                 record_stage,
                 reason="frontend_validation_failed",
                 failure_class=validation.failure_class,
+                branch_name=publishing_token,
             )
             return PublicationOutcome(
                 success=False,
@@ -153,9 +158,14 @@ class TargetRepoPublicationWorkflow:
         deps: PublicationDeps,
         output_filename: str,
         record_stage: StageRecorder,
-    ) -> str:
+    ) -> tuple[str, str]:
         """4. Create Branch: before writing files, so branch collisions or
-        remote sync failures do not leave uncommitted content edits behind."""
+        remote sync failures do not leave uncommitted content edits behind.
+
+        Returns ``(branch_name, publishing_token)`` — the token is the exact
+        branch name recorded by ``mark_article_publishing``, used to scope a
+        later release to this run's attempt (overlapping publishers).
+        """
         branch_slug = output_filename.replace(".md", "")
         expected_branch = f"content/update-{branch_slug}"
 
@@ -181,7 +191,7 @@ class TargetRepoPublicationWorkflow:
             ),
         )
         record_stage("branch_created", True, branch_name=branch_name)
-        return branch_name
+        return branch_name, expected_branch
 
     def _write_post(
         self,
@@ -314,6 +324,7 @@ class TargetRepoPublicationWorkflow:
         *,
         reason: str,
         failure_class: Optional[PublicationFailureClass] = None,
+        branch_name: Optional[str] = None,
     ) -> None:
         """Undo the pre-PR `publishing` mark after a clean failure.
 
@@ -322,6 +333,10 @@ class TargetRepoPublicationWorkflow:
         through the crash-recovery path for nothing (and did exactly that on
         run 59). Recovery still owns failures after commit/push: those may
         have a pushed branch worth resuming.
+
+        `branch_name` is the ownership token recorded by
+        `mark_article_publishing`: a stale run must not release an article
+        that a newer overlapping run has already re-marked.
         """
         if request.numeric_id is None or not hasattr(
             deps.db, "release_article_publishing"
@@ -332,6 +347,7 @@ class TargetRepoPublicationWorkflow:
                 request.numeric_id,
                 reason=reason,
                 failure_class=failure_class,
+                branch_name=branch_name,
             )
         except Exception as e:
             logger.warning(
