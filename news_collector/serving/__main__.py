@@ -5,10 +5,15 @@ Usage:
     python -m news_collector.serving
 
 Env:
-    SERVING_PORT  TCP port to bind (default: 8000). Honored strictly: an
-                  invalid value fails closed, and a busy port surfaces
-                  uvicorn's bind error. Port *selection* (next-free fallback)
-                  belongs to the caller — see scripts/dev/admin_stack.sh.
+    SERVING_PORT    TCP port to bind (default: 8000). Honored strictly: an
+                    invalid value fails closed, and a busy port surfaces
+                    uvicorn's bind error. Port *selection* (next-free fallback)
+                    belongs to the caller — see scripts/dev/admin_stack.sh.
+    SERVING_RELOAD  uvicorn auto-reload (default: 1). Set to 0/false/no/off
+                    for publication sessions: a run executes in-process for
+                    ~12 min and any watched source edit would restart the
+                    server and kill it mid-flight (runs 58/60). Invalid
+                    values fail closed, same convention as SERVING_PORT.
 """
 
 import os
@@ -42,6 +47,9 @@ RELOAD_EXCLUDES = [str(_REPO_ROOT / name) for name in ("temp", "data", "logs")]
 
 DEFAULT_PORT = 8000
 
+_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
 
 def _resolve_port() -> int:
     """Resolve the bind port from SERVING_PORT, failing closed on garbage."""
@@ -59,15 +67,34 @@ def _resolve_port() -> int:
     return port
 
 
+def _resolve_reload() -> bool:
+    """Resolve uvicorn auto-reload from SERVING_RELOAD, failing closed.
+
+    Defaults to True (normal development). Publication runs execute as
+    daemon threads inside this process; with reload on, any watched source
+    change restarts the worker and kills the run (runs 58/60). Operators
+    publishing from the desk run the stack with `SERVING_RELOAD=0`.
+    """
+    raw = os.environ.get("SERVING_RELOAD", "1").strip().lower()
+    if raw in _FALSE_VALUES:
+        return False
+    if raw in _TRUE_VALUES:
+        return True
+    raise SystemExit(
+        f"news_collector.serving: invalid SERVING_RELOAD={raw!r} "
+        "(expected one of: 1/0, true/false, yes/no, on/off)"
+    )
+
+
 def main() -> None:
-    """Launch the dev server (auto-reload, runtime dirs excluded)."""
+    """Launch the dev server (auto-reload by default, runtime dirs excluded)."""
     import uvicorn
 
     uvicorn.run(
         "news_collector.serving.__main__:app",
         host="0.0.0.0",  # noqa: S104 # nosec B104 — local dev server only
         port=_resolve_port(),
-        reload=True,
+        reload=_resolve_reload(),
         reload_excludes=RELOAD_EXCLUDES,
     )
 
