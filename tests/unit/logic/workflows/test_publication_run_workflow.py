@@ -513,3 +513,50 @@ def test_typical_seconds_is_median_of_recent_single_runs(db_manager, workflow) -
     status = workflow.get_status(None)
     assert status.run_status == "running"
     assert status.typical_seconds == 200
+
+
+def test_typical_seconds_ignores_a_batch_dominated_recent_window(
+    db_manager, workflow
+) -> None:
+    """Recent batch successes must not starve the single-run sample.
+
+    Regression (Codex P2 on #359): the history cap used to be applied before
+    batches were discarded, so a window full of batch runs returned None even
+    though older single-article runs existed.
+    """
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        for i, seconds in enumerate((100, 300)):
+            session.add(
+                WorkflowRun(
+                    run_type="publication",
+                    status="succeeded",
+                    idempotency_key=f"typ-single-{i}",
+                    started_at=now - timedelta(seconds=seconds + 10_000),
+                    finished_at=now - timedelta(seconds=10_000 + i),
+                    run_metadata={},
+                )
+            )
+        for i in range(35):
+            session.add(
+                WorkflowRun(
+                    run_type="publication",
+                    status="succeeded",
+                    idempotency_key=f"typ-batch-{i}",
+                    started_at=now - timedelta(seconds=5000 + i),
+                    finished_at=now - timedelta(seconds=i),
+                    run_metadata={"summary": {"mode": "batch"}},
+                )
+            )
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="running",
+                idempotency_key="typ-live-2",
+                started_at=now,
+            )
+        )
+
+    status = workflow.get_status(None)
+    assert status.run_status == "running"
+    assert status.typical_seconds == 200

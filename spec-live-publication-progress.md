@@ -49,9 +49,11 @@ advisory only:
     `item_count`, `updated_at` UTC ISO); wrapped in try/except + warning.
   - `_reset_progress` clears `stages` and sets item position at the start of
     each article (single and batch).
-  - `_typical_seconds(session)` = median of up to the last 10 successful
-    single-article runs (batch runs excluded by `summary.mode == "batch"`),
-    computed only while the run is queued/running.
+  - `_typical_seconds(session)` = median of the last ≤10 successful
+    single-article runs. Batch runs are excluded **in SQL** (`json_extract
+    (run_metadata, '$.summary.mode')`, same pattern as `serving/api.py`)
+    *before* the sample cap, so a batch-dominated recent window can never
+    starve the estimate; computed only while the run is queued/running.
   - `PublicationRunStatusResult` gains `progress: dict` and
     `typical_seconds: int | None`; `_as_utc` normalizes naive SQLite
     datetimes.
@@ -103,7 +105,9 @@ advisory only:
    `typical_seconds`; `progress` is reset per article in batch runs and
    `item_index`/`item_count` track the batch position.
 2. `typical_seconds` is the median of ≤10 recent successful single-article
-   runs; batch runs never contribute; `null` when there is no history.
+   runs; batch runs are discarded in SQL before the cap (a batch-dominated
+   recent window still yields the single-run median); `null` when there is
+   no history.
 3. A raising stage listener or a failing progress DB write never changes the
    publication result (tests assert no exception propagates).
 4. Frontend helpers: phase folding ignores unknown/minor stages, naive
@@ -120,8 +124,13 @@ advisory only:
 - `npm --prefix apps/admin exec vitest run src/lib/publishProgress.test.ts` — 10 passed.
 - `make admin-contracts-check` — green.
 - Gates: `make lint`, `make type`, `make test`, `make test-boundaries`,
-  `make test-contracts`, `make admin-test`.
+  `make test-contracts`, `make admin-test`, `make docs-check`.
 - Inventory: `make inventory-refresh && make inventory-check`.
+- Review fixes (PR #359): Codex P2 — the history query filters batches in SQL
+  before the cap, with a regression test
+  (`test_typical_seconds_ignores_a_batch_dominated_recent_window`); Codex P1 —
+  `docs/PIPELINE_CONTRACTS.md` and `docs/PRODUCT_FLOW.md` document the
+  extended status contract and its advisory semantics.
 - Manual smoke (operator): `SERVING_RELOAD=0 make admin`, publish a candidate
   and watch the panel advance; a killed worker should show the stall flag
   after 150 s of silence.

@@ -46,7 +46,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
@@ -550,28 +550,28 @@ class PublicationRunWorkflow:
 
     def _typical_seconds(self, session: Any) -> int | None:
         """Median wall time of the most recent successful single-article runs
-        (batch runs excluded: their duration scales with the item count)."""
+        (batch runs excluded in SQL, *before* the sample cap, so a window
+        dominated by batches can never starve the estimate)."""
+        mode = func.json_extract(WorkflowRun.run_metadata, "$.summary.mode")
         rows = session.execute(
             select(
                 WorkflowRun.started_at,
                 WorkflowRun.finished_at,
-                WorkflowRun.run_metadata,
             )
             .where(
                 WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
                 WorkflowRun.status == "succeeded",
                 WorkflowRun.finished_at.is_not(None),
+                or_(mode.is_(None), mode != "batch"),
             )
             .order_by(WorkflowRun.finished_at.desc())
-            .limit(TYPICAL_DURATION_SAMPLE * 3)
+            .limit(TYPICAL_DURATION_SAMPLE)
         ).all()
-        durations: list[float] = []
-        for started, finished, metadata in rows:
-            seconds = _run_duration_seconds(started, finished, metadata)
-            if seconds is not None:
-                durations.append(seconds)
-            if len(durations) >= TYPICAL_DURATION_SAMPLE:
-                break
+        durations = [
+            seconds
+            for started, finished in rows
+            if (seconds := _run_duration_seconds(started, finished)) is not None
+        ]
         median = _median_seconds(durations)
         return int(round(median)) if median is not None else None
 
@@ -806,14 +806,9 @@ def _as_utc(value: datetime) -> datetime:
 def _run_duration_seconds(
     started: datetime | None,
     finished: datetime | None,
-    metadata: Any,
 ) -> float | None:
     """Wall time of a completed run, or None when it must not contribute:
-    missing timestamps, non-positive durations, or batch runs (their duration
-    scales with the item count, so they are not a per-article baseline)."""
-    summary = metadata.get("summary") if isinstance(metadata, dict) else None
-    if isinstance(summary, dict) and summary.get("mode") == "batch":
-        return None
+    a missing timestamp or a non-positive duration."""
     if started is None or finished is None:
         return None
     seconds = (_as_utc(finished) - _as_utc(started)).total_seconds()

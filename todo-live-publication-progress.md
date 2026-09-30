@@ -18,4 +18,8 @@
       91.25%), `make test` (3495 passed), `make test-boundaries` (3),
       `make test-contracts` (171), `make admin-test` (45)
 - [ ] Live smoke: publish with `SERVING_RELOAD=0` and watch the panel (operator)
+- [x] Review fix (Codex P2 #359): filter batches in SQL before the 10-row cap
+      + `test_typical_seconds_ignores_a_batch_dominated_recent_window`
+- [x] Review fix (Codex P1 #359): document the extended status contract and
+      advisory semantics in `PIPELINE_CONTRACTS.md` + `PRODUCT_FLOW.md`
 - [x] Commit + PR [#359](https://github.com/cortega26/noticiencias_news_collector/pull/359)
