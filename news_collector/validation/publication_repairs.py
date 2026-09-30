@@ -60,6 +60,34 @@ def _split_frontmatter(content: str) -> Optional[tuple[str, str]]:
     )
 
 
+def _parse_frontmatter_mapping(frontmatter: str) -> Optional[dict]:
+    """Parse a frontmatter block into a mapping, or `None` when unusable."""
+    try:
+        data = yaml.safe_load(frontmatter)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _string_tags(data: dict) -> Optional[list[str]]:
+    """The post's tag list when it is a non-empty list of strings."""
+    raw_tags = data.get("tags")
+    if not isinstance(raw_tags, list) or not raw_tags:
+        return None
+    if not all(isinstance(tag, str) for tag in raw_tags):
+        return None
+    return raw_tags
+
+
+def _dump_frontmatter(data: dict) -> Optional[str]:
+    try:
+        return yaml.safe_dump(data, allow_unicode=True, sort_keys=False).rstrip("\n")
+    except yaml.YAMLError:
+        return None
+
+
 def _repair_taxonomy_tags(content: str) -> Optional[ContentRepair]:
     """Repair post tags to the cross-repo charset contract.
 
@@ -71,19 +99,11 @@ def _repair_taxonomy_tags(content: str) -> Optional[ContentRepair]:
     if split is None:
         return None
     frontmatter, remainder = split
-    try:
-        data = yaml.safe_load(frontmatter)
-    except yaml.YAMLError:
+    data = _parse_frontmatter_mapping(frontmatter)
+    if data is None:
         return None
-    if not isinstance(data, dict):
-        return None
-
-    raw_tags = data.get("tags")
-    if (
-        not isinstance(raw_tags, list)
-        or not raw_tags
-        or not all(isinstance(tag, str) for tag in raw_tags)
-    ):
+    raw_tags = _string_tags(data)
+    if raw_tags is None:
         return None
 
     normalizer = TagNormalizer()
@@ -95,11 +115,8 @@ def _repair_taxonomy_tags(content: str) -> Optional[ContentRepair]:
         return None
 
     data["tags"] = repaired_tags
-    try:
-        repaired_frontmatter = yaml.safe_dump(
-            data, allow_unicode=True, sort_keys=False
-        ).rstrip("\n")
-    except yaml.YAMLError:
+    repaired_frontmatter = _dump_frontmatter(data)
+    if repaired_frontmatter is None:
         return None
 
     return ContentRepair(

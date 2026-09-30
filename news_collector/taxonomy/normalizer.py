@@ -111,6 +111,15 @@ class TagNormalizer:
         )
         return re.sub(r"\s+", " ", repaired).strip()
 
+    def _repair_charset_with_audit(
+        self, tag: str, replaced: List[Dict[str, str]]
+    ) -> str:
+        """Charset repair that records the before/after in the audit list."""
+        repaired = self._repair_charset(tag)
+        if repaired != tag:
+            replaced.append({"from": tag, "to": repaired})
+        return repaired
+
     def sanitize_tags(self, tags: List[str]) -> NormalizeResult:  # noqa: C901
         """
         Main entry point for sanitization.
@@ -135,10 +144,7 @@ class TagNormalizer:
             # Charset repair (cross-repo tag contract, self-healing): any
             # character the frontend gate rejects is neutralized here, so the
             # publication never burns a full run to fail at check:tags.
-            t_repaired = self._repair_charset(t_sanitized)
-            if t_repaired != t_sanitized:
-                replaced.append({"from": t_sanitized, "to": t_repaired})
-                t_sanitized = t_repaired
+            t_sanitized = self._repair_charset_with_audit(t_sanitized, replaced)
 
             # Empty check
             if not t_sanitized:
