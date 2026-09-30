@@ -1152,6 +1152,26 @@ export interface components {
             status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
         };
         /**
+         * AdminPublishProgress
+         * @description Live progress of an in-flight publication run (advisory).
+         */
+        AdminPublishProgress: {
+            /**
+             * Item Count
+             * @default 1
+             */
+            item_count: number;
+            /**
+             * Item Index
+             * @default 0
+             */
+            item_index: number;
+            /** Stages */
+            stages?: string[];
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
          * AdminPublishRequest
          * @description Body for POST /v1/admin/publish — exactly one of article_id / article_url.
          *
@@ -1201,8 +1221,11 @@ export interface components {
             final_slug?: string | null;
             /** Finished At */
             finished_at?: string | null;
+            /** Heartbeat At */
+            heartbeat_at?: string | null;
             /** Pr Url */
             pr_url?: string | null;
+            progress?: components["schemas"]["AdminPublishProgress"] | null;
             /** Run Id */
             run_id?: string | null;
             /** Started At */
@@ -1217,6 +1240,8 @@ export interface components {
             summary?: {
                 [key: string]: unknown;
             };
+            /** Typical Seconds */
+            typical_seconds?: number | null;
         };
         /**
          * AdminQualityAggregate

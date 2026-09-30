@@ -39,6 +39,12 @@ in `workflow_runs` and invokes the editorial/publication workflow. It accepts
 exactly one article ID or URL. See `docs/PIPELINE_CONTRACTS.md` for status,
 conflict and lease-recovery semantics.
 
+While a run is queued/running, `GET /v1/admin/publish/status` also exposes
+advisory live progress for the admin GUI: the article's completed Refinery
+stages, its position in a batch, the lease heartbeat, and an ETA derived from
+the most recent successful single-article runs. It is observability only —
+recording it (or failing to) can never block or change a publication.
+
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
 The target artifact is Markdown under `src/content/posts/<canonical-slug>.md`
@@ -84,6 +90,7 @@ state stale after a successful frontend deployment.
 | Start returns conflict | Active run ID, type, heartbeat and lease age |
 | Identity cannot be resolved | Persisted slug, manifest/frontend artifact, source/collection dates |
 | Publication stops before PR | Workflow error, editorial result, image artifact and GitHub configuration |
+| Publication seems hung | Live progress stages, heartbeat age and lease age in the admin publish status |
 | PR validation fails | Frontend diagnostic and exact render schema |
 | Deployed article remains pending in backend | Callback IDs/transport and the backend's effective database |
 

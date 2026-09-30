@@ -163,7 +163,13 @@ def test_run_batch_success_merges_pr_urls_per_item(
 
     workflow._run_batch(run_id, [11, 12])
 
-    assert calls == [([11, 12], {"skip_visuals": False})]
+    assert len(calls) == 1
+    ids, kwargs = calls[0]
+    assert ids == [11, 12]
+    assert kwargs.pop("skip_visuals") is False
+    assert callable(kwargs.pop("stage_listener"))
+    assert callable(kwargs.pop("on_item_start"))
+    assert kwargs == {}
     status = workflow.get_status(run_id)
     assert status.run_status == "succeeded"
     items = status.summary["items"]
@@ -335,3 +341,29 @@ def test_wrapper_rejects_empty_and_oversize() -> None:
         run_publication_batch([])
     with pytest.raises(ValueError):
         run_publication_batch([1, 2, 3, 4, 5, 6])
+
+
+def test_wrapper_reports_item_start_and_forwards_stage_listener(monkeypatch) -> None:
+    from news_collector.logic.workflows.publication_pipeline import (
+        run_publication_batch,
+    )
+
+    forwarded: list = []
+
+    def fake(**kw):
+        forwarded.append(kw.get("stage_listener"))
+        return {"status": "success", "processed_count": 1}
+
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.publication_pipeline.run_publication_pipeline",
+        fake,
+    )
+    starts: list = []
+    listener = object()
+    run_publication_batch(
+        [7, 8],
+        stage_listener=listener,
+        on_item_start=lambda i, n, aid: starts.append((i, n, aid)),
+    )
+    assert starts == [(0, 2, 7), (1, 2, 8)]
+    assert forwarded == [listener, listener]

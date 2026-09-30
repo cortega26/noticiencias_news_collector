@@ -1266,6 +1266,41 @@
         "title": "AdminPublishBatchStarted",
         "type": "object"
       },
+      "AdminPublishProgress": {
+        "description": "Live progress of an in-flight publication run (advisory).",
+        "properties": {
+          "item_count": {
+            "default": 1,
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "item_index": {
+            "default": 0,
+            "title": "Item Index",
+            "type": "integer"
+          },
+          "stages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "title": "AdminPublishProgress",
+        "type": "object"
+      },
       "AdminPublishRequest": {
         "description": "Body for POST /v1/admin/publish — exactly one of article_id / article_url.\n\nNOTE (plan 074): there is intentionally NO dry_run flag here. A previous\nversion accepted and threaded one, but nothing on the publish path ever\nconsulted it — a \"dry-run publish\" executed a full real publish. The\nflag was removed rather than left as a dishonest promise. (Collect\ndry-run is real and lives on AdminCollectRequest.)",
         "properties": {
@@ -1379,6 +1414,17 @@
             ],
             "title": "Finished At"
           },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
           "pr_url": {
             "anyOf": [
               {
@@ -1389,6 +1435,16 @@
               }
             ],
             "title": "Pr Url"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminPublishProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "run_id": {
             "anyOf": [
@@ -1429,6 +1485,17 @@
             "additionalProperties": true,
             "title": "Summary",
             "type": "object"
+          },
+          "typical_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Seconds"
           }
         },
         "title": "AdminPublishStatus",

@@ -146,6 +146,18 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   Starting a new run also recovers expired running leases, without recovering
   queued rows that may belong to an in-flight dispatch. A missing heartbeat
   is stale only when `started_at` is older than the lease cutoff.
+- publication trigger/status (`/v1/admin/publish`, `/v1/admin/publish/batch`,
+  `GET /v1/admin/publish/status?run_id=`) is durable in `workflow_runs`
+  (Plan 060 Phase 4c) and single-flight; an unrecognized run id returns 404.
+  While a run is queued/running `AdminPublishStatus` also carries **advisory
+  live progress**: the article's recorded Refinery stage names
+  (`progress.stages`, fed by the `RefineryEngine.stage_listener` hook),
+  `progress.item_index`/`item_count` for batch runs, the lease
+  `heartbeat_at`, and `typical_seconds` (median wall time of the most recent
+  successful single-article runs, batch runs excluded in SQL before the
+  sample cap — the admin GUI's ETA baseline). Recording progress is
+  deliberately non-blocking: a listener or progress-write failure is logged
+  and can never alter the publication outcome (LAW-B7).
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)

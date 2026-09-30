@@ -89,6 +89,7 @@ from news_collector.contracts.admin import (
     AdminPromptsEnvelope,
     AdminPublishBatchRequest,
     AdminPublishBatchStarted,
+    AdminPublishProgress,
     AdminPublishRequest,
     AdminPublishStarted,
     AdminPublishStatus,
@@ -1684,6 +1685,15 @@ def create_app(  # noqa: C901
             pr_url=summary.get("pr_url"),
             failure_class=summary.get("failure_class"),
             final_slug=summary.get("final_slug"),
+            progress=(
+                AdminPublishProgress.model_validate(result.progress)
+                if result.progress
+                else None
+            ),
+            heartbeat_at=(
+                result.heartbeat_at.isoformat() if result.heartbeat_at else None
+            ),
+            typical_seconds=result.typical_seconds,
         )
 
     @app.post(
