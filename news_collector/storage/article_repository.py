@@ -632,6 +632,36 @@ class ArticleRepository:
                 "publishing_branch": metadata.get("publishing_branch"),
             }
 
+    def release_article_publishing(self, article_id: int, *, reason: str) -> bool:
+        """Undo ``mark_article_publishing`` after a clean pre-PR failure.
+
+        Restores the publishable ``completed`` status (the state candidates
+        carry when selected for publication) and clears the publishing
+        window metadata, so the next attempt starts from scratch instead of
+        entering crash recovery for a branch that was never committed
+        (run 59). Idempotent: an article that is not in ``publishing``
+        returns ``False`` and is left untouched.
+        """
+        with self._session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is None or article.processing_status != "publishing":
+                return False
+
+            article.processing_status = "completed"
+            metadata = dict(article.article_metadata or {})
+            metadata.pop("publishing_started_at", None)
+            metadata.pop("publishing_branch", None)
+            metadata["publication_released"] = {
+                "reason": reason,
+                "at": datetime.now(timezone.utc).isoformat(),
+            }
+            article.article_metadata = metadata
+            session.add(article)
+            logger.info(
+                "Article {} released from publishing (reason={}).", article_id, reason
+            )
+            return True
+
     def is_processed(self, identifier: str | int) -> bool:
         """
         Backwards-compatible helper used by Refinery for file-based workflows.

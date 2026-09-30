@@ -188,6 +188,60 @@ def test_publication_helpers(db_manager):
     assert db_manager.articles.update_article_audit_status(99999, "failed") is False
 
 
+def test_release_article_publishing_restores_publishable_state(db_manager):
+    saved = db_manager.articles.save_article(_payload("https://x.com/release"))
+    article_id = int(saved.id)
+
+    assert db_manager.articles.mark_article_publishing(article_id, "content/update-x")
+    state = db_manager.articles.get_publishing_state(article_id)
+    assert state == {
+        "publishing_started_at": state["publishing_started_at"],
+        "publishing_branch": "content/update-x",
+    }
+
+    assert db_manager.articles.release_article_publishing(
+        article_id, reason="frontend_validation_failed"
+    )
+    released = db_manager.articles.get_article_by_id(article_id)
+    assert released.processing_status == "completed"
+    metadata = released.article_metadata or {}
+    assert "publishing_started_at" not in metadata
+    assert "publishing_branch" not in metadata
+    assert metadata["publication_released"]["reason"] == "frontend_validation_failed"
+    assert db_manager.articles.get_publishing_state(article_id) is None
+
+    # Idempotent: nothing left to release.
+    assert not db_manager.articles.release_article_publishing(
+        article_id, reason="frontend_validation_failed"
+    )
+    assert not db_manager.articles.release_article_publishing(
+        99999, reason="frontend_validation_failed"
+    )
+
+
+def test_database_release_closes_publishing_attempt(db_manager):
+    saved = db_manager.articles.save_article(_payload("https://x.com/release-db"))
+    article_id = int(saved.id)
+    assert db_manager.mark_article_publishing(article_id, "content/update-y")
+
+    attempts = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    assert [a.state for a in attempts] == ["PUBLISHING"]
+
+    assert db_manager.release_article_publishing(
+        article_id,
+        reason="frontend_validation_failed",
+        failure_class="taxonomy_contract_violation",
+    )
+
+    attempts = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    assert [a.state for a in attempts] == ["REJECTED"]
+    assert attempts[0].finished_at is not None
+    events = db_manager.lifecycle.get_publication_events_for_attempt(attempts[0].id)
+    assert [e.event_type for e in events] == ["rejected"]
+    assert events[0].details["reason"] == "frontend_validation_failed"
+    assert events[0].details["failure_class"] == "taxonomy_contract_violation"
+
+
 def test_is_processed(db_manager):
     saved = db_manager.articles.save_article(_payload("https://x.com/processed"))
     article_id = int(saved.id)

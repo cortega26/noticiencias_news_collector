@@ -178,11 +178,18 @@ class TestFailurePaths:
 
         assert outcome.success is False
         assert outcome.branch_name == "content/update-2024-01-25-test"
-        assert stages.names == ["branch_created", "file_written"]
+        assert stages.names == [
+            "branch_created",
+            "file_written",
+            "publishing_state_released",
+        ]
         assert stages.get("file_written")[0][1] is False
         assert stages.get("file_written")[0][2]["error"] == "bad write"
         deps.git.commit_and_push.assert_not_called()
         deps.pr_orchestrator.create_pr.assert_not_called()
+        deps.db.release_article_publishing.assert_called_once_with(
+            42, reason="file_write_failed", failure_class=None
+        )
 
     def test_fast_frontmatter_failure_skips_full_validation(self, tmp_path: Path):
         request = _request(tmp_path)
@@ -283,6 +290,234 @@ class TestFailurePaths:
         assert outcome.success is False
         assert outcome.pr_url == ""
         assert stages.get("pr_created")[0][1] is False
+
+
+# ---------------------------------------------------------------------------
+# self-healing: bounded content repair + publishing-state release
+# ---------------------------------------------------------------------------
+
+POST_WITH_BAD_TAG = """---
+title: La gravedad
+tags:
+  - ads/cft
+  - gravedad
+---
+
+Body
+"""
+
+
+def _summary(
+    target_dir: Path, *, success: bool, failure_class=None
+) -> PublicationValidationSummary:
+    return PublicationValidationSummary(
+        generated_at="2026-05-08T12:00:00Z",
+        frontend_root=str(target_dir),
+        post_path=str(target_dir / "src/content/posts/x.md"),
+        manifest_path=str(target_dir / "src/content/posts/m.json"),
+        success=success,
+        overall_failure_class=failure_class,
+        checks=[],
+    )
+
+
+def _write_post_file(request: PublicationRequest) -> Path:
+    post_path = request.target_dir / "src/content/posts" / request.output_filename
+    post_path.write_text(POST_WITH_BAD_TAG, encoding="utf-8")
+    return post_path
+
+
+class TestSelfHealingRepair:
+    def _prepared_request(self, tmp_path: Path) -> PublicationRequest:
+        request = _request(tmp_path)
+        (request.target_dir / "package.json").write_text("{}", encoding="utf-8")
+        return request
+
+    def test_full_validation_failure_is_repaired_and_publishes(self, tmp_path: Path):
+        request = self._prepared_request(tmp_path)
+        post_path = _write_post_file(request)
+        deps = _deps()
+        stages = StageLog()
+        summaries = [
+            _summary(
+                request.target_dir,
+                success=False,
+                failure_class="taxonomy_contract_violation",
+            ),
+            _summary(request.target_dir, success=True),
+        ]
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(
+                f"{MODULE}.run_frontend_publication_validation",
+                side_effect=summaries,
+            ),
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is True
+        repaired = post_path.read_text(encoding="utf-8")
+        assert "ads/cft" not in repaired
+        assert "ads cft" in repaired
+        repair_stage = stages.get("validation_self_repair")
+        assert repair_stage and repair_stage[0][1] is True
+        assert repair_stage[0][2]["failure_class"] == "taxonomy_contract_violation"
+        deps.git.commit_and_push.assert_called_once()
+        deps.db.release_article_publishing.assert_not_called()
+
+    def test_repair_is_bounded_when_revalidation_still_fails(self, tmp_path: Path):
+        request = self._prepared_request(tmp_path)
+        _write_post_file(request)
+        deps = _deps()
+        stages = StageLog()
+        summaries = [
+            _summary(
+                request.target_dir,
+                success=False,
+                failure_class="taxonomy_contract_violation",
+            ),
+            _summary(
+                request.target_dir,
+                success=False,
+                failure_class="frontend_build_failure",
+            ),
+        ]
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(
+                f"{MODULE}.run_frontend_publication_validation",
+                side_effect=summaries,
+            ) as run,
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        assert outcome.failure_class == "frontend_build_failure"
+        assert run.call_count == 2  # one repair attempt, never a loop
+        assert len(stages.get("validation_self_repair")) == 1
+        deps.git.commit_and_push.assert_not_called()
+
+    def test_unrepairable_failure_is_not_retried(self, tmp_path: Path):
+        request = self._prepared_request(tmp_path)
+        _write_post_file(request)
+        deps = _deps()
+        stages = StageLog()
+        failed = _summary(
+            request.target_dir,
+            success=False,
+            failure_class="frontend_build_failure",
+        )
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(
+                f"{MODULE}.run_frontend_publication_validation", return_value=failed
+            ) as run,
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        assert run.call_count == 1
+        assert stages.get("validation_self_repair") == []
+        deps.git.commit_and_push.assert_not_called()
+
+    def test_fast_guard_failure_is_repaired_before_full_validation(
+        self, tmp_path: Path
+    ):
+        request = self._prepared_request(tmp_path)
+        post_path = _write_post_file(request)
+        deps = _deps()
+        stages = StageLog()
+        fast_results = [
+            (False, "taxonomy_contract_violation", "tags"),
+            (True, None, None),
+        ]
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                side_effect=fast_results,
+            ),
+            patch(
+                f"{MODULE}.run_frontend_publication_validation",
+                return_value=_summary(request.target_dir, success=True),
+            ) as run,
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is True
+        assert run.call_count == 1
+        assert "ads cft" in post_path.read_text(encoding="utf-8")
+        assert stages.get("validation_self_repair")
+
+    def test_release_on_validation_failure(self, tmp_path: Path):
+        request = self._prepared_request(tmp_path)
+        _write_post_file(request)
+        deps = _deps()
+        stages = StageLog()
+        failed = _summary(
+            request.target_dir,
+            success=False,
+            failure_class="frontend_build_failure",
+        )
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(f"{MODULE}.run_frontend_publication_validation", return_value=failed),
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        deps.db.release_article_publishing.assert_called_once_with(
+            42,
+            reason="frontend_validation_failed",
+            failure_class="frontend_build_failure",
+        )
+        released = stages.get("publishing_state_released")
+        assert released and released[0][1] is True
+
+    def test_release_skipped_without_db_method(self, tmp_path: Path):
+        request = self._prepared_request(tmp_path)
+        _write_post_file(request)
+        deps = _deps(db=SimpleNamespace())
+        stages = StageLog()
+        failed = _summary(
+            request.target_dir,
+            success=False,
+            failure_class="frontend_build_failure",
+        )
+        with (
+            patch(
+                f"{MODULE}.validate_post_frontmatter_fast",
+                return_value=(True, None, None),
+            ),
+            patch(f"{MODULE}.run_frontend_publication_validation", return_value=failed),
+        ):
+            outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        assert "publishing_state_released" not in stages.names
+
+    def test_pr_failure_keeps_publishing_state_for_recovery(self, tmp_path: Path):
+        request = _request(tmp_path)
+        deps = _deps()
+        deps.pr_orchestrator.create_pr.return_value = SimpleNamespace(pr_url=None)
+        stages = StageLog()
+
+        outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        deps.db.release_article_publishing.assert_not_called()
+        assert "publishing_state_released" not in stages.names
 
 
 # ---------------------------------------------------------------------------

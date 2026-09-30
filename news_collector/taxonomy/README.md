@@ -8,6 +8,7 @@ The normalization process follows a strict pipeline:
 
 1.  **Sanitization** (`sanitize_tags`):
     - **Basic Normalization**: Trims whitespace, lowercases, and replaces hyphens/underscores with spaces.
+    - **Charset Repair**: Replaces any character the frontend tag contract rejects (`/`, `+`, `²`, emoji, …) with a space, enforcing the same `allowed_chars_regex` as validation and `check:tags` (e.g., `ads/cft` -> `ads cft`). Recorded in the `replaced` audit.
     - **Orthography Correction** (`orthography.yml`): Fixes spelling, accents, and grammar (e.g., `energia oscura` -> `energía oscura`).
     - **Semantic Aliasing** (`tags.yml`): Maps synonyms and abbreviations to canonical terms (e.g., `ia` -> `inteligencia artificial`).
     - **Deduplication**: Merges near-duplicates (ignoring accents/case) and preserves the first occurrence.

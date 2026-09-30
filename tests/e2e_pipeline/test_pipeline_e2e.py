@@ -84,6 +84,7 @@ def test_blocked_source_fallback_persists_rejected_candidate(tmp_path: Path) -> 
     )
 
 
+@pytest.mark.timeout(600)  # two validation cycles: self-repair re-runs the gate
 def test_frontend_validation_failure_is_classified_for_taxonomy_and_permalink(
     tmp_path: Path,
 ) -> None:
@@ -97,7 +98,26 @@ def test_frontend_validation_failure_is_classified_for_taxonomy_and_permalink(
             encoding="utf-8"
         )
     )
-    assert taxonomy_payload["overall_failure_class"] == "taxonomy_contract_violation"
+    # Self-healing: the taxonomy failure that can be mechanically repaired
+    # (the invalid tag) is repaired and recorded before the run stops on
+    # what remains unrepairable (the invalid category, surfaced by the real
+    # frontend build; the mock fixture flags it in validate_content).
+    taxonomy_attempt = json.loads(
+        Path(taxonomy_summary.publication_attempt_summary_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    repair_stage = next(
+        stage
+        for stage in taxonomy_attempt["stages"]
+        if stage["name"] == "validation_self_repair"
+    )
+    assert repair_stage["details"]["failure_class"] == "taxonomy_contract_violation"
+    assert "tags" in repair_stage["details"]["fields"]
+    assert taxonomy_payload["overall_failure_class"] in {
+        "taxonomy_contract_violation",
+        "frontend_build_failure",
+    }
 
     permalink_bundle = tmp_path / "duplicate_permalink_collision"
     permalink_summary = run_pipeline_e2e_scenario(

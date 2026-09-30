@@ -28,6 +28,7 @@ from news_collector.logic.workflows.frontend_publication_validation import (
 )
 from news_collector.logic.workflows.publication_attempts import artifact_name
 from news_collector.utils.logger import get_logger
+from news_collector.validation.publication_repairs import repair_post_content
 
 logger = get_logger().create_module_logger("TargetRepoPublication")
 
@@ -103,11 +104,21 @@ class TargetRepoPublicationWorkflow:
             request, deps, output_filename, record_stage
         )
         if not self._write_post(request, deps, output_filename, record_stage):
+            self._release_publishing_state(
+                request, deps, record_stage, reason="file_write_failed"
+            )
             return PublicationOutcome(success=False, branch_name=branch_name)
         validation = self._validate_post_frontend(
             request, output_filename, record_stage
         )
         if not validation.ok:
+            self._release_publishing_state(
+                request,
+                deps,
+                record_stage,
+                reason="frontend_validation_failed",
+                failure_class=validation.failure_class,
+            )
             return PublicationOutcome(
                 success=False,
                 branch_name=branch_name,
@@ -214,6 +225,10 @@ class TargetRepoPublicationWorkflow:
             / f"{artifact_name(request.article_id)}.frontend_validation.json"
         )
         fast = self._fast_frontmatter_guard(request, output_filename, record_stage)
+        if not fast.ok and self._attempt_self_repair(
+            request, output_filename, fast.failure_class, record_stage
+        ):
+            fast = self._fast_frontmatter_guard(request, output_filename, record_stage)
         if not fast.ok:
             return _ValidationResult(
                 ok=False,
@@ -223,6 +238,12 @@ class TargetRepoPublicationWorkflow:
         full = self._run_full_frontend_validation(
             request, output_filename, summary_path, record_stage
         )
+        if not full.ok and self._attempt_self_repair(
+            request, output_filename, full.failure_class, record_stage
+        ):
+            full = self._run_full_frontend_validation(
+                request, output_filename, summary_path, record_stage
+            )
         if not full.ok:
             return _ValidationResult(
                 ok=False,
@@ -230,6 +251,107 @@ class TargetRepoPublicationWorkflow:
                 failure_class=full.failure_class,
             )
         return _ValidationResult(ok=True, summary_path=summary_path)
+
+    def _attempt_self_repair(
+        self,
+        request: PublicationRequest,
+        output_filename: str,
+        failure_class: Optional[PublicationFailureClass],
+        record_stage: StageRecorder,
+    ) -> bool:
+        """Apply one deterministic repair for a classified validation failure.
+
+        Bounded by construction: one attempt per validation phase (the
+        caller re-runs the phase at most once); no strategy → no re-run. The
+        post is only rewritten when the pure strategy returned a repaired
+        version that restores its contract.
+        """
+        if not failure_class:
+            return False
+        post_path = request.target_dir / "src/content/posts" / output_filename
+        try:
+            content = post_path.read_text(encoding="utf-8")
+        except OSError as e:
+            logger.warning(
+                "Self-repair skipped for {}: cannot read post ({}): {}",
+                request.article_id,
+                post_path,
+                e,
+            )
+            return False
+        repair = repair_post_content(content, failure_class)
+        if repair is None:
+            return False
+        try:
+            post_path.write_text(repair.content, encoding="utf-8")
+        except OSError as e:
+            logger.warning(
+                "Self-repair for {} could not write the post: {}",
+                request.article_id,
+                e,
+            )
+            return False
+        logger.warning(
+            "Self-corrected publication failure {} for article {}: {}",
+            failure_class,
+            request.article_id,
+            "; ".join(repair.descriptions),
+        )
+        record_stage(
+            "validation_self_repair",
+            True,
+            failure_class=failure_class,
+            fields=list(repair.fields),
+            descriptions=list(repair.descriptions),
+        )
+        return True
+
+    def _release_publishing_state(
+        self,
+        request: PublicationRequest,
+        deps: PublicationDeps,
+        record_stage: StageRecorder,
+        *,
+        reason: str,
+        failure_class: Optional[PublicationFailureClass] = None,
+    ) -> None:
+        """Undo the pre-PR `publishing` mark after a clean failure.
+
+        A validation/write failure before commit/push can never become a PR,
+        so leaving the article in `publishing` would force the next attempt
+        through the crash-recovery path for nothing (and did exactly that on
+        run 59). Recovery still owns failures after commit/push: those may
+        have a pushed branch worth resuming.
+        """
+        if request.numeric_id is None or not hasattr(
+            deps.db, "release_article_publishing"
+        ):
+            return
+        try:
+            released = deps.db.release_article_publishing(
+                request.numeric_id,
+                reason=reason,
+                failure_class=failure_class,
+            )
+        except Exception as e:
+            logger.warning(
+                "Could not release publishing state for article {}: {}",
+                request.article_id,
+                e,
+            )
+            return
+        if released:
+            logger.info(
+                "Released publishing state for article {} (reason: {})",
+                request.article_id,
+                reason,
+            )
+            record_stage(
+                "publishing_state_released",
+                True,
+                reason=reason,
+                failure_class=failure_class,
+            )
 
     def _fast_frontmatter_guard(
         self,

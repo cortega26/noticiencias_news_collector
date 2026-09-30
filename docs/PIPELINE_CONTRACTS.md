@@ -88,6 +88,32 @@ immutable identity, but they no longer include a non-deterministic path.
 - optional auditor execution happens after PR creation
 - final frontend site publication occurs after merge and frontend deploy, outside this repo
 
+### Self-Corrective Validation (Bounded)
+
+The frontend publication gate classifies its failures
+(`PublicationFailureClass`). Two deterministic self-healing layers operate on
+top of that contract:
+
+1. **Preventive** — `taxonomy/normalizer.py` repairs characters the
+   cross-repo tag contract rejects (`allowed_chars_regex`, shared with the
+   frontend `check:tags`) before the post is written; repairs are recorded in
+   the normalize audit.
+2. **Corrective** — `TargetRepoPublicationWorkflow` consults the pure repair
+   registry in `validation/publication_repairs.py` when the fast frontmatter
+   guard or the full frontend validation fails. A strategy may only return a
+   repair when the contract invariant it targets passes afterwards; the
+   workflow re-runs that validation phase **once** (never a loop). A repair
+   is surfaced as the `validation_self_repair` stage with the failure class
+   and changed fields. Failure classes without a strategy fail exactly as
+   before.
+
+A clean pre-PR failure (file write or validation, i.e. nothing committed or
+pushed) releases the article's `publishing` state back to the publishable
+`completed` status and closes the attempt row as `REJECTED`
+(`db.release_article_publishing`, `publishing_state_released` stage). Failures
+after commit/push keep `publishing` so the crash-recovery path can resume the
+pushed branch. PR creation itself is never retried by the repair loop.
+
 ## API Contract
 
 The serving layer exposes public reads and authenticated admin workflow dispatch:

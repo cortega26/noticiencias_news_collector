@@ -673,6 +673,48 @@ class DatabaseManager:
     def get_publishing_state(self, article_id: int) -> dict | None:
         return self.articles.get_publishing_state(article_id)
 
+    def release_article_publishing(
+        self,
+        article_id: int,
+        *,
+        reason: str,
+        failure_class: str | None = None,
+    ) -> bool:
+        """Release an article from a clean pre-PR ``publishing`` window.
+
+        Delegates the legacy status/metadata restore to the article
+        repository and dual-writes the still-``PUBLISHING`` attempt row to
+        ``REJECTED`` (the existing legal CAS transition; retries create a
+        new attempt row). The lifecycle write is best-effort: a failure is
+        logged and swallowed, matching the other dual-writes in this facade.
+        """
+        result = self.articles.release_article_publishing(article_id, reason=reason)
+        if not result:
+            return False
+        try:
+            attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
+            publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
+            if publishing_attempts:
+                latest = max(
+                    publishing_attempts, key=lambda a: (a.attempt_number, a.id)
+                )
+                self.lifecycle.apply_publication_transition(
+                    latest.id,
+                    from_state="PUBLISHING",
+                    to_state="REJECTED",
+                    event_type="rejected",
+                    details={"reason": reason, "failure_class": failure_class},
+                    finished_at=datetime.now(timezone.utc),
+                )
+        except Exception:
+            logger.exception(
+                "Dual-write to publication_attempts failed for article {} "
+                "(state=REJECTED); legacy release already succeeded and is "
+                "unaffected.",
+                article_id,
+            )
+        return True
+
     def is_processed(self, identifier: str | int) -> bool:
         return self.articles.is_processed(identifier)
 

@@ -108,6 +108,26 @@ class TestTagNormalizer(unittest.TestCase):
         expected = ["agujeros negros", "materia oscura", "inteligencia artificial"]
         self.assertEqual(result.tags, expected)
 
+    def test_charset_repair_matches_frontend_contract(self):
+        """Characters the frontend check:tags gate rejects are neutralized."""
+        tags = ["ads/cft", "h²maf", "mit sa+p", "c++"]
+        result = self.normalizer.sanitize_tags(tags)
+        self.assertEqual(result.tags, ["ads cft", "h maf", "mit sa p"])
+        self.assertIn({"from": "ads/cft", "to": "ads cft"}, result.replaced)
+        self.assertIn("c", result.removed)  # "c++" collapses to a short tag
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+
+    def test_charset_repair_is_idempotent(self):
+        once = self.normalizer.sanitize_tags(["ads/cft", "mit sa+p"])
+        twice = self.normalizer.sanitize_tags(once.tags)
+        self.assertEqual(once.tags, twice.tags)
+        self.assertEqual(twice.replaced, [])
+
+    def test_accents_survive_charset_repair(self):
+        result = self.normalizer.sanitize_tags(["energía oscura/gravedad"])
+        self.assertEqual(result.tags, ["energía oscura gravedad"])
+        self.assertTrue(self.normalizer.validate_tags(result.tags).is_valid)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -98,6 +98,19 @@ class TagNormalizer:
         tag = re.sub(r"\s+", " ", tag)
         return tag
 
+    def _repair_charset(self, tag: str) -> str:
+        """Replace characters outside the allowed charset with spaces.
+
+        Enforces the same cross-repo contract as `validate_tags` and the
+        frontend `check:tags` gate (`allowed_chars_regex`): a tag like
+        `ads/cft` becomes `ads cft` instead of reaching the last validation
+        gate with a slash and failing the whole publication (run 59).
+        """
+        repaired = "".join(
+            ch if self.allowed_chars_pattern.match(ch) else " " for ch in tag
+        )
+        return re.sub(r"\s+", " ", repaired).strip()
+
     def sanitize_tags(self, tags: List[str]) -> NormalizeResult:  # noqa: C901
         """
         Main entry point for sanitization.
@@ -118,6 +131,14 @@ class TagNormalizer:
         for t in tags:
             original = t
             t_sanitized = self._basic_sanitize(t)
+
+            # Charset repair (cross-repo tag contract, self-healing): any
+            # character the frontend gate rejects is neutralized here, so the
+            # publication never burns a full run to fail at check:tags.
+            t_repaired = self._repair_charset(t_sanitized)
+            if t_repaired != t_sanitized:
+                replaced.append({"from": t_sanitized, "to": t_repaired})
+                t_sanitized = t_repaired
 
             # Empty check
             if not t_sanitized:

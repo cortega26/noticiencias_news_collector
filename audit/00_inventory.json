@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-30T00:11:55.368090+00:00",
+  "generated_at": "2026-09-30T17:31:16.840539+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -358,6 +358,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md": null,
     "spec-refinery-gui-phase4.md": null,
     "spec-refinery-gui.md": null,
+    "spec-self-healing-publication.md": null,
     "spec-source-alt-extraction.md": null,
     "spec-test-suite-audit.md": null,
     "spec.md": null,
@@ -492,6 +493,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md": null,
     "todo-refinery-gui-phase4.md": null,
     "todo-refinery-gui.md": null,
+    "todo-self-healing-publication.md": null,
     "todo-source-alt-extraction.md": null,
     "todo-test-suite-audit.md": null,
     "todo.md": null,
@@ -1417,6 +1419,7 @@
     "spec-refinery-gui-phase4-addendum-source-editor.md",
     "spec-refinery-gui-phase4.md",
     "spec-refinery-gui.md",
+    "spec-self-healing-publication.md",
     "spec-source-alt-extraction.md",
     "spec-test-suite-audit.md",
     "spec.md",
@@ -1456,6 +1459,7 @@
     "todo-refinery-gui-phase4-addendum-source-editor.md",
     "todo-refinery-gui-phase4.md",
     "todo-refinery-gui.md",
+    "todo-self-healing-publication.md",
     "todo-source-alt-extraction.md",
     "todo-test-suite-audit.md",
     "todo.md"
