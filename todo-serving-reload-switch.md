@@ -5,5 +5,6 @@
 - [x] `admin_stack.sh` header + RUNBOOK note
 - [x] `make lint` + focused tests (30 passed)
 - [x] Live smoke: `SERVING_RELOAD=0` → no reloader child process, HTTP 200
-- [ ] Inventory refresh after staging (new spec/todo pair)
-- [ ] Commit + PR (pending user)
+- [x] Inventory refresh after staging (new spec/todo pair)
+- [x] Commit + PR [#358](https://github.com/cortega26/noticiencias_news_collector/pull/358)
+      (squash-merged as `ffa2f5e`)

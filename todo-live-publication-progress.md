@@ -18,4 +18,4 @@
       91.25%), `make test` (3495 passed), `make test-boundaries` (3),
       `make test-contracts` (171), `make admin-test` (45)
 - [ ] Live smoke: publish with `SERVING_RELOAD=0` and watch the panel (operator)
-- [ ] Commit + PR
+- [x] Commit + PR [#359](https://github.com/cortega26/noticiencias_news_collector/pull/359)
