@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run the full Refinery admin stack for local development:
-#   - serving API  (FastAPI, uvicorn --reload, :8000)
+#   - serving API  (FastAPI, uvicorn; --reload on by default, :8000)
 #   - admin GUI    (Astro dev server, :4321; proxies /v1/* to the API)
 #
 # One Ctrl+C tears down both. Invoked by `make admin`.
@@ -12,6 +12,10 @@
 #                     chosen API port, i.e. http://localhost:$API_PORT)
 #   API_PORT          preferred API port (default: 8000)
 #   GUI_PORT          preferred GUI port (default: 4321)
+#   SERVING_RELOAD    uvicorn auto-reload for the API (default: 1). Set to
+#                     0/false/no/off for publication sessions: a run lives
+#                     ~12 min inside this process and any watched source edit
+#                     restarts the API and kills it (runs 58/60).
 #
 # Port policy: defaults are resilient — if the preferred port is busy the
 # stack bumps to the next free one (scan capped at +100) and the GUI proxy

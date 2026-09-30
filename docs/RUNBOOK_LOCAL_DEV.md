@@ -49,6 +49,12 @@ in separate terminals (both accept the same `API_PORT=`/`GUI_PORT=`
 overrides; `ADMIN_API_TARGET=` overrides the GUI proxy target).
 Migrate before starting: these targets do not depend on `make migrate`.
 
+When publishing from the desk, start the stack with `SERVING_RELOAD=0`
+(e.g. `SERVING_RELOAD=0 make admin`): a publication run executes inside the
+API process for ~12 min, and with the default auto-reload any source edit
+restarts the API and kills the run (leaving a stale `running` row until the
+lease recovers). Restart the stack manually after code changes in that mode.
+
 Admin authentication and dev bypass are defined by `apps/admin/src/lib/api.ts`
 and the serving auth code. The client uses localStorage with a build-time
 `PUBLIC_ADMIN_API_KEY` fallback. A `PUBLIC_*` value is client-visible, so
