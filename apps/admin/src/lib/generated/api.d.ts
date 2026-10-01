@@ -599,6 +599,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/webhook/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Webhook Receipts
+         * @description Durable frontend callbacks held by this serving instance (ADR-0011).
+         *
+         *     Read-only inbox for a consumer with its own database (the local
+         *     system of record): every status is returned because the sender's
+         *     processing outcome says nothing about the consumer's state. Order is
+         *     ``id`` ascending; ``after_id`` pages forward.
+         */
+        get: operations["admin_webhook_receipts_v1_admin_webhook_receipts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/articles": {
         parameters: {
             query?: never;
@@ -1454,6 +1479,44 @@ export interface components {
             update_frequency: "daily" | "weekly" | "hourly" | "multiple_daily";
             /** Url */
             url: string;
+        };
+        /**
+         * AdminWebhookReceipt
+         * @description One durable frontend callback receipt (ADR-0011 inbox pull).
+         *
+         *     The payload is the raw `FrontendWebhookEvent` envelope; it is exposed only
+         *     on the admin-authenticated surface so a local node can replay deliveries
+         *     the hosted receiver holds. Every status is returned: the sender's
+         *     processing outcome says nothing about the receiver's database.
+         */
+        AdminWebhookReceipt: {
+            /** Attempts */
+            attempts: number;
+            /** Delivery Key */
+            delivery_key: string;
+            /** Event Type */
+            event_type: string;
+            /** Id */
+            id: number;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Processed At */
+            processed_at?: string | null;
+            /** Received At */
+            received_at?: string | null;
+            /** Status */
+            status: string;
+        };
+        /** AdminWebhookReceiptEnvelope */
+        AdminWebhookReceiptEnvelope: {
+            /** Meta */
+            meta?: {
+                [key: string]: unknown;
+            };
+            /** Receipts */
+            receipts?: components["schemas"]["AdminWebhookReceipt"][];
         };
         /** ArticleResponse */
         ArticleResponse: {
@@ -2667,6 +2730,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminMutationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_webhook_receipts_v1_admin_webhook_receipts_get: {
+        parameters: {
+            query?: {
+                after_id?: number | null;
+                limit?: number;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookReceiptEnvelope"];
                 };
             };
             /** @description Validation Error */

@@ -181,6 +181,27 @@ class WebhookReceiptRepository:
             )
             return [_to_view(r) for r in rows]
 
+    def list_receipts(
+        self,
+        *,
+        after_id: Optional[int] = None,
+        limit: int = 200,
+    ) -> list[WebhookReceiptView]:
+        """Every receipt ordered by ``id`` (stable cursor), for inbox pulls.
+
+        Unlike :meth:`list_unprocessed_receipts`, all statuses are included:
+        the inbox consumer is a *different* database, where the sender's
+        processing outcome says nothing about the receiver's state (the
+        hosted handler marks no-op deliveries ``processed``). ``after_id``
+        is exclusive; the puller pages forward until a short page.
+        """
+        with self._session() as session:
+            query = session.query(_WebhookReceiptModel)
+            if after_id is not None:
+                query = query.filter(_WebhookReceiptModel.id > after_id)
+            rows = query.order_by(_WebhookReceiptModel.id.asc()).limit(limit).all()
+            return [_to_view(r) for r in rows]
+
     def count_receipts_by_status(self) -> Dict[str, int]:
         """Receipt counts per status (Plan 060 / Phase 5c dashboard evidence)."""
         with self._session() as session:

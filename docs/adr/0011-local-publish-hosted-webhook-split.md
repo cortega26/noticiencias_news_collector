@@ -1,7 +1,7 @@
 # ADR-0011: Local publication runs vs. the hosted webhook receiver (split state)
 
-- **Date**: 2026-09-30
-- **Status**: Proposed
+- **Date**: 2026-09-30 (decided 2026-09-30)
+- **Status**: Accepted
 
 ## Context
 
@@ -35,41 +35,49 @@ does not remove the split.
 
 ## Decision
 
-Not yet made — this ADR documents the gap and the options so the operator can
-choose. Interim practice (used for 2671): when a local publish's
-acknowledgment is lost to the hosted backend, replay the exact delivery into
-the local backend via `handle_webhook_event` (receipt-first, idempotent by
-delivery key) — never a manual UPDATE.
+**Chosen: the hosted serving instance is a durable inbox; the local node
+pulls and replays (store-and-forward).** The system of record stays local
+(where the collector, refinery and admin actually write); the hosted
+receiver never needs the production database. Deliveries accumulate durably
+on the hosted side (they already do: `webhook_receipts` persists the raw
+payload with a deterministic `delivery_key`), and a local ops script pulls
+them through the same handler the serving webhook uses — receipt-first and
+idempotent, so replays are no-ops.
 
-Recommendation:
+This inverts the sync direction: pulling works behind NAT, needs no tunnel,
+no secret flipping, and tolerates the deploy arriving hours after the
+publish session — the exact conditions that caused the 2671 incident.
 
-1. **Target — operate from the backend that receives callbacks.** Run the
-   admin/publish flow against the hosted service with a persistent, backed-up
-   database (the OCI spec's SQLite is on the VM; a volume/backup story is
-   required). One writer, one state, no replay.
-2. **Near-term — route callbacks to the backend in use.** During local publish
-   sessions, point `BACKEND_WEBHOOK_URL` at the local backend through an
-   on-demand Cloudflare tunnel (the connector retired by the OCI cutover),
-   restoring the hosted URL afterwards. Small operational cost, no code change.
-3. **Stopgap — scripted post-session reconcile.** Keep local-first operation and
-   formalize the manual replay (a small ops script/runbook) for every publish
-   session. Acceptable only as a temporary measure.
+Implementation spec: `spec-webhook-inbox-pull.md` (`GET
+/v1/admin/webhook/receipts` + `scripts/ops/pull_webhook_receipts.py` +
+`make webhooks-pull`). The 2671 manual replay remains the emergency path and
+was the evidence this decision rests on.
+
+If the product ever needs to operate without the operator's laptop, the
+successor option is to move the system of record to the VM (single writer,
+persistent volume, backups) and make local a client; that is a separate
+strategic initiative, not a prerequisite for this decision.
 
 ## Consequences
 
-Easier with 1 (recommended): publication state is truthful wherever the
-operator looks; receipts, reports and admin reads share one database; no
-per-session ritual.
+Easier: local state converges to the truth without anyone remembering a
+ritual — callbacks wait in the inbox until pulled; the raw payload is kept
+for audit on the side that receives it; the same pull generalizes to every
+frontend callback (`validation_result`, `publish_complete`) and future
+report flows.
 
-Harder / constraints: the hosted DB needs durability, backups and access
-control; the hosted admin surface needs the operator's credentials; migrating
-the operating DB to the VM must not fork `data/news_v3.db` further.
+Harder / constrained: convergence is eventual (a publish's `publish_complete`
+applies on the next pull, not exactly when the deploy finishes), so the admin
+can briefly show `publishing` after the article is live; the puller must be
+run (startup hook or timer) or state waits; the hosted inbox needs a
+retention/prune policy before it grows without bound; and the hosted receipts'
+processing status is meaningless across databases (the puller must consider
+all statuses, since the hosted handler "processed" deliveries as no-ops).
 
-With 2: no data migration, but every publish session depends on a tunnel being
-up, and forgetting to restore the secret silently recreates the split.
-
-With 3: zero infra change, but state stays wrong until someone replays, and
-each local publish leaves hosted receipts with no local counterpart.
+Rejected, as before: session tunnels (deploy timing), manual replay only
+(state lies), DB file sync (two writers), permanent local callback URL (the
+reason the OCI cutover exists), hand-importing receipts (loses the real
+delivery key).
 
 ## Alternatives considered
 

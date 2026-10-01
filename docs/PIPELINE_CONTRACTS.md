@@ -158,6 +158,13 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   sample cap — the admin GUI's ETA baseline). Recording progress is
   deliberately non-blocking: a listener or progress-write failure is logged
   and can never alter the publication outcome (LAW-B7).
+- webhook inbox (ADR-0011): `GET /v1/admin/webhook/receipts?after_id=&limit=`
+  returns this instance's durable callback receipts — raw payload, **every**
+  status (the sender's processing outcome says nothing about a consumer with
+  its own database), ordered by id — so the local system of record can replay
+  them through the same `handle_webhook_event` path (idempotent by delivery
+  key). Pull with `scripts/ops/pull_webhook_receipts.py` / `make
+  webhooks-pull`. Read-only, admin-authenticated.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)

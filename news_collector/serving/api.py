@@ -105,6 +105,8 @@ from news_collector.contracts.admin import (
     AdminSourceListItem,
     AdminSourceToggleRequest,
     AdminSourceUpsert,
+    AdminWebhookReceipt,
+    AdminWebhookReceiptEnvelope,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
@@ -1802,6 +1804,45 @@ def create_app(  # noqa: C901
         "unknown"``) whenever no record exists to judge from — a zero-row
         query is never reported as ``pass``. Read-only."""
         return build_dashboard_health(manager)
+
+    @app.get(
+        "/v1/admin/webhook/receipts",
+        response_model=AdminWebhookReceiptEnvelope,
+    )
+    def admin_webhook_receipts(
+        after_id: Optional[int] = Query(None, ge=0),
+        limit: int = Query(200, ge=1, le=1000),
+        manager: DatabaseManager = Depends(get_db),
+        _: None = Depends(verify_admin_token),
+    ) -> AdminWebhookReceiptEnvelope:
+        """Durable frontend callbacks held by this serving instance (ADR-0011).
+
+        Read-only inbox for a consumer with its own database (the local
+        system of record): every status is returned because the sender's
+        processing outcome says nothing about the consumer's state. Order is
+        ``id`` ascending; ``after_id`` pages forward.
+        """
+        rows = manager.webhook_receipts.list_receipts(after_id=after_id, limit=limit)
+        receipts = [
+            AdminWebhookReceipt(
+                id=row.id,
+                delivery_key=row.delivery_key,
+                event_type=row.event_type,
+                status=row.status,
+                attempts=row.attempts,
+                payload=row.payload,
+                received_at=row.received_at,
+                processed_at=row.processed_at,
+            )
+            for row in rows
+        ]
+        return AdminWebhookReceiptEnvelope(
+            receipts=receipts,
+            meta={
+                "count": len(receipts),
+                "latest_id": receipts[-1].id if receipts else None,
+            },
+        )
 
     @app.post(
         "/v1/admin/articles/{article_id}/reprocess",

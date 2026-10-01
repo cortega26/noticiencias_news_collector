@@ -123,11 +123,35 @@ For schema errors, inspect content validation or database revision as appropriat
 
 See [database_deployment.md](database_deployment.md) for SQLite and migration
 ownership, [runbook.md](runbook.md) for incidents, and [faq.md](faq.md) for
-configuration errors. `fly-serving.toml`, `fly-tunnel.toml` and
-`Dockerfile.serving` describe hosted serving/tunnel configuration; repository
-files do not prove that deployment is currently healthy or that it shares
-the collector database. Confirm the remotely managed tunnel route and secrets
-in the deployment environment before changing them.
+configuration errors.
+
+### Webhook callbacks (hosted inbox → local pull)
+
+Frontend CI callbacks (`validation_result`, `publish_complete`) are delivered
+to the hosted serving instance (`api.noticiencias.com`), which persists each
+delivery as a durable receipt before processing it. That instance is only an
+**inbox**: publications and the admin operate against the local database, so
+pending deliveries must be replayed into it:
+
+```bash
+make webhooks-pull                          # needs BACKEND_ADMIN_URL (or BACKEND_WEBHOOK_URL) + ADMIN_API_KEY
+make webhooks-pull ARGS="--dry-run"         # report only, no writes
+```
+
+Replays go through the same handler as the serving webhook and are idempotent
+by delivery key, so running the pull twice is safe. `make admin` can pull once
+at startup with `WEBHOOK_INBOX_PULL=1`. The unattended option is a systemd
+timer (e.g. every 15 minutes) running
+`scripts/ops/pull_webhook_receipts.py`. See ADR-0011 and
+`spec-webhook-inbox-pull.md`.
+
+Hosted serving configuration lives in `Dockerfile.serving` +
+`docker-compose.serving.yml` (OCI VM systemd service `noticiencias-serving` —
+see `spec-oci-hosting-migration.md`); `fly-serving.toml` / `fly-tunnel.toml`
+are the retired Fly fallback kept for rollback. Repository files do not prove
+the deployment is currently healthy or that it shares the collector database;
+confirm the tunnel route and secrets in the deployment environment before
+changing them.
 
 The PostgreSQL/Streamlit `docker-compose.yml` is legacy scaffolding; it is
 not a supported production-parity setup or the current admin stack.

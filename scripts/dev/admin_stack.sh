@@ -16,6 +16,11 @@
 #                     0/false/no/off for publication sessions: a run lives
 #                     ~12 min inside this process and any watched source edit
 #                     restarts the API and kills it (runs 58/60).
+#   WEBHOOK_INBOX_PULL  best-effort pull of pending frontend callback receipts
+#                     from the hosted inbox into this local DB before starting
+#                     (default: 0). Needs BACKEND_ADMIN_URL (or
+#                     BACKEND_WEBHOOK_URL) + ADMIN_API_KEY; see ADR-0011 and
+#                     `make webhooks-pull`.
 #
 # Port policy: defaults are resilient — if the preferred port is busy the
 # stack bumps to the next free one (scan capped at +100) and the GUI proxy
@@ -114,6 +119,17 @@ echo "[admin-stack] GUI  : http://localhost:${GUI_PORT}  (proxy /v1/* -> ${ADMIN
 case "$ADMIN_API_TARGET" in
   *":${API_PORT}"*|*"${API_PORT}/"*) ;;
   *) echo "[admin-stack] WARNING: ADMIN_API_TARGET ($ADMIN_API_TARGET) does not point at the API port ($API_PORT) — /v1/* calls will fail." >&2 ;;
+esac
+
+# ADR-0011: the hosted serving instance is only a durable inbox for frontend
+# callbacks; replay pending deliveries into this local DB before starting the
+# stack so the admin shows truthful publication state. Opt-in and best-effort.
+case "${WEBHOOK_INBOX_PULL:-0}" in
+  1|true|yes|on)
+    echo "[admin-stack] pulling pending webhook receipts (ADR-0011)…"
+    timeout 30 "$python_bin" scripts/ops/pull_webhook_receipts.py \
+      || echo "[admin-stack] WARNING: webhook pull failed — continuing; retry with 'make webhooks-pull'." >&2
+    ;;
 esac
 
 api_pid=""

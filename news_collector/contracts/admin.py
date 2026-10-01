@@ -389,6 +389,30 @@ class AdminSourceListEnvelope(BaseModel):
     sources: List[AdminSourceListItem] = Field(default_factory=list)
 
 
+class AdminWebhookReceipt(BaseModel):
+    """One durable frontend callback receipt (ADR-0011 inbox pull).
+
+    The payload is the raw `FrontendWebhookEvent` envelope; it is exposed only
+    on the admin-authenticated surface so a local node can replay deliveries
+    the hosted receiver holds. Every status is returned: the sender's
+    processing outcome says nothing about the receiver's database.
+    """
+
+    id: int
+    delivery_key: str
+    event_type: str
+    status: str
+    attempts: int
+    payload: Dict[str, Any]
+    received_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = None
+
+
+class AdminWebhookReceiptEnvelope(BaseModel):
+    receipts: List[AdminWebhookReceipt] = Field(default_factory=list)
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+
 class AdminSourceToggleRequest(BaseModel):
     """Body for activating/deactivating a source."""
 

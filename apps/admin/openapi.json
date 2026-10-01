@@ -2017,6 +2017,88 @@
         "title": "AdminSourceUpsert",
         "type": "object"
       },
+      "AdminWebhookReceipt": {
+        "description": "One durable frontend callback receipt (ADR-0011 inbox pull).\n\nThe payload is the raw `FrontendWebhookEvent` envelope; it is exposed only\non the admin-authenticated surface so a local node can replay deliveries\nthe hosted receiver holds. Every status is returned: the sender's\nprocessing outcome says nothing about the receiver's database.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "delivery_key": {
+            "title": "Delivery Key",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "delivery_key",
+          "event_type",
+          "status",
+          "attempts",
+          "payload"
+        ],
+        "title": "AdminWebhookReceipt",
+        "type": "object"
+      },
+      "AdminWebhookReceiptEnvelope": {
+        "properties": {
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/AdminWebhookReceipt"
+            },
+            "title": "Receipts",
+            "type": "array"
+          }
+        },
+        "title": "AdminWebhookReceiptEnvelope",
+        "type": "object"
+      },
       "ArticleResponse": {
         "properties": {
           "category": {
@@ -4197,6 +4279,82 @@
           }
         },
         "summary": "Admin Toggle Source"
+      }
+    },
+    "/v1/admin/webhook/receipts": {
+      "get": {
+        "description": "Durable frontend callbacks held by this serving instance (ADR-0011).\n\nRead-only inbox for a consumer with its own database (the local\nsystem of record): every status is returned because the sender's\nprocessing outcome says nothing about the consumer's state. Order is\n``id`` ascending; ``after_id`` pages forward.",
+        "operationId": "admin_webhook_receipts_v1_admin_webhook_receipts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminWebhookReceiptEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Webhook Receipts"
       }
     },
     "/v1/articles": {
