@@ -45,6 +45,13 @@ stages, its position in a batch, the lease heartbeat, and an ETA derived from
 the most recent successful single-article runs. It is observability only —
 recording it (or failing to) can never block or change a publication.
 
+Frontend acknowledgments (`publish_complete`) are delivered to the hosted
+serving instance, which keeps them as durable receipts; the local operator
+pulls them into the production DB (`make webhooks-pull`, ADR-0011), the only
+place `published_at`/`published_url` are set. Until a delivery is pulled, a
+live article can still appear as `publishing` locally — convergence is
+eventual by design.
+
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
 The target artifact is Markdown under `src/content/posts/<canonical-slug>.md`

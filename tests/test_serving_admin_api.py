@@ -2996,3 +2996,107 @@ def test_admin_dashboard_health_reports_real_records(
     assert body["callbacks"]["status"] == "fail"
     assert body["callbacks"]["counts"]["failed"] == 1
     assert body["validation"]["status"] == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Webhook receipts inbox (ADR-0011): hosted deliveries pulled by the local
+# system of record. All statuses are returned because the sender's
+# processing outcome says nothing about the consumer's database.
+# ---------------------------------------------------------------------------
+
+
+def test_admin_webhook_receipts_lists_every_status_in_id_order(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    first, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:inbox-1",
+        event_type="publish_complete",
+        payload={"event": "publish_complete", "publication_ids": ["42"]},
+    )
+    db_manager.webhook_receipts.mark_processing(first.delivery_key)
+    db_manager.webhook_receipts.mark_processed(first.delivery_key, {"action": "noop"})
+    second, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:inbox-2",
+        event_type="validation_result",
+        payload={"event": "validation_result", "publication_ids": []},
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/webhook/receipts", headers=_admin_headers()
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [r["id"] for r in body["receipts"]] == [first.id, second.id]
+    assert [r["status"] for r in body["receipts"]] == ["processed", "received"]
+    assert body["receipts"][0]["payload"]["publication_ids"] == ["42"]
+    assert body["meta"] == {"count": 2, "latest_id": second.id}
+
+
+def test_admin_webhook_receipts_after_id_cursor_and_limit(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    one, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:cursor-1",
+        event_type="publish_complete",
+        payload={"event": "publish_complete", "publication_ids": ["1"]},
+    )
+    two, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:cursor-2",
+        event_type="publish_complete",
+        payload={"event": "publish_complete", "publication_ids": ["2"]},
+    )
+    three, _ = db_manager.webhook_receipts.record_receipt(
+        delivery_key="derived:cursor-3",
+        event_type="publish_complete",
+        payload={"event": "publish_complete", "publication_ids": ["3"]},
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        paged = api_client.get(
+            f"/v1/admin/webhook/receipts?after_id={one.id}&limit=1",
+            headers=_admin_headers(),
+        )
+        exhausted = api_client.get(
+            f"/v1/admin/webhook/receipts?after_id={three.id}",
+            headers=_admin_headers(),
+        )
+
+    assert paged.status_code == 200
+    paged_body = paged.json()
+    assert [r["id"] for r in paged_body["receipts"]] == [two.id]
+    assert paged_body["meta"]["latest_id"] == two.id
+    # A short page is the puller's stop signal.
+    assert exhausted.status_code == 200
+    assert exhausted.json()["receipts"] == []
+    assert exhausted.json()["meta"]["latest_id"] is None
+
+
+def test_admin_webhook_receipts_rejects_out_of_range_limit(
+    api_client: TestClient,
+) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        assert (
+            api_client.get(
+                "/v1/admin/webhook/receipts?limit=0", headers=_admin_headers()
+            ).status_code
+            == 422
+        )
+        assert (
+            api_client.get(
+                "/v1/admin/webhook/receipts?limit=1001", headers=_admin_headers()
+            ).status_code
+            == 422
+        )
+
+
+def test_admin_webhook_receipts_requires_auth(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        assert api_client.get("/v1/admin/webhook/receipts").status_code == 401
+        assert (
+            api_client.get(
+                "/v1/admin/webhook/receipts", headers=_admin_headers("wrong-token")
+            ).status_code
+            == 403
+        )

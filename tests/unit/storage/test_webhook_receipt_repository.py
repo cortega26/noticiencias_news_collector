@@ -176,6 +176,42 @@ class TestListUnprocessed:
         assert db_manager.webhook_receipts.list_unprocessed_receipts() == []
 
 
+class TestListReceiptsInbox:
+    """Inbox pulls (ADR-0011): all statuses, id-ordered, cursor-paged."""
+
+    def test_includes_every_status_in_id_order(self, db_manager: DatabaseManager):
+        repo = db_manager.webhook_receipts
+        first, _ = _record(repo, key="inbox-processed")
+        repo.mark_processing("inbox-processed")
+        repo.mark_processed("inbox-processed", {"action": "noop", "updated": 0})
+        second, _ = _record(repo, key="inbox-received")
+
+        rows = repo.list_receipts()
+
+        assert [r.id for r in rows] == [first.id, second.id]
+        assert [r.status for r in rows] == ["processed", "received"]
+        assert rows[0].payload["publication_ids"] == ["42"]
+
+    def test_after_id_is_exclusive_and_limit_is_respected(
+        self, db_manager: DatabaseManager
+    ):
+        repo = db_manager.webhook_receipts
+        one, _ = _record(repo, key="cursor-1")
+        _record(repo, key="cursor-2")
+        three, _ = _record(repo, key="cursor-3")
+
+        after_one = repo.list_receipts(after_id=one.id)
+
+        assert [r.delivery_key for r in after_one] == ["cursor-2", "cursor-3"]
+        assert [r.delivery_key for r in repo.list_receipts(after_id=three.id)] == []
+        assert [
+            r.delivery_key for r in repo.list_receipts(after_id=one.id, limit=1)
+        ] == ["cursor-2"]
+
+    def test_empty_inbox_returns_empty_list(self, db_manager: DatabaseManager):
+        assert db_manager.webhook_receipts.list_receipts() == []
+
+
 class TestDashboardAggregates:
     """Plan 060 / Phase 5c dashboard evidence aggregates."""
 

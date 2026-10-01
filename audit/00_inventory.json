@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T00:04:38.296435+00:00",
+  "generated_at": "2026-10-01T01:32:57.867450+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -363,6 +363,7 @@
     "spec-serving-reload-switch.md": null,
     "spec-source-alt-extraction.md": null,
     "spec-test-suite-audit.md": null,
+    "spec-webhook-inbox-pull.md": null,
     "spec.md": null,
     "temp_auditor_regressions/": [
       "article_metadata"
@@ -500,6 +501,7 @@
     "todo-serving-reload-switch.md": null,
     "todo-source-alt-extraction.md": null,
     "todo-test-suite-audit.md": null,
+    "todo-webhook-inbox-pull.md": null,
     "todo.md": null,
     "tools/": [
       "audit_to_issues.sh",
@@ -568,6 +570,10 @@
     {
       "target": "admin-test",
       "description": "Run the Refinery admin GUI client unit tests (vitest)"
+    },
+    {
+      "target": "webhooks-pull",
+      "description": "Replay frontend callback receipts from the hosted serving inbox into the local DB (ADR-0011). Needs BACKEND_ADMIN_URL or BACKEND_WEBHOOK_URL + ADMIN_API_KEY; extra flags via ARGS="
     },
     {
       "target": "admin-contracts-generate",
@@ -1429,6 +1435,7 @@
     "spec-serving-reload-switch.md",
     "spec-source-alt-extraction.md",
     "spec-test-suite-audit.md",
+    "spec-webhook-inbox-pull.md",
     "spec.md",
     "spec/frontend-wave2-contract-mirror.md",
     "spec/frontend-wave3-contract-mirror.md",
@@ -1471,6 +1478,7 @@
     "todo-serving-reload-switch.md",
     "todo-source-alt-extraction.md",
     "todo-test-suite-audit.md",
+    "todo-webhook-inbox-pull.md",
     "todo.md"
   ],
   "open_questions": []

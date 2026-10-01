@@ -116,7 +116,7 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" REFINERY_UI_UNSAFE_ALLOW=1 PYTHONPATH=$(CURDIR) $(PYTHON_REFINERY) -m pytest -c tools/ci/pytest_refinery.toml --rootdir=.
 
 
-.PHONY: serve admin admin-install admin-dev admin-build admin-test
+.PHONY: serve admin admin-install admin-dev admin-build admin-test webhooks-pull
 serve: ## Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `make serve API_PORT=9000` (default 8000, honored strictly)
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(SERVING_PORT),$(or $(API_PORT),8000))" $(PYTHON_BIN) -m news_collector.serving
 
@@ -139,6 +139,9 @@ admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
 
 admin-test: ## Run the Refinery admin GUI client unit tests (vitest)
 	@cd apps/admin && npm test
+
+webhooks-pull: bootstrap ## Replay frontend callback receipts from the hosted serving inbox into the local DB (ADR-0011). Needs BACKEND_ADMIN_URL or BACKEND_WEBHOOK_URL + ADMIN_API_KEY; extra flags via ARGS=
+	@$(PYTHON_BIN) scripts/ops/pull_webhook_receipts.py $(ARGS)
 
 admin-contracts-generate: bootstrap ## Regenerate the admin OpenAPI artifact and generated TS types (plan 080 Phase 2)
 	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --output apps/admin/openapi.json
