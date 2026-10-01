@@ -95,19 +95,12 @@ def resolve_endpoint(
     return None
 
 
-def fetch_page(
-    *,
-    endpoint: str,
-    token: str,
-    after_id: Optional[int],
-    limit: int,
-) -> List[Dict[str, Any]]:
-    """Fetch one page of receipts from the hosted inbox."""
-    params: Dict[str, Any] = {"limit": limit}
-    if after_id is not None:
-        params["after_id"] = after_id
+def _request_page(
+    endpoint: str, token: str, params: Dict[str, Any]
+) -> "requests.Response":
+    """GET one page, converting transport failures into :class:`PullError`."""
     try:
-        response = requests.get(
+        return requests.get(
             endpoint,
             headers={"Authorization": f"Bearer {token}"},
             params=params,
@@ -115,6 +108,12 @@ def fetch_page(
         )
     except requests.RequestException as exc:
         raise PullError(f"could not reach {endpoint}: {exc}") from exc
+
+
+def _decode_receipts(
+    response: "requests.Response", endpoint: str
+) -> List[Dict[str, Any]]:
+    """Validate the response envelope and return its receipt dicts."""
     if response.status_code in (401, 403):
         raise PullError(
             f"admin authentication rejected by {endpoint} "
@@ -133,6 +132,20 @@ def fetch_page(
     if not isinstance(receipts, list):
         raise PullError(f"response from {endpoint} has no receipts list")
     return [row for row in receipts if isinstance(row, dict)]
+
+
+def fetch_page(
+    *,
+    endpoint: str,
+    token: str,
+    after_id: Optional[int],
+    limit: int,
+) -> List[Dict[str, Any]]:
+    """Fetch one page of receipts from the hosted inbox."""
+    params: Dict[str, Any] = {"limit": limit}
+    if after_id is not None:
+        params["after_id"] = after_id
+    return _decode_receipts(_request_page(endpoint, token, params), endpoint)
 
 
 def _replay_receipt(
