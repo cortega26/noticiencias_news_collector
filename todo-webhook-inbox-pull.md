@@ -13,4 +13,4 @@
 - [x] Gates: lint, type (ratchet 93.04% vs 91.25%), test (3516 passed),
       contracts (171), boundaries (3), admin-test (45), admin contracts, docs,
       inventory
-- [ ] Commit + PR
+- [x] Commit + PR [#361](https://github.com/cortega26/noticiencias_news_collector/pull/361)
