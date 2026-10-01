@@ -20,5 +20,12 @@
 - [x] Full coverage + ratchet (92.87% vs 91.25%, changed files passed)
 - [x] e2e taxonomy/permalink scenario updated for the self-repair behavior
       (asserts the repair stage + the remaining classified failure); green
-- [ ] Inventory refresh after staging the new files (spec/todo, module, tests)
-- [ ] User re-publishes article 2671 (live proof of the full pipeline)
+- [x] Inventory refresh after staging the new files (spec/todo, module, tests)
+      — verified 2026-09-30: inventory lists `publication_repairs.py` and both
+      docs; `make inventory-check` clean
+- [x] User re-publishes article 2671 (live proof of the full pipeline) — done
+      2026-09-30: run 61 refined 2671 with the tag self-repair, opened frontend
+      PR #231 (merged), Pages deploy green; article live at
+      `https://noticiencias.com/ciencia/2026-09-25-la-gravedad-como-proyector-holografico-del-universo/`;
+      local attempt 16 completed via the replayed `publish_complete` callback
+      (see ADR-0011 for the local↔hosted state split found while verifying)

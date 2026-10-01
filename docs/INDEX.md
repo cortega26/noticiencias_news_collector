@@ -84,6 +84,9 @@ The development reports below are historical snapshots, not current measured bas
 | [`adr/0006-durable-workflow-lifecycle-state.md`](adr/0006-durable-workflow-lifecycle-state.md) | Durable `workflow_runs` state for collection/publication lifecycle (plan 060; proposed) |
 | [`adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md`](adr/0007-generate-contracts-instead-of-hand-maintained-parsers.md) | Generate contract parsers/admin types instead of hand-maintaining them (plan 060; proposed) |
 | [`adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md`](adr/0008-harden-two-repo-boundary-before-reconsidering-consolidation.md) | Harden the two-repo boundary before reconsidering consolidation (plan 060; proposed) |
+| [`adr/0009-multi-provider-llm-chain.md`](adr/0009-multi-provider-llm-chain.md) | Multi-provider LLM chain with classified failures |
+| [`adr/0010-llm-routing.md`](adr/0010-llm-routing.md) | LLM routing — no change; GLM parked, Ultra not wired |
+| [`adr/0011-local-publish-hosted-webhook-split.md`](adr/0011-local-publish-hosted-webhook-split.md) | Local publication runs vs. the hosted webhook receiver (split state; proposed) |
 
 ---
 
