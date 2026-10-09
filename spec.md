@@ -429,3 +429,64 @@ handled the same kind of boundary earlier in this session.
 - Every ~20 iterations: spawn a fresh subagent to review this spec.md plus
   the current diff/`plans/README.md` state for gaps (scope drift, skipped
   Done Criteria, silently-broken tests) and loop on its feedback.
+
+## Isolated task: source-aware editorial review (2026-10-09)
+
+### Goal and acceptance criteria
+
+Improve the existing Stage 4 editorial critic so it can compare a draft with
+the original source material and identify unsupported expansion, borrowed
+first-person narration, and paraphrase that adds no useful synthesis. This is
+a preventive quality check, not a claim that model review proves originality
+or policy compliance.
+
+- Production Stage 4 receives a bounded representative sample of the cleaned
+  original title and content, plus an explicit indication of whether the input was full text
+  or a summary.
+- Source-bearing prompts delimit and escape untrusted text and place the
+  instruction to ignore embedded directives in the system message. This
+  mitigates prompt injection but does not guarantee model compliance.
+- The rubric distinguishes a useful summary from near-source paraphrase; it
+  does not require extra sources, interviews, or invented regional context.
+- Existing score fields, thresholds, bounded repair behavior, advisory
+  terminal semantics, and infrastructure fail-open behavior remain unchanged.
+- Old Stage 4 pass checkpoints do not bypass the new comparison; their cache
+  key is versioned so cached article content is reviewed again on resume.
+- Fail-open approval remains publishable but is not stored as a successful
+  editorial-review checkpoint; an actual approved verdict remains cacheable.
+- A provider error during the advisory Stage 4 repair retains the current
+  candidate, records a repair-failed outcome without provider error details,
+  and continues without a successful-review checkpoint. The technical Stage 3
+  repair remains blocking.
+- Invalid critic verdicts are non-blocking and are not stored as approvals or
+  successful-review checkpoints.
+- No generated article is published as part of this task.
+
+### Implementation
+
+- `news_collector/components/editorial/ai_editor.py`: pass `content_mode` in
+  editor context; add bounded, escaped source-data blocks to publication
+  prompts; wire the cleaned original title/content into Stage 4; require
+  coherent critic booleans and scores.
+- `news_collector/components/editorial/editorial_input.py`: classify an empty
+  content field filled from a summary as `summary_fallback`, including when a
+  default `full_text` value was supplied.
+- `news_collector/components/editorial/editorial_stages.py`: version the
+  Stage 4 success checkpoint; old files remain on disk but are ignored.
+- `config/prompts.yaml`: add comparison instructions while retaining the
+  existing JSON output schema and seven dimensions.
+- `tests/unit/editorial/test_ai_editor_coverage.py`: prove source reference
+  delivery, truncation, scope context, and legacy-checkpoint invalidation.
+- `tests/unit/editorial/test_editorial_critic_gate.py`: prove a publishable
+  fail-open verdict does not invoke the successful-review checkpoint hook.
+
+### Verification
+
+- Run focused editorial regressions, then `make lint`, `make type`, and
+  `make test` on the candidate. Reproduce the two previously reported suite
+  failures against both a clean baseline and the candidate before attributing
+  them.
+- Run one bounded real LLM canary (`make llm-canary ARGS="--items 1 --require-keys"`)
+  if credentials and runtime are available; report it
+  separately from deterministic tests.
+- Review the full diff and verify no publication, push, or deployment occurs.

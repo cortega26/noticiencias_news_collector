@@ -70,16 +70,22 @@ class EditorialInput:
     def _from_dict(cls, raw: dict, article_id: str) -> "EditorialInput":
         content = cls._text_field(raw, "content")
         summary = cls._text_field(raw, "summary")
+        content_mode = raw.get("content_mode")
         # Fallback for RSS feeds where "content" is often in "summary"
         if not content and summary:
             content = summary
+            # A CollectorArticleModel may default a missing content field to
+            # `full_text`; once we substitute the summary, that default no
+            # longer describes the material actually sent to the editor.
+            if content_mode != "summary_only":
+                content_mode = "summary_fallback"
         metadata = raw.get("metadata") or {}
         return cls(
             article_id=cls._dict_article_id(raw, article_id),
             title=cls._text_field(raw, "title"),
             summary=summary,
             content=content,
-            content_mode=raw.get("content_mode") or "full_text",
+            content_mode=content_mode or "full_text",
             image_url=raw.get("image_url"),
             image_alt=raw.get("image_alt"),
             source_id=raw.get("source_id"),

@@ -175,6 +175,8 @@ def _load_cases(limit: int | None = None) -> list[dict]:
 
 
 def _case_input(db_id: str) -> dict:
+    from news_collector.components.editorial.editorial_input import EditorialInput
+
     con = sqlite3.connect(f"file:{REPO_ROOT / 'data' / 'news_v3.db'}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     row = con.execute(
@@ -186,16 +188,29 @@ def _case_input(db_id: str) -> dict:
     if row is None:
         raise ValueError(f"db article {db_id} not found")
     d = dict(row)
+    article = EditorialInput.from_raw(
+        {
+            "id": d["id"],
+            "title": d["title"],
+            "summary": d["summary"],
+            "content": d["content"],
+            "content_mode": d["content_mode"],
+            "url": d["url"],
+            "source_id": d["source_id"],
+            "source_name": d["source_name"],
+            "category": d["category"],
+        }
+    )
     return {
-        "id": str(d["id"]),
-        "title": d["title"] or "",
-        "summary": d["summary"] or "",
-        "content": d["content"] or "",
-        "content_mode": d["content_mode"] or "full_text",
+        "id": article.article_id,
+        "title": article.title,
+        "summary": article.summary,
+        "content": article.content,
+        "content_mode": article.content_mode,
         "url": d["url"] or "",
-        "source_id": d["source_id"] or "",
-        "source_name": d["source_name"] or "",
-        "category": d.get("category") or "",
+        "source_id": article.source_id or "",
+        "source_name": article.source_name or "",
+        "category": article.raw_category or "",
     }
 
 
@@ -645,6 +660,48 @@ CROSS_PATH = EVAL_DIR / "cross_critic.jsonl"
 GROUNDED_PATH = EVAL_DIR / "grounded.jsonl"
 
 
+def _load_completed_cross_critic_keys(path: Path) -> set[tuple[str, str, str]]:
+    """Only coherent checkpointable verdicts complete a replay matrix cell."""
+    if not path.exists():
+        return set()
+    from news_collector.components.editorial.ai_editor import (
+        _parse_editorial_critic_result,
+    )
+
+    done: set[tuple[str, str, str]] = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            rec = json.loads(line)
+            if not isinstance(rec, dict) or rec.get("status") != "ok":
+                continue
+            approved = rec.get("approved")
+            verdict = rec.get("verdict")
+            if (
+                type(approved) is not bool
+                or not isinstance(verdict, dict)
+                or verdict.get("approved") is not approved
+                or not isinstance(verdict.get("scores"), dict)
+            ):
+                continue
+            normalized_verdict = {
+                **verdict["scores"],
+                "average": verdict.get("average"),
+                "approved": verdict["approved"],
+                "recoverable": False,
+                "feedback": "",
+            }
+            parsed_approved, *_ = _parse_editorial_critic_result(normalized_verdict)
+            if parsed_approved is not approved:
+                continue
+            key = (str(rec["db_id"]), rec["output_arm"], rec["critic_arm"])
+            if not all(isinstance(part, str) and part for part in key):
+                continue
+            done.add(key)
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            continue
+    return done
+
+
 def _parse_output_frontmatter(markdown: str) -> dict:
     """Frontmatter dict from a generated article ({} when unparseable)."""
     import yaml
@@ -737,14 +794,7 @@ def cmd_cross_critic() -> int:
         print("no fully-ok cases yet — run generate first")
         return 2
     agents = _fixed_critic_agents()
-    done = set()
-    if CROSS_PATH.exists():
-        for line in CROSS_PATH.read_text(encoding="utf-8").splitlines():
-            try:
-                rec = json.loads(line)
-                done.add((rec["db_id"], rec["output_arm"], rec["critic_arm"]))
-            except (json.JSONDecodeError, KeyError):
-                continue
+    done = _load_completed_cross_critic_keys(CROSS_PATH)
     with CROSS_PATH.open("a", encoding="utf-8") as out:
         for case in subset:
             db_id = case["db_id"]
@@ -761,6 +811,7 @@ def cmd_cross_critic() -> int:
                     "source_url": row["url"],
                     "source_name": row["source_name"],
                     "category": row.get("category", ""),
+                    "content_mode": row.get("content_mode", ""),
                 }
                 for critic_arm in ARMS:
                     if (db_id, output_arm, critic_arm) in done:
@@ -769,9 +820,23 @@ def cmd_cross_critic() -> int:
                     agent.last_critic_verdict = None
                     t0 = time.time()
                     try:
-                        valid, reason, _ = agent._critic_editorial_pass(body, context)
-                        verdict = _copy.deepcopy(agent.last_critic_verdict)
-                        status, error = "ok", None
+                        editorial_verdict = agent._critic_editorial_pass(
+                            body,
+                            context,
+                            source_reference=row.get("content"),
+                        )
+                        if editorial_verdict.checkpointable:
+                            valid = editorial_verdict.is_valid
+                            reason = editorial_verdict.reason
+                            verdict = _copy.deepcopy(agent.last_critic_verdict)
+                            status, error = "ok", None
+                        else:
+                            # Fail-open/skipped critics let the pipeline
+                            # continue; they are not judged approvals and
+                            # must stay out of the approval matrix.
+                            valid, reason, verdict = None, None, None
+                            status = "unreviewed"
+                            error = "critic produced no checkpointable verdict"
                     except Exception as exc:  # noqa: BLE001 - failures are data
                         valid, reason, verdict = None, None, None
                         status, error = "failed", str(exc)[:300]
