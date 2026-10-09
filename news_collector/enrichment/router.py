@@ -75,6 +75,24 @@ class EnrichmentStrategyRouter:
 
         run_context.get_context()
 
+        if os.getenv("NOTICIENCIAS_SMOKE", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            self.logger.info(
+                {
+                    "event": "enrichment.router.skipped",
+                    "details": {"source_id": source_id, "reason": "smoke_mode"},
+                }
+            )
+            return {
+                "success": False,
+                "reason": "smoke_mode",
+                "strategy_used": "none",
+            }
+
         # 1. Strategy Locking (Highest Priority after Config)
         # Check against source_config hard overrides?
         # Source config is the "truth" passed in. Mutating it affects this run.

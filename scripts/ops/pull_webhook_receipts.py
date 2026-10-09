@@ -31,7 +31,7 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
@@ -45,6 +45,10 @@ from news_collector.contracts.webhook import (  # noqa: E402
 )
 from news_collector.serving.webhook_handler import handle_webhook_event  # noqa: E402
 from news_collector.storage.database import DatabaseManager  # noqa: E402
+from news_collector.storage.webhook_pull_repository import (  # noqa: E402
+    CursorConflict,
+    WebhookPullReceiptView,
+)
 from news_collector.utils.logger import get_logger  # noqa: E402
 
 logger = get_logger().create_module_logger(__name__)
@@ -52,6 +56,7 @@ logger = get_logger().create_module_logger(__name__)
 RECEIPTS_PATH = "/v1/admin/webhook/receipts"
 DEFAULT_LIMIT = 200
 DEFAULT_MAX_RECEIPTS = 2000
+DEFAULT_LEASE_SECONDS = 600
 TIMEOUT_SECONDS = 30
 
 #: Signature of the page fetcher (injectable in tests).
@@ -60,13 +65,17 @@ PageFetcher = Callable[..., List[Dict[str, Any]]]
 
 @dataclass
 class PullSummary:
-    """Outcome of one pull pass (``replayed`` = applied or would-apply)."""
+    """Counts distinguish fetched, durably staged, applied, and pending work."""
 
     fetched: int = 0
+    staged: int = 0
+    attempted: int = 0
     replayed: int = 0
     duplicates: int = 0
     failed: int = 0
     malformed: int = 0
+    pending: int = 0
+    truncated: bool = False
     dry_run: bool = False
 
 
@@ -107,31 +116,64 @@ def _request_page(
             timeout=TIMEOUT_SECONDS,
         )
     except requests.RequestException as exc:
-        raise PullError(f"could not reach {endpoint}: {exc}") from exc
+        raise PullError(
+            f"could not reach {_safe_endpoint(endpoint)} "
+            f"(error_type={type(exc).__name__})"
+        ) from exc
+
+
+def _safe_endpoint(endpoint: str) -> str:
+    """Return an origin/path suitable for diagnostics and durable identity.
+
+    Userinfo, query parameters, and fragments can contain credentials. They
+    are neither part of the receipt inbox identity nor safe to log.
+    """
+    parts = urlsplit(endpoint)
+    hostname = parts.hostname
+    if not parts.scheme or not hostname:
+        return "<invalid-endpoint>"
+    try:
+        port = parts.port
+    except ValueError:
+        return "<invalid-endpoint>"
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    netloc = f"{hostname.lower()}:{port}" if port is not None else hostname.lower()
+    return urlunsplit(
+        (
+            parts.scheme.lower(),
+            netloc,
+            parts.path.rstrip("/"),
+            "",
+            "",
+        )
+    )
 
 
 def _decode_receipts(
     response: "requests.Response", endpoint: str
 ) -> List[Dict[str, Any]]:
     """Validate the response envelope and return its receipt dicts."""
+    safe_endpoint = _safe_endpoint(endpoint)
     if response.status_code in (401, 403):
         raise PullError(
-            f"admin authentication rejected by {endpoint} "
+            f"admin authentication rejected by {safe_endpoint} "
             f"(status {response.status_code}) — check ADMIN_API_KEY"
         )
     if response.status_code != 200:
         raise PullError(
-            f"unexpected status {response.status_code} from {endpoint}: "
-            f"{response.text[:200]}"
+            f"unexpected status {response.status_code} from {safe_endpoint}"
         )
     try:
         body = response.json()
     except ValueError as exc:
-        raise PullError(f"non-JSON response from {endpoint}") from exc
+        raise PullError(f"non-JSON response from {safe_endpoint}") from exc
     receipts = body.get("receipts") if isinstance(body, dict) else None
     if not isinstance(receipts, list):
-        raise PullError(f"response from {endpoint} has no receipts list")
-    return [row for row in receipts if isinstance(row, dict)]
+        raise PullError(f"response from {safe_endpoint} has no receipts list")
+    if any(not isinstance(row, dict) for row in receipts):
+        raise PullError(f"response from {safe_endpoint} contains a non-object receipt")
+    return receipts
 
 
 def fetch_page(
@@ -150,20 +192,18 @@ def fetch_page(
 
 def _replay_receipt(
     row: Dict[str, Any], db: DatabaseManager, summary: PullSummary
-) -> None:
-    """Apply one receipt payload through the real webhook handler."""
-    receipt_id = row.get("id")
+) -> tuple[bool, str | None]:
+    """Apply one receipt payload; return whether it reached a safe outcome."""
     try:
         event = parse_webhook_payload(row.get("payload"))
     except Exception as exc:  # malformed payload: report, never guess
         summary.malformed += 1
+        summary.failed += 1
         logger.warning(
-            "Skipping malformed receipt id={} delivery_key={}: {}",
-            receipt_id,
-            row.get("delivery_key"),
-            exc,
+            "Malformed hosted receipt retained for retry (error_type={})",
+            type(exc).__name__,
         )
-        return
+        return False, f"malformed:{type(exc).__name__}"
 
     if summary.dry_run:
         existing = db.webhook_receipts.get_receipt(compute_delivery_key(event))
@@ -171,15 +211,153 @@ def _replay_receipt(
             summary.duplicates += 1
         else:
             summary.replayed += 1
-        return
+        return True, None
 
-    result = handle_webhook_event(event, db)
+    try:
+        result = handle_webhook_event(event, db)
+    except Exception as exc:  # preserve the failure and retry the staged row
+        summary.failed += 1
+        logger.warning(
+            "Hosted receipt handler raised (error_type={})", type(exc).__name__
+        )
+        return False, f"handler_exception:{type(exc).__name__}"
+
+    if not isinstance(result, dict):
+        summary.failed += 1
+        return False, "handler_returned_invalid_result"
     if result.get("duplicate"):
         summary.duplicates += 1
     elif result.get("processed", True) is False or "result" not in result:
         summary.failed += 1
+        return False, "handler_did_not_process"
     else:
         summary.replayed += 1
+    return True, None
+
+
+def _endpoint_key(endpoint: str) -> str:
+    """Stable inbox identity without query parameters or URL fragments."""
+    safe_endpoint = _safe_endpoint(endpoint)
+    if safe_endpoint == "<invalid-endpoint>":
+        raise PullError("receipts endpoint must be an absolute URL")
+    return safe_endpoint
+
+
+def _validate_page(rows: List[Dict[str, Any]], after_id: Optional[int]) -> int:
+    """Require strict, ascending hosted IDs before persisting a page cursor."""
+    previous = after_id
+    for row in rows:
+        receipt_id = row.get("id")
+        if isinstance(receipt_id, bool) or not isinstance(receipt_id, int):
+            raise PullError("hosted receipt page has a missing or invalid id")
+        if receipt_id < 1 or (previous is not None and receipt_id <= previous):
+            raise PullError("hosted receipt page is not strictly ordered by id")
+        previous = receipt_id
+    if previous is None:
+        raise PullError("hosted receipt page is empty")
+    return previous
+
+
+def _mark_malformed_claim(
+    receipt: WebhookPullReceiptView,
+    repo,
+    summary: PullSummary,
+) -> bool:
+    summary.failed += 1
+    summary.malformed += 1
+    settled = repo.mark_failed(
+        receipt.id,
+        receipt.lease_token or "",
+        "malformed:staged_payload_not_object",
+    )
+    if not settled:
+        logger.warning("Could not settle a leased hosted receipt row")
+        summary.failed += 1
+    return False
+
+
+def _settle_claimed(
+    receipt: WebhookPullReceiptView,
+    repo,
+    summary: PullSummary,
+    applied: bool,
+    error: str | None,
+) -> bool:
+    if applied:
+        settled = repo.mark_processed(receipt.id, receipt.lease_token or "")
+    else:
+        settled = repo.mark_failed(
+            receipt.id,
+            receipt.lease_token or "",
+            error or "handler_did_not_process",
+        )
+    if settled:
+        return True
+    summary.failed += 1
+    logger.warning("Could not settle a leased hosted receipt row")
+    return False
+
+
+def _apply_one_claimed(
+    receipt: WebhookPullReceiptView,
+    db: DatabaseManager,
+    summary: PullSummary,
+) -> bool:
+    """Apply and settle one leased row; keep failures retryable."""
+    raw_row = receipt.payload
+    if not isinstance(raw_row, dict):
+        return _mark_malformed_claim(receipt, db.webhook_pull_receipts, summary)
+
+    applied, error = _replay_receipt(raw_row, db, summary)
+    if not _settle_claimed(
+        receipt,
+        db.webhook_pull_receipts,
+        summary,
+        applied,
+        error,
+    ):
+        return False
+    return applied
+
+
+def _apply_claimed(
+    receipts: List[WebhookPullReceiptView],
+    db: DatabaseManager,
+    summary: PullSummary,
+) -> bool:
+    """Apply leased rows in order; stop at the first unacknowledged event."""
+    for receipt in receipts:
+        summary.attempted += 1
+        if not _apply_one_claimed(receipt, db, summary):
+            return False
+    return True
+
+
+def _drain_pending(
+    db: DatabaseManager,
+    endpoint_key: str,
+    summary: PullSummary,
+    *,
+    max_attempts: int,
+) -> None:
+    """Retry the oldest event first and never pass an unacknowledged ID."""
+    repo = db.webhook_pull_receipts
+    for _ in range(max_attempts):
+        batch = repo.claim_pending(
+            endpoint_key,
+            limit=1,
+            lease_seconds=DEFAULT_LEASE_SECONDS,
+            retry_only=True,
+        )
+        if not batch:
+            batch = repo.claim_pending(
+                endpoint_key,
+                limit=1,
+                lease_seconds=DEFAULT_LEASE_SECONDS,
+                retry_only=False,
+            )
+        if not batch or not _apply_claimed(batch, db, summary):
+            break
 
 
 def pull_receipts(
@@ -192,10 +370,18 @@ def pull_receipts(
     dry_run: bool = False,
     fetcher: Optional[PageFetcher] = None,
 ) -> PullSummary:
-    """Page the hosted inbox forward and replay every delivery exactly once."""
+    """Stage hosted pages durably, then apply and retry staged deliveries."""
+    if limit < 1:
+        raise PullError("page limit must be at least 1")
+    if max_receipts < 0:
+        raise PullError("max receipts must be zero or greater")
+
     page_fetcher = fetcher or fetch_page
     summary = PullSummary(dry_run=dry_run)
-    after_id: Optional[int] = None
+    endpoint_key = _endpoint_key(endpoint)
+    repo = db.webhook_pull_receipts
+    after_id = repo.get_cursor(endpoint_key)
+
     while summary.fetched < max_receipts:
         page_limit = min(limit, max_receipts - summary.fetched)
         rows = page_fetcher(
@@ -206,12 +392,42 @@ def pull_receipts(
         )
         if not rows:
             break
-        for row in rows:
-            summary.fetched += 1
-            after_id = row.get("id", after_id)
-            _replay_receipt(row, db, summary)
+        if len(rows) > page_limit:
+            raise PullError("hosted receipt page exceeded the requested limit")
+        next_after_id = _validate_page(rows, after_id)
+        summary.fetched += len(rows)
+        if dry_run:
+            for row in rows:
+                _replay_receipt(row, db, summary)
+        else:
+            try:
+                summary.staged += repo.stage_page(
+                    endpoint_key,
+                    expected_after_id=after_id,
+                    rows=rows,
+                )
+            except CursorConflict as exc:
+                raise PullError(
+                    "another puller advanced this inbox; rerun to resume"
+                ) from exc
+        after_id = next_after_id
+
+        if summary.fetched >= max_receipts:
+            summary.truncated = len(rows) == page_limit
+            break
         if len(rows) < page_limit:
             break
+
+    if dry_run:
+        return summary
+
+    _drain_pending(
+        db,
+        endpoint_key,
+        summary,
+        max_attempts=max_receipts,
+    )
+    summary.pending = repo.count_pending(endpoint_key)
     return summary
 
 
@@ -259,10 +475,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _print_summary(summary: PullSummary) -> None:
     print(f"[pull-webhooks] fetched={summary.fetched}")
+    print(f"[pull-webhooks] staged={summary.staged}")
+    print(f"[pull-webhooks] attempted={summary.attempted}")
     print(f"[pull-webhooks] replayed={summary.replayed}")
     print(f"[pull-webhooks] duplicates={summary.duplicates}")
     print(f"[pull-webhooks] failed={summary.failed}")
     print(f"[pull-webhooks] malformed={summary.malformed}")
+    print(f"[pull-webhooks] pending={summary.pending}")
+    print(f"[pull-webhooks] truncated={str(summary.truncated).lower()}")
     if summary.dry_run:
         print("[pull-webhooks] dry-run: no rows were written")
 
@@ -309,6 +529,10 @@ def main() -> int:
         db.close()
 
     _print_summary(summary)
+    if summary.failed or summary.malformed:
+        return 1
+    if summary.pending or summary.truncated:
+        return 2
     return 0
 
 

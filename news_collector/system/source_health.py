@@ -106,7 +106,7 @@ def classify_failure_taxonomy(  # noqa: C901
     if "parse" in error_blob or "extract" in error_blob or "selector" in error_blob:
         return "extraction_parser_mismatch"
 
-    if not feed_ok and not pipeline_ok:
+    if not feed_ok and not pipeline_ok and failure_stage == "collector.fetch":
         return "feed_fetch_failure"
 
     if error_blob:
@@ -121,21 +121,25 @@ def classify_operational_state(
     articles_found: int,
     articles_saved: int,
     save_ratio: float,
+    feed_ok: bool = False,
+    pipeline_ok: bool = False,
+    failure_taxonomy: SourceFailureTaxonomy | None = None,
 ) -> SourceOperationalState:
-    if articles_saved > 0 and content_mode == "full_text" and save_ratio >= 0.8:
+    if failure_taxonomy is not None:
+        if articles_found > 0 or articles_saved > 0:
+            return "partial_yield_flaky"
+        return "failing_suppressed_candidate"
+
+    if feed_ok and pipeline_ok and content_mode == "full_text":
         return "healthy_full_text"
 
-    if (
-        articles_saved > 0
-        and content_mode in {"summary_only", "summary_fallback"}
-        and save_ratio >= 0.5
-    ):
+    if feed_ok and pipeline_ok and content_mode in {"summary_only", "summary_fallback"}:
         return "healthy_summary_only"
 
     if articles_found > 0 or articles_saved > 0:
         return "partial_yield_flaky"
 
-    return "failing_suppressed_candidate"
+    return "unknown"
 
 
 def build_source_health_record(
@@ -180,6 +184,16 @@ def build_source_health_record(
     content_mode = str(
         data.get("content_mode") or config.get("content_mode") or "unknown"
     )
+    feed_ok = bool(data.get("feed_ok", data.get("success", False)))
+    pipeline_ok = bool(data.get("pipeline_ok", False))
+    failure_taxonomy = classify_failure_taxonomy(
+        feed_ok=feed_ok,
+        pipeline_ok=pipeline_ok,
+        articles_saved=articles_saved,
+        last_error_message=last_error_message,
+        failure_reason=failure_reason,
+        failure_stage=failure_stage,
+    )
     record = SourceHealthRecord(
         source_id=source_id,
         source_name=str(config.get("name")) if config.get("name") else None,
@@ -195,8 +209,8 @@ def build_source_health_record(
             if (data.get("fetch_mode") or config.get("fetch_mode"))
             else None
         ),
-        feed_ok=bool(data.get("feed_ok", data.get("success", False))),
-        pipeline_ok=bool(data.get("pipeline_ok", True)),
+        feed_ok=feed_ok,
+        pipeline_ok=pipeline_ok,
         content_ok=bool(data.get("content_ok", articles_saved > 0)),
         articles_found=articles_found,
         articles_saved=articles_saved,
@@ -237,19 +251,16 @@ def build_source_health_record(
         or _normalize_last_run(data.get("last_run")),
         latency=_to_float(data.get("latency", data.get("processing_time"))),
         last_error_message=last_error_message,
-        failure_taxonomy=classify_failure_taxonomy(
-            feed_ok=bool(data.get("feed_ok", data.get("success", False))),
-            pipeline_ok=bool(data.get("pipeline_ok", True)),
-            articles_saved=articles_saved,
-            last_error_message=last_error_message,
-            failure_reason=failure_reason,
-            failure_stage=failure_stage,
-        ),
+        failure_taxonomy=failure_taxonomy,
+        failure_count=_to_int(data.get("failure_count")),
         operational_state=classify_operational_state(
             content_mode=content_mode,
             articles_found=articles_found,
             articles_saved=articles_saved,
             save_ratio=save_ratio,
+            feed_ok=feed_ok,
+            pipeline_ok=pipeline_ok,
+            failure_taxonomy=failure_taxonomy,
         ),
     )
     return record

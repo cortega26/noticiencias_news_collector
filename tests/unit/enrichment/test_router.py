@@ -156,6 +156,36 @@ class TestEnrichmentStrategyRouter(unittest.TestCase):
         self.router.scholarly.enrich_url.assert_not_called()
         self.router.scrapling.enrich.assert_not_called()
 
+    def test_smoke_mode_skips_external_enrichment_even_with_http_hint(self):
+        source_config = {"enrichment_strategy": "none", "content_mode": "summary_only"}
+        candidate = {"url": "https://example.com/article"}
+
+        with (
+            patch.dict(
+                "os.environ",
+                {"NOTICIENCIAS_SMOKE": "1", "ENABLE_ADAPTIVE_OPTIMIZER": "true"},
+            ),
+            patch(
+                "news_collector.enrichment.router.strategy_lock_manager.get_lock",
+                return_value=None,
+            ),
+            patch(
+                "news_collector.enrichment.router.strategy_optimizer.get_strategy_hint",
+                return_value="http",
+            ),
+        ):
+            result = self.router.route_enrichment(
+                "smoke-source", source_config, candidate
+            )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "smoke_mode")
+        self.assertEqual(result["strategy_used"], "none")
+        self.router.http.enrich.assert_not_called()
+        self.router.scholarly.enrich_url.assert_not_called()
+        self.router.headless.enrich.assert_not_called()
+        self.router.scrapling.enrich.assert_not_called()
+
     def test_rss_only_does_not_gate_the_configured_strategy(self):
         source_config = {
             "enrichment_strategy": "http",
