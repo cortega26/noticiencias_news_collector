@@ -76,7 +76,7 @@ def test_source_health_report_serialization_includes_all_configured_sources():
     configured_only = SourceHealthRecord.model_validate(
         report["configured_only_source"]
     )
-    assert configured_only.operational_state == "failing_suppressed_candidate"
+    assert configured_only.operational_state == "unknown"
     assert configured_only.articles_found == 0
     assert configured_only.articles_saved == 0
     assert configured_only.enrichment_strategy == "http"

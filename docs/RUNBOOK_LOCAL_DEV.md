@@ -145,6 +145,14 @@ timer (e.g. every 15 minutes) running
 `scripts/ops/pull_webhook_receipts.py`. See ADR-0011 and
 `spec-webhook-inbox-pull.md`.
 
+The local cursor only confirms that hosted rows were durably staged. The
+puller retains unprocessed payloads, retries expired leases, and applies IDs in
+order; it stops behind the first failed receipt. Exit 1 means an apply or fetch
+failure needs another run and inspection; exit 2 means the cap, an active
+lease, or other pending work remains. Do not treat an exit 0 from `--dry-run`
+as an acknowledgment: that mode parses and reports without applying events.
+The staging tables are additive Alembic migration `c6d1a4e8f203`.
+
 Hosted serving configuration lives in `Dockerfile.serving` +
 `docker-compose.serving.yml` (OCI VM systemd service `noticiencias-serving` —
 see `spec-oci-hosting-migration.md`); `fly-serving.toml` / `fly-tunnel.toml`

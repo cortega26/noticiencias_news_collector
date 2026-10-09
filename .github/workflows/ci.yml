@@ -160,7 +160,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reports/coverage
-          .venv/bin/pytest --cov-report=xml:reports/coverage/coverage.xml --cov-report=html:reports/coverage/html
+          .venv/bin/pytest tests \
+            --ignore=tests/integration \
+            --ignore=tests/e2e_pipeline \
+            --ignore=tests/perf \
+            -m "not e2e and not perf" \
+            --cov-report=xml:reports/coverage/coverage.xml \
+            --cov-report=html:reports/coverage/html
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -168,6 +174,32 @@ jobs:
           name: coverage-reports
           path: reports/coverage
           if-no-files-found: warn
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python-env
+        with:
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+      - name: Run integration and root-level E2E tests
+        run: make test-integration
+
+  pipeline-e2e:
+    name: Pipeline E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python-env
+        with:
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+      - name: Run isolated pipeline E2E suite
+        run: make test-e2e
 
   coverage:
     name: coverage

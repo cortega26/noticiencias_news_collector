@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist check:search-budget test:audit test:e2e check:contract-sync` |
 | Whole workspace (requires clean Git worktrees) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; frontend builds may generate artifacts or upload derivatives depending on mode/credentials |
 
@@ -25,12 +25,14 @@ The main workflow is `.github/workflows/ci.yml`.
 Current jobs:
 
 - `lint` — `make lint`
-- `type` — `make type` (mypy on the three Makefile targets + pytest coverage run + coverage ratchet)
+- `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet)
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
-- `test` — full pytest suite with coverage XML
+- `test` — unit suite with coverage XML; integration, E2E, and performance run in separate jobs
+- `integration` — `make test-integration` (integration directory and root tests marked `e2e`)
+- `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
 - `coverage` — coverage ratchet vs base branch
-- `perf` — `make perf` (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
+- `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)

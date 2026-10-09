@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -245,7 +245,7 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
-verify-ci: lint type test test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
@@ -258,24 +258,31 @@ typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
 	@$(PYTHON_BIN) -m mypy --config-file=pyproject.toml $(MYPY_TARGETS)
 
 	@mkdir -p $(COVERAGE_DIR)
+	# The ratchet baseline includes unit, integration, pipeline E2E, and perf
+	# coverage. Keep each suite in its own Make target for diagnosis, but use
+	# the full collection here so the comparison remains like-for-like.
 	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
 	@COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
 
-test: bootstrap ## Run unit tests (fast feedback, excludes slow e2e pipeline)
-	@$(PYTEST) tests --ignore=tests/e2e_pipeline
+test: bootstrap ## Run unit tests (excludes integration, pipeline E2E, and performance suites)
+	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf"
 
 test-all: bootstrap ## Run all tests including slow e2e pipeline
-	# Unit suite first (randomized), then e2e in fixed order — mixing them
-	# lets unit-test global state leak into the order-sensitive e2e
-	# scenarios (2026-08-12, surfaced by pytest-randomly).
-	@$(PYTEST) tests --ignore=tests/e2e_pipeline
-	@$(PYTEST) tests/e2e_pipeline --randomly-dont-reorganize
+	# Keep unit, integration, pipeline E2E, and performance results separate.
+	@$(MAKE) test
+	@$(MAKE) test-integration
+	@$(MAKE) test-e2e
+	@$(MAKE) perf
 
-test-e2e: bootstrap ## Run the full e2e pipeline tests (~4 min)
+test-integration: bootstrap ## Run integration tests and root-level tests marked e2e
+	@$(PYTEST) tests/integration --no-cov
+	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "e2e" --no-cov
+
+test-e2e: bootstrap ## Run the isolated pipeline E2E suite in fixed order
 	# e2e scenarios assume a clean environment and are order-sensitive;
 	# pytest-randomly reorganizes the suite by default, so disable it for
 	# this directory (the unit suite stays randomized, 2026-08-12).
-	@$(PYTEST) tests/e2e_pipeline --randomly-dont-reorganize
+	@$(PYTEST) tests/e2e_pipeline --no-cov --randomly-dont-reorganize
 
 check-coverage: bootstrap ## Check if coverage meets the required threshold (fails under 80%)
 	@echo "[coverage] Checking coverage threshold..."
@@ -298,7 +305,7 @@ e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
 
 perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@mkdir -p $(PERF_DIR)
-	@$(PYTEST) -m "perf" --junitxml=$(PERF_DIR)/junit.xml; \
+	@$(PYTEST) -m "perf" --no-cov --junitxml=$(PERF_DIR)/junit.xml; \
 	code=$$?; \
 	if [ $$code -eq 5 ]; then \
 		echo "Performance tests not defined; skipped."; \

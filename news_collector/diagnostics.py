@@ -28,6 +28,7 @@ class SourceHealth:
     attempted: int = 0
     fetch_ok: int = 0
     parsed_ok: int = 0
+    parse_succeeded: bool = False
     validation_ok: int = 0
     filter_passed: int = 0
     saved: int = 0
@@ -41,6 +42,7 @@ class SourceHealth:
     # Failure diagnostics
     primary_failure_stage: Optional[FailureStage] = None
     primary_failure_reason: Optional[str] = None
+    failure_count: int = 0
     http_status: Optional[int] = None
     last_error_details: Dict[str, Any] = field(default_factory=dict)
 
@@ -52,6 +54,7 @@ class SourceHealth:
             self.fetch_ok += count
         elif stage == "parse":
             self.parsed_ok += count
+            self.parse_succeeded = True
         elif stage == "validate":
             self.validation_ok += count
         elif stage == "filter":
@@ -62,6 +65,7 @@ class SourceHealth:
     def record_failure(
         self, stage: FailureStage, reason: str, details: Dict[str, Any] | None = None
     ):
+        self.failure_count += 1
         if self.primary_failure_stage is None:  # Keep first/most significant failure
             self.primary_failure_stage = stage
             self.primary_failure_reason = reason
@@ -107,10 +111,12 @@ class SourceHealthTracker:
 
     def finalize_status(self):
         for src in self.sources.values():
-            if src.saved > 0:
+            if src.saved > 0 or (src.fetch_ok > 0 and src.parse_succeeded):
                 src.status = "WORKING"
-            else:
+            elif src.failure_count > 0:
                 src.status = "FAILING"
+            else:
+                src.status = "UNKNOWN"
 
     def export_json(self, path: str):
         self.finalize_status()
@@ -124,15 +130,9 @@ class SourceHealthTracker:
             data = self.sources.get(sid)
             observed = {
                 "last_run": now,
-                "feed_ok": bool(data and data.fetch_ok > 0),
+                "feed_ok": bool(data and data.fetch_ok > 0 and data.parse_succeeded),
                 "pipeline_ok": bool(
-                    data
-                    and (
-                        data.parsed_ok > 0
-                        or data.validation_ok > 0
-                        or data.filter_passed > 0
-                        or data.saved > 0
-                    )
+                    data and data.parse_succeeded and data.failure_count == 0
                 ),
                 "content_ok": bool(data and data.saved > 0),
                 "content_mode": ALL_SOURCES.get(sid, {}).get("content_mode", "unknown"),
@@ -141,6 +141,7 @@ class SourceHealthTracker:
                 ),
                 "articles_found": data.parsed_ok if data else 0,
                 "articles_saved": data.saved if data else 0,
+                "failure_count": data.failure_count if data else 0,
                 "latency": 0.0,
                 "last_error_message": data.primary_failure_reason if data else None,
             }
@@ -160,32 +161,6 @@ class SourceHealthTracker:
 
         payload: Dict[str, Any] = {"sources": output}
 
-        # Emit blacklist suggestions for sources that failed completely
-        suggested_blacklist: list[Dict[str, Any]] = []
-        for sid in sorted(self.sources):
-            data = self.sources[sid]
-            if data.saved > 0:
-                continue
-            if data.attempted == 0:
-                continue
-            if ALL_SOURCES.get(sid, {}).get("blacklisted"):
-                continue
-
-            suggested_blacklist.append(
-                {
-                    "source_id": sid,
-                    "reason": (
-                        data.primary_failure_reason
-                        or f"No articles saved ({data.parsed_ok} found, {data.saved} saved)"
-                    ),
-                    "failure_stage": data.primary_failure_stage,
-                    "run_attempted": data.attempted,
-                }
-            )
-
-        if suggested_blacklist:
-            payload["suggested_blacklist"] = suggested_blacklist
-
         with open(p, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
 
@@ -199,7 +174,11 @@ class SourceHealthTracker:
         print("-" * 100)
 
         for sid, data in self.sources.items():
-            status_icon = "✅" if data.status == "WORKING" else "❌"
+            status_icon = {
+                "WORKING": "✅",
+                "FAILING": "❌",
+                "UNKNOWN": "❔",
+            }[data.status]
             diagnosis = ""
             if data.status == "FAILING":
                 diagnosis = (
