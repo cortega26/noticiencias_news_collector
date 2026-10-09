@@ -64,6 +64,9 @@ description = "Publication delivery-key helper name, not a credential."
 regexTarget = "match"
 regexes = [
   '''compute_delivery_key''',
-  # This replay helper returns a row identity, not a credential.
-  '''_replay_record_key''',
+  # Historical replay code used this exact assignment for a row identity.
+  # Anchored to the Gitleaks match so longer values still trigger the rule.
+  '''^key = _completed_cross_critic_key
+]
+'',
 ]
