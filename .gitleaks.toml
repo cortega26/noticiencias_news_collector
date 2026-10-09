@@ -64,4 +64,6 @@ description = "Publication delivery-key helper name, not a credential."
 regexTarget = "match"
 regexes = [
   '''compute_delivery_key''',
+  # This replay helper returns a row identity, not a credential.
+  '''_replay_record_key''',
 ]
