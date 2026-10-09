@@ -480,7 +480,7 @@ or policy compliance.
 - `tests/unit/editorial/test_editorial_critic_gate.py`: prove a publishable
   fail-open verdict does not invoke the successful-review checkpoint hook.
 
-### Verification
+### Candidate acceptance checks
 
 - Run focused editorial regressions, then `make lint`, `make type`, and
   `make test` on the candidate. Reproduce the two previously reported suite

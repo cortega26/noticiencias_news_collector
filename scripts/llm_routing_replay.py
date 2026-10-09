@@ -660,45 +660,66 @@ CROSS_PATH = EVAL_DIR / "cross_critic.jsonl"
 GROUNDED_PATH = EVAL_DIR / "grounded.jsonl"
 
 
+def _is_checkpointable_cross_critic_record(rec: dict) -> bool:
+    """A replay row is complete only when its stored critic verdict is coherent."""
+    from news_collector.components.editorial.ai_editor import (
+        _parse_editorial_critic_result,
+    )
+
+    approved = rec.get("approved")
+    verdict = rec.get("verdict")
+    if type(approved) is not bool:
+        return False
+    if not isinstance(verdict, dict):
+        return False
+    if verdict.get("approved") is not approved:
+        return False
+    scores = verdict.get("scores")
+    if not isinstance(scores, dict):
+        return False
+
+    normalized_verdict = {
+        **scores,
+        "average": verdict.get("average"),
+        "approved": approved,
+        "recoverable": False,
+        "feedback": "",
+    }
+    try:
+        parsed_approved, *_ = _parse_editorial_critic_result(normalized_verdict)
+    except (TypeError, ValueError):
+        return False
+    return parsed_approved is approved
+
+
+def _completed_cross_critic_key(rec: dict) -> tuple[str, str, str] | None:
+    if rec.get("status") != "ok" or not _is_checkpointable_cross_critic_record(rec):
+        return None
+    try:
+        key = (str(rec["db_id"]), rec["output_arm"], rec["critic_arm"])
+    except KeyError:
+        return None
+    if not all(isinstance(part, str) and part for part in key):
+        return None
+    return key
+
+
 def _load_completed_cross_critic_keys(path: Path) -> set[tuple[str, str, str]]:
     """Only coherent checkpointable verdicts complete a replay matrix cell."""
     if not path.exists():
         return set()
-    from news_collector.components.editorial.ai_editor import (
-        _parse_editorial_critic_result,
-    )
 
     done: set[tuple[str, str, str]] = set()
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
             rec = json.loads(line)
-            if not isinstance(rec, dict) or rec.get("status") != "ok":
-                continue
-            approved = rec.get("approved")
-            verdict = rec.get("verdict")
-            if (
-                type(approved) is not bool
-                or not isinstance(verdict, dict)
-                or verdict.get("approved") is not approved
-                or not isinstance(verdict.get("scores"), dict)
-            ):
-                continue
-            normalized_verdict = {
-                **verdict["scores"],
-                "average": verdict.get("average"),
-                "approved": verdict["approved"],
-                "recoverable": False,
-                "feedback": "",
-            }
-            parsed_approved, *_ = _parse_editorial_critic_result(normalized_verdict)
-            if parsed_approved is not approved:
-                continue
-            key = (str(rec["db_id"]), rec["output_arm"], rec["critic_arm"])
-            if not all(isinstance(part, str) and part for part in key):
-                continue
-            done.add(key)
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        except json.JSONDecodeError:
             continue
+        if not isinstance(rec, dict):
+            continue
+        key = _completed_cross_critic_key(rec)
+        if key is not None:
+            done.add(key)
     return done
 
 

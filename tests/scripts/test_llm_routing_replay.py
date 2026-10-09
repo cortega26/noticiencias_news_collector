@@ -55,70 +55,51 @@ def test_cli_requires_a_phase() -> None:
 
 def test_cross_critic_resume_retries_unreviewed_and_failed_rows(tmp_path: Path) -> None:
     path = tmp_path / "cross_critic.jsonl"
+    score_names = (
+        "hook_score",
+        "clarity_score",
+        "structure_score",
+        "rigor_score",
+        "voice_score",
+        "shareability_score",
+        "closing_score",
+    )
 
     def verdict(approved: bool, score: int) -> dict:
-        scores = {
-            "hook_score": score,
-            "clarity_score": score,
-            "structure_score": score,
-            "rigor_score": score,
-            "voice_score": score,
-            "shareability_score": score,
-            "closing_score": score,
+        return {
+            "approved": approved,
+            "average": float(score),
+            "scores": dict.fromkeys(score_names, score),
         }
-        return {"approved": approved, "average": float(score), "scores": scores}
+
+    def row(
+        db_id: str,
+        output_arm: str,
+        critic_arm: str,
+        status: str,
+        approved: bool | None = None,
+        stored_verdict: dict | None = None,
+    ) -> dict:
+        return {
+            "db_id": db_id,
+            "output_arm": output_arm,
+            "critic_arm": critic_arm,
+            "status": status,
+            "approved": approved,
+            "verdict": stored_verdict,
+        }
 
     records = [
-        {
-            "db_id": "1",
-            "output_arm": "A",
-            "critic_arm": "A",
-            "status": "unreviewed",
-            "approved": None,
-        },
-        {
-            "db_id": "2",
-            "output_arm": "A",
-            "critic_arm": "B",
-            "status": "failed",
-            "approved": None,
-        },
-        {
-            "db_id": "3",
-            "output_arm": "A",
-            "critic_arm": "C",
-            "status": "ok",
-            "approved": False,
-            "verdict": verdict(False, 6),
-        },
-        {
-            "db_id": "4",
-            "output_arm": "B",
-            "critic_arm": "A",
-            "status": "ok",
-            "approved": True,
-            "verdict": None,
-        },
-        {
-            "db_id": "5",
-            "output_arm": "B",
-            "critic_arm": "B",
-            "status": "ok",
-            "approved": True,
-            "verdict": verdict(True, 7),
-        },
-        {
-            "db_id": "6",
-            "output_arm": "B",
-            "critic_arm": "C",
-            "status": "ok",
-            "approved": False,
-            "verdict": verdict(False, 7),
-        },
+        row("1", "A", "A", "unreviewed"),
+        row("2", "A", "B", "failed"),
+        row("3", "A", "C", "ok", False, verdict(False, 6)),
+        row("4", "B", "A", "ok", True),
+        row("5", "B", "B", "ok", True, verdict(True, 7)),
+        row("6", "B", "C", "ok", False, verdict(False, 7)),
         {"status": "ok", "approved": True, "verdict": verdict(True, 7)},
     ]
     path.write_text(
-        "\n".join(json.dumps(record) for record in records) + "\nnot-json\n",
+        "\n".join([*(json.dumps(record) for record in records), "not-json"]),
         encoding="utf-8",
     )
 

@@ -174,9 +174,7 @@ def _system_with_untrusted_data_policy(system_prompt: str) -> str:
     return f"{system_prompt.rstrip()}\n\n{_UNTRUSTED_DATA_POLICY}".strip()
 
 
-def _parse_editorial_critic_scores(
-    result: dict[Any, Any],
-) -> tuple[float, dict[str, int]]:
+def _parse_editorial_critic_average(result: dict[Any, Any]) -> float:
     average_raw = result["average"]
     if isinstance(average_raw, bool) or not isinstance(average_raw, (int, float)):
         raise ValueError("average must be numeric")
@@ -186,17 +184,51 @@ def _parse_editorial_critic_scores(
         raise ValueError("average must be finite and between 0 and 10") from exc
     if not math.isfinite(average) or not 0 <= average <= 10:
         raise ValueError("average must be finite and between 0 and 10")
+    return average
 
+
+def _parse_editorial_critic_score_values(result: dict[Any, Any]) -> dict[str, int]:
     scores_raw = {key: result[key] for key in _EDITORIAL_CRITIC_SCORE_KEYS}
-    if any(
-        type(score) is not int or not 0 <= score <= 10 for score in scores_raw.values()
-    ):
-        raise ValueError("all criterion scores must be integers from 0 to 10")
-    scores = cast(dict[str, int], scores_raw)
+    for score in scores_raw.values():
+        if type(score) is not int or not 0 <= score <= 10:
+            raise ValueError("all criterion scores must be integers from 0 to 10")
+    return cast(dict[str, int], scores_raw)
+
+
+def _parse_editorial_critic_scores(
+    result: dict[Any, Any],
+) -> tuple[float, dict[str, int]]:
+    average = _parse_editorial_critic_average(result)
+    scores = _parse_editorial_critic_score_values(result)
     calculated_average = sum(scores.values()) / len(_EDITORIAL_CRITIC_SCORE_KEYS)
     if abs(average - calculated_average) > 0.11:
         raise ValueError("average does not match the seven criterion scores")
     return average, scores
+
+
+def _validate_editorial_critic_approval(
+    approved: bool, average: float, scores: dict[str, int]
+) -> None:
+    meets_thresholds = (
+        average >= 7.0
+        and all(score >= 5 for score in scores.values())
+        and scores["rigor_score"] >= 6
+    )
+    if approved != meets_thresholds:
+        raise ValueError("approved verdict contradicts the stated thresholds")
+
+
+def _parse_editorial_critic_flags(
+    result: dict[Any, Any],
+) -> tuple[bool, bool, str]:
+    approved = result["approved"]
+    recoverable = result["recoverable"]
+    if type(approved) is not bool or type(recoverable) is not bool:
+        raise ValueError("approved and recoverable must be booleans")
+    feedback_raw = result["feedback"]
+    if not isinstance(feedback_raw, str):
+        raise ValueError("feedback must be a string")
+    return approved, recoverable, feedback_raw.strip()
 
 
 def _parse_editorial_critic_result(
@@ -216,21 +248,9 @@ def _parse_editorial_critic_result(
     if missing_keys:
         raise ValueError(f"verdict is incomplete; missing {missing_keys}")
 
-    approved = result["approved"]
-    recoverable = result["recoverable"]
-    if type(approved) is not bool or type(recoverable) is not bool:
-        raise ValueError("approved and recoverable must be booleans")
-    if not isinstance(result["feedback"], str):
-        raise ValueError("feedback must be a string")
-    feedback = result["feedback"].strip()
+    approved, recoverable, feedback = _parse_editorial_critic_flags(result)
     average, scores = _parse_editorial_critic_scores(result)
-    meets_thresholds = (
-        average >= 7.0
-        and all(score >= 5 for score in scores.values())
-        and scores["rigor_score"] >= 6
-    )
-    if approved != meets_thresholds:
-        raise ValueError("approved verdict contradicts the stated thresholds")
+    _validate_editorial_critic_approval(approved, average, scores)
     return approved, recoverable, feedback, average, scores
 
 
