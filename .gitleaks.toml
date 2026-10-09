@@ -66,7 +66,5 @@ regexes = [
   '''compute_delivery_key''',
   # Historical replay code used this exact assignment for a row identity.
   # Anchored to the Gitleaks match so longer values still trigger the rule.
-  '''^key = _completed_cross_critic_key
-]
-'',
+  '''^key = _completed_cross_critic_key$''',
 ]
