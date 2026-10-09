@@ -339,6 +339,12 @@ class TestPullReceipts:
     def test_repeated_capped_passes_progress_past_the_previous_window(
         self, db_manager: DatabaseManager, monkeypatch: pytest.MonkeyPatch
     ):
+        # A small cap exercises the same repeated-window boundary as the
+        # production default (2000) without creating thousands of SQLite rows
+        # under the unit-test timeout.
+        history_size = 9
+        max_per_pass = 4
+        page_size = 2
         payload = _publish_payload([])
         seen_ids: list[int] = []
 
@@ -346,7 +352,7 @@ class TestPullReceipts:
             start = (after_id or 0) + 1
             rows = [
                 _receipt(receipt_id, payload)
-                for receipt_id in range(start, min(start + limit, 2004))
+                for receipt_id in range(start, min(start + limit, history_size + 1))
             ]
             seen_ids.extend(row["id"] for row in rows)
             return rows
@@ -357,18 +363,17 @@ class TestPullReceipts:
             lambda _event, _db: {"result": {"action": "noop"}},
         )
 
-        for _ in range(2):
+        for _ in range(3):
             script.pull_receipts(
                 db_manager,
                 endpoint="https://api.example/v1/admin/webhook/receipts",
                 token="token",
-                limit=200,
-                max_receipts=2000,
+                limit=page_size,
+                max_receipts=max_per_pass,
                 fetcher=fetch,
             )
 
-        assert max(seen_ids) == 2003
-        assert len(seen_ids) == len(set(seen_ids))
+        assert seen_ids == list(range(1, history_size + 1))
 
     def test_dry_run_writes_nothing(self, db_manager: DatabaseManager):
         article_id = _seed_pr_created(db_manager)
