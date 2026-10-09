@@ -21,67 +21,77 @@ depends_on: Union[str, Sequence[str], None] = None
 _STATUS_CHECK = "status IN ('received', 'processing', 'processed', 'failed')"
 
 
-def upgrade() -> None:
-    # DatabaseManager.create_all() runs before Alembic in the existing app
-    # lifecycle. Guard each object so fresh databases and partially initialized
-    # deployments can safely advance to this revision.
+def _table_exists(table_name: str) -> bool:
+    return table_name in set(inspect(op.get_bind()).get_table_names())
+
+
+def _ensure_cursor_table() -> None:
+    if _table_exists("webhook_pull_cursors"):
+        return
+    op.create_table(
+        "webhook_pull_cursors",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("endpoint_key", sa.String(length=500), nullable=False),
+        sa.Column("after_id", sa.Integer(), nullable=True),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    )
+
+
+def _ensure_receipt_table() -> None:
+    if _table_exists("webhook_pull_receipts"):
+        return
+    op.create_table(
+        "webhook_pull_receipts",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("endpoint_key", sa.String(length=500), nullable=False),
+        sa.Column("remote_id", sa.Integer(), nullable=False),
+        sa.Column("delivery_key", sa.String(length=200), nullable=True),
+        sa.Column("event_type", sa.String(length=50), nullable=True),
+        sa.Column("payload", sa.JSON(), nullable=True),
+        sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("attempts", sa.Integer(), nullable=False),
+        sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("last_attempt_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("lease_until", sa.Float(), nullable=True),
+        sa.Column("lease_token", sa.String(length=32), nullable=True),
+        sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.CheckConstraint(_STATUS_CHECK, name="ck_webhook_pull_receipts_status"),
+        sa.UniqueConstraint(
+            "endpoint_key", "remote_id", name="uq_webhook_pull_receipts_source_id"
+        ),
+    )
+
+
+def _ensure_index(
+    table_name: str,
+    index_name: str,
+    columns: list[str],
+    *,
+    unique: bool = False,
+) -> None:
     inspector = inspect(op.get_bind())
-    tables = set(inspector.get_table_names())
+    indexes = {index["name"] for index in inspector.get_indexes(table_name)}
+    if index_name not in indexes:
+        op.create_index(index_name, table_name, columns, unique=unique)
 
-    if "webhook_pull_cursors" not in tables:
-        op.create_table(
-            "webhook_pull_cursors",
-            sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-            sa.Column("endpoint_key", sa.String(length=500), nullable=False),
-            sa.Column("after_id", sa.Integer(), nullable=True),
-            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        )
-    cursor_indexes = (
-        {index["name"] for index in inspector.get_indexes("webhook_pull_cursors")}
-        if "webhook_pull_cursors" in tables
-        else set()
-    )
-    if "uq_webhook_pull_cursors_endpoint" not in cursor_indexes:
-        op.create_index(
-            "uq_webhook_pull_cursors_endpoint",
-            "webhook_pull_cursors",
-            ["endpoint_key"],
-            unique=True,
-        )
 
-    if "webhook_pull_receipts" not in tables:
-        op.create_table(
-            "webhook_pull_receipts",
-            sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-            sa.Column("endpoint_key", sa.String(length=500), nullable=False),
-            sa.Column("remote_id", sa.Integer(), nullable=False),
-            sa.Column("delivery_key", sa.String(length=200), nullable=True),
-            sa.Column("event_type", sa.String(length=50), nullable=True),
-            sa.Column("payload", sa.JSON(), nullable=True),
-            sa.Column("status", sa.String(length=20), nullable=False),
-            sa.Column("attempts", sa.Integer(), nullable=False),
-            sa.Column("error", sa.Text(), nullable=True),
-            sa.Column("last_attempt_at", sa.DateTime(timezone=True), nullable=True),
-            sa.Column("lease_until", sa.Float(), nullable=True),
-            sa.Column("lease_token", sa.String(length=32), nullable=True),
-            sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
-            sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
-            sa.CheckConstraint(_STATUS_CHECK, name="ck_webhook_pull_receipts_status"),
-            sa.UniqueConstraint(
-                "endpoint_key", "remote_id", name="uq_webhook_pull_receipts_source_id"
-            ),
-        )
-    receipt_indexes = (
-        {index["name"] for index in inspector.get_indexes("webhook_pull_receipts")}
-        if "webhook_pull_receipts" in tables
-        else set()
+def upgrade() -> None:
+    # create_all() precedes Alembic in the existing app lifecycle; each object
+    # remains safe to create when a database is fresh or partially initialized.
+    _ensure_cursor_table()
+    _ensure_index(
+        "webhook_pull_cursors",
+        "uq_webhook_pull_cursors_endpoint",
+        ["endpoint_key"],
+        unique=True,
     )
-    if "ix_webhook_pull_receipts_pending" not in receipt_indexes:
-        op.create_index(
-            "ix_webhook_pull_receipts_pending",
-            "webhook_pull_receipts",
-            ["endpoint_key", "status", "last_attempt_at"],
-        )
+    _ensure_receipt_table()
+    _ensure_index(
+        "webhook_pull_receipts",
+        "ix_webhook_pull_receipts_pending",
+        ["endpoint_key", "status", "last_attempt_at"],
+    )
 
 
 def downgrade() -> None:

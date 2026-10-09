@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, null, or_
 from sqlalchemy.exc import IntegrityError
 
 from .models import WebhookPullCursor as _WebhookPullCursorModel
@@ -53,6 +53,24 @@ def _to_view(row: _WebhookPullReceiptModel) -> WebhookPullReceiptView:
         lease_token=row.lease_token,
         received_at=row.received_at,
         processed_at=row.processed_at,
+    )
+
+
+def _receipt_from_remote_row(
+    endpoint_key: str, row: Dict[str, Any]
+) -> _WebhookPullReceiptModel:
+    payload = row.get("payload")
+    delivery_key = row.get("delivery_key")
+    event_type = row.get("event_type")
+    return _WebhookPullReceiptModel(
+        endpoint_key=endpoint_key,
+        remote_id=row["id"],
+        delivery_key=delivery_key if isinstance(delivery_key, str) else None,
+        event_type=event_type if isinstance(event_type, str) else None,
+        # Preserve the complete row so malformed events remain retryable.
+        payload=dict(row) if isinstance(payload, dict) else row,
+        status="received",
+        attempts=0,
     )
 
 
@@ -104,44 +122,96 @@ class WebhookPullReceiptRepository:
                 if current_after_id != expected_after_id:
                     raise CursorConflict("hosted receipt cursor changed concurrently")
 
-                for row in rows:
-                    payload = row.get("payload")
-                    delivery_key = row.get("delivery_key")
-                    event_type = row.get("event_type")
-                    session.add(
-                        _WebhookPullReceiptModel(
-                            endpoint_key=endpoint_key,
-                            remote_id=row["id"],
-                            delivery_key=(
-                                delivery_key if isinstance(delivery_key, str) else None
-                            ),
-                            event_type=(
-                                event_type if isinstance(event_type, str) else None
-                            ),
-                            # Keep the complete remote row locally until it has
-                            # been applied, so malformed events remain retryable.
-                            payload=dict(row) if isinstance(payload, dict) else row,
-                            status="received",
-                            attempts=0,
-                        )
-                    )
-
+                session.add_all(
+                    _receipt_from_remote_row(endpoint_key, row) for row in rows
+                )
                 next_after_id = rows[-1]["id"]
-                if cursor is None:
-                    cursor = _WebhookPullCursorModel(
-                        endpoint_key=endpoint_key,
-                        after_id=next_after_id,
-                    )
-                    session.add(cursor)
-                else:
-                    cursor.after_id = next_after_id
-                    cursor.updated_at = datetime.now(timezone.utc)
+                self._advance_cursor(session, cursor, endpoint_key, next_after_id)
                 session.flush()
                 return len(rows)
         except IntegrityError as exc:
             raise CursorConflict(
                 "hosted receipt page conflicted with another puller"
             ) from exc
+
+    @staticmethod
+    def _advance_cursor(session, cursor, endpoint_key: str, next_after_id: int) -> None:
+        if cursor is None:
+            session.add(
+                _WebhookPullCursorModel(
+                    endpoint_key=endpoint_key,
+                    after_id=next_after_id,
+                )
+            )
+            return
+        cursor.after_id = next_after_id
+        cursor.updated_at = datetime.now(timezone.utc)
+
+    @staticmethod
+    def _oldest_pending(
+        session, endpoint_key: str
+    ) -> Optional[_WebhookPullReceiptModel]:
+        return (
+            session.query(_WebhookPullReceiptModel)
+            .filter(
+                _WebhookPullReceiptModel.endpoint_key == endpoint_key,
+                _WebhookPullReceiptModel.status != "processed",
+            )
+            .order_by(_WebhookPullReceiptModel.remote_id.asc())
+            .first()
+        )
+
+    @staticmethod
+    def _is_claim_eligible(row, retry_only: bool, now_epoch: float) -> bool:
+        if row.status == "received":
+            return row.attempts > 0 if retry_only else row.attempts == 0
+        if retry_only and row.status == "failed":
+            return True
+        if not retry_only or row.status != "processing":
+            return False
+        return row.lease_until is None or row.lease_until <= now_epoch
+
+    @staticmethod
+    def _claimable_filter(retry_only: bool, now_epoch: float):
+        if not retry_only:
+            return and_(
+                _WebhookPullReceiptModel.status == "received",
+                _WebhookPullReceiptModel.attempts == 0,
+            )
+        expired_lease = and_(
+            _WebhookPullReceiptModel.status == "processing",
+            or_(
+                _WebhookPullReceiptModel.lease_until.is_(None),
+                _WebhookPullReceiptModel.lease_until <= now_epoch,
+            ),
+        )
+        return or_(
+            _WebhookPullReceiptModel.status == "failed",
+            and_(
+                _WebhookPullReceiptModel.status == "received",
+                _WebhookPullReceiptModel.attempts > 0,
+            ),
+            expired_lease,
+        )
+
+    @staticmethod
+    def _leased_view(row, now: datetime, lease_until: float, lease_token: str):
+        return WebhookPullReceiptView(
+            id=row.id,
+            endpoint_key=row.endpoint_key,
+            remote_id=row.remote_id,
+            delivery_key=row.delivery_key,
+            event_type=row.event_type,
+            payload=row.payload,
+            status="processing",
+            attempts=row.attempts + 1,
+            error=None,
+            last_attempt_at=now,
+            lease_until=lease_until,
+            lease_token=lease_token,
+            received_at=row.received_at,
+            processed_at=row.processed_at,
+        )
 
     def claim_pending(
         self,
@@ -151,73 +221,24 @@ class WebhookPullReceiptRepository:
         lease_seconds: int,
         retry_only: bool,
     ) -> list[WebhookPullReceiptView]:
-        """Lease only the oldest pending row so one failed event blocks later IDs."""
+        """Lease the oldest pending row, preserving order across concurrent pulls."""
         if limit <= 0:
             return []
 
         now = datetime.now(timezone.utc)
         now_epoch = now.timestamp()
         lease_until = (now + timedelta(seconds=lease_seconds)).timestamp()
-        claimed: list[WebhookPullReceiptView] = []
         with self._session() as session:
-            # Ordered application matters for publication events. An active
-            # lease on the oldest row blocks later rows until it settles or
-            # expires, including when another puller is running concurrently.
-            row = (
-                session.query(_WebhookPullReceiptModel)
-                .filter(
-                    _WebhookPullReceiptModel.endpoint_key == endpoint_key,
-                    _WebhookPullReceiptModel.status != "processed",
-                )
-                .order_by(_WebhookPullReceiptModel.remote_id.asc())
-                .first()
-            )
-            if row is None:
-                return []
-
-            if row.status == "received" and row.attempts == 0:
-                eligible = not retry_only
-            elif row.status == "failed" or (
-                row.status == "received" and row.attempts > 0
-            ):
-                eligible = retry_only
-            elif row.status == "processing":
-                eligible = retry_only and (
-                    row.lease_until is None or row.lease_until <= now_epoch
-                )
-            else:
-                eligible = False
-            if not eligible:
+            row = self._oldest_pending(session, endpoint_key)
+            if row is None or not self._is_claim_eligible(row, retry_only, now_epoch):
                 return []
 
             lease_token = uuid4().hex
-            expired_lease = and_(
-                _WebhookPullReceiptModel.status == "processing",
-                or_(
-                    _WebhookPullReceiptModel.lease_until.is_(None),
-                    _WebhookPullReceiptModel.lease_until <= now_epoch,
-                ),
-            )
-            claimable = (
-                and_(
-                    _WebhookPullReceiptModel.status == "received",
-                    _WebhookPullReceiptModel.attempts == 0,
-                )
-                if not retry_only
-                else or_(
-                    _WebhookPullReceiptModel.status == "failed",
-                    and_(
-                        _WebhookPullReceiptModel.status == "received",
-                        _WebhookPullReceiptModel.attempts > 0,
-                    ),
-                    expired_lease,
-                )
-            )
             changed = (
                 session.query(_WebhookPullReceiptModel)
                 .filter(
                     _WebhookPullReceiptModel.id == row.id,
-                    claimable,
+                    self._claimable_filter(retry_only, now_epoch),
                 )
                 .update(
                     {
@@ -231,26 +252,9 @@ class WebhookPullReceiptRepository:
                     synchronize_session=False,
                 )
             )
-            if changed == 1:
-                claimed.append(
-                    WebhookPullReceiptView(
-                        id=row.id,
-                        endpoint_key=row.endpoint_key,
-                        remote_id=row.remote_id,
-                        delivery_key=row.delivery_key,
-                        event_type=row.event_type,
-                        payload=row.payload,
-                        status="processing",
-                        attempts=row.attempts + 1,
-                        error=None,
-                        last_attempt_at=now,
-                        lease_until=lease_until,
-                        lease_token=lease_token,
-                        received_at=row.received_at,
-                        processed_at=row.processed_at,
-                    )
-                )
-        return claimed
+            if changed != 1:
+                return []
+            return [self._leased_view(row, now, lease_until, lease_token)]
 
     def mark_processed(self, receipt_id: int, lease_token: str) -> bool:
         """Acknowledge local application and discard the staged raw payload."""
@@ -264,7 +268,7 @@ class WebhookPullReceiptRepository:
                         "payload": None,
                         "error": None,
                         "lease_until": None,
-                        "lease_token": None,
+                        "lease_token": null(),
                         "processed_at": datetime.now(timezone.utc),
                     },
                     synchronize_session=False,
@@ -283,7 +287,7 @@ class WebhookPullReceiptRepository:
                         "status": "failed",
                         "error": error[:500],
                         "lease_until": None,
-                        "lease_token": None,
+                        "lease_token": null(),
                     },
                     synchronize_session=False,
                 )

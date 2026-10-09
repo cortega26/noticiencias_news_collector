@@ -258,43 +258,52 @@ def _validate_page(rows: List[Dict[str, Any]], after_id: Optional[int]) -> int:
     return previous
 
 
+def _apply_one_claimed(
+    receipt: WebhookPullReceiptView,
+    db: DatabaseManager,
+    summary: PullSummary,
+) -> bool:
+    """Apply and settle one leased row; keep failures retryable."""
+    repo = db.webhook_pull_receipts
+    raw_row = receipt.payload
+    if not isinstance(raw_row, dict):
+        summary.failed += 1
+        summary.malformed += 1
+        settled = repo.mark_failed(
+            receipt.id,
+            receipt.lease_token or "",
+            "malformed:staged_payload_not_object",
+        )
+        if not settled:
+            logger.warning("Could not settle a leased hosted receipt row")
+            summary.failed += 1
+        return False
+
+    applied, error = _replay_receipt(raw_row, db, summary)
+    if applied:
+        settled = repo.mark_processed(receipt.id, receipt.lease_token or "")
+    else:
+        settled = repo.mark_failed(
+            receipt.id,
+            receipt.lease_token or "",
+            error or "handler_did_not_process",
+        )
+    if not settled:
+        summary.failed += 1
+        logger.warning("Could not settle a leased hosted receipt row")
+        return False
+    return applied
+
+
 def _apply_claimed(
     receipts: List[WebhookPullReceiptView],
     db: DatabaseManager,
     summary: PullSummary,
 ) -> bool:
     """Apply leased rows in order; stop at the first unacknowledged event."""
-    repo = db.webhook_pull_receipts
     for receipt in receipts:
         summary.attempted += 1
-        raw_row = receipt.payload
-        if not isinstance(raw_row, dict):
-            summary.failed += 1
-            summary.malformed += 1
-            settled = repo.mark_failed(
-                receipt.id,
-                receipt.lease_token or "",
-                "malformed:staged_payload_not_object",
-            )
-            if not settled:
-                logger.warning("Could not settle a leased hosted receipt row")
-                summary.failed += 1
-            return False
-
-        applied, error = _replay_receipt(raw_row, db, summary)
-        if applied:
-            settled = repo.mark_processed(receipt.id, receipt.lease_token or "")
-        else:
-            settled = repo.mark_failed(
-                receipt.id,
-                receipt.lease_token or "",
-                error or "handler_did_not_process",
-            )
-        if not settled:
-            summary.failed += 1
-            logger.warning("Could not settle a leased hosted receipt row")
-            return False
-        if not applied:
+        if not _apply_one_claimed(receipt, db, summary):
             return False
     return True
 
