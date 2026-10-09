@@ -717,9 +717,9 @@ def _load_completed_cross_critic_keys(path: Path) -> set[tuple[str, str, str]]:
             continue
         if not isinstance(rec, dict):
             continue
-        key = _completed_cross_critic_key(rec)
-        if key is not None:
-            done.add(key)
+        record_identity = _completed_cross_critic_key(rec)
+        if record_identity is not None:
+            done.add(record_identity)
     return done
 
 
