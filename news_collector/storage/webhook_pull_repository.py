@@ -5,11 +5,12 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterator, Optional, cast
 from uuid import uuid4
 
 from sqlalchemy import and_, func, null, or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from .models import WebhookPullCursor as _WebhookPullCursorModel
 from .models import WebhookPullReceipt as _WebhookPullReceiptModel
@@ -86,7 +87,7 @@ class WebhookPullReceiptRepository:
         self._db = db_manager
 
     @contextmanager
-    def _session(self):
+    def _session(self) -> Iterator[Session]:
         with self._db.get_session() as session:
             yield session
 
@@ -135,7 +136,12 @@ class WebhookPullReceiptRepository:
             ) from exc
 
     @staticmethod
-    def _advance_cursor(session, cursor, endpoint_key: str, next_after_id: int) -> None:
+    def _advance_cursor(
+        session: Session,
+        cursor: Optional[_WebhookPullCursorModel],
+        endpoint_key: str,
+        next_after_id: int,
+    ) -> None:
         if cursor is None:
             session.add(
                 _WebhookPullCursorModel(
@@ -151,7 +157,7 @@ class WebhookPullReceiptRepository:
     def _oldest_pending(
         session, endpoint_key: str
     ) -> Optional[_WebhookPullReceiptModel]:
-        return (
+        row = (
             session.query(_WebhookPullReceiptModel)
             .filter(
                 _WebhookPullReceiptModel.endpoint_key == endpoint_key,
@@ -160,9 +166,12 @@ class WebhookPullReceiptRepository:
             .order_by(_WebhookPullReceiptModel.remote_id.asc())
             .first()
         )
+        return cast(Optional[_WebhookPullReceiptModel], row)
 
     @staticmethod
-    def _is_claim_eligible(row, retry_only: bool, now_epoch: float) -> bool:
+    def _is_claim_eligible(
+        row: _WebhookPullReceiptModel, retry_only: bool, now_epoch: float
+    ) -> bool:
         if row.status == "received":
             return row.attempts > 0 if retry_only else row.attempts == 0
         if retry_only and row.status == "failed":
@@ -195,7 +204,12 @@ class WebhookPullReceiptRepository:
         )
 
     @staticmethod
-    def _leased_view(row, now: datetime, lease_until: float, lease_token: str):
+    def _leased_view(
+        row: _WebhookPullReceiptModel,
+        now: datetime,
+        lease_until: float,
+        lease_token: str,
+    ) -> WebhookPullReceiptView:
         return WebhookPullReceiptView(
             id=row.id,
             endpoint_key=row.endpoint_key,
