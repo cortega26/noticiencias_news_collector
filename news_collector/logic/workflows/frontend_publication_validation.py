@@ -212,14 +212,13 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
     of making a real Ollama call from this CI fixture.
     """
     from news_collector.components.editorial.ai_editor import EditorAgent
+    from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 
     agent = EditorAgent("http://fixture.invalid", "fixture-model")
     agent.category_resolver._classifier = _NullCategoryClassifier()
     agent._critic_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
-    agent._critic_editorial_pass = lambda *args, **kwargs: (  # type: ignore[method-assign]
-        True,
-        None,
-        True,
+    agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(  # type: ignore[method-assign]
+        True
     )
     agent._generate_headlines = lambda *args, **kwargs: dict(  # type: ignore[method-assign]
         _FIXTURE_HEADLINES
@@ -231,7 +230,11 @@ def _build_fixture_editor_agent(*, enrichment_omit_field: str | None = None):
     def _stub_send_prompt(
         prompt: str, system: str | None = None, model: str | None = None
     ) -> str:
-        if enrichment_system_prompt and system == enrichment_system_prompt:
+        if (
+            enrichment_system_prompt
+            and system
+            and system.startswith(enrichment_system_prompt)
+        ):
             return enrichment_response
         return _FIXTURE_ARTICLE_BODY
 
