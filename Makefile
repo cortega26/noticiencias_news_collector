@@ -235,7 +235,7 @@ docs-review: bootstrap ## Changed-file gate: protected code changes require an a
 
 format: lint-fix ## Alias for auto-formatting helpers
 
-type: typecheck ## Alias for static type checking (mypy)
+type: typecheck ## Run incremental mypy plus unit coverage ratchet
 
 quality-gate: bootstrap ## Run snapshot-first quality gate (No LLM required)
 	@$(PYTHON) scripts/quality_gate.py
@@ -254,18 +254,15 @@ MYPY_TARGETS := scripts/generate_api_docs.py \
 news_collector/utils/logger.py \
 news_collector/utils/url_canonicalizer.py
 
-typecheck: bootstrap ## Static type checking with mypy (incremental coverage)
+typecheck: bootstrap ## Static mypy check plus unit tests and coverage ratchet
 	@$(PYTHON_BIN) -m mypy --config-file=pyproject.toml $(MYPY_TARGETS)
 
 	@mkdir -p $(COVERAGE_DIR)
-	# The ratchet baseline includes unit, integration, pipeline E2E, and perf
-	# coverage. Keep each suite in its own Make target for diagnosis, but use
-	# the full collection here so the comparison remains like-for-like.
-	@$(PYTEST) --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
-	@COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
+	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
+	@COVERAGE_PROFILE=unit COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
 
 test: bootstrap ## Run unit tests (excludes integration, pipeline E2E, and performance suites)
-	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf"
+	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --no-cov
 
 test-all: bootstrap ## Run all tests including slow e2e pipeline
 	# Keep unit, integration, pipeline E2E, and performance results separate.

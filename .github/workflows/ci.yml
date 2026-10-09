@@ -40,13 +40,28 @@ jobs:
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
-      - name: Type check
+      - name: Checkout front-end schema (sparse)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cortega26/noticiencias
+          path: .tmp/frontend-schema
+          sparse-checkout: |
+            src/content.config.ts
+          sparse-checkout-cone-mode: false
+      - name: Make frontend schema available at expected path
+        run: |
+          mkdir -p ../noticiencias/src
+          cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
+          rm -rf .tmp/frontend-schema
+      - name: Type check and unit coverage
+        env:
+          CI_EXPECTED_FRONTEND_SCHEMA: "1"
         run: make type
-      - name: Upload full-suite coverage report
+      - name: Upload unit coverage report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: coverage-reports-full
+          name: coverage-reports-unit
           path: reports/coverage
           if-no-files-found: warn
 
@@ -161,26 +176,10 @@ jobs:
           mkdir -p ../noticiencias/src
           cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
           rm -rf .tmp/frontend-schema
-      - name: Run tests
+      - name: Run unit tests
         env:
           CI_EXPECTED_FRONTEND_SCHEMA: "1"
-        run: |
-          set -euo pipefail
-          mkdir -p reports/coverage
-          .venv/bin/pytest tests \
-            --ignore=tests/integration \
-            --ignore=tests/e2e_pipeline \
-            --ignore=tests/perf \
-            -m "not e2e and not perf" \
-            --cov-report=xml:reports/coverage/coverage.xml \
-            --cov-report=html:reports/coverage/html
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: coverage-reports-unit
-          path: reports/coverage
-          if-no-files-found: warn
+        run: make test
 
   integration:
     name: Integration tests
@@ -221,7 +220,7 @@ jobs:
       - name: Download coverage artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: coverage-reports-full
+          name: coverage-reports-unit
           path: reports/coverage
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
@@ -235,6 +234,7 @@ jobs:
         env:
           COVERAGE_XML: reports/coverage/coverage.xml
           BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+          COVERAGE_PROFILE: unit
         run: |
           REF="${BASE_REF:-origin/main}"
           bash scripts/coverage_ratcheter.sh check --base-ref "$REF"
