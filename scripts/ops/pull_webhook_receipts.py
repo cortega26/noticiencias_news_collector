@@ -258,28 +258,31 @@ def _validate_page(rows: List[Dict[str, Any]], after_id: Optional[int]) -> int:
     return previous
 
 
-def _apply_one_claimed(
+def _mark_malformed_claim(
     receipt: WebhookPullReceiptView,
-    db: DatabaseManager,
+    repo,
     summary: PullSummary,
 ) -> bool:
-    """Apply and settle one leased row; keep failures retryable."""
-    repo = db.webhook_pull_receipts
-    raw_row = receipt.payload
-    if not isinstance(raw_row, dict):
+    summary.failed += 1
+    summary.malformed += 1
+    settled = repo.mark_failed(
+        receipt.id,
+        receipt.lease_token or "",
+        "malformed:staged_payload_not_object",
+    )
+    if not settled:
+        logger.warning("Could not settle a leased hosted receipt row")
         summary.failed += 1
-        summary.malformed += 1
-        settled = repo.mark_failed(
-            receipt.id,
-            receipt.lease_token or "",
-            "malformed:staged_payload_not_object",
-        )
-        if not settled:
-            logger.warning("Could not settle a leased hosted receipt row")
-            summary.failed += 1
-        return False
+    return False
 
-    applied, error = _replay_receipt(raw_row, db, summary)
+
+def _settle_claimed(
+    receipt: WebhookPullReceiptView,
+    repo,
+    summary: PullSummary,
+    applied: bool,
+    error: str | None,
+) -> bool:
     if applied:
         settled = repo.mark_processed(receipt.id, receipt.lease_token or "")
     else:
@@ -288,9 +291,31 @@ def _apply_one_claimed(
             receipt.lease_token or "",
             error or "handler_did_not_process",
         )
-    if not settled:
-        summary.failed += 1
-        logger.warning("Could not settle a leased hosted receipt row")
+    if settled:
+        return True
+    summary.failed += 1
+    logger.warning("Could not settle a leased hosted receipt row")
+    return False
+
+
+def _apply_one_claimed(
+    receipt: WebhookPullReceiptView,
+    db: DatabaseManager,
+    summary: PullSummary,
+) -> bool:
+    """Apply and settle one leased row; keep failures retryable."""
+    raw_row = receipt.payload
+    if not isinstance(raw_row, dict):
+        return _mark_malformed_claim(receipt, db.webhook_pull_receipts, summary)
+
+    applied, error = _replay_receipt(raw_row, db, summary)
+    if not _settle_claimed(
+        receipt,
+        db.webhook_pull_receipts,
+        summary,
+        applied,
+        error,
+    ):
         return False
     return applied
 
