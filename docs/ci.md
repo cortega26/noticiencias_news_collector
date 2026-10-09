@@ -28,10 +28,10 @@ Current jobs:
 - `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet)
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
-- `test` — unit suite with coverage XML; integration, E2E, and performance run in separate jobs
+- `test` — `make test` unit suite without coverage; integration, E2E, and performance run in separate jobs
 - `integration` — `make test-integration` (integration directory and root tests marked `e2e`)
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
-- `coverage` — coverage ratchet vs base branch
+- `coverage` — ratchet the unit coverage artifact from `type` against the unit profile baseline
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
