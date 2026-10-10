@@ -546,7 +546,7 @@ def _transition_correlated_attempt(
         )
         .values(state=target_state, finished_at=now)
     )
-    return result.rowcount == 1
+    return bool(result.rowcount == 1)
 
 
 def _correlated_check_pass_conflict(
