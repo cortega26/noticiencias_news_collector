@@ -132,7 +132,9 @@ def test_frontend_validation_failure_is_classified_for_taxonomy_and_permalink(
     assert permalink_payload["overall_failure_class"] == "permalink_collision"
 
 
-def test_recovery_scenario_records_publishing_recovery(tmp_path: Path) -> None:
+def test_recovery_without_artifact_falls_back_to_normal_publication(
+    tmp_path: Path,
+) -> None:
     bundle_root = tmp_path / "stuck_publishing_recovery"
     summary = run_pipeline_e2e_scenario(
         FIXTURE_DIR / "stuck_publishing_recovery.json",
@@ -140,12 +142,13 @@ def test_recovery_scenario_records_publishing_recovery(tmp_path: Path) -> None:
     )
 
     assert summary.success is True
+    assert summary.frontend_validation_summary_path is not None
     publication_attempt = json.loads(
         Path(summary.publication_attempt_summary_path).read_text(encoding="utf-8")
     )
     stage_names = [stage["name"] for stage in publication_attempt["stages"]]
-    assert "publishing_recovery" in stage_names
-    assert summary.frontend_validation_summary_path is None
+    assert "publishing_recovery" not in stage_names
+    assert "editor_refinement" in stage_names
 
 
 def test_happy_path_captures_generated_markdown_artifact(tmp_path: Path) -> None:

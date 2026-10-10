@@ -45,6 +45,8 @@ logger = get_logger().create_module_logger(__name__)
 def handle_webhook_event(
     event: AnyWebhookEvent,
     db: DatabaseManager,
+    *,
+    retry_business_attention: bool = False,
 ) -> Dict[str, Any]:
     """Persist one delivery, then process it at most once per delivery key.
 
@@ -66,7 +68,13 @@ def handle_webhook_event(
         event_type=event.event,
         payload=event.model_dump(mode="json", by_alias=True),
     )
-    if not created and receipt.status == "processed":
+    retry_prior_attention = bool(
+        retry_business_attention
+        and isinstance(receipt.result, dict)
+        and receipt.result.get("needs_attention")
+        and receipt.result.get("retryable")
+    )
+    if not created and receipt.status == "processed" and not retry_prior_attention:
         logger.info(
             "Duplicate webhook delivery {} ({}) — returning stored result.",
             delivery_key,
@@ -78,6 +86,12 @@ def handle_webhook_event(
             "duplicate": True,
             "result": receipt.result or {},
         }
+    if retry_prior_attention:
+        logger.info(
+            "Retrying correlated callback delivery {} after its prior business "
+            "outcome was retryable.",
+            delivery_key,
+        )
 
     receipts.mark_processing(delivery_key)
     try:
@@ -92,6 +106,27 @@ def handle_webhook_event(
         )
         receipts.mark_failed(delivery_key, f"{type(exc).__name__}: {exc}")
         return {"accepted": True, "event": event.event, "processed": False}
+
+    if result.get("needs_attention"):
+        logger.error(
+            "Webhook receipt {} was stored/processed at the transport layer, "
+            "but its publication business outcome needs attention (action={}).",
+            delivery_key,
+            result.get("action", "unknown"),
+        )
+        if retry_business_attention and result.get("retryable"):
+            reason = str(result.get("reason", "correlation_pending"))[:200]
+            receipts.mark_failed(
+                delivery_key,
+                f"business_attention_retryable:{reason}",
+                result=result,
+            )
+            return {
+                "accepted": True,
+                "event": event.event,
+                "processed": False,
+                "result": result,
+            }
 
     receipts.mark_processed(delivery_key, result)
     return {"accepted": True, "event": event.event, "result": result}

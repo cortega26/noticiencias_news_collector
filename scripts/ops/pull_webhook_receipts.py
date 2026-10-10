@@ -74,6 +74,7 @@ class PullSummary:
     duplicates: int = 0
     failed: int = 0
     malformed: int = 0
+    business_attention: int = 0
     pending: int = 0
     truncated: bool = False
     dry_run: bool = False
@@ -214,7 +215,7 @@ def _replay_receipt(
         return True, None
 
     try:
-        result = handle_webhook_event(event, db)
+        result = handle_webhook_event(event, db, retry_business_attention=True)
     except Exception as exc:  # preserve the failure and retry the staged row
         summary.failed += 1
         logger.warning(
@@ -225,6 +226,13 @@ def _replay_receipt(
     if not isinstance(result, dict):
         summary.failed += 1
         return False, "handler_returned_invalid_result"
+    business_result = result.get("result")
+    if isinstance(business_result, dict) and business_result.get("needs_attention"):
+        summary.business_attention += 1
+        if business_result.get("retryable"):
+            summary.failed += 1
+            reason = str(business_result.get("reason", "correlation_pending"))[:120]
+            return False, f"business_attention_retryable:{reason}"
     if result.get("duplicate"):
         summary.duplicates += 1
     elif result.get("processed", True) is False or "result" not in result:
@@ -481,6 +489,7 @@ def _print_summary(summary: PullSummary) -> None:
     print(f"[pull-webhooks] duplicates={summary.duplicates}")
     print(f"[pull-webhooks] failed={summary.failed}")
     print(f"[pull-webhooks] malformed={summary.malformed}")
+    print(f"[pull-webhooks] business_attention={summary.business_attention}")
     print(f"[pull-webhooks] pending={summary.pending}")
     print(f"[pull-webhooks] truncated={str(summary.truncated).lower()}")
     if summary.dry_run:
@@ -531,7 +540,7 @@ def main() -> int:
     _print_summary(summary)
     if summary.failed or summary.malformed:
         return 1
-    if summary.pending or summary.truncated:
+    if summary.pending or summary.truncated or summary.business_attention:
         return 2
     return 0
 

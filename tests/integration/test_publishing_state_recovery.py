@@ -10,6 +10,7 @@ test_publishing_state_recovery_without_pr:
     succeed.
 """
 
+import hashlib
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -60,6 +61,7 @@ class TestPublishingStateRecoveryWithExistingPR:
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": datetime.now(timezone.utc).isoformat(),
             "publishing_branch": "content/update-2024-01-01-test-article",
+            "publication_attempt_id": "existing-attempt-token",
         }
 
         # A-04 logic: create_pull_request returns existing PR URL on 422
@@ -74,7 +76,11 @@ class TestPublishingStateRecoveryWithExistingPR:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
+            target_dir = Path(tmpdir)
+            artifact = target_dir / "src/content/posts/2024-01-01-test-article.md"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"recovered exact markdown\n")
+            result = engine.process_single_article(article, MagicMock(), target_dir)
 
         assert result is True
         # Recovery should have called create_pull_request with the publishing branch
@@ -82,9 +88,12 @@ class TestPublishingStateRecoveryWithExistingPR:
         call_kwargs = mock_git.create_pull_request.call_args
         assert call_kwargs[1]["branch_name"] == "content/update-2024-01-01-test-article"
         # Should have marked article as published
-        mock_db.mark_article_published.assert_called_once_with(
-            123, existing_pr_url, "123"
-        )
+        published_call = mock_db.mark_article_published.call_args
+        assert published_call.args == (123, existing_pr_url, "123")
+        assert published_call.kwargs == {
+            "publication_attempt_id": "existing-attempt-token",
+            "content_sha256": hashlib.sha256(b"recovered exact markdown\n").hexdigest(),
+        }
         # Should NOT have gone through normal processing (no editor call)
         mock_editor.process_article.assert_not_called()
 
@@ -113,11 +122,21 @@ class TestPublishingStateRecoveryWithoutPR:
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = engine.process_single_article(article, MagicMock(), Path(tmpdir))
+            target_dir = Path(tmpdir)
+            artifact = target_dir / "src/content/posts/2024-01-01-new-article.md"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"legacy recovered markdown\n")
+            result = engine.process_single_article(article, MagicMock(), target_dir)
 
         assert result is True
         mock_git.create_pull_request.assert_called_once()
-        mock_db.mark_article_published.assert_called_once_with(456, new_pr_url, "456")
+        published_call = mock_db.mark_article_published.call_args
+        assert published_call.args == (456, new_pr_url, "456")
+        assert published_call.kwargs["publication_attempt_id"]
+        assert (
+            published_call.kwargs["content_sha256"]
+            == hashlib.sha256(b"legacy recovered markdown\n").hexdigest()
+        )
         mock_editor.process_article.assert_not_called()
 
 

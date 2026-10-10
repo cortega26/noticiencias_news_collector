@@ -8,13 +8,40 @@ frontend CI pipelines (Content Guard, GitHub Pages deploy).
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 _MAX_PUBLICATION_IDS = 200
+_MAX_PUBLICATION_ATTEMPT_REFS = 200
 _MAX_DELIVERY_ID_LENGTH = 128
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+class PublicationAttemptRef(BaseModel):
+    """Content-level evidence that identifies one stored PR attempt."""
+
+    refinery_id: str = Field(min_length=1, max_length=100)
+    pull_request_number: int = Field(gt=0, strict=True)
+    content_sha256: str = Field(min_length=64, max_length=64)
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("refinery_id")
+    @classmethod
+    def _validate_refinery_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("refinery_id must not be blank")
+        return value.strip()
+
+    @field_validator("content_sha256")
+    @classmethod
+    def _validate_content_sha256(cls, value: str) -> str:
+        if not _SHA256_RE.fullmatch(value):
+            raise ValueError("content_sha256 must be a lowercase SHA-256 digest")
+        return value
 
 
 class DiagnosticResult(BaseModel):
@@ -45,6 +72,14 @@ class FrontendWebhookEvent(BaseModel):
         default_factory=list,
         description="Stable refinery_ids identifying articles in this callback event. "
         "Required for publication-state mutations.",
+    )
+    publication_attempt_refs: List[PublicationAttemptRef] = Field(
+        default_factory=list,
+        description=(
+            "Per-post deployment evidence: stable refinery_id, originating "
+            "GitHub PR number, and SHA-256 of the exact post bytes. These "
+            "fields distinguish retries that share a refinery_id."
+        ),
     )
     delivery_id: Optional[str] = Field(
         default=None,
@@ -79,6 +114,36 @@ class FrontendWebhookEvent(BaseModel):
                 f"{_MAX_DELIVERY_ID_LENGTH} characters"
             )
         return v
+
+    @field_validator("publication_attempt_refs")
+    @classmethod
+    def _validate_publication_attempt_refs(
+        cls, refs: List[PublicationAttemptRef]
+    ) -> List[PublicationAttemptRef]:
+        if len(refs) > _MAX_PUBLICATION_ATTEMPT_REFS:
+            raise ValueError(
+                "publication_attempt_refs must not exceed "
+                f"{_MAX_PUBLICATION_ATTEMPT_REFS} entries"
+            )
+        refinery_ids = [ref.refinery_id for ref in refs]
+        if len(refinery_ids) != len(set(refinery_ids)):
+            raise ValueError(
+                "publication_attempt_refs must contain at most one attempt "
+                "per refinery_id"
+            )
+        return refs
+
+    @model_validator(mode="after")
+    def _attempt_refs_must_name_publication_ids(self):
+        unknown_ids = {ref.refinery_id for ref in self.publication_attempt_refs} - set(
+            self.publication_ids
+        )
+        if unknown_ids:
+            raise ValueError(
+                "publication_attempt_refs refinery_id values must also appear "
+                "in publication_ids"
+            )
+        return self
 
 
 class ValidationResultEvent(FrontendWebhookEvent):
@@ -137,6 +202,13 @@ def compute_delivery_key(event: AnyWebhookEvent) -> str:
             event.branch,
             event.status,
             ",".join(sorted(event.publication_ids)),
+            ",".join(
+                sorted(
+                    f"{ref.refinery_id}:{ref.pull_request_number}:"
+                    f"{ref.content_sha256}"
+                    for ref in event.publication_attempt_refs
+                )
+            ),
             extract_deploy_url(event) or "",
         ]
     )
