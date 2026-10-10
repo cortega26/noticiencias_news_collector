@@ -610,3 +610,5 @@ this file now tracks the current pass over the 18 remaining plans.
 - [ ] Obtain a complete unit/coverage suite result in CI. Local `make type` mypy passed but the full run was interrupted at 47% after watchdog timeouts; targeted follow-up fixed stale expectations, while one unrelated network-dependent reliability test cannot resolve `example.com` in this environment.
 - [ ] Review, publish PR(s), resolve review feedback, verify CI, and integrate via protected-main procedure.
 - [ ] Update only the local timer runtime after merge; verify timer, SQLite integrity, ordinary pull, and no changes to receipts/cursor or article 2422 attempt #1.
+- [x] Address Codacy's long callback/storage methods, duplicate section headings, and oversized Refinery test module without changing callback result shapes.
+- [ ] Rerun targeted callback and lifecycle tests, formatting/lint, boundary and contract gates, then push the reviewed PR update.

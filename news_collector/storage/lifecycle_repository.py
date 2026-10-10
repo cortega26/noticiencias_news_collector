@@ -209,6 +209,14 @@ class PublicationCallbackApplyResult:
     reason: str = ""
 
 
+@dataclass(frozen=True)
+class _CorrelatedCallbackContext:
+    attempt: Any
+    article: Any | None
+    article_metadata: dict[str, Any]
+    current_attempt: bool
+
+
 def _match_callback_attempt(
     session: Any,
     *,
@@ -303,6 +311,56 @@ def _callback_projection_conflict(
     )
 
 
+def _prepare_correlated_callback(
+    session: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+    target_state: str,
+) -> tuple[_CorrelatedCallbackContext | None, PublicationCallbackApplyResult | None]:
+    attempt, match_error = _match_callback_attempt(
+        session,
+        refinery_id=refinery_id,
+        pull_request_number=pull_request_number,
+        content_sha256=content_sha256,
+    )
+    if attempt is None:
+        return None, PublicationCallbackApplyResult(
+            matched=False,
+            transitioned=False,
+            reason=match_error or "attempt_not_found",
+        )
+
+    conflict = _callback_state_conflict(attempt, target_state)
+    if conflict is not None:
+        return None, conflict
+
+    article = (
+        session.query(_ArticleModel)
+        .filter(_ArticleModel.id == attempt.article_id)
+        .first()
+    )
+    article_metadata, current_attempt = _callback_projection_context(attempt, article)
+    conflict = _callback_projection_conflict(
+        attempt,
+        article,
+        current_attempt=current_attempt,
+        target_state=target_state,
+    )
+    if conflict is not None:
+        return None, conflict
+    return (
+        _CorrelatedCallbackContext(
+            attempt=attempt,
+            article=article,
+            article_metadata=article_metadata,
+            current_attempt=current_attempt,
+        ),
+        None,
+    )
+
+
 def _project_correlated_callback(
     article: Any | None,
     article_metadata: dict[str, Any],
@@ -342,6 +400,222 @@ def _project_correlated_callback(
     article_metadata["publication"] = publication
     article.article_metadata = article_metadata
     return True
+
+
+def _append_correlated_publication_event(
+    session: Any,
+    attempt_id: int,
+    *,
+    event_type: str,
+    occurred_at: datetime,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+    deploy_url: str | None,
+    callback_details: dict[str, Any],
+    article_updated: bool,
+) -> None:
+    session.add(
+        _PublicationEventModel(
+            publication_attempt_id=attempt_id,
+            event_type=event_type,
+            occurred_at=occurred_at,
+            details={
+                **callback_details,
+                "refinery_id": refinery_id,
+                "pull_request_number": pull_request_number,
+                "content_sha256": content_sha256,
+                "deploy_url": deploy_url,
+                "article_projection_updated": article_updated,
+            },
+        )
+    )
+
+
+def _update_correlated_projection_and_record_event(
+    session: Any,
+    attempt: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+    target_state: str,
+    event_type: str,
+    callback_details: dict[str, Any],
+    deploy_url: str | None,
+    article: Any | None,
+    article_metadata: dict[str, Any],
+    current_attempt: bool,
+    now: datetime,
+) -> bool:
+    article_updated = _project_correlated_callback(
+        article,
+        article_metadata,
+        current_attempt=current_attempt,
+        refinery_id=refinery_id,
+        target_state=target_state,
+        callback_details=callback_details,
+        deploy_url=deploy_url,
+        now=now,
+    )
+    _append_correlated_publication_event(
+        session,
+        attempt.id,
+        event_type=event_type,
+        occurred_at=now,
+        refinery_id=refinery_id,
+        pull_request_number=pull_request_number,
+        content_sha256=content_sha256,
+        deploy_url=deploy_url,
+        callback_details=callback_details,
+        article_updated=article_updated,
+    )
+    return article_updated
+
+
+def _concurrent_callback_result(attempt: Any) -> PublicationCallbackApplyResult:
+    return PublicationCallbackApplyResult(
+        matched=True,
+        transitioned=False,
+        attempt_id=attempt.id,
+        state=attempt.state,
+        reason="concurrent_state_change",
+    )
+
+
+def _persist_correlated_publication_callback(
+    session: Any,
+    attempt: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+    target_state: str,
+    event_type: str,
+    callback_details: dict[str, Any],
+    deploy_url: str | None,
+    article: Any | None,
+    article_metadata: dict[str, Any],
+    current_attempt: bool,
+) -> PublicationCallbackApplyResult:
+    now = datetime.now(timezone.utc)
+    changed = _transition_correlated_attempt(
+        session, attempt.id, attempt.state, target_state, now
+    )
+    if not changed:
+        return _concurrent_callback_result(attempt)
+
+    article_updated = _update_correlated_projection_and_record_event(
+        session,
+        attempt,
+        refinery_id=refinery_id,
+        pull_request_number=pull_request_number,
+        content_sha256=content_sha256,
+        target_state=target_state,
+        event_type=event_type,
+        callback_details=callback_details,
+        deploy_url=deploy_url,
+        article=article,
+        article_metadata=article_metadata,
+        current_attempt=current_attempt,
+        now=now,
+    )
+    return PublicationCallbackApplyResult(
+        matched=True,
+        transitioned=True,
+        recorded=True,
+        attempt_id=attempt.id,
+        state=target_state,
+        article_updated=article_updated,
+        reason="transitioned" if article_updated else "attempt_only",
+    )
+
+
+def _transition_correlated_attempt(
+    session: Any,
+    attempt_id: int,
+    from_state: str,
+    target_state: str,
+    now: datetime,
+) -> bool:
+    result = session.execute(
+        update(_PublicationAttemptModel)
+        .where(
+            _PublicationAttemptModel.id == attempt_id,
+            _PublicationAttemptModel.state == from_state,
+        )
+        .values(state=target_state, finished_at=now)
+    )
+    return result.rowcount == 1
+
+
+def _correlated_check_pass_conflict(
+    session: Any, attempt: Any, content_sha256: str
+) -> PublicationCallbackApplyResult | None:
+    if attempt.state in ("REJECTED", "COMPLETED"):
+        return PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="terminal_attempt",
+        )
+
+    prior_passes = (
+        session.query(_PublicationEventModel)
+        .filter(
+            _PublicationEventModel.publication_attempt_id == attempt.id,
+            _PublicationEventModel.event_type == "check_passed",
+        )
+        .all()
+    )
+    already_recorded = any(
+        isinstance(row.details, dict)
+        and row.details.get("content_sha256") == content_sha256
+        for row in prior_passes
+    )
+    if not already_recorded:
+        return None
+    return PublicationCallbackApplyResult(
+        matched=True,
+        transitioned=False,
+        attempt_id=attempt.id,
+        state=attempt.state,
+        reason="already_recorded",
+    )
+
+
+def _append_correlated_check_pass_event(
+    session: Any,
+    attempt: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+    callback_details: dict[str, Any],
+) -> PublicationCallbackApplyResult:
+    now = datetime.now(timezone.utc)
+    session.add(
+        _PublicationEventModel(
+            publication_attempt_id=attempt.id,
+            event_type="check_passed",
+            occurred_at=now,
+            details={
+                **callback_details,
+                "refinery_id": refinery_id,
+                "pull_request_number": pull_request_number,
+                "content_sha256": content_sha256,
+            },
+        )
+    )
+    return PublicationCallbackApplyResult(
+        matched=True,
+        transitioned=False,
+        recorded=True,
+        attempt_id=attempt.id,
+        state=attempt.state,
+        reason="check_passed_recorded",
+    )
 
 
 @dataclass(frozen=True)
@@ -565,20 +839,46 @@ class LifecycleRepository:
         callback_details: dict[str, Any],
         deploy_url: str | None = None,
     ) -> PublicationCallbackApplyResult:
-        """Apply one frontend callback to exactly one matching PR artifact.
-
-        The callback identity is the stable article id plus the originating PR
-        and SHA-256 of the exact markdown file. All three are required because
-        one article may have several publication attempts and one PR may update
-        a post more than once. Ambiguous or unmatched evidence never mutates
-        state. The attempt transition, audit event, and current-article
-        projection update share one SQLite transaction.
-        """
-        transition_events = {"REJECTED": "rejected", "COMPLETED": "deployed"}
-        event_type = transition_events.get(target_state)
+        """Apply a callback only to its uniquely correlated PR artifact."""
+        event_type = {"REJECTED": "rejected", "COMPLETED": "deployed"}.get(target_state)
         if event_type is None:
             raise ValueError(f"Unsupported callback target state: {target_state!r}")
 
+        with self._session() as session:
+            context, failure = _prepare_correlated_callback(
+                session,
+                refinery_id=refinery_id,
+                pull_request_number=pull_request_number,
+                content_sha256=content_sha256,
+                target_state=target_state,
+            )
+            if failure is not None:
+                return failure
+            assert context is not None
+            return _persist_correlated_publication_callback(
+                session,
+                context.attempt,
+                refinery_id=refinery_id,
+                pull_request_number=pull_request_number,
+                content_sha256=content_sha256,
+                target_state=target_state,
+                event_type=event_type,
+                callback_details=callback_details,
+                deploy_url=deploy_url,
+                article=context.article,
+                article_metadata=context.article_metadata,
+                current_attempt=context.current_attempt,
+            )
+
+    def record_correlated_check_passed(
+        self,
+        *,
+        refinery_id: str,
+        pull_request_number: int,
+        content_sha256: str,
+        callback_details: dict[str, Any],
+    ) -> PublicationCallbackApplyResult:
+        """Record one exact content-check pass without changing attempt state."""
         with self._session() as session:
             attempt, match_error = _match_callback_attempt(
                 session,
@@ -592,168 +892,16 @@ class LifecycleRepository:
                     transitioned=False,
                     reason=match_error or "attempt_not_found",
                 )
-            state_conflict = _callback_state_conflict(attempt, target_state)
-            if state_conflict is not None:
-                return state_conflict
-
-            article = (
-                session.query(_ArticleModel)
-                .filter(_ArticleModel.id == attempt.article_id)
-                .first()
-            )
-            article_metadata, current_attempt = _callback_projection_context(
-                attempt, article
-            )
-            projection_conflict = _callback_projection_conflict(
-                attempt,
-                article,
-                current_attempt=current_attempt,
-                target_state=target_state,
-            )
-            if projection_conflict is not None:
-                return projection_conflict
-
-            now = datetime.now(timezone.utc)
-            cas = session.execute(
-                update(_PublicationAttemptModel)
-                .where(
-                    _PublicationAttemptModel.id == attempt.id,
-                    _PublicationAttemptModel.state == attempt.state,
-                )
-                .values(state=target_state, finished_at=now)
-            )
-            if cas.rowcount != 1:
-                return PublicationCallbackApplyResult(
-                    matched=True,
-                    transitioned=False,
-                    attempt_id=attempt.id,
-                    state=attempt.state,
-                    reason="concurrent_state_change",
-                )
-
-            article_updated = _project_correlated_callback(
-                article,
-                article_metadata,
-                current_attempt=current_attempt,
-                refinery_id=refinery_id,
-                target_state=target_state,
-                callback_details=callback_details,
-                deploy_url=deploy_url,
-                now=now,
-            )
-
-            event_details = {
-                **callback_details,
-                "refinery_id": refinery_id,
-                "pull_request_number": pull_request_number,
-                "content_sha256": content_sha256,
-                "deploy_url": deploy_url,
-                "article_projection_updated": article_updated,
-            }
-            session.add(
-                _PublicationEventModel(
-                    publication_attempt_id=attempt.id,
-                    event_type=event_type,
-                    occurred_at=now,
-                    details=event_details,
-                )
-            )
-            return PublicationCallbackApplyResult(
-                matched=True,
-                transitioned=True,
-                recorded=True,
-                attempt_id=attempt.id,
-                state=target_state,
-                article_updated=article_updated,
-                reason=("transitioned" if article_updated else "attempt_only"),
-            )
-
-    def record_correlated_check_passed(
-        self,
-        *,
-        refinery_id: str,
-        pull_request_number: int,
-        content_sha256: str,
-        callback_details: dict[str, Any],
-    ) -> PublicationCallbackApplyResult:
-        """Record one exact content-check pass without changing attempt state."""
-        if not refinery_id.strip():
-            return PublicationCallbackApplyResult(
-                matched=False, transitioned=False, reason="invalid_refinery_id"
-            )
-
-        with self._session() as session:
-            matches = _find_correlated_attempts(
+            conflict = _correlated_check_pass_conflict(session, attempt, content_sha256)
+            if conflict is not None:
+                return conflict
+            return _append_correlated_check_pass_event(
                 session,
+                attempt,
                 refinery_id=refinery_id,
                 pull_request_number=pull_request_number,
                 content_sha256=content_sha256,
-            )
-            if not matches:
-                return PublicationCallbackApplyResult(
-                    matched=False,
-                    transitioned=False,
-                    reason="attempt_not_found",
-                )
-            if len(matches) != 1:
-                return PublicationCallbackApplyResult(
-                    matched=False,
-                    transitioned=False,
-                    reason="ambiguous_attempt_reference",
-                )
-
-            attempt = matches[0]
-            if attempt.state in ("REJECTED", "COMPLETED"):
-                return PublicationCallbackApplyResult(
-                    matched=True,
-                    transitioned=False,
-                    attempt_id=attempt.id,
-                    state=attempt.state,
-                    reason="terminal_attempt",
-                )
-
-            prior_passes = (
-                session.query(_PublicationEventModel)
-                .filter(
-                    _PublicationEventModel.publication_attempt_id == attempt.id,
-                    _PublicationEventModel.event_type == "check_passed",
-                )
-                .all()
-            )
-            if any(
-                isinstance(row.details, dict)
-                and row.details.get("content_sha256") == content_sha256
-                for row in prior_passes
-            ):
-                return PublicationCallbackApplyResult(
-                    matched=True,
-                    transitioned=False,
-                    attempt_id=attempt.id,
-                    state=attempt.state,
-                    reason="already_recorded",
-                )
-
-            now = datetime.now(timezone.utc)
-            session.add(
-                _PublicationEventModel(
-                    publication_attempt_id=attempt.id,
-                    event_type="check_passed",
-                    occurred_at=now,
-                    details={
-                        **callback_details,
-                        "refinery_id": refinery_id,
-                        "pull_request_number": pull_request_number,
-                        "content_sha256": content_sha256,
-                    },
-                )
-            )
-            return PublicationCallbackApplyResult(
-                matched=True,
-                transitioned=False,
-                recorded=True,
-                attempt_id=attempt.id,
-                state=attempt.state,
-                reason="check_passed_recorded",
+                callback_details=callback_details,
             )
 
     @staticmethod

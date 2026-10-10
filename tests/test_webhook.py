@@ -15,6 +15,11 @@ from news_collector.storage.models import Article
 
 pytestmark = pytest.mark.e2e
 
+_REFINERY_ID = "refinery-test-123"
+_ATTEMPT_ID = "fixture-attempt-123"
+_CONTENT_SHA256 = "a" * 64
+_PULL_REQUEST_URL = "https://github.com/cortega26/noticiencias/pull/99"
+
 
 @pytest.fixture()
 def db_manager(tmp_path) -> DatabaseManager:
@@ -29,17 +34,23 @@ def db_manager(tmp_path) -> DatabaseManager:
             source_id="test-source",
             source_name="Test Source",
             category="science",
-            processing_status="publishing",
-            article_metadata={
-                "publishing_branch": "publish/test-article-123",
-                "publication": {
-                    "state": "PR_CREATED",
-                    "pr_url": "https://github.com/cortega26/noticiencias/pull/99",
-                    "refinery_id": "refinery-test-123",
-                },
-            },
+            processing_status="pending",
         )
         session.add(article)
+        session.flush()
+        article_id = article.id
+    manager.mark_article_publishing(
+        article_id,
+        "publish/test-article-123",
+        publication_attempt_id=_ATTEMPT_ID,
+    )
+    manager.mark_article_published(
+        article_id,
+        _PULL_REQUEST_URL,
+        _REFINERY_ID,
+        publication_attempt_id=_ATTEMPT_ID,
+        content_sha256=_CONTENT_SHA256,
+    )
     try:
         yield manager
     finally:
@@ -357,6 +368,7 @@ def _make_validation_payload(
         "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/123"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "publication_ids": publication_ids or [],
+        "publication_attempt_refs": _attempt_refs(publication_ids),
     }
 
 
@@ -382,7 +394,20 @@ def _make_publish_payload(
         "run_url": ("https://github.com/cortega26/noticiencias/actions/runs/456"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "publication_ids": publication_ids or [],
+        "publication_attempt_refs": _attempt_refs(publication_ids),
     }
+
+
+def _attempt_refs(publication_ids: list[str] | None) -> list[dict[str, object]]:
+    if not publication_ids or _REFINERY_ID not in publication_ids:
+        return []
+    return [
+        {
+            "refinery_id": _REFINERY_ID,
+            "pull_request_number": 99,
+            "content_sha256": _CONTENT_SHA256,
+        }
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -263,8 +263,8 @@ class TestE2EIdempotency:
 
 
 class TestE2ERecovery:
-    def test_e2e_03_stuck_in_publishing_recovery_returns_true(self, tmp_path):
-        """E2E-03: Article stuck in publishing → recovery path returns True."""
+    def test_e2e_03_recovery_without_artifact_does_not_create_pr(self, tmp_path):
+        """Recovery refuses an uncorrelated PR when the artifact is missing."""
         from datetime import timedelta, timezone
 
         engine = _make_engine(tmp_path)
@@ -279,7 +279,8 @@ class TestE2ERecovery:
 
         result = engine.process_single_article(_make_article(), MagicMock(), target_dir)
 
-        assert result is True
+        assert result is False
+        engine.git.create_pull_request.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

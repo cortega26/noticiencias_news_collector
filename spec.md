@@ -493,7 +493,7 @@ or policy compliance.
 
 ## Isolated task: callback attempt correlation and terminal-state integrity (2026-10-10)
 
-### Goals
+### Callback-order goals
 
 - A Content Guard failure can reject only the exact publication attempt whose artifact produced the callback.
 - A successful deployment for a later attempt remains applicable when an older attempt's failure callback is delivered first or late.
@@ -520,7 +520,7 @@ or policy compliance.
 - Frontend changed-post reference extraction, callback envelope/CLI/workflow integration, narrowly scoped read access to the commit-to-PR association endpoint, and focused contract tests.
 - Regression matrix covers pass then deploy, fail without deploy, old failure vs newer deploy in either delivery order, insufficient correlation, multiple attempts, duplicate deliveries/retries, and unknown article/attempt.
 
-### Verification
+### Callback-order verification
 
 - First add a temporary-SQLite regression that fails on current code for the stale-attempt-failure followed by authentic later deploy sequence. (DONE: reproduced against clean `f61644f` baseline.)
 - Focused backend regression and target-repository writer tests pass after implementation; the duplicate delivery result is explicitly attention-free. Recovery tests also assert the exact artifact hash and preserve a pre-existing workflow UUID.
