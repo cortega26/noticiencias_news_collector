@@ -163,8 +163,15 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   status (the sender's processing outcome says nothing about a consumer with
   its own database), ordered by id — so the local system of record can replay
   them through the same `handle_webhook_event` path (idempotent by delivery
-  key). Pull with `scripts/ops/pull_webhook_receipts.py` / `make
-  webhooks-pull`. Read-only, admin-authenticated.
+  key). `scripts/ops/pull_webhook_receipts.py` / `make webhooks-pull` stages
+  each hosted page in `webhook_pull_receipts` before advancing the durable
+  endpoint cursor in `webhook_pull_cursors`. The cursor proves receipt, not
+  application; staged rows keep their payload and retry lease until the local
+  handler succeeds. Application stays in hosted ID order and stops at the
+  first failed event. For an applying run, exit 0 reports no known pending
+  work, 1 reports a fetch, validation, or apply failure, and 2 reports a cap
+  or pending work; dry-run exit 0 means parse-only and makes no acknowledgments.
+  The endpoint remains read-only and admin-authenticated.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)

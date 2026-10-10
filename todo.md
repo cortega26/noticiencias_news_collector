@@ -589,3 +589,13 @@ this file now tracks the current pass over the 18 remaining plans.
       credentials). Two hazards found and fixed before shipping (a
       dedup-guard regression, a duplicate-PR-recovery risk). Full record
       in `plans/021/spec.md` / `plans/021/todo.md`.
+
+## Isolated task: source-aware editorial review (2026-10-09)
+
+- [x] Add focused tests for source delivery, hostile delimiter text, verdict
+      coherence, and summary fallback classification.
+- [x] Pass bounded original-source reference and source coverage into Stage 4.
+- [x] Update the critic rubric and invalidate old Stage 4 pass checkpoints.
+- [ ] Run focused tests, `make lint`, `make type`, `make test`, and a bounded
+      LLM canary if credentials/runtime are available.
+- [ ] Review diff and obtain an independent review before reporting status.

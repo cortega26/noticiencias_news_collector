@@ -59,6 +59,7 @@ from .lifecycle_repository import LifecycleRepository, map_legacy_audit_outcome
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
 from .webhook_receipt_repository import WebhookReceiptRepository
+from .webhook_pull_repository import WebhookPullReceiptRepository
 
 # Configurar logging para este módulo
 logger = get_logger().create_module_logger(__name__)
@@ -178,6 +179,8 @@ class DatabaseManager:
         self.lifecycle = LifecycleRepository(self)
         # Plan 060 / Phase 5a: durable receipts for frontend webhook deliveries.
         self.webhook_receipts = WebhookReceiptRepository(self)
+        # ADR-0011: durable staging and cursor for the hosted inbox consumer.
+        self.webhook_pull_receipts = WebhookPullReceiptRepository(self)
 
     def _setup_database(self):
         """
