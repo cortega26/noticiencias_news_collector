@@ -599,3 +599,14 @@ this file now tracks the current pass over the 18 remaining plans.
 - [ ] Run focused tests, `make lint`, `make type`, `make test`, and a bounded
       LLM canary if credentials/runtime are available.
 - [ ] Review diff and obtain an independent review before reporting status.
+
+## Isolated task: callback attempt correlation and terminal-state integrity (2026-10-10)
+
+- [x] Reproduce callback ordering defect on isolated SQLite and prove current attempt mutation (fail for attempt 1 rejected attempt 2; later deploy updated=0).
+- [x] Implement backend per-attempt callback reference and atomic transitions, with explicit unmatched outcomes and attention reporting.
+- [x] Add compatible frontend emitter support for attempt references and contract parity coverage without changing the public article schema.
+- [x] Run the focused backend regression matrix, target publication workflow tests, frontend callback audit/build/dist, and backend lint. Exact duplicates remain clean no-ops.
+- [x] Run `make test-contracts` (177), `make test-boundaries` (3), `make quality-gate`, `make lint`, and focused callback/recovery/storage tests; the frontend sender bridge passes 8 tests with its sibling checkout configured.
+- [ ] Obtain a complete unit/coverage suite result in CI. Local `make type` mypy passed but the full run was interrupted at 47% after watchdog timeouts; targeted follow-up fixed stale expectations, while one unrelated network-dependent reliability test cannot resolve `example.com` in this environment.
+- [ ] Review, publish PR(s), resolve review feedback, verify CI, and integrate via protected-main procedure.
+- [ ] Update only the local timer runtime after merge; verify timer, SQLite integrity, ordinary pull, and no changes to receipts/cursor or article 2422 attempt #1.

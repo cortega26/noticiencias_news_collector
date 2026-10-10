@@ -53,6 +53,14 @@ class TestEditorialPolicyEnforcement:
                 "https://github.com/org/repo/pull/1"
             )
             engine.writer.write_article = MagicMock(return_value=MagicMock())
+
+            def write_article(*, posts_dir, output_filename, content, **_kwargs):
+                posts_dir.mkdir(parents=True, exist_ok=True)
+                artifact = posts_dir / output_filename
+                artifact.write_text(content, encoding="utf-8")
+                return artifact
+
+            engine.writer.write_article.side_effect = write_article
             engine._extract_slug = MagicMock(return_value="slug")
             engine._download_image = MagicMock(
                 return_value="~/assets/images/editorial-policy-test.png"

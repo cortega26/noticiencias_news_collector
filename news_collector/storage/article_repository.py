@@ -283,7 +283,13 @@ class ArticleRepository:
     # ------------------------------------------------------------------
 
     def mark_article_published(
-        self, article_id: int, pr_url: str, refinery_id: str | None = None
+        self,
+        article_id: int,
+        pr_url: str,
+        refinery_id: str | None = None,
+        *,
+        publication_attempt_id: str | None = None,
+        content_sha256: str | None = None,
     ) -> bool:
         """Record PR_CREATED publication-attempt state.
 
@@ -325,6 +331,10 @@ class ArticleRepository:
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
+            if publication_attempt_id:
+                publication_meta["publication_attempt_id"] = publication_attempt_id
+            if content_sha256:
+                publication_meta["content_sha256"] = content_sha256
             article_metadata["publication"] = publication_meta
             article.article_metadata = article_metadata
             session.add(article)
@@ -589,7 +599,13 @@ class ArticleRepository:
             )
             return {row[0] for row in rows}
 
-    def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
+    def mark_article_publishing(
+        self,
+        article_id: int,
+        branch_name: str,
+        *,
+        publication_attempt_id: str | None = None,
+    ) -> bool:
         """Mark article as 'publishing' before git operations."""
         with self._session() as session:
             article = session.query(Article).filter(Article.id == article_id).first()
@@ -602,6 +618,8 @@ class ArticleRepository:
                 timezone.utc
             ).isoformat()
             article_metadata["publishing_branch"] = branch_name
+            if publication_attempt_id:
+                article_metadata["publication_attempt_id"] = publication_attempt_id
             article.article_metadata = article_metadata
             session.add(article)
             return True
@@ -630,6 +648,7 @@ class ArticleRepository:
             return {
                 "publishing_started_at": metadata.get("publishing_started_at"),
                 "publishing_branch": metadata.get("publishing_branch"),
+                "publication_attempt_id": metadata.get("publication_attempt_id"),
             }
 
     def release_article_publishing(
@@ -638,6 +657,7 @@ class ArticleRepository:
         *,
         reason: str,
         branch_name: str | None = None,
+        publication_attempt_id: str | None = None,
     ) -> bool:
         """Undo ``mark_article_publishing`` after a clean pre-PR failure.
 
@@ -672,10 +692,21 @@ class ArticleRepository:
                     branch_name,
                 )
                 return False
+            if (
+                publication_attempt_id is not None
+                and metadata.get("publication_attempt_id") != publication_attempt_id
+            ):
+                logger.warning(
+                    "Release skipped for article {}: publication attempt changed.",
+                    article_id,
+                )
+                return False
 
             article.processing_status = "completed"
             metadata.pop("publishing_started_at", None)
             metadata.pop("publishing_branch", None)
+            if publication_attempt_id is not None:
+                metadata.pop("publication_attempt_id", None)
             metadata["publication_released"] = {
                 "reason": reason,
                 "at": datetime.now(timezone.utc).isoformat(),

@@ -32,6 +32,7 @@ as a real ``UPDATE ... WHERE id = ... AND state = ...`` with a rowcount
 check — no schema change, no new ``version`` column.
 """
 
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -42,11 +43,53 @@ from sqlalchemy import func, update
 from news_collector.utils.logger import get_logger
 
 from .models import PUBLICATION_EVENT_TYPE_VALUES
+from .models import Article as _ArticleModel
 from .models import EditorialDecision as _EditorialDecisionModel
 from .models import PublicationAttemptRecord as _PublicationAttemptModel
 from .models import PublicationEvent as _PublicationEventModel
 
 logger = get_logger().create_module_logger(__name__)
+_PULL_REQUEST_PATH_RE = re.compile(r"/pull/([1-9][0-9]*)(?:/.*)?$")
+
+
+def _pull_request_number(pr_url: str | None) -> int | None:
+    if not isinstance(pr_url, str):
+        return None
+    match = _PULL_REQUEST_PATH_RE.search(pr_url.rstrip("/"))
+    return int(match.group(1)) if match else None
+
+
+def _find_correlated_attempts(
+    session: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+) -> list[Any]:
+    attempts = (
+        session.query(_PublicationAttemptModel)
+        .filter(_PublicationAttemptModel.refinery_id == refinery_id)
+        .all()
+    )
+    matches = []
+    for attempt in attempts:
+        if _pull_request_number(attempt.pr_url) != pull_request_number:
+            continue
+        audit_rows = (
+            session.query(_PublicationEventModel)
+            .filter(
+                _PublicationEventModel.publication_attempt_id == attempt.id,
+                _PublicationEventModel.event_type == "pr_created",
+            )
+            .all()
+        )
+        if any(
+            isinstance(row.details, dict)
+            and row.details.get("content_sha256") == content_sha256
+            for row in audit_rows
+        ):
+            matches.append(attempt)
+    return matches
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +194,154 @@ class PublicationEventView:
     occurred_at: datetime
     details: dict[str, Any] | None
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class PublicationCallbackApplyResult:
+    """Auditable result of one attempt-correlated frontend callback."""
+
+    matched: bool
+    transitioned: bool
+    recorded: bool = False
+    attempt_id: int | None = None
+    state: str | None = None
+    article_updated: bool = False
+    reason: str = ""
+
+
+def _match_callback_attempt(
+    session: Any,
+    *,
+    refinery_id: str,
+    pull_request_number: int,
+    content_sha256: str,
+) -> tuple[Any | None, str | None]:
+    if not refinery_id.strip():
+        return None, "invalid_refinery_id"
+    matches = _find_correlated_attempts(
+        session,
+        refinery_id=refinery_id,
+        pull_request_number=pull_request_number,
+        content_sha256=content_sha256,
+    )
+    if not matches:
+        return None, "attempt_not_found"
+    if len(matches) != 1:
+        return None, "ambiguous_attempt_reference"
+    return matches[0], None
+
+
+def _callback_state_conflict(
+    attempt: Any, target_state: str
+) -> PublicationCallbackApplyResult | None:
+    if attempt.state == target_state:
+        return PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="already_applied",
+        )
+    if attempt.state in ("REJECTED", "COMPLETED"):
+        return PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="terminal_state_conflict",
+        )
+    if attempt.state not in ("PUBLISHING", "PR_CREATED"):
+        return PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="attempt_not_in_flight",
+        )
+    return None
+
+
+def _callback_projection_context(
+    attempt: Any, article: Any | None
+) -> tuple[dict[str, Any], bool]:
+    attempt_details = attempt.details if isinstance(attempt.details, dict) else {}
+    attempt_token = attempt_details.get("publication_attempt_id")
+    article_metadata = dict(article.article_metadata or {}) if article else {}
+    current_attempt = bool(attempt_token) and (
+        article_metadata.get("publication_attempt_id") == attempt_token
+    )
+    return article_metadata, current_attempt
+
+
+def _callback_projection_conflict(
+    attempt: Any,
+    article: Any | None,
+    *,
+    current_attempt: bool,
+    target_state: str,
+) -> PublicationCallbackApplyResult | None:
+    if not current_attempt or article is None:
+        return None
+    article_state = article.processing_status
+    conflict_reason = (
+        "article_already_completed"
+        if target_state == "REJECTED" and article_state == "completed"
+        else (
+            "article_already_rejected"
+            if target_state == "COMPLETED" and article_state == "rejected"
+            else None
+        )
+    )
+    if conflict_reason is None:
+        return None
+    return PublicationCallbackApplyResult(
+        matched=True,
+        transitioned=False,
+        attempt_id=attempt.id,
+        state=attempt.state,
+        reason=conflict_reason,
+    )
+
+
+def _project_correlated_callback(
+    article: Any | None,
+    article_metadata: dict[str, Any],
+    *,
+    current_attempt: bool,
+    refinery_id: str,
+    target_state: str,
+    callback_details: dict[str, Any],
+    deploy_url: str | None,
+    now: datetime,
+) -> bool:
+    if (
+        article is None
+        or not current_attempt
+        or article.processing_status != "publishing"
+    ):
+        return False
+
+    publication = dict(article_metadata.get("publication") or {})
+    if publication.get("refinery_id") not in (None, refinery_id):
+        return False
+    if target_state == "REJECTED":
+        article.processing_status = "rejected"
+        publication.update(
+            {
+                "state": "REJECTED",
+                "reason": callback_details.get("reason", ""),
+                "updated_at": now.isoformat(),
+            }
+        )
+    else:
+        article.processing_status = "completed"
+        article.published_at = now
+        if deploy_url:
+            article.published_url = deploy_url
+        publication.update({"state": "COMPLETED", "updated_at": now.isoformat()})
+    article_metadata["publication"] = publication
+    article.article_metadata = article_metadata
+    return True
 
 
 @dataclass(frozen=True)
@@ -363,6 +554,207 @@ class LifecycleRepository:
             occurred_at=occurred_at,
             **fields,
         )
+
+    def apply_correlated_publication_callback(
+        self,
+        *,
+        refinery_id: str,
+        pull_request_number: int,
+        content_sha256: str,
+        target_state: str,
+        callback_details: dict[str, Any],
+        deploy_url: str | None = None,
+    ) -> PublicationCallbackApplyResult:
+        """Apply one frontend callback to exactly one matching PR artifact.
+
+        The callback identity is the stable article id plus the originating PR
+        and SHA-256 of the exact markdown file. All three are required because
+        one article may have several publication attempts and one PR may update
+        a post more than once. Ambiguous or unmatched evidence never mutates
+        state. The attempt transition, audit event, and current-article
+        projection update share one SQLite transaction.
+        """
+        transition_events = {"REJECTED": "rejected", "COMPLETED": "deployed"}
+        event_type = transition_events.get(target_state)
+        if event_type is None:
+            raise ValueError(f"Unsupported callback target state: {target_state!r}")
+
+        with self._session() as session:
+            attempt, match_error = _match_callback_attempt(
+                session,
+                refinery_id=refinery_id,
+                pull_request_number=pull_request_number,
+                content_sha256=content_sha256,
+            )
+            if attempt is None:
+                return PublicationCallbackApplyResult(
+                    matched=False,
+                    transitioned=False,
+                    reason=match_error or "attempt_not_found",
+                )
+            state_conflict = _callback_state_conflict(attempt, target_state)
+            if state_conflict is not None:
+                return state_conflict
+
+            article = (
+                session.query(_ArticleModel)
+                .filter(_ArticleModel.id == attempt.article_id)
+                .first()
+            )
+            article_metadata, current_attempt = _callback_projection_context(
+                attempt, article
+            )
+            projection_conflict = _callback_projection_conflict(
+                attempt,
+                article,
+                current_attempt=current_attempt,
+                target_state=target_state,
+            )
+            if projection_conflict is not None:
+                return projection_conflict
+
+            now = datetime.now(timezone.utc)
+            cas = session.execute(
+                update(_PublicationAttemptModel)
+                .where(
+                    _PublicationAttemptModel.id == attempt.id,
+                    _PublicationAttemptModel.state == attempt.state,
+                )
+                .values(state=target_state, finished_at=now)
+            )
+            if cas.rowcount != 1:
+                return PublicationCallbackApplyResult(
+                    matched=True,
+                    transitioned=False,
+                    attempt_id=attempt.id,
+                    state=attempt.state,
+                    reason="concurrent_state_change",
+                )
+
+            article_updated = _project_correlated_callback(
+                article,
+                article_metadata,
+                current_attempt=current_attempt,
+                refinery_id=refinery_id,
+                target_state=target_state,
+                callback_details=callback_details,
+                deploy_url=deploy_url,
+                now=now,
+            )
+
+            event_details = {
+                **callback_details,
+                "refinery_id": refinery_id,
+                "pull_request_number": pull_request_number,
+                "content_sha256": content_sha256,
+                "deploy_url": deploy_url,
+                "article_projection_updated": article_updated,
+            }
+            session.add(
+                _PublicationEventModel(
+                    publication_attempt_id=attempt.id,
+                    event_type=event_type,
+                    occurred_at=now,
+                    details=event_details,
+                )
+            )
+            return PublicationCallbackApplyResult(
+                matched=True,
+                transitioned=True,
+                recorded=True,
+                attempt_id=attempt.id,
+                state=target_state,
+                article_updated=article_updated,
+                reason=("transitioned" if article_updated else "attempt_only"),
+            )
+
+    def record_correlated_check_passed(
+        self,
+        *,
+        refinery_id: str,
+        pull_request_number: int,
+        content_sha256: str,
+        callback_details: dict[str, Any],
+    ) -> PublicationCallbackApplyResult:
+        """Record one exact content-check pass without changing attempt state."""
+        if not refinery_id.strip():
+            return PublicationCallbackApplyResult(
+                matched=False, transitioned=False, reason="invalid_refinery_id"
+            )
+
+        with self._session() as session:
+            matches = _find_correlated_attempts(
+                session,
+                refinery_id=refinery_id,
+                pull_request_number=pull_request_number,
+                content_sha256=content_sha256,
+            )
+            if not matches:
+                return PublicationCallbackApplyResult(
+                    matched=False,
+                    transitioned=False,
+                    reason="attempt_not_found",
+                )
+            if len(matches) != 1:
+                return PublicationCallbackApplyResult(
+                    matched=False,
+                    transitioned=False,
+                    reason="ambiguous_attempt_reference",
+                )
+
+            attempt = matches[0]
+            if attempt.state in ("REJECTED", "COMPLETED"):
+                return PublicationCallbackApplyResult(
+                    matched=True,
+                    transitioned=False,
+                    attempt_id=attempt.id,
+                    state=attempt.state,
+                    reason="terminal_attempt",
+                )
+
+            prior_passes = (
+                session.query(_PublicationEventModel)
+                .filter(
+                    _PublicationEventModel.publication_attempt_id == attempt.id,
+                    _PublicationEventModel.event_type == "check_passed",
+                )
+                .all()
+            )
+            if any(
+                isinstance(row.details, dict)
+                and row.details.get("content_sha256") == content_sha256
+                for row in prior_passes
+            ):
+                return PublicationCallbackApplyResult(
+                    matched=True,
+                    transitioned=False,
+                    attempt_id=attempt.id,
+                    state=attempt.state,
+                    reason="already_recorded",
+                )
+
+            now = datetime.now(timezone.utc)
+            session.add(
+                _PublicationEventModel(
+                    publication_attempt_id=attempt.id,
+                    event_type="check_passed",
+                    occurred_at=now,
+                    details={
+                        **callback_details,
+                        "refinery_id": refinery_id,
+                        "pull_request_number": pull_request_number,
+                        "content_sha256": content_sha256,
+                    },
+                )
+            )
+            return PublicationCallbackApplyResult(
+                matched=True,
+                transitioned=False,
+                recorded=True,
+                attempt_id=attempt.id,
+                state=attempt.state,
+                reason="check_passed_recorded",
+            )
 
     @staticmethod
     def _audited_transition_is_legal(

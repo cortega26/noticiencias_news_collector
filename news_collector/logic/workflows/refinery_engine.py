@@ -429,7 +429,7 @@ class RefineryEngine:
         article = self._normalize_article_payload(article)
 
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
-        if self._attempt_publishing_recovery(article_id, article, run):
+        if self._attempt_publishing_recovery(article_id, article, target_dir, run):
             return True
 
         # 1. Canonical Identity Check (Idempotency)
@@ -513,7 +513,11 @@ class RefineryEngine:
             return _CONTRACT_REJECTED
 
     def _attempt_publishing_recovery(
-        self, article_id: str, article: Dict[str, Any], run: "_PublicationRun"
+        self,
+        article_id: str,
+        article: Dict[str, Any],
+        target_dir: Path,
+        run: "_PublicationRun",
     ) -> bool:
         """B-01 / F-0012, F-0015: recover an article stuck in `publishing`.
 
@@ -530,6 +534,7 @@ class RefineryEngine:
                 article_id=article_id,
                 article=article,
                 git_handler=self.git,
+                target_dir=target_dir,
             )
             if recovery_result is not None:
                 run.pr_url = recovery_result.pr_url

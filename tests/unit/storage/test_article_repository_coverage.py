@@ -197,6 +197,7 @@ def test_release_article_publishing_restores_publishable_state(db_manager):
     assert state == {
         "publishing_started_at": state["publishing_started_at"],
         "publishing_branch": "content/update-x",
+        "publication_attempt_id": None,
     }
 
     # Ownership token mismatch: a stale run must not release the article.

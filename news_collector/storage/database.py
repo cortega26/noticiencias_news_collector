@@ -58,8 +58,8 @@ from .article_repository import ArticleCursor, ArticlePage, ArticleRepository
 from .lifecycle_repository import LifecycleRepository, map_legacy_audit_outcome
 from .models import PENDING_STATUS, Article
 from .source_repository import SourceRepository
-from .webhook_receipt_repository import WebhookReceiptRepository
 from .webhook_pull_repository import WebhookPullReceiptRepository
+from .webhook_receipt_repository import WebhookReceiptRepository
 
 # Configurar logging para este módulo
 logger = get_logger().create_module_logger(__name__)
@@ -365,9 +365,21 @@ class DatabaseManager:
         return self.articles.articles_exist(urls)
 
     def mark_article_published(
-        self, article_id: int, pr_url: str, refinery_id: str | None = None
+        self,
+        article_id: int,
+        pr_url: str,
+        refinery_id: str | None = None,
+        *,
+        publication_attempt_id: str | None = None,
+        content_sha256: str | None = None,
     ) -> bool:
-        result = self.articles.mark_article_published(article_id, pr_url, refinery_id)
+        result = self.articles.mark_article_published(
+            article_id,
+            pr_url,
+            refinery_id,
+            publication_attempt_id=publication_attempt_id,
+            content_sha256=content_sha256,
+        )
         # Plan 060 / Phase 3c: dual-write into publication_attempts. Gated on
         # the legacy write's own return value — a False result means the
         # article row doesn't exist, and publication_attempts.article_id is
@@ -375,11 +387,23 @@ class DatabaseManager:
         # skipping avoids both the pointless IntegrityError and a lifecycle
         # row for an article the legacy path deliberately skipped.
         if result:
-            self._dual_write_pr_created(article_id, pr_url, refinery_id)
+            self._dual_write_pr_created(
+                article_id,
+                pr_url,
+                refinery_id,
+                publication_attempt_id=publication_attempt_id,
+                content_sha256=content_sha256,
+            )
         return result
 
     def _dual_write_pr_created(
-        self, article_id: int, pr_url: str, refinery_id: str | None
+        self,
+        article_id: int,
+        pr_url: str,
+        refinery_id: str | None,
+        *,
+        publication_attempt_id: str | None = None,
+        content_sha256: str | None = None,
     ) -> None:
         """Best-effort: CAS the latest PUBLISHING row to PR_CREATED (state
         change + ``pr_created`` event, plan 5b), or insert a fresh PR_CREATED
@@ -393,11 +417,29 @@ class DatabaseManager:
         event_details = {
             "pr_url": pr_url,
             "refinery_id": resolved_refinery_id,
+            "content_sha256": content_sha256,
+            "publication_attempt_id": publication_attempt_id,
         }
         try:
             attempts = self.lifecycle.get_publication_attempts_for_article(article_id)
             publishing_attempts = [a for a in attempts if a.state == "PUBLISHING"]
             transitioned = False
+            if publication_attempt_id:
+                publishing_attempts = [
+                    attempt
+                    for attempt in publishing_attempts
+                    if isinstance(attempt.details, dict)
+                    and attempt.details.get("publication_attempt_id")
+                    == publication_attempt_id
+                ]
+                if len(publishing_attempts) != 1:
+                    logger.error(
+                        "Cannot attach PR to publication attempt for article {}: "
+                        "correlation id matched {} PUBLISHING attempts.",
+                        article_id,
+                        len(publishing_attempts),
+                    )
+                    return
             if publishing_attempts:
                 # Tie-break by (attempt_number, id): record_publication_attempt's
                 # default numbering is COUNT(*) + 1, not MAX(attempt_number) + 1,
@@ -649,8 +691,18 @@ class DatabaseManager:
     def published_ids_in(self, article_ids: list[int]) -> set[int]:
         return self.articles.published_ids_in(article_ids)
 
-    def mark_article_publishing(self, article_id: int, branch_name: str) -> bool:
-        result = self.articles.mark_article_publishing(article_id, branch_name)
+    def mark_article_publishing(
+        self,
+        article_id: int,
+        branch_name: str,
+        *,
+        publication_attempt_id: str | None = None,
+    ) -> bool:
+        result = self.articles.mark_article_publishing(
+            article_id,
+            branch_name,
+            publication_attempt_id=publication_attempt_id,
+        )
         # Plan 060 / Phase 3c: dual-write into publication_attempts. Gated
         # on the legacy write's own return value — see mark_article_published
         # above for why (FK ondelete="RESTRICT" on an article row that
@@ -663,6 +715,11 @@ class DatabaseManager:
                     state="PUBLISHING",
                     started_at=datetime.now(timezone.utc),
                     branch_name=branch_name,
+                    details=(
+                        {"publication_attempt_id": publication_attempt_id}
+                        if publication_attempt_id
+                        else None
+                    ),
                 )
             except Exception:
                 logger.exception(
@@ -695,6 +752,7 @@ class DatabaseManager:
         reason: str,
         failure_class: str | None = None,
         branch_name: str | None = None,
+        publication_attempt_id: str | None = None,
     ) -> bool:
         """Release an article from a clean pre-PR ``publishing`` window.
 
@@ -708,12 +766,29 @@ class DatabaseManager:
         other dual-writes in this facade.
         """
         result = self.articles.release_article_publishing(
-            article_id, reason=reason, branch_name=branch_name
+            article_id,
+            reason=reason,
+            branch_name=branch_name,
+            publication_attempt_id=publication_attempt_id,
         )
         if not result:
             return False
         try:
-            latest = self._latest_publishing_attempt(article_id, branch_name)
+            if publication_attempt_id:
+                attempts = self.lifecycle.get_publication_attempts_for_article(
+                    article_id
+                )
+                matches = [
+                    attempt
+                    for attempt in attempts
+                    if attempt.state == "PUBLISHING"
+                    and isinstance(attempt.details, dict)
+                    and attempt.details.get("publication_attempt_id")
+                    == publication_attempt_id
+                ]
+                latest = matches[0] if len(matches) == 1 else None
+            else:
+                latest = self._latest_publishing_attempt(article_id, branch_name)
             if latest is not None:
                 self.lifecycle.apply_publication_transition(
                     latest.id,

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sys
 import tempfile
@@ -117,8 +118,20 @@ class TestRefineryEngine(unittest.TestCase):
             # Check output file write (indirectly via mock path)
             # Note: mocking pathlib iterface is tricky, usually we trust write_text works or use tmp_path fixture.
             # Here we just check logical flow.
-            self.mock_db.mark_article_published.assert_called_with(
-                123, "http://pr.url", "123"
+            published_call = self.mock_db.mark_article_published.call_args
+            self.assertEqual(published_call.args, (123, "http://pr.url", "123"))
+            publication_attempt_id = published_call.kwargs["publication_attempt_id"]
+            self.assertEqual(
+                self.mock_db.mark_article_publishing.call_args.kwargs[
+                    "publication_attempt_id"
+                ],
+                publication_attempt_id,
+            )
+            markdown_files = list((target_dir / "src/content/posts").glob("*.md"))
+            self.assertEqual(len(markdown_files), 1)
+            self.assertEqual(
+                published_call.kwargs["content_sha256"],
+                hashlib.sha256(markdown_files[0].read_bytes()).hexdigest(),
             )
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")

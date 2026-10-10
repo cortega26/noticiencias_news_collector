@@ -9,6 +9,7 @@ real (temporary) SQLite database and an injected page fetcher.
 
 from __future__ import annotations
 
+import hashlib
 import sys
 
 import pytest
@@ -20,6 +21,9 @@ from scripts.ops import pull_webhook_receipts as script
 ARTICLE_URL = "https://example.com/inbox-pull"
 REFINERY_ID = "refinery-inbox-1"
 DEPLOY_URL = "https://noticiencias.com"
+PUBLICATION_ATTEMPT_ID = "inbox-test-attempt"
+PULL_REQUEST_NUMBER = 999
+CONTENT_SHA256 = hashlib.sha256(b"inbox fixture post").hexdigest()
 
 
 @pytest.fixture()
@@ -46,9 +50,17 @@ def _seed_pr_created(db_manager: DatabaseManager) -> int:
         article = session.query(Article).filter_by(url=ARTICLE_URL).first()
         assert article is not None
         article_id = int(article.id)
-    db_manager.mark_article_publishing(article_id, "content/update-inbox")
+    db_manager.mark_article_publishing(
+        article_id,
+        "content/update-inbox",
+        publication_attempt_id=PUBLICATION_ATTEMPT_ID,
+    )
     db_manager.mark_article_published(
-        article_id, "https://github.com/cortega26/noticiencias/pull/999", REFINERY_ID
+        article_id,
+        f"https://github.com/cortega26/noticiencias/pull/{PULL_REQUEST_NUMBER}",
+        REFINERY_ID,
+        publication_attempt_id=PUBLICATION_ATTEMPT_ID,
+        content_sha256=CONTENT_SHA256,
     )
     return article_id
 
@@ -65,6 +77,17 @@ def _publish_payload(publication_ids):
         "frontend_ref": "abc123def",
         "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
         "publication_ids": publication_ids,
+        "publication_attempt_refs": (
+            [
+                {
+                    "refinery_id": REFINERY_ID,
+                    "pull_request_number": PULL_REQUEST_NUMBER,
+                    "content_sha256": CONTENT_SHA256,
+                }
+            ]
+            if REFINERY_ID in publication_ids
+            else []
+        ),
         "delivery_id": "v1:1:publish_complete",
     }
 
@@ -183,7 +206,9 @@ class TestPullReceipts:
             ]
         )
         monkeypatch.setattr(
-            script, "handle_webhook_event", lambda _event, _db: next(outcomes)
+            script,
+            "handle_webhook_event",
+            lambda _event, _db, **_kwargs: next(outcomes),
         )
         payload = _publish_payload([])
 
@@ -222,7 +247,7 @@ class TestPullReceipts:
         second_payload["commit_sha"] = "second-event"
         calls: list[str] = []
 
-        def handler(event, _db):
+        def handler(event, _db, **_kwargs):
             calls.append(event.commit_sha)
             if len(calls) == 1:
                 return {"processed": False}
@@ -257,6 +282,56 @@ class TestPullReceipts:
         assert recovered.replayed == 2
         assert recovered.pending == 0
         assert calls == ["first-event", "first-event", "second-event"]
+
+    def test_retryable_unmatched_callback_reconverges_after_attempt_is_recorded(
+        self, db_manager: DatabaseManager
+    ):
+        endpoint = "https://api.example/v1/admin/webhook/receipts"
+        payload = _publish_payload([REFINERY_ID])
+        fetch, _ = _page_fetcher([[_receipt(7, payload)]])
+
+        first = script.pull_receipts(
+            db_manager,
+            endpoint=endpoint,
+            token="token",
+            fetcher=fetch,
+        )
+
+        assert first.fetched == 1
+        assert first.business_attention == 1
+        assert first.failed == 1
+        assert first.pending == 1
+
+        # The callback arrived before local PR state was committed. Once the
+        # exact attempt exists, ordinary retry of the staged receipt converges.
+        article_id = _seed_pr_created(db_manager)
+        retry = script.pull_receipts(
+            db_manager,
+            endpoint=endpoint,
+            token="token",
+            fetcher=lambda **_kwargs: [],
+        )
+
+        assert retry.fetched == 0
+        assert retry.replayed == 1
+        assert retry.business_attention == 0
+        assert retry.failed == 0
+        assert retry.pending == 0
+        with db_manager.get_session() as session:
+            article = session.query(Article).filter_by(id=article_id).first()
+            assert article is not None
+            assert article.processing_status == "completed"
+            assert article.published_at is not None
+            assert article.published_url == DEPLOY_URL
+        [attempt] = db_manager.lifecycle.get_publication_attempts_for_article(
+            article_id
+        )
+        assert attempt.state == "COMPLETED"
+
+        receipt = db_manager.webhook_receipts.get_receipt("id:v1:1:publish_complete")
+        assert receipt is not None
+        assert receipt.status == "processed"
+        assert receipt.result["needs_attention"] is False
 
     def test_pages_forward_with_after_id_and_stops_on_a_short_page(
         self, db_manager: DatabaseManager
@@ -360,7 +435,7 @@ class TestPullReceipts:
         monkeypatch.setattr(
             script,
             "handle_webhook_event",
-            lambda _event, _db: {"result": {"action": "noop"}},
+            lambda _event, _db, **_kwargs: {"result": {"action": "noop"}},
         )
 
         for _ in range(3):
@@ -530,7 +605,7 @@ class TestPageValidation:
         monkeypatch.setattr(
             script,
             "handle_webhook_event",
-            lambda _event, _db: {"processed": False, "error": "injected"},
+            lambda _event, _db, **_kwargs: {"processed": False, "error": "injected"},
         )
         monkeypatch.setenv("ADMIN_API_KEY", "token")
         monkeypatch.setenv("BACKEND_ADMIN_URL", "https://api.example")

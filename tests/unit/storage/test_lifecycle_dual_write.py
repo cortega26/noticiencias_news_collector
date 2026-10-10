@@ -446,6 +446,8 @@ def test_mark_article_published_cas_appends_pr_created_event(db_manager):
     assert event.details == {
         "pr_url": "https://github.com/pr/ev1",
         "refinery_id": str(article_id),
+        "content_sha256": None,
+        "publication_attempt_id": None,
     }
 
 

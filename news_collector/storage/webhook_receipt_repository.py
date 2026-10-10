@@ -138,7 +138,12 @@ class WebhookReceiptRepository:
             row.processed_at = datetime.now(timezone.utc)
             return True
 
-    def mark_failed(self, delivery_key: str, error: str) -> bool:
+    def mark_failed(
+        self,
+        delivery_key: str,
+        error: str,
+        result: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         """Record a processing failure and keep it operator-visible.
 
         The delivery stays retryable: a replay of the same key reprocesses it.
@@ -150,6 +155,8 @@ class WebhookReceiptRepository:
                 return False
             row.status = "failed"
             row.error = error
+            if result is not None:
+                row.result = result
             row.processed_at = datetime.now(timezone.utc)
             return True
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from concurrent.futures import Future
 from datetime import datetime, timezone
 from pathlib import Path
@@ -82,8 +83,18 @@ def test_pr_created_state_is_persisted_when_optional_audit_times_out(tmp_path: P
     result = engine.process_single_article(article, MagicMock(), tmp_path / "target")
 
     assert result is True
-    mock_db.mark_article_published.assert_called_once_with(
-        1087, "https://example.test/pr/1087", "1087"
+    published_call = mock_db.mark_article_published.call_args
+    assert published_call.args == (1087, "https://example.test/pr/1087", "1087")
+    publication_attempt_id = published_call.kwargs["publication_attempt_id"]
+    assert (
+        publication_attempt_id
+        == mock_db.mark_article_publishing.call_args.kwargs["publication_attempt_id"]
+    )
+    markdown_files = list((tmp_path / "target/src/content/posts").glob("*.md"))
+    assert len(markdown_files) == 1
+    assert (
+        published_call.kwargs["content_sha256"]
+        == hashlib.sha256(markdown_files[0].read_bytes()).hexdigest()
     )
 
     audit_states = [

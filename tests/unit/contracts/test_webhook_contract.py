@@ -104,6 +104,70 @@ def test_publication_ids_rejects_empty_strings():
         ValidationResultEvent.model_validate(payload)
 
 
+def test_publication_attempt_reference_requires_article_id_pr_and_sha256():
+    payload = _base_payload()
+    payload["publication_attempt_refs"] = [
+        {
+            "refinery_id": "refinery-1",
+            "pull_request_number": 42,
+            "content_sha256": "a" * 64,
+        }
+    ]
+
+    event = ValidationResultEvent.model_validate(payload)
+
+    assert event.publication_attempt_refs[0].refinery_id == "refinery-1"
+    assert event.publication_attempt_refs[0].pull_request_number == 42
+    assert event.publication_attempt_refs[0].content_sha256 == "a" * 64
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        {
+            "refinery_id": "refinery-1",
+            "pull_request_number": 0,
+            "content_sha256": "a" * 64,
+        },
+        {
+            "refinery_id": "refinery-1",
+            "pull_request_number": 42,
+            "content_sha256": "A" * 64,
+        },
+        {
+            "refinery_id": "not-in-publication-ids",
+            "pull_request_number": 42,
+            "content_sha256": "a" * 64,
+        },
+    ],
+)
+def test_publication_attempt_reference_rejects_incomplete_or_unrelated_evidence(ref):
+    payload = _base_payload()
+    payload["publication_attempt_refs"] = [ref]
+
+    with pytest.raises(ValidationError):
+        ValidationResultEvent.model_validate(payload)
+
+
+def test_publication_attempt_refs_reject_duplicate_article_identity():
+    payload = _base_payload()
+    payload["publication_attempt_refs"] = [
+        {
+            "refinery_id": "refinery-1",
+            "pull_request_number": 42,
+            "content_sha256": "a" * 64,
+        },
+        {
+            "refinery_id": "refinery-1",
+            "pull_request_number": 43,
+            "content_sha256": "b" * 64,
+        },
+    ]
+
+    with pytest.raises(ValidationError, match="at most one attempt"):
+        ValidationResultEvent.model_validate(payload)
+
+
 def test_timestamp_optional_and_parsed():
     payload = _base_payload()
     payload["timestamp"] = "2026-08-10T12:00:00Z"
@@ -187,6 +251,36 @@ def test_delivery_key_differs_by_commit_and_ids():
     )
     assert compute_delivery_key(first) != compute_delivery_key(other_commit)
     assert compute_delivery_key(first) != compute_delivery_key(other_ids)
+
+
+def test_delivery_key_includes_attempt_evidence():
+    base = _base_payload()
+    first = ValidationResultEvent.model_validate(
+        {
+            **base,
+            "publication_attempt_refs": [
+                {
+                    "refinery_id": "refinery-1",
+                    "pull_request_number": 42,
+                    "content_sha256": "a" * 64,
+                }
+            ],
+        }
+    )
+    second = ValidationResultEvent.model_validate(
+        {
+            **base,
+            "publication_attempt_refs": [
+                {
+                    "refinery_id": "refinery-1",
+                    "pull_request_number": 43,
+                    "content_sha256": "b" * 64,
+                }
+            ],
+        }
+    )
+
+    assert compute_delivery_key(first) != compute_delivery_key(second)
 
 
 def test_delivery_key_includes_deploy_url():
