@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from news_collector.components.editorial.ai_editor import EditorAgent
+from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 
 
 def _valid_markdown_body() -> str:
@@ -50,7 +51,7 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
     agent._repair_editorial = repair_mock  # type: ignore[method-assign]
     # Editorial critic gate is an independent stage; bypass it here so the
     # test stays focused on the technical critic recovery path.
-    agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
+    agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)  # type: ignore[method-assign]
     agent._headline_critic_pass = lambda *args, **kwargs: (True, None)  # type: ignore[method-assign]
     agent._generate_enrichment_fields = MagicMock(
         return_value={

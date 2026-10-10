@@ -967,6 +967,77 @@ class WebhookReceipt(Base):
         )
 
 
+WEBHOOK_PULL_STATUS_VALUES = ("received", "processing", "processed", "failed")
+_WEBHOOK_PULL_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{value}'" for value in WEBHOOK_PULL_STATUS_VALUES)
+)
+
+
+class WebhookPullCursor(Base):
+    """Durable high-water mark for one hosted receipt inbox."""
+
+    __tablename__ = "webhook_pull_cursors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    endpoint_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    after_id: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("uq_webhook_pull_cursors_endpoint", "endpoint_key", unique=True),
+    )
+
+
+class WebhookPullReceipt(Base):
+    """Durable local staging record for one receipt read from a hosted inbox.
+
+    Raw data stays local while the row is pending/failed. After successful
+    application, only metadata remains; the event itself is already retained
+    in ``webhook_receipts`` by the real handler.
+    """
+
+    __tablename__ = "webhook_pull_receipts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    endpoint_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    remote_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    delivery_key: Mapped[str | None] = mapped_column(String(200))
+    event_type: Mapped[str | None] = mapped_column(String(50))
+    payload: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="received")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error: Mapped[str | None] = mapped_column(Text)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_until: Mapped[float | None] = mapped_column(Float)
+    lease_token: Mapped[str | None] = mapped_column(String(32))
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint(
+            _WEBHOOK_PULL_STATUS_CHECK,
+            name="ck_webhook_pull_receipts_status",
+        ),
+        UniqueConstraint(
+            "endpoint_key", "remote_id", name="uq_webhook_pull_receipts_source_id"
+        ),
+        Index(
+            "ix_webhook_pull_receipts_pending",
+            "endpoint_key",
+            "status",
+            "last_attempt_at",
+        ),
+    )
+
+
 # Funciones de utilidad para trabajar con los modelos
 # ===================================================
 

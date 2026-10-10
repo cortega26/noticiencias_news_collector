@@ -50,6 +50,30 @@ class TestFromRawDict:
             {"id": "1", "summary": "Solo resumen", "content": ""}
         )
         assert result.content == "Solo resumen"
+        assert result.content_mode == "summary_fallback"
+
+    def test_explicit_content_mode_is_preserved_when_content_falls_back(self):
+        result = EditorialInput.from_raw(
+            {
+                "id": "1",
+                "summary": "Solo resumen",
+                "content": "",
+                "content_mode": "summary_only",
+            }
+        )
+        assert result.content_mode == "summary_only"
+
+    def test_default_full_text_mode_becomes_summary_fallback_when_summary_is_used(self):
+        result = EditorialInput.from_raw(
+            {
+                "id": "1",
+                "summary": "Only the feed summary is available",
+                "content": "",
+                "content_mode": "full_text",
+            }
+        )
+        assert result.content == "Only the feed summary is available"
+        assert result.content_mode == "summary_fallback"
 
     def test_content_mode_defaults_to_full_text(self):
         result = EditorialInput.from_raw({"id": "1", "content": "x"})
@@ -140,12 +164,13 @@ class TestFromRawString:
 
 
 class TestEditorialStage:
-    def test_values_are_the_legacy_cache_keys(self):
+    def test_values_preserve_existing_keys_except_intentionally_versioned_critic(self):
         assert EditorialStage.TRANSLATION.value == "stage1_translation"
         assert EditorialStage.EDITORIAL.value == "stage2_editorial"
         assert EditorialStage.TECHNICAL_CRITIC_OK.value == "stage2_5_critic_ok"
         assert (
-            EditorialStage.EDITORIAL_CRITIC_OK.value == "stage2_6_editorial_critic_ok"
+            EditorialStage.EDITORIAL_CRITIC_OK.value
+            == "stage2_6_editorial_critic_source_aware_v2_ok"
         )
         assert EditorialStage.ENRICHMENT.value == "stage4_enrichment"
 

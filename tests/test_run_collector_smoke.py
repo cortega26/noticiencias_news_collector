@@ -7,8 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import httpx
-import requests
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "run_collector_smoke.py"
@@ -17,21 +16,20 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
-SMOKE_ARTICLE_URL = "https://example.com/articles/smoke-article-1"
 
-
-def _clean_smoke_article() -> None:
-    """Remove the known smoke article URL from the database so the replay
-    dedup check (article_exists) won't filter it out."""
-    try:
-        from news_collector.storage.database import get_database_manager
-
-        db = get_database_manager()
-        article = db.get_article_by_url(SMOKE_ARTICLE_URL)
-        if article is not None:
-            db.delete_article(article.id)
-    except Exception:
-        pass  # Non-fatal — the smoke test will fail independently if this matters
+def _isolated_smoke_environment(tmp_path: Path) -> dict[str, str]:
+    """Keep smoke subprocess files and database inside pytest's temp directory."""
+    env = os.environ.copy()
+    env.update(
+        {
+            "NOTICIENCIAS_SMOKE": "1",
+            "NOTICIENCIAS__DATABASE__PATH": str(tmp_path / "smoke.db"),
+            "NOTICIENCIAS__PATHS__DATA_DIR": str(tmp_path / "data"),
+            "NOTICIENCIAS__PATHS__LOGS_DIR": str(tmp_path / "logs"),
+            "NOTICIENCIAS__PATHS__DLQ_DIR": str(tmp_path / "dlq"),
+        }
+    )
+    return env
 
 
 def test_smoke_contract_requires_fixture_output() -> None:
@@ -43,10 +41,9 @@ def test_smoke_contract_requires_fixture_output() -> None:
     )
 
 
-def test_run_collector_smoke_replay_contract() -> None:
-    _clean_smoke_article()
-    env = os.environ.copy()
-    env["NOTICIENCIAS_SMOKE"] = "1"
+@pytest.mark.e2e
+def test_run_collector_smoke_replay_contract(tmp_path: Path) -> None:
+    env = _isolated_smoke_environment(tmp_path)
 
     result = subprocess.run(
         [sys.executable, "scripts/run_collector_smoke.py"],
@@ -77,8 +74,8 @@ def test_run_collector_smoke_fails_if_fixture_missing(monkeypatch, tmp_path) -> 
     assert MODULE.main() == 1
 
 
-def test_run_collector_smoke_network_tripwire() -> None:
-    _clean_smoke_article()
+@pytest.mark.e2e
+def test_run_collector_smoke_network_tripwire(tmp_path: Path) -> None:
 
     # Run the smoke script in a SUBPROCESS with a prelude that patches
     # requests/httpx to deny ALL network calls BEFORE the script imports
@@ -97,8 +94,7 @@ def test_run_collector_smoke_network_tripwire() -> None:
         "httpx.Client.get = httpx.Client.post = _deny\n"
         f"__file__ = os.path.abspath({str(SCRIPT_PATH)!r})\n"
     )
-    env = dict(os.environ)
-    env["NOTICIENCIAS_SMOKE"] = "1"
+    env = _isolated_smoke_environment(tmp_path)
     proc = subprocess.run(
         [
             sys.executable,
