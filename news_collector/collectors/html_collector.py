@@ -113,6 +113,13 @@ class HtmlCollector(BaseCollector):
                     if status_code
                     else "Error fetching content"
                 )
+                if self.health_tracker and status_code and status_code >= 400:
+                    self.health_tracker.record_failure(
+                        source_id,
+                        "collector.fetch",
+                        f"HTTP {status_code}",
+                        {"status_code": status_code},
+                    )
                 return stats
 
             # 3. Parse & Extract
@@ -125,13 +132,20 @@ class HtmlCollector(BaseCollector):
                 )
             except Exception as e:
                 stats["error_message"] = f"Error de parsing: {str(e)}"
+                if self.health_tracker:
+                    self.health_tracker.record_failure(
+                        source_id, "collector.parse", "html_extraction_error"
+                    )
                 return stats
 
             if self.health_tracker:
                 self.health_tracker.record_success(source_id, "fetch")
-                self.health_tracker.record_success(
-                    source_id, "parse", count=len(raw_articles)
-                )
+                # An empty HTML extraction is inconclusive: without candidates,
+                # it is not evidence that the publisher is healthy or broken.
+                if raw_articles:
+                    self.health_tracker.record_success(
+                        source_id, "parse", count=len(raw_articles)
+                    )
 
             stats["articles_found"] = len(raw_articles)
 

@@ -257,11 +257,29 @@ class RSSCollector(BaseCollector):
             if not feed_response["success"]:
                 stats["success"] = False  # Explicitly false if fetch failed
                 stats["error_message"] = feed_response.get("error_message")
+                if self.health_tracker:
+                    status_code = feed_response.get("status_code")
+                    reason = (
+                        f"HTTP {status_code}"
+                        if isinstance(status_code, int)
+                        else "feed_fetch_failed"
+                    )
+                    details = (
+                        {"status_code": status_code}
+                        if isinstance(status_code, int)
+                        else None
+                    )
+                    self.health_tracker.record_failure(
+                        source_id, "collector.fetch", reason, details
+                    )
                 # Already logged in fetch_robust
                 return stats
 
             if feed_response.get("status_code") == 304:
                 stats["success"] = True
+                if self.health_tracker:
+                    self.health_tracker.record_success(source_id, "fetch")
+                    self.health_tracker.record_success(source_id, "parse", count=0)
                 return stats
 
             # 2. Robust Parse
@@ -271,6 +289,10 @@ class RSSCollector(BaseCollector):
 
             if not parse_result["success"]:
                 stats["error_message"] = parse_result.get("error_message")
+                if self.health_tracker:
+                    self.health_tracker.record_failure(
+                        source_id, "collector.parse", "invalid_feed"
+                    )
                 # Classification logic is inside parse_robust
                 return stats
 
@@ -282,6 +304,14 @@ class RSSCollector(BaseCollector):
             )
             stats["articles_found"] = len(raw_articles)
 
+            if self.health_tracker:
+                self.health_tracker.record_success(source_id, "fetch")
+                # The parse succeeded even when its valid feed contains no new
+                # entries or every entry is filtered later in the pipeline.
+                self.health_tracker.record_success(
+                    source_id, "parse", count=len(raw_articles)
+                )
+
             if not raw_articles:
                 if getattr(parsed_feed, "entries", []):
                     self._emit_log(
@@ -292,14 +322,6 @@ class RSSCollector(BaseCollector):
                     )
                 stats["success"] = True
                 return stats
-
-            if self.health_tracker:
-                self.health_tracker.record_success(source_id, "fetch")
-                # FOUND column semantics: count actual parsed articles, not
-                # the implicit count-1 (which made FOUND always 1 per cycle).
-                self.health_tracker.record_success(
-                    source_id, "parse", count=len(raw_articles)
-                )
 
             # Batch process candidates for filtering pipeline
             processed_candidates = []
@@ -323,6 +345,10 @@ class RSSCollector(BaseCollector):
                         },
                     )
                     self.session_stats["errors_encountered"] += 1
+                    if self.health_tracker:
+                        self.health_tracker.record_failure(
+                            source_id, "unknown", "article_processing_error"
+                        )
 
             # Apply strict sequential filters and save
             saved_count = self._filter_and_save_articles(

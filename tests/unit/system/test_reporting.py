@@ -88,5 +88,5 @@ def test_generate_session_report_exports_stable_source_health_shape(
     assert validated_s1.scrapling_stealth_success_rate == 0.5
     assert (
         SourceHealthRecord.model_validate(source_health["s2"]).operational_state
-        == "failing_suppressed_candidate"
+        == "unknown"
     )
