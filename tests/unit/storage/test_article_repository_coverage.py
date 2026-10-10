@@ -263,6 +263,40 @@ def test_database_release_is_scoped_to_the_owning_attempt(db_manager):
     assert events[0].details["failure_class"] == "taxonomy_contract_violation"
 
 
+def test_article_release_requires_matching_publication_attempt_id(db_manager):
+    saved = db_manager.articles.save_article(_payload("https://x.com/release-attempt"))
+    article_id = int(saved.id)
+    attempt_id = "release-attempt-current"
+
+    assert db_manager.mark_article_publishing(
+        article_id, "content/update-release-attempt", publication_attempt_id=attempt_id
+    )
+    state = db_manager.get_publishing_state(article_id)
+    assert state is not None
+    assert state["publication_attempt_id"] == attempt_id
+
+    assert not db_manager.release_article_publishing(
+        article_id,
+        reason="stale_validation_failure",
+        branch_name="content/update-release-attempt",
+        publication_attempt_id="release-attempt-stale",
+    )
+    assert (
+        db_manager.get_publishing_state(article_id)["publication_attempt_id"]
+        == attempt_id
+    )
+
+    assert db_manager.release_article_publishing(
+        article_id,
+        reason="matching_validation_failure",
+        branch_name="content/update-release-attempt",
+        publication_attempt_id=attempt_id,
+    )
+    article = db_manager.articles.get_article_by_id(article_id)
+    assert article.processing_status == "completed"
+    assert "publication_attempt_id" not in (article.article_metadata or {})
+
+
 def test_is_processed(db_manager):
     saved = db_manager.articles.save_article(_payload("https://x.com/processed"))
     article_id = int(saved.id)

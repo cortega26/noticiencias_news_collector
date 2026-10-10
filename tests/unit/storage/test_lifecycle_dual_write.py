@@ -194,6 +194,29 @@ def test_mark_article_published_cas_miss_falls_back_to_fresh_row(db_manager):
     assert any(r.pr_url == "https://github.com/pr/3" for r in rows)
 
 
+def test_pr_created_dual_write_ignores_unmatched_attempt_id(db_manager):
+    article_id = _save_article(db_manager, "published-unmatched-attempt")
+    assert db_manager.mark_article_publishing(
+        article_id,
+        "content/update-current-attempt",
+        publication_attempt_id="attempt-current",
+    )
+
+    db_manager._dual_write_pr_created(
+        article_id,
+        "https://github.com/pr/unmatched",
+        str(article_id),
+        publication_attempt_id="attempt-stale",
+        content_sha256="f" * 64,
+    )
+
+    rows = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    assert len(rows) == 1
+    assert rows[0].state == "PUBLISHING"
+    assert rows[0].details["publication_attempt_id"] == "attempt-current"
+    assert db_manager.lifecycle.get_publication_events_for_attempt(rows[0].id) == []
+
+
 def test_mark_article_published_swallows_lifecycle_failure(db_manager, monkeypatch):
     article_id = _save_article(db_manager, "published-fail")
 

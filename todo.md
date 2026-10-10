@@ -611,4 +611,6 @@ this file now tracks the current pass over the 18 remaining plans.
 - [ ] Review, publish PR(s), resolve review feedback, verify CI, and integrate via protected-main procedure.
 - [ ] Update only the local timer runtime after merge; verify timer, SQLite integrity, ordinary pull, and no changes to receipts/cursor or article 2422 attempt #1.
 - [x] Address Codacy's long callback/storage methods, duplicate section headings, and oversized Refinery test module without changing callback result shapes.
-- [ ] Rerun targeted callback and lifecycle tests, formatting/lint, boundary and contract gates, then push the reviewed PR update.
+- [x] Inspect latest CI: functional, integration, pipeline E2E, performance, lint, config, contract, admin, and publication-smoke jobs pass; type/code-quality fail at the existing per-file coverage ratchet (not mypy).
+- [x] Add temporary-SQLite regressions proving stale release tokens cannot close the current attempt and unmatched PR-created tokens cannot transition a lifecycle row.
+- [ ] Rerun targeted callback and lifecycle tests, formatting/lint, boundary and contract gates, then push the reviewed PR update and require a green full CI run.
