@@ -329,7 +329,7 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 118 | [Enforce the v2 editorial contract in the backend mirror](118-contract-parity.md) | P1 | M | None | TODO |
+| 118 | [Enforce the v2 editorial contract in the backend mirror](118-contract-parity.md) | P1 | M | None | DONE (4 commits on `advisor/118-contract-parity` in `/tmp/opencode/exec-118`: v2 validator, featured_rank, non-empty items, 27 contract tests; `make lint/type/test/test-contracts` green, frontend mirror no-new-divergence; reviewed 2026-10-11, merged locally, unpushed. Executor STOPped correctly on 2 invalid fixtures — fixed in one REVISE round (+4 YAML lines each, expectations byte-identical).) |
 | 119 | [Make the contract-sync gate see cross-field rules](119-contract-sync-gate.md) | P2 | M | 118 | TODO |
 | 120 | [Deterministic dates: undated, naive, calendar](120-deterministic-dates.md) | P1 | M | None | TODO |
 | 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
