@@ -20,6 +20,9 @@
 - **Depends on**: none
 - **Category**: bug
 - **Planned at**: commit `04016ca`, 2026-10-11
+- **Refreshed**: 2026-10-11 after executor STOP exposed three plan-time errors
+  (wrong helper location, wrong quarantine mechanism, headless mis-scoped).
+  No work executed under the original text — worktree/branch left empty.
 - **Issue**: omit
 
 ## Why this matters
@@ -47,16 +50,21 @@ Facts (all verified 2026-10-11):
 ```
 
 ```python
-# rss_collector.py:834; base_collector.py:718; admission.py:66 — naive labeled UTC
-published = published.replace(tzinfo=timezone.utc)
-dt = dt.replace(tzinfo=timezone.utc)
-published = published.replace(tzinfo=timezone.utc)
+# rss_collector.py:808 (line drifted from :834 via later merges);
+# base_collector.py:718; admission.py:66 — naive labeled UTC:
+published = published.replace(tzinfo=timezone.utc)  # (respective var names)
 ```
 
-```python
-# utils/datetime_utils.py:41-59 — the correct helper, bypassed by the above
-# ensure_timezone(...) (uses calendar.timegm path); verify its exact signature first.
-```
+CORRECTION (2026-10-11, executor-verified): the `ensure_timezone` helper does
+NOT live in `utils/datetime_utils.py` (that file holds `parse_to_utc_with_tzinfo`,
+`to_display_tz`, `format_display` only — the "calendar.timegm path" belongs to
+struct_time parsing inside `parse_to_utc_with_tzinfo`). The real
+`ensure_timezone(dt)` is at `storage/article_repository.py:59-64` and is
+semantically IDENTICAL to the call sites (`replace(tzinfo=utc)` for naive) —
+so "route through it" gains nothing. Step 2 below instead introduces one
+explicit collector-layer assumption point (new function, justified scope
+addition). Do NOT import the storage-layer helper into collectors (wrong
+layer, zero behavior change).
 
 ```python
 # frontend_schema.py:207-210 — shape-only validation
@@ -64,12 +72,23 @@ review_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 corrected_at: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 ```
 
-Identity-layer context (read-only — do NOT change in this plan):
-`publication_identity.py:99-100` restricts clock use to manual ingest only;
-`:358-389` `_derive_date` raises `UndatedArticleError` for the same case
-the HTML collector papers over; `headless_collector.py:285-286` has the
-same `or datetime.now` pattern (include it if the identical shape is
-confirmed — see Step 1).
+Identity-layer context, CORRECTED (2026-10-11, executor-verified):
+`publication_identity.py:99-100` restricts clock use to manual ingest only.
+`_derive_date` (`:372-389`) falls back to `collected_date` before raising
+`UndatedArticleError` — it is NOT the quarantine owner for this path. The
+actual quarantine point is `CollectorArticleModel` validation:
+`contracts/collector.py:161` (`published_date: datetime`, required) +
+`:46-49` `_ensure_not_none` rejects None, and `_filter_and_save_articles`
+(`base_collector.py:976-992` try/except → `collector.validate.error` → per-item
+`continue`) keeps the batch safe. Propagating None therefore surfaces as an
+explicit per-item `collector.validate.error` skip — deterministic, reported,
+batch-safe. That is the mechanism Step 1 relies on (not `_derive_date`).
+
+Headless, CORRECTED: `headless_collector.py:285-286` is NOT the same shape —
+it stamps `datetime.now(timezone.utc)` UNCONDITIONALLY into both
+`published_at` and `published_date` with no date extraction at all, so
+propagating None there would quarantine the entire headless output. EXCLUDED
+from this plan (see Deferred) — do not touch that file.
 
 Repo conventions: LAW-B5 (deterministic identity — no runtime time in
 identity paths); LAW-B4 (I/O at edges, policy pure); `make test-boundaries`
@@ -93,19 +112,21 @@ overlapping).
 **In scope** (the only files you should modify):
 
 - `news_collector/collectors/html_collector.py` (propagate `None`, drop wall-clock default)
-- `news_collector/collectors/headless_collector.py` (same fix ONLY if the
-  identical `or datetime.now` shape is confirmed at `:285-286`)
 - `news_collector/collectors/rss_collector.py`, `base_collector.py`,
-  `admission.py` (route naive dates through `ensure_timezone`)
+  `admission.py` (route naive dates through the new `assume_utc`)
+- `news_collector/utils/datetime_utils.py` (ADD `assume_utc` function ONLY —
+  no changes to existing helpers)
 - `news_collector/contracts/frontend_schema.py` (calendar-date validators
-  for the two fields — small addition; coordinate with plan 118 if it is
-  in flight on the same file: sequence after it, don't parallelize)
+  for the two fields — small addition; plan 118 is merged, no conflict)
 - `tests/` (collector date tests + contract calendar tests)
 
 **Out of scope** (do NOT touch, even though they look related):
 
-- `publication_identity.py` `_derive_date`/quarantine logic — it is
-  already correct; this plan feeds it `None` instead of fake dates.
+- `news_collector/collectors/headless_collector.py` — different shape
+  (unconditional clock-stamp, no extraction); own future plan (see Deferred).
+- `publication_identity.py` — already correct; not the quarantine owner here.
+- `storage/article_repository.py:ensure_timezone` — do not import into
+  collectors (wrong layer, zero behavior change).
 - Frontend `content.config.ts` calendar check — the frontend accepts the
   same shape-only regex; file it as a follow-up note (see Maintenance),
   don't cross repos here.
@@ -128,31 +149,47 @@ time — you are isolated; record, don't fix).
 
 **Verify**: gates green at baseline, or pre-existing reds recorded with a STOP-and-report.
 
-### Step 1: Quarantine undated articles instead of clock-stamping
+### Step 1: Quarantine undated (no clock-stamp)
 
-1. Confirm the `headless_collector.py:285-286` shape matches; if yes,
-   include it, if no, record why not and skip it.
-2. In `html_collector.py` (and headless if confirmed), propagate `None`
-   when `raw.get("date")` is absent and let `_derive_date` raise
-   `UndatedArticleError` with the existing per-item continue-on-error
-   handling. Adjust the 1–2 tests that assert the clock-stamped behavior
-   (they encode the bug — rewrite them to assert quarantine + per-item
-   reporting, and say so in the commit message).
+1. Headless is CONFIRMED different-shaped — skip it entirely (record the
+   skip; its own plan is Deferred below).
+2. In `html_collector.py`, propagate `None` when `raw.get("date")` is absent.
+   Expected mechanism (verified): `CollectorArticleModel._ensure_not_none`
+   rejects it → explicit per-item `collector.validate.error` skip inside
+   `_filter_and_save_articles` → batch continues. If INSTEAD the batch
+   crashes, or the item publishes with an invented date, or the rejection
+   surfaces anywhere OTHER than the per-item validate-error path — STOP and
+   report (do not rewire orchestration).
+3. Search for tests asserting clock-stamped fallback for missing HTML dates.
+   If any encode the bug, rewrite them to assert the quarantine outcome and
+   say so in the commit; if none exist (expected — none found at refresh
+   time), do not invent replacements, just add the new quarantine test.
 
 **Verify**: `make test-boundaries` passes; a probe article with no date
 quarantines with an explicit per-item outcome instead of publishing with
 today's date.
 
-### Step 2: Centralize naive-datetime handling on ensure_timezone
+### Step 2: One explicit UTC-assumption point (reframed 2026-10-11)
 
-Read `utils/datetime_utils.py:41-59` first. Route all naive feed dates in
-`rss_collector.py`, `base_collector.py`, `admission.py` through
-`ensure_timezone`; record the assumption (feed tz vs UTC) in source
-metadata per the existing pattern instead of silent `replace`. Keep retry/
-backoff-window comparisons (`next_retry`, `last_checked` sites at
-`rss_collector.py:192`, `base_collector.py:789,812`) untouched unless they
-consume the same naive values — if they do, say so in the commit; if the
-blast radius exceeds the three call sites, STOP and report.
+There is no more-correct existing helper to centralize on (see Correction
+above). The real defect is a silent, scattered assumption, so the fix is to
+make it explicit, singular, and tested:
+
+1. Add a NEW function `assume_utc(dt, *, source_id: str = "")` to
+   `news_collector/utils/datetime_utils.py` (justified scope addition — the
+   narrow-helpers home for datetime policy). Semantics: aware datetimes →
+   `.astimezone(timezone.utc)`; naive datetimes → labeled UTC **with the
+   assumption recorded**: datetimes cannot carry provenance, so the CALLERS
+   record it via the existing model fields (`published_tz_offset_minutes` /
+   `published_tz_name` on `CollectorArticleModel`, offset 0 / name
+   `"UTC (assumed)"`). Docstring must state: naive feed timestamps are
+   ASSUMED UTC because feeds rarely declare zones; a source known to publish
+   in another zone needs explicit per-source handling (future work, not here).
+2. Route the three call sites (`rss_collector.py:808`,
+   `base_collector.py:718`, `admission.py:66`) through `assume_utc`.
+   Keep retry/backoff-window sites (`rss_collector.py:192`,
+   `base_collector.py:789,812`) untouched unless proven same-value
+   consumers — if blast radius exceeds the three call sites, STOP and report.
 
 **Verify**: `make test-boundaries` passes; new tests assert a naive
 non-UTC timestamp normalizes identically regardless of host timezone
@@ -186,8 +223,10 @@ Run `make lint && make type && make test && make test-boundaries && make test-co
 
 Machine-checkable. ALL must hold:
 
-- [ ] `grep -n "or datetime.now(timezone.utc)" news_collector/collectors/html_collector.py` returns no matches (and headless too, if included)
-- [ ] `grep -n "replace(tzinfo=timezone.utc)" news_collector/collectors/rss_collector.py news_collector/collectors/base_collector.py news_collector/collectors/admission.py` returns no matches (except retry/backoff sites explicitly documented in the commit)
+- [ ] `grep -n "or datetime.now(timezone.utc)" news_collector/collectors/html_collector.py` returns no matches
+- [ ] The three collector sites call `assume_utc` (grep); direct
+  `replace(tzinfo=timezone.utc)` remains ONLY at documented retry/backoff
+  sites (if any) and inside `assume_utc` itself
 - [ ] `2026-13-40` fails `AstroPost` validation (probe or test)
 - [ ] `make lint && make type && make test && make test-boundaries && make test-contracts` all pass
 - [ ] `git diff --name-only 04016ca...HEAD` lists only the in-scope files
@@ -212,9 +251,15 @@ Stop and report back (do not improvise) if:
 
 For the human/agent who owns this code after the change lands:
 
-- New collectors must route dates through `ensure_timezone` and propagate
+- New collectors must route dates through `assume_utc` and propagate
   `None` for missing dates — add both to the review checklist (the two
   failure modes recur per collector).
+- **Deferred:** headless_collector unconditional clock-stamp (`:285-286`,
+  no extraction — propagating None would quarantine all headless output);
+  needs its own plan with a date-extraction design, unblocked by nothing.
+- **Deferred:** `parse_to_utc_with_tzinfo` invents wall-clock for `None`
+  input (`datetime_utils.py`) — investigate whether any caller depends on
+  that; do not change here.
 - **Deferred:** frontend `content.config.ts` calendar check for the same
   two fields (small; needs a cross-repo touch — file it with the next
   schema change, don't open a second front for it).
