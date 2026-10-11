@@ -218,6 +218,44 @@ class AstroPost(BaseModel):
             raise ValueError("corrected_at and correction_summary must be set together")
         return self
 
+    @model_validator(mode="after")
+    def _v2_editorial_fields_required(self) -> "AstroPost":
+        # Mirror the `schema_version >= 2` superRefine branch in
+        # src/content.config.ts: v1 posts are grandfathered, v2+ require
+        # structured editorial fields. `why_it_matters` intentionally has NO
+        # minimum (0-3, absence valid) so it is not checked here.
+        if self.schema_version is not None and self.schema_version >= 2:
+            sp = self.summary_points
+            if not sp:
+                raise ValueError(
+                    "summary_points is required for schema_version >= 2 (2-5 items)"
+                )
+            if not 2 <= len(sp) <= 5:
+                raise ValueError(
+                    "summary_points must have 2-5 items "
+                    f"for schema_version >= 2 (got {len(sp)})"
+                )
+            if any(not (s or "").strip() for s in sp):
+                raise ValueError(
+                    "summary_points must not contain empty items "
+                    "for schema_version >= 2"
+                )
+            if not self.glossary:
+                raise ValueError(
+                    "glossary is required for schema_version >= 2 (>=1 item)"
+                )
+            if not self.fact_check:
+                raise ValueError(
+                    "fact_check is required for schema_version >= 2 (>=1 item)"
+                )
+            if not (self.confidence or "").strip():
+                raise ValueError("confidence is required for schema_version >= 2")
+            if not self.sources:
+                raise ValueError(
+                    "sources is required for schema_version >= 2 (>=1 item)"
+                )
+        return self
+
     @field_validator("social", mode="before")
     @classmethod
     def _social_not_null(cls, v):
