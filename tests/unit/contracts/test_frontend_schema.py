@@ -212,6 +212,63 @@ def test_featured_true_with_rank_passes():
 
 
 # --------------------------------------------------------------------------- #
+# correction pair (mirrors P2-07 superRefine in src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+def test_correction_half_pair_raises():
+    with pytest.raises(ValidationError, match="must be set together"):
+        AstroPost(**_base_post(corrected_at="2026-09-02"))
+    with pytest.raises(ValidationError, match="must be set together"):
+        AstroPost(**_base_post(correction_summary="Se corrigio una cifra."))
+
+
+def test_correction_full_pair_passes():
+    post = AstroPost(
+        **_base_post(
+            corrected_at="2026-09-02",
+            correction_summary="Se corrigio una cifra.",
+        )
+    )
+    assert post.corrected_at == "2026-09-02"
+
+
+# --------------------------------------------------------------------------- #
+# doi requires primary role (mirrors P0-01 superRefine in src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("role", [None, "secondary"])
+def test_doi_without_primary_role_raises(role):
+    source = {
+        "title": "Paper",
+        "url": "https://doi.org/10.1371/journal.pone.0353485",
+        "doi": "10.1371/journal.pone.0353485",
+    }
+    if role is not None:
+        source["role"] = role
+    with pytest.raises(ValidationError, match="must declare role: primary"):
+        AstroPost(**_base_post(sources=[source]))
+
+
+# --------------------------------------------------------------------------- #
+# image_alt without inline alt (mirrors image_alt superRefine in
+# src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_image_alt_without_inline_alt_raises():
+    with pytest.raises(ValidationError, match="image_alt is required"):
+        AstroPost(**_base_post(image="http://example.com/image.jpg"))
+    with pytest.raises(ValidationError, match="image_alt is required"):
+        AstroPost(
+            **_base_post(
+                image=ImageObject(src="a.jpg", width=10, height=10),
+            )
+        )
+
+
+# --------------------------------------------------------------------------- #
 # non-empty list items (mirrors z.string().min(1), hardened vs whitespace)
 # --------------------------------------------------------------------------- #
 
