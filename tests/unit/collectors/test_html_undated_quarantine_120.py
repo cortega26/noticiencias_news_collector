@@ -36,9 +36,7 @@ def _raw_undated():
 
 def test_missing_date_propagates_none_not_wall_clock(collector):
     """No ``date`` key -> ``published_date is None`` (never today's date)."""
-    processed = collector._process_article_html(
-        _raw_undated(), CONFIG, "test_source"
-    )
+    processed = collector._process_article_html(_raw_undated(), CONFIG, "test_source")
     assert processed is not None
     assert processed["published_date"] is None
 
