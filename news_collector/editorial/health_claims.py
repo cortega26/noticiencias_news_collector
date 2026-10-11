@@ -89,6 +89,18 @@ def _quoted_spans(text: str) -> list[tuple[int, int]]:
     return [match.span() for match in _QUOTED_RE.finditer(text)]
 
 
+def _unquoted_hits(
+    pattern: re.Pattern[str], text: str, quoted: list[tuple[int, int]]
+) -> list[re.Match[str]]:
+    """Matches of `pattern` outside quoted spans (a quoted clinician is the
+    source's voice, not ours)."""
+    return [
+        match
+        for match in pattern.finditer(text)
+        if not any(start <= match.start() < end for start, end in quoted)
+    ]
+
+
 def _snippet(text: str, offset: int, width: int = 60) -> str:
     start = max(0, offset - width // 2)
     return text[start : start + width].strip()[:width]
@@ -121,11 +133,7 @@ def find_guarantee_language(
     quoted = _quoted_spans(text)
     findings: list[GuaranteeFinding] = []
     for code, pattern, message in _COMPILED:
-        hits = [
-            match
-            for match in pattern.finditer(text)
-            if not any(start <= match.start() < end for start, end in quoted)
-        ]
+        hits = _unquoted_hits(pattern, text, quoted)
         if hits:
             findings.append(
                 GuaranteeFinding(

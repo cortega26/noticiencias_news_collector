@@ -1744,26 +1744,12 @@ class EditorAgent:
                     system=_system_with_untrusted_data_policy(system_prompt),
                     model=self.enrichment_model,
                 )
-                data = sanitize_enrichment_payload(self._extract_json(response))
-                if not data.get("sources") and (source_url or source_name):
-                    # Backfill BEFORE validation: a sanitized-away blank-url
-                    # source (run 39) leaves an empty list, which would fail
-                    # min_length=1 below and discard the other five valid
-                    # fields with it.
-                    logger.warning(
-                        "Enrichment returned no sources; falling back to the "
-                        "article's original source (url={}).",
-                        source_url,
-                    )
-                    data["sources"] = [
-                        {
-                            "title": source_name or article_title or "Fuente original",
-                            "url": source_url,
-                            "publisher": source_name or None,
-                        }
-                    ]
-                validated = EnrichmentSchema(**data)
-                return validated.model_dump()
+                return self._parse_enrichment_response(
+                    response,
+                    article_title=article_title,
+                    source_url=source_url,
+                    source_name=source_name,
+                )
             except Exception as e:  # noqa: BLE001 - bounded retry, then fail-open empty
                 if attempt == 1:
                     logger.warning(
@@ -1785,6 +1771,42 @@ class EditorAgent:
                     )
                 return self._empty_enrichment_fields()
         return self._empty_enrichment_fields()
+
+    def _parse_enrichment_response(
+        self,
+        response: str,
+        *,
+        article_title: str,
+        source_url: str,
+        source_name: str,
+    ) -> dict[str, list | str]:
+        """Sanitize, backfill sources, and validate one enrichment response.
+
+        Raises the underlying parse/validation error on failure — the caller
+        (`_generate_enrichment_fields`) owns the bounded retry + fail-open
+        policy, so this helper stays a straight-line parse with one
+        backfill branch.
+        """
+        data = sanitize_enrichment_payload(self._extract_json(response))
+        if not data.get("sources") and (source_url or source_name):
+            # Backfill BEFORE validation: a sanitized-away blank-url
+            # source (run 39) leaves an empty list, which would fail
+            # min_length=1 below and discard the other five valid
+            # fields with it.
+            logger.warning(
+                "Enrichment returned no sources; falling back to the "
+                "article's original source (url={}).",
+                source_url,
+            )
+            data["sources"] = [
+                {
+                    "title": source_name or article_title or "Fuente original",
+                    "url": source_url,
+                    "publisher": source_name or None,
+                }
+            ]
+        validated = EnrichmentSchema(**data)
+        return validated.model_dump()
 
     def _send_fact_check_prompt(self, prompt: str, system: str) -> dict[str, Any]:
         """Send one fact-check verification prompt to the dedicated

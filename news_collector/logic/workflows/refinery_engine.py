@@ -743,37 +743,49 @@ class RefineryEngine:
         # refined body, advisory only — never blocks. Persisted per article
         # so editors can track prose hygiene next to legibility.
         if isinstance(refined_content, str):
-            article_id = article.get("id")
-            tics = check_voice_tics(refined_content)
-            if tics:
-                logger.warning(
-                    f"Voice tics [{article_id}]: "
-                    + "; ".join(f"{t.code}x{t.count}" for t in tics)
-                )
-            run.record_stage(
-                "voice_tics",
-                True,
-                findings=len(tics),
-                codes=[t.code for t in tics],
-            )
-            guarantees = find_guarantee_language(
-                refined_content,
-                category=article.get("category"),
-                metadata_category=article.get("metadata_category"),
-            )
-            if guarantees:
-                logger.warning(
-                    f"Health guarantees [{article_id}]: "
-                    + "; ".join(f"{g.code}x{g.count}" for g in guarantees)
-                )
-            run.record_stage(
-                "health_guarantees",
-                True,
-                findings=len(guarantees),
-                codes=[g.code for g in guarantees],
-            )
+            self._record_prose_hygiene_stages(article, refined_content, run)
 
         return refined_content, grounding_notes
+
+    @staticmethod
+    def _record_prose_hygiene_stages(
+        article: Dict[str, Any], refined_content: str, run: "_PublicationRun"
+    ) -> None:
+        """Record voice-tic + health-guarantee advisory stages (L3/L4).
+
+        Extracted from `_record_advisory_stages` so each gate stays small;
+        same fail-open contract (never blocks, never raises — callers treat
+        checker defects as invisible, mirroring the grounding stage).
+        """
+        article_id = article.get("id")
+        tics = check_voice_tics(refined_content)
+        if tics:
+            logger.warning(
+                f"Voice tics [{article_id}]: "
+                + "; ".join(f"{t.code}x{t.count}" for t in tics)
+            )
+        run.record_stage(
+            "voice_tics",
+            True,
+            findings=len(tics),
+            codes=[t.code for t in tics],
+        )
+        guarantees = find_guarantee_language(
+            refined_content,
+            category=article.get("category"),
+            metadata_category=article.get("metadata_category"),
+        )
+        if guarantees:
+            logger.warning(
+                f"Health guarantees [{article_id}]: "
+                + "; ".join(f"{g.code}x{g.count}" for g in guarantees)
+            )
+        run.record_stage(
+            "health_guarantees",
+            True,
+            findings=len(guarantees),
+            codes=[g.code for g in guarantees],
+        )
 
     def _enforce_publication_gates(
         self,

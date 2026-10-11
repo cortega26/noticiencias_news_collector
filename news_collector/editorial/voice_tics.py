@@ -119,6 +119,29 @@ def _snippet(text: str, offset: int, width: int = 60) -> str:
     return text[start : start + width].strip()[:width]
 
 
+def _unquoted_hits(
+    pattern: re.Pattern[str], body: str, quoted: list[tuple[int, int]]
+) -> list[re.Match[str]]:
+    """Matches of `pattern` outside quoted spans (quoted speech is the
+    source's voice, not ours)."""
+    return [
+        match
+        for match in pattern.finditer(body)
+        if not _in_spans(match.start(), quoted)
+    ]
+
+
+def _to_finding(
+    code: str, message: str, body: str, hits: list[re.Match[str]]
+) -> VoiceTic:
+    return VoiceTic(
+        code=code,
+        message=f"{message}: {len(hits)} ocurrencia(s)",
+        count=len(hits),
+        snippets=tuple(_snippet(body, hit.start()) for hit in hits[:3]),
+    )
+
+
 def check_voice_tics(markdown: str | None) -> list[VoiceTic]:
     """Return advisory voice-tic findings for generated article markdown.
 
@@ -132,37 +155,21 @@ def check_voice_tics(markdown: str | None) -> list[VoiceTic]:
     if not body.strip():
         return []
     quoted = _quoted_spans(body)
-    findings: list[VoiceTic] = []
+    findings = []
     for code, pattern, message in _COMPILED:
-        hits = [
-            match
-            for match in pattern.finditer(body)
-            if not _in_spans(match.start(), quoted)
-        ]
+        hits = _unquoted_hits(pattern, body, quoted)
         if hits:
-            findings.append(
-                VoiceTic(
-                    code=code,
-                    message=f"{message}: {len(hits)} ocurrencia(s)",
-                    count=len(hits),
-                    snippets=tuple(_snippet(body, h.start()) for h in hits[:3]),
-                )
-            )
-    voseo_hits = [
-        match
-        for match in _VOSEO_RE.finditer(body.lower())
-        if not _in_spans(match.start(), quoted)
-    ]
+            findings.append(_to_finding(code, message, body, hits))
     # "vos" alone is a strong signal but also a substring risk; the
-    # word-boundaried regex above already constrains it. Report once.
+    # word-boundaried regex below already constrains it. Report once.
+    voseo_hits = _unquoted_hits(_VOSEO_RE, body.lower(), quoted)
     if voseo_hits:
         findings.append(
-            VoiceTic(
-                code="voseo",
-                message=f"Voseo rioplatense prohibido (tuteo neutro requerido): "
-                f"{len(voseo_hits)} ocurrencia(s)",
-                count=len(voseo_hits),
-                snippets=tuple(_snippet(body, h.start()) for h in voseo_hits[:3]),
+            _to_finding(
+                "voseo",
+                "Voseo rioplatense prohibido (tuteo neutro requerido)",
+                body,
+                voseo_hits,
             )
         )
     return findings
