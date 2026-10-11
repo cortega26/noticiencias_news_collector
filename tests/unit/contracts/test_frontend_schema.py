@@ -288,3 +288,36 @@ def test_list_items_reject_empty(field, bad_item):
 def test_list_items_accept_non_empty(field):
     post = AstroPost(**_base_post(**{field: ["Real content"]}))
     assert getattr(post, field) == ["Real content"]
+
+
+# --------------------------------------------------------------------------- #
+# real calendar dates for review_date / corrected_at (plan 120: the shape
+# regex ^\d{4}-\d{2}-\d{2}$ admits non-calendar dates like 2026-13-40)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("field", ["review_date", "corrected_at"])
+@pytest.mark.parametrize("bad_date", ["2026-13-40", "2026-02-30", "2026-00-10"])
+def test_non_calendar_dates_rejected(field, bad_date):
+    extra = (
+        {"correction_summary": "Se corrigio una cifra."}
+        if field == "corrected_at"
+        else {}
+    )
+    with pytest.raises(ValidationError, match="real calendar date"):
+        AstroPost(**_base_post(**{field: bad_date, **extra}))
+
+
+@pytest.mark.parametrize(
+    "field, extra",
+    [
+        ("review_date", {}),
+        (
+            "corrected_at",
+            {"correction_summary": "Se corrigio una cifra."},
+        ),
+    ],
+)
+def test_valid_calendar_date_accepted(field, extra):
+    post = AstroPost(**_base_post(**{field: "2026-02-28", **extra}))
+    assert getattr(post, field) == "2026-02-28"
