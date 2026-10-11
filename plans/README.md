@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
 | 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
 | 123 | [Harden serving and fetch edges](123-serving-edge-hardening.md) | P1 | M | None (read 099/021 first) | TODO |
 | 124 | [Publication query scans, ordering, batch setup tax](124-publication-query-perf.md) | P2 | M | None (read 109/045 first) | TODO |
@@ -372,6 +371,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   validation for review/correction dates; `make lint/type/test/boundaries/
   contracts` green (3595 passed, ratchet OK). Plan refreshed mid-flight
   after a correct STOP (wrong helper location/mechanism in original text).
+  Merged locally, unpushed.
+- 121 (publication identity) DONE and archived — second slug path deleted
+  (was dead: no production caller, no migration needed), persistence
+  outcomes explicit (backfill bool, collision/outage typed errors, no bare
+  assert), DB-reservation serializes retry-vs-retry (concurrency-tested);
+  `make lint/type/test/boundaries` + quality-gate green (3600 passed).
+  O_EXCL primitive tested but writer-wiring deferred (noted in code).
   Merged locally, unpushed.
 
 ### Eighth-pass findings considered and rejected (do not re-audit)
