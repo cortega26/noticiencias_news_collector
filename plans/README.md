@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 120 | [Deterministic dates: undated, naive, calendar](120-deterministic-dates.md) | P1 | M | None | TODO |
 | 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
 | 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
 | 123 | [Harden serving and fetch edges](123-serving-edge-hardening.md) | P1 | M | None (read 099/021 first) | TODO |
@@ -367,6 +366,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   directions fail); 6 new gate tests + 4 backend case names added;
   frontend sync normal+strict and `make test-contracts` green. Merged
   locally (backend) + frontend branch merged and pushed; unpushed backend.
+- 120 (deterministic dates) DONE and archived — undated HTML quarantines via
+  model-validation per-item skip (no clock-stamp), explicit `assume_utc`
+  assumption point for naive feed dates (two-TZ proven), calendar-date
+  validation for review/correction dates; `make lint/type/test/boundaries/
+  contracts` green (3595 passed, ratchet OK). Plan refreshed mid-flight
+  after a correct STOP (wrong helper location/mechanism in original text).
+  Merged locally, unpushed.
 
 ### Eighth-pass findings considered and rejected (do not re-audit)
 
