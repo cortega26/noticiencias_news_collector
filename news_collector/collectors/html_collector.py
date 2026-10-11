@@ -286,7 +286,11 @@ class HtmlCollector(BaseCollector):
             "url": article_url,
             "summary": summary,
             "content": content,
-            "published_date": raw.get("date") or datetime.now(timezone.utc),
+            # Plan 120: propagate None for undated articles so
+            # CollectorArticleModel._ensure_not_none rejects the item with an
+            # explicit per-item collector.validate.error skip (deterministic,
+            # batch-safe) instead of baking in wall-clock time.
+            "published_date": raw.get("date") or None,
             "source_id": source_id,
             "source_name": config.get("name", "Unknown Source"),
             "category": config.get("category", "unknown"),
