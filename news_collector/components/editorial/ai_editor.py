@@ -44,7 +44,9 @@ from news_collector.components.editorial.editorial_publication_artifact import (
 )
 from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
+from news_collector.editorial.health_claims import find_guarantee_language
 from news_collector.editorial.readability import check_english_spillover, check_headline
+from news_collector.editorial.voice_tics import check_voice_tics
 
 SOURCE_IDENTITY_COMMENT_RE = re.compile(
     r"<!--\s*source_identity:[\s\S]*?-->",
@@ -1653,6 +1655,18 @@ class EditorAgent:
                     f"{max_headline_retries + 1} attempts. Publishing with "
                     f"last generated headlines. Reason: {regen_instruction}"
                 )
+                # Structured exhaustion event
+                # (spec-editorial-quality-lifts L5): the prose warning above
+                # is not countable by monitoring — emit the machine-readable
+                # event alongside it. Behavior unchanged: last headlines
+                # are still published.
+                logger.warning(
+                    {
+                        "event": "headline_critic.exhausted",
+                        "attempts": max_headline_retries + 1,
+                        "reason": (regen_instruction or "")[:300],
+                    }
+                )
         return headlines
 
     @staticmethod
@@ -1716,47 +1730,61 @@ class EditorAgent:
             context, "INSUMO_ENRIQUECIMIENTO_NO_CONFIABLE"
         )
 
+        # Bounded retry (spec-editorial-quality-lifts L6): one extra attempt
+        # on the total-failure path only. A transient LLM failure here used
+        # to discard the whole flow downstream (missing V2 enrichment
+        # fields); a single retry recovers the nondeterministic cases while
+        # keeping the cost bound (at most 1 extra call, only when the first
+        # attempt produced nothing usable).
         response = ""
-        try:
-            response = self._send_prompt(
-                context,
-                system=_system_with_untrusted_data_policy(system_prompt),
-                model=self.enrichment_model,
-            )
-            data = sanitize_enrichment_payload(self._extract_json(response))
-            if not data.get("sources") and (source_url or source_name):
-                # Backfill BEFORE validation: a sanitized-away blank-url
-                # source (run 39) leaves an empty list, which would fail
-                # min_length=1 below and discard the other five valid
-                # fields with it.
-                logger.warning(
-                    "Enrichment returned no sources; falling back to the "
-                    "article's original source (url={}).",
-                    source_url,
+        for attempt in (1, 2):
+            try:
+                response = self._send_prompt(
+                    context,
+                    system=_system_with_untrusted_data_policy(system_prompt),
+                    model=self.enrichment_model,
                 )
-                data["sources"] = [
-                    {
-                        "title": source_name or article_title or "Fuente original",
-                        "url": source_url,
-                        "publisher": source_name or None,
-                    }
-                ]
-            validated = EnrichmentSchema(**data)
-            return validated.model_dump()
-        except (ValidationError, ValueError, json.JSONDecodeError) as e:
-            failed_fields = ""
-            if isinstance(e, ValidationError):
-                locs = sorted(
-                    {str(err["loc"][0]) for err in e.errors() if err.get("loc")}
-                )
-                if locs:
-                    failed_fields = f" campos=[{', '.join(locs)}]"
-            logger.error(f"Enrichment Schema Validation Failed{failed_fields}: {e}")
-            if response:
-                logger.debug(
-                    f"Raw enrichment response (first 500 chars): {response[:500]}"
-                )
-            return self._empty_enrichment_fields()
+                data = sanitize_enrichment_payload(self._extract_json(response))
+                if not data.get("sources") and (source_url or source_name):
+                    # Backfill BEFORE validation: a sanitized-away blank-url
+                    # source (run 39) leaves an empty list, which would fail
+                    # min_length=1 below and discard the other five valid
+                    # fields with it.
+                    logger.warning(
+                        "Enrichment returned no sources; falling back to the "
+                        "article's original source (url={}).",
+                        source_url,
+                    )
+                    data["sources"] = [
+                        {
+                            "title": source_name or article_title or "Fuente original",
+                            "url": source_url,
+                            "publisher": source_name or None,
+                        }
+                    ]
+                validated = EnrichmentSchema(**data)
+                return validated.model_dump()
+            except Exception as e:  # noqa: BLE001 - bounded retry, then fail-open empty
+                if attempt == 1:
+                    logger.warning(
+                        "Enrichment attempt 1 failed "
+                        f"({type(e).__name__}); retrying once."
+                    )
+                    continue
+                failed_fields = ""
+                if isinstance(e, ValidationError):
+                    locs = sorted(
+                        {str(err["loc"][0]) for err in e.errors() if err.get("loc")}
+                    )
+                    if locs:
+                        failed_fields = f" campos=[{', '.join(locs)}]"
+                logger.error(f"Enrichment Schema Validation Failed{failed_fields}: {e}")
+                if response:
+                    logger.debug(
+                        f"Raw enrichment response (first 500 chars): {response[:500]}"
+                    )
+                return self._empty_enrichment_fields()
+        return self._empty_enrichment_fields()
 
     def _send_fact_check_prompt(self, prompt: str, system: str) -> dict[str, Any]:
         """Send one fact-check verification prompt to the dedicated
@@ -2381,6 +2409,16 @@ class EditorAgent:
         )
         if cache_s2_6.exists():
             print(f"(Loaded from cache: {cache_s2_6})")
+            # Provenance capture (spec-editorial-quality-lifts L1): a
+            # checkpoint file means a previous run passed this gate, so
+            # record that instead of leaving `last_critic_verdict` as None.
+            # `from_cache` marks it as historical, not a fresh judgment
+            # (no scores survive the "ok" checkpoint format).
+            self.last_critic_verdict = {"approved": True, "from_cache": True}
+            logger.info(
+                "Editorial Critic skipped (cache hit): prior pass recorded "
+                f"as cached verdict for {article_id}."
+            )
         elif os.getenv(
             "ENABLE_EDITORIAL_CRITIC", "true"
         ).lower() != "false" and self.prompts.get("editor_critic", {}).get("system"):
@@ -2478,6 +2516,19 @@ class EditorAgent:
         # English words the translation critic misses. Advisory only.
         for spill in check_english_spillover(final_content):
             logger.warning(f"Prose language [{spill.code}]: {spill.message}")
+
+        # Deterministic voice-tic lint (spec-editorial-quality-lifts L3):
+        # banned openings/muletillas the editorial critic judges
+        # nondeterministically. Advisory only.
+        for tic in check_voice_tics(final_content):
+            logger.warning(f"Voice tics [{tic.code}]: {tic.message}")
+
+        # Deterministic health guarantee-language check
+        # (spec-editorial-quality-lifts L4): therapeutic overgeneralizations
+        # in health-scope prose. Advisory only; the fact-check verifier
+        # stays the judge.
+        for guarantee in find_guarantee_language(final_content):
+            logger.warning(f"Health guarantee [{guarantee.code}]: {guarantee.message}")
 
         # --- DETERMINISTIC REPAIR LAYER ---
         final_content, headlines = self._repair_output(

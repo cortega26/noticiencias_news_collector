@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T01:32:57.867450+00:00",
+  "generated_at": "2026-10-11T11:18:44.408880+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -113,6 +113,7 @@
       "AGENTS.md",
       "ARCHITECTURE.md",
       "CHANGELOG.md",
+      "EDITORIAL_EVALUATION_PROTOCOL.md",
       "EDITORIAL_MODES.md",
       "INDEX.md",
       "PIPELINE_CONTRACTS.md",
@@ -412,6 +413,7 @@
       "test_datetime_utils.py",
       "test_dedupe_utils.py",
       "test_editor_agent.py",
+      "test_editorial_eval_seed.py",
       "test_editorial_policy.py",
       "test_editorial_policy_enforcement.py",
       "test_enrichment_pipeline.py",
@@ -649,7 +651,7 @@
     },
     {
       "target": "type",
-      "description": "Alias for static type checking (mypy)"
+      "description": "Run incremental mypy plus unit coverage ratchet"
     },
     {
       "target": "quality-gate",
@@ -673,19 +675,23 @@
     },
     {
       "target": "typecheck",
-      "description": "Static type checking with mypy (incremental coverage)"
+      "description": "Static mypy check plus unit tests and coverage ratchet"
     },
     {
       "target": "test",
-      "description": "Run unit tests (fast feedback, excludes slow e2e pipeline)"
+      "description": "Run unit tests (excludes integration, pipeline E2E, and performance suites)"
     },
     {
       "target": "test-all",
       "description": "Run all tests including slow e2e pipeline"
     },
     {
+      "target": "test-integration",
+      "description": "Run integration tests and root-level tests marked e2e"
+    },
+    {
       "target": "test-e2e",
-      "description": "Run the full e2e pipeline tests (~4 min)"
+      "description": "Run the isolated pipeline E2E suite in fixed order"
     },
     {
       "target": "check-coverage",
@@ -1056,6 +1062,7 @@
     "docs/AGENTS.md",
     "docs/ARCHITECTURE.md",
     "docs/CHANGELOG.md",
+    "docs/EDITORIAL_EVALUATION_PROTOCOL.md",
     "docs/EDITORIAL_MODES.md",
     "docs/INDEX.md",
     "docs/PIPELINE_CONTRACTS.md",
