@@ -178,7 +178,7 @@ class AstroPost(BaseModel):
     confidence: Optional[str] = None
     investigation: bool = Field(default=False)
     featured: bool = Field(default=False)
-    featured_rank: Optional[int] = None
+    featured_rank: Optional[int] = Field(default=None, gt=0)
     summary_points: Optional[List[str]] = None
     uncertainty_note: Optional[str] = None
     glossary: Optional[List[GlossaryItem]] = None
@@ -218,6 +218,51 @@ class AstroPost(BaseModel):
             raise ValueError("corrected_at and correction_summary must be set together")
         return self
 
+    @model_validator(mode="after")
+    def _featured_rank_required_when_featured(self) -> "AstroPost":
+        # Mirror `featured === true requires featured_rank` in content.config.ts.
+        if self.featured is True and self.featured_rank is None:
+            raise ValueError("featured_rank is required when featured is true")
+        return self
+
+    @model_validator(mode="after")
+    def _v2_editorial_fields_required(self) -> "AstroPost":
+        # Mirror the `schema_version >= 2` superRefine branch in
+        # src/content.config.ts: v1 posts are grandfathered, v2+ require
+        # structured editorial fields. `why_it_matters` intentionally has NO
+        # minimum (0-3, absence valid) so it is not checked here.
+        if self.schema_version is not None and self.schema_version >= 2:
+            sp = self.summary_points
+            if not sp:
+                raise ValueError(
+                    "summary_points is required for schema_version >= 2 (2-5 items)"
+                )
+            if not 2 <= len(sp) <= 5:
+                raise ValueError(
+                    "summary_points must have 2-5 items "
+                    f"for schema_version >= 2 (got {len(sp)})"
+                )
+            if any(not (s or "").strip() for s in sp):
+                raise ValueError(
+                    "summary_points must not contain empty items "
+                    "for schema_version >= 2"
+                )
+            if not self.glossary:
+                raise ValueError(
+                    "glossary is required for schema_version >= 2 (>=1 item)"
+                )
+            if not self.fact_check:
+                raise ValueError(
+                    "fact_check is required for schema_version >= 2 (>=1 item)"
+                )
+            if not (self.confidence or "").strip():
+                raise ValueError("confidence is required for schema_version >= 2")
+            if not self.sources:
+                raise ValueError(
+                    "sources is required for schema_version >= 2 (>=1 item)"
+                )
+        return self
+
     @field_validator("social", mode="before")
     @classmethod
     def _social_not_null(cls, v):
@@ -225,6 +270,20 @@ class AstroPost(BaseModel):
             raise ValueError(
                 "social must be an object, not null (omit the key to disable)"
             )
+        return v
+
+    @field_validator(
+        "summary_points", "why_it_matters", "known_points", "open_questions"
+    )
+    @classmethod
+    def _list_items_must_be_non_empty(cls, v):
+        # Mirror z.string().min(1) on list items, hardened against
+        # whitespace-only strings (["  "] fails).
+        if v is None:
+            return v
+        for item in v:
+            if not (item or "").strip():
+                raise ValueError("list items must be non-empty")
         return v
 
     @field_validator("date")

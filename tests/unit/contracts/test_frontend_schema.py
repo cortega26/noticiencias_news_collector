@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from news_collector.contracts.frontend_schema import (
     AstroPost,
+    FactCheckItem,
+    GlossaryItem,
     ImageObject,
     SocialConfig,
     SourceItem,
@@ -98,3 +100,134 @@ def test_astropost_still_ignores_unknown_top_level_extras():
     # The social object is strict, but AstroPost itself keeps ignoring extras.
     post = AstroPost(**_base_post(some_unknown_future_field="whatever"))
     assert not hasattr(post, "some_unknown_future_field")
+
+
+# --------------------------------------------------------------------------- #
+# v2 editorial contract (mirrors schema_version >= 2 superRefine in
+# src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+def _base_v2_post(**overrides):
+    data = _base_post(
+        schema_version=2,
+        summary_points=["First point", "Second point"],
+        glossary=[GlossaryItem(term="Term", definition="Definition")],
+        fact_check=[FactCheckItem(label="Claim", status="verified")],
+        confidence="high",
+    )
+    data.update(overrides)
+    return data
+
+
+def test_v1_without_editorial_fields_still_validates():
+    post = AstroPost(**_base_post())
+    assert post.schema_version == 1
+
+
+def test_v2_valid_post_passes():
+    post = AstroPost(**_base_v2_post())
+    assert post.schema_version == 2
+
+
+def test_v2_missing_summary_points_raises():
+    data = _base_v2_post()
+    del data["summary_points"]
+    with pytest.raises(ValidationError, match="summary_points is required"):
+        AstroPost(**data)
+
+
+def test_v2_summary_points_too_few_raises():
+    with pytest.raises(ValidationError, match="summary_points must have 2-5 items"):
+        AstroPost(**_base_v2_post(summary_points=["Only one"]))
+
+
+def test_v2_summary_points_too_many_raises():
+    with pytest.raises(ValidationError, match="summary_points must have 2-5 items"):
+        AstroPost(**_base_v2_post(summary_points=["a", "b", "c", "d", "e", "f"]))
+
+
+def test_v2_missing_glossary_raises():
+    data = _base_v2_post()
+    del data["glossary"]
+    with pytest.raises(ValidationError, match="glossary is required"):
+        AstroPost(**data)
+
+
+def test_v2_missing_fact_check_raises():
+    data = _base_v2_post()
+    del data["fact_check"]
+    with pytest.raises(ValidationError, match="fact_check is required"):
+        AstroPost(**data)
+
+
+def test_v2_missing_confidence_raises():
+    data = _base_v2_post()
+    del data["confidence"]
+    with pytest.raises(ValidationError, match="confidence is required"):
+        AstroPost(**data)
+
+
+def test_v2_missing_sources_raises():
+    data = _base_v2_post()
+    data["sources"] = []
+    with pytest.raises(ValidationError, match="sources is required"):
+        AstroPost(**data)
+
+
+def test_v2_why_it_matters_absent_is_valid():
+    # P0-06 / DEC-003: no minimum — absence beats fabrication.
+    post = AstroPost(**_base_v2_post())
+    assert post.why_it_matters is None
+
+
+# --------------------------------------------------------------------------- #
+# featured_rank (mirrors featured_rank superRefine in src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+def test_featured_true_without_rank_raises():
+    with pytest.raises(ValidationError, match="featured_rank is required"):
+        AstroPost(**_base_post(featured=True))
+
+
+def test_featured_rank_zero_raises():
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(featured=True, featured_rank=0))
+
+
+def test_featured_rank_negative_raises():
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(featured=True, featured_rank=-3))
+
+
+def test_featured_false_without_rank_passes():
+    post = AstroPost(**_base_post(featured=False))
+    assert post.featured_rank is None
+
+
+def test_featured_true_with_rank_passes():
+    post = AstroPost(**_base_post(featured=True, featured_rank=1))
+    assert post.featured_rank == 1
+
+
+# --------------------------------------------------------------------------- #
+# non-empty list items (mirrors z.string().min(1), hardened vs whitespace)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "field", ["summary_points", "why_it_matters", "known_points", "open_questions"]
+)
+@pytest.mark.parametrize("bad_item", ["", "  "])
+def test_list_items_reject_empty(field, bad_item):
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(**{field: [bad_item]}))
+
+
+@pytest.mark.parametrize(
+    "field", ["summary_points", "why_it_matters", "known_points", "open_questions"]
+)
+def test_list_items_accept_non_empty(field):
+    post = AstroPost(**_base_post(**{field: ["Real content"]}))
+    assert getattr(post, field) == ["Real content"]
