@@ -33,9 +33,7 @@ def collector():
 @pytest.fixture
 def tracked_collector():
     with patch("news_collector.collectors.html_collector.get_runtime_config"):
-        return HtmlCollector(
-            logger_factory=MagicMock(), health_tracker=MagicMock()
-        )
+        return HtmlCollector(logger_factory=MagicMock(), health_tracker=MagicMock())
 
 
 def _config(**overrides):
@@ -98,9 +96,7 @@ async def test_robots_disallowed_sends_dlq(collector):
 async def test_parse_exception_recorded(collector):
     client = _client_mock(httpx.Response(200, text=LIST_HTML))
     with patch.object(collector, "_respect_robots", return_value=(True, 0)):
-        with patch(
-            "news_collector.collectors.html_collector.validate_url_safety"
-        ):
+        with patch("news_collector.collectors.html_collector.validate_url_safety"):
             with patch("httpx.AsyncClient", return_value=client):
                 with patch.object(
                     collector,
@@ -117,9 +113,7 @@ async def test_parse_exception_recorded(collector):
 
 @pytest.mark.asyncio
 async def test_unexpected_exception_path(collector):
-    with patch.object(
-        collector, "_respect_robots", side_effect=RuntimeError("boom")
-    ):
+    with patch.object(collector, "_respect_robots", side_effect=RuntimeError("boom")):
         with patch.object(collector, "_update_source_stats"):
             stats = await collector.collect_from_source_async("s", _config())
     assert stats["success"] is False
@@ -133,9 +127,7 @@ async def test_happy_path_with_health_tracker(tracked_collector):
         httpx.Response(200, text=DETAIL_HTML),
     )
     with patch.object(tracked_collector, "_respect_robots", return_value=(True, 0)):
-        with patch(
-            "news_collector.collectors.html_collector.validate_url_safety"
-        ):
+        with patch("news_collector.collectors.html_collector.validate_url_safety"):
             with patch("httpx.AsyncClient", return_value=client):
                 with patch.object(tracked_collector, "_enforce_domain_rate_limit"):
                     with patch.object(
@@ -143,9 +135,7 @@ async def test_happy_path_with_health_tracker(tracked_collector):
                         "_filter_and_save_articles",
                         return_value=1,
                     ) as save:
-                        with patch.object(
-                            tracked_collector, "_update_source_stats"
-                        ):
+                        with patch.object(tracked_collector, "_update_source_stats"):
                             stats = await tracked_collector.collect_from_source_async(
                                 "s", _config()
                             )
@@ -221,7 +211,9 @@ def test_css_container_exception_skipped(collector):
 def test_process_returns_none_without_url_or_title(collector):
     assert collector._process_article_html({}, _config(), "s") is None
     assert (
-        collector._process_article_html({"url": "https://example.com/x"}, _config(), "s")
+        collector._process_article_html(
+            {"url": "https://example.com/x"}, _config(), "s"
+        )
         is None
     )
 
@@ -238,7 +230,10 @@ def test_parse_json_ld_article_defaults(collector):
 @pytest.mark.asyncio
 async def test_fetch_content_http_error_returns_none(collector):
     client = _client_mock(httpx.Response(404, text="missing"))
-    assert await collector._fetch_article_content(client, "https://example.com/x", {}) is None
+    assert (
+        await collector._fetch_article_content(client, "https://example.com/x", {})
+        is None
+    )
 
 
 @pytest.mark.asyncio
@@ -246,7 +241,9 @@ async def test_fetch_content_configured_selector(collector):
     html = '<html><body><div class="body"><p>This paragraph is long enough to keep here.</p></div></body></html>'
     client = _client_mock(httpx.Response(200, text=html))
     text = await collector._fetch_article_content(
-        client, "https://example.com/x", {"html_selectors": {"article_selector": "div.body"}}
+        client,
+        "https://example.com/x",
+        {"html_selectors": {"article_selector": "div.body"}},
     )
     assert text is not None and "long enough" in text
 
@@ -254,13 +251,19 @@ async def test_fetch_content_configured_selector(collector):
 @pytest.mark.asyncio
 async def test_fetch_content_no_container_returns_none(collector):
     client = _client_mock(httpx.Response(200, text=""))
-    assert await collector._fetch_article_content(client, "https://example.com/x", {}) is None
+    assert (
+        await collector._fetch_article_content(client, "https://example.com/x", {})
+        is None
+    )
 
 
 @pytest.mark.asyncio
 async def test_fetch_content_exception_returns_none(collector):
     client = _client_mock(get_side_effect=RuntimeError("network down"))
-    assert await collector._fetch_article_content(client, "https://example.com/x", {}) is None
+    assert (
+        await collector._fetch_article_content(client, "https://example.com/x", {})
+        is None
+    )
 
 
 # --- _fetch_html_conditional outcomes -------------------------------------- #
@@ -300,8 +303,11 @@ async def test_conditional_fetch_429_without_retry_after_uses_default(collector)
 @pytest.mark.asyncio
 async def test_conditional_fetch_500_then_gives_up(collector):
     _conditional_collector(collector)
-    client = _client_mock(httpx.Response(500, text="err"), httpx.Response(500, text="err"),
-                          httpx.Response(500, text="err"))
+    client = _client_mock(
+        httpx.Response(500, text="err"),
+        httpx.Response(500, text="err"),
+        httpx.Response(500, text="err"),
+    )
     with patch("httpx.AsyncClient", return_value=client):
         with patch.object(collector, "_backoff_sleep_async", new=AsyncMock()):
             content, status = await collector._fetch_html_conditional(
