@@ -32,7 +32,6 @@ from news_collector.logic.workflows.publication_pipeline import (
     _load_export_articles,
     _safe_clone_source_repo,
     _select_export_articles,
-    _unique_post_slug,
     run_collector_script,
     run_publication_pipeline,
 )
@@ -53,7 +52,6 @@ __all__ = [
     "_load_export_articles",
     "_safe_clone_source_repo",
     "_select_export_articles",
-    "_unique_post_slug",
     "delete_article",
     "main",
     "run_collector_script",

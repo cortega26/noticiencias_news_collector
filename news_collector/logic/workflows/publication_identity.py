@@ -63,6 +63,43 @@ class UndatedArticleError(ValueError):
         )
 
 
+class EmptyArticleIdError(ValueError):
+    """Quarantine error: empty article_id cannot yield deterministic identity.
+
+    LAW-B5 forbids minting randomness (ex-``uuid4`` suffix in the deleted
+    second slug path) when the identifier is missing. Fail closed with an
+    explicit per-item error carrying ``error_code``/``public_message`` for
+    the batch reporter (LAW-B6), like :class:`UndatedArticleError`.
+    """
+
+    error_code = "E_IDENTITY_EMPTY_ID"
+
+    def __init__(self, detail: str = "") -> None:
+        self.article_id = ""
+        message = (
+            "Empty article_id cannot yield deterministic publication "
+            f"identity — refusing to mint randomness.{(' ' + detail) if detail else ''}"
+        )
+        super().__init__(message)
+        self.public_message = (
+            "El artículo no tiene un identificador válido para publicar y "
+            "el sistema no inventa identificadores (identidad no "
+            "determinista). Revisa los datos de origen."
+        )
+
+
+def _require_nonempty_article_id(article_id: str) -> str:
+    """Fail closed on empty identifiers (plan 121 Step 1, LAW-B5).
+
+    Returns the stripped identifier for convenience. Raises
+    :class:`EmptyArticleIdError` when ``article_id`` is empty/blank —
+    never mints ``uuid4`` randomness.
+    """
+    if article_id is None or not str(article_id).strip():
+        raise EmptyArticleIdError()
+    return str(article_id).strip()
+
+
 @dataclass
 class PublicationIdentity:
     final_slug: str  # e.g. "2024-01-25-my-article"
@@ -133,7 +170,11 @@ class PublicationIdentityResolver:
         canonical identity (LAW-B5).
 
         Collision avoidance runs only in Priority 3 (slug is already stable in P1/P2).
+
+        Raises EmptyArticleIdError when article_id is empty (LAW-B5 fail-closed,
+        never uuid randomness — single identity path is this resolver).
         """
+        _require_nonempty_article_id(article_id)
         # Priority 1 — DB (only if slug is well-formed with a date prefix)
         db_slug = self._get_db_slug(article_id)
         canonical_date = self._date_from_slug(db_slug) if db_slug else None
@@ -218,7 +259,10 @@ class PublicationIdentityResolver:
         the default static extract_slug (used so test monkeypatches are respected).
 
         Only valid to call when identity.is_new is True.
+
+        Raises EmptyArticleIdError when article_id is empty (LAW-B5 fail-closed).
         """
+        _require_nonempty_article_id(article_id)
         assert identity.is_new, "finalize_slug only valid for creation-mode identities"
 
         canonical_date = identity.canonical_date

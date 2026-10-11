@@ -24,9 +24,7 @@ Maintenance contract:
 
 import asyncio
 import json
-import re
 import shutil
-import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -66,38 +64,6 @@ def _is_file_lock_error(exc: Exception) -> bool:
     return (
         "being used by another process" in message
         or "utilizado por otro proceso" in message
-    )
-
-
-def _unique_post_slug(
-    *,
-    posts_dir: Path,
-    date_str: str,
-    base_slug: str,
-    article_id: str,
-) -> tuple[str, Path]:
-    candidate_slug = base_slug
-    output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
-    if not output_path.exists():
-        return candidate_slug, output_path
-
-    safe_suffix = re.sub(r"[^a-z0-9]+", "", article_id.lower())[:6]
-    if not safe_suffix:
-        safe_suffix = uuid.uuid4().hex[:6]
-
-    candidate_slug = f"{base_slug}-{safe_suffix}"
-    output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
-    if not output_path.exists():
-        return candidate_slug, output_path
-
-    for attempt in range(2, 100):
-        candidate_slug = f"{base_slug}-{safe_suffix}-{attempt}"
-        output_path = posts_dir / f"{date_str}-{candidate_slug}.md"
-        if not output_path.exists():
-            return candidate_slug, output_path
-
-    raise RuntimeError(
-        f"Unable to generate unique slug for article {article_id} in {posts_dir}"
     )
 
 
