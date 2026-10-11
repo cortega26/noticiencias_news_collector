@@ -20,6 +20,7 @@ Does NOT own:
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -439,6 +440,55 @@ class PublicationIdentityResolver:
             article_id,
         )
         raise SlugCollisionError(article_id, slug)
+
+    @staticmethod
+    def exclusive_create_file(
+        posts_dir: Path, output_filename: str, content: str = ""
+    ) -> Path:
+        """Atomically claim ``posts_dir/output_filename`` via O_EXCL (plan 121).
+
+        This is the FS-level counterpart to the DB unique-index lock in
+        :meth:`register_slug`: retry-vs-retry is serialized by the DB (the
+        primary lock — ``register_slug`` raises on collision before any FS
+        write), while this primitive closes the residual external-writer
+        window where a file appears between the resolver's ``exists()`` scan
+        and the later write. Single-process sequential behavior is unchanged
+        (the ``exists()`` bump loops in ``resolve``/``finalize_slug`` still
+        pick the same names; this method is the atomic commit for the chosen
+        name).
+
+        Returns the claimed Path. Raises SlugCollisionError when the file
+        already exists (explicit loser — never overwrites). Raises
+        IdentityPersistenceError on other OS errors. Includes the
+        path-traversal guard (NC-BE-015).
+
+        NOTE (ADR-0011): the write path (TargetRepoWriter.write_article) is
+        out of scope for this plan, so production wiring of this primitive
+        into the writer is deferred; the DB lock already prevents
+        retry-vs-retry overwrites end-to-end (concurrency test proves it).
+        """
+        target = posts_dir / output_filename
+        try:
+            resolved_target = target.resolve()
+            resolved_posts = posts_dir.resolve()
+            resolved_target.relative_to(resolved_posts)
+        except ValueError as err:
+            raise IdentityPersistenceError(
+                "", detail=f"path traversal refused for {output_filename!r}"
+            ) from err
+        try:
+            posts_dir.mkdir(parents=True, exist_ok=True)
+            fd = os.open(str(target), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        except FileExistsError as err:
+            raise SlugCollisionError("", str(output_filename)) from err
+        except OSError as err:
+            raise IdentityPersistenceError("", detail=str(err)) from err
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(content)
+        except OSError as err:
+            raise IdentityPersistenceError("", detail=str(err)) from err
+        return target
 
     # ------------------------------------------------------------------
     # Pure helpers

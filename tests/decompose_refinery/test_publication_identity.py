@@ -749,3 +749,141 @@ class TestFinalizeSlug:
             )
         assert exc_info.value.error_code == "E_IDENTITY_FINALIZE_NOT_NEW"
         assert exc_info.value.public_message
+
+
+# ---------------------------------------------------------------------------
+# Plan 121 Step 3: atomic resolve-vs-write (DB lock + O_EXCL primitive)
+# ---------------------------------------------------------------------------
+
+
+class _FakeSlugDB:
+    """Stateful stand-in enforcing real unique-slug semantics (thread-safe).
+
+    Mirrors article_repository.set_canonical_slug: same-row same-slug retry
+    → True; different article same slug → False (collision); missing methods
+    intentionally absent (resolver requires set_canonical_slug).
+    """
+
+    def __init__(self):
+        import threading
+
+        self._lock = threading.Lock()
+        self._by_id: dict[str, str] = {}
+        self._by_slug: dict[str, str] = {}
+
+    def get_canonical_slug(self, article_id):
+        with self._lock:
+            return self._by_id.get(str(article_id))
+
+    def set_canonical_slug(self, article_id, slug):
+        with self._lock:
+            aid = str(article_id)
+            if aid in self._by_id and self._by_id[aid] != slug:
+                return False  # overwrite refusal
+            owner = self._by_slug.get(slug)
+            if owner is not None and owner != aid:
+                return False  # genuine collision
+            self._by_id[aid] = slug
+            self._by_slug[slug] = aid
+            return True
+
+
+class TestAtomicResolveVsWrite:
+    def test_concurrent_same_slug_winner_loser_no_overwrite(self, tmp_path):
+        """Two finalize+register flows, same canonical slug, different ids →
+        exactly one winner (True), one explicit SlugCollisionError loser;
+        winner's file never overwritten."""
+        import threading
+
+        from news_collector.logic.workflows.publication_identity import (
+            PublicationIdentityResolver,
+            SlugCollisionError,
+        )
+
+        db = _FakeSlugDB()
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = None
+        slug = "2026-05-01-same-story"
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, object] = {}
+
+        def _run(article_id: str):
+            resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+            identity = PublicationIdentity(
+                final_slug=None,
+                canonical_date="2026-05-01",
+                output_filename=None,
+                is_new=True,
+            )
+            try:
+                barrier.wait(timeout=10)
+                finalized = resolver.finalize_slug(
+                    identity=identity,
+                    refined_content=f"slug: same-story\ntitle: Same Story",
+                    article_id=article_id,
+                    posts_dir=tmp_path,
+                )
+                assert finalized.final_slug == slug
+                resolver.register_slug(article_id, finalized.final_slug)
+                outcomes[article_id] = "winner"
+            except SlugCollisionError:
+                outcomes[article_id] = "collision"
+            except Exception as exc:  # pragma: no cover - must not happen
+                outcomes[article_id] = f"unexpected:{exc!r}"
+
+        threads = [
+            threading.Thread(target=_run, args=("9001",)),
+            threading.Thread(target=_run, args=("9002",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        assert sorted(outcomes.values()) == ["collision", "winner"]
+        winner_id = next(aid for aid, res in outcomes.items() if res == "winner")
+        # Winner's DB lock intact; loser holds nothing (no overwrite).
+        assert db.get_canonical_slug(winner_id) == slug
+        loser_id = "9002" if winner_id == "9001" else "9001"
+        assert db.get_canonical_slug(loser_id) is None
+        # Winner writes; loser never reaches write (failed at register).
+        target = tmp_path / f"{slug}.md"
+        target.write_text(f"winner:{winner_id}", encoding="utf-8")
+        assert target.read_text(encoding="utf-8") == f"winner:{winner_id}"
+
+    def test_concurrent_exclusive_create_no_overwrite(self, tmp_path):
+        """O_EXCL primitive: two claims, same filename → one winner, one
+        explicit collision, winner content intact (never overwritten)."""
+        import threading
+
+        from news_collector.logic.workflows.publication_identity import (
+            PublicationIdentityResolver,
+            SlugCollisionError,
+        )
+
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, object] = {}
+
+        def _run(name: str):
+            try:
+                barrier.wait(timeout=10)
+                PublicationIdentityResolver.exclusive_create_file(
+                    tmp_path, "2026-05-01-race.md", content=f"content:{name}"
+                )
+                outcomes[name] = "winner"
+            except SlugCollisionError:
+                outcomes[name] = "collision"
+
+        threads = [
+            threading.Thread(target=_run, args=("a",)),
+            threading.Thread(target=_run, args=("b",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        assert sorted(outcomes.values()) == ["collision", "winner"]
+        body = (tmp_path / "2026-05-01-race.md").read_text(encoding="utf-8")
+        winner = next(name for name, res in outcomes.items() if res == "winner")
+        assert body == f"content:{winner}"
