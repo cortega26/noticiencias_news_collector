@@ -329,8 +329,7 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 118 | [Enforce the v2 editorial contract in the backend mirror](118-contract-parity.md) | P1 | M | None | DONE (4 commits on `advisor/118-contract-parity` in `/tmp/opencode/exec-118`: v2 validator, featured_rank, non-empty items, 27 contract tests; `make lint/type/test/test-contracts` green, frontend mirror no-new-divergence; reviewed 2026-10-11, merged locally, unpushed. Executor STOPped correctly on 2 invalid fixtures — fixed in one REVISE round (+4 YAML lines each, expectations byte-identical).) |
-| 119 | [Make the contract-sync gate see cross-field rules](119-contract-sync-gate.md) | P2 | M | 118 | TODO |
+| 119 | [Make the contract-sync gate see cross-field rules](119-contract-sync-gate.md) | P2 | M | 118 (DONE, archived) | TODO |
 | 120 | [Deterministic dates: undated, naive, calendar](120-deterministic-dates.md) | P1 | M | None | TODO |
 | 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
 | 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
@@ -355,6 +354,14 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   `article_repository.py`) — sequence executors, don't parallelize.
 - 129's docs items coordinate with 081 (governance owner); 123 builds on
   021/099 enforcement floors without re-litigating them.
+
+### Eighth-pass completed (archived)
+
+- 118 (backend v2 contract parity) DONE and archived — v2 editorial validator,
+  featured_rank positivity + required-when-featured, non-empty list items
+  (27 new contract tests); 2 invalid v2 fixtures corrected (+4 YAML lines
+  each, expectations byte-identical); `make lint/type/test/test-contracts`
+  green, frontend mirror no-new-divergence. Merged locally, unpushed.
 
 ### Eighth-pass findings considered and rejected (do not re-audit)
 
