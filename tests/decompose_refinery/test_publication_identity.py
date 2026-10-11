@@ -574,8 +574,41 @@ class TestSlugPersistence:
         db = MagicMock()
         db.set_canonical_slug.return_value = True
         resolver = _make_resolver(db=db)
-        resolver.backfill_slug("77", "2025-06-01-old-slug")
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is True
         db.set_canonical_slug.assert_called_once_with("77", "2025-06-01-old-slug")
+
+    def test_backfill_slug_returns_false_on_refusal(self):
+        db = MagicMock()
+        db.set_canonical_slug.return_value = False
+        resolver = _make_resolver(db=db)
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is False
+
+    def test_backfill_slug_returns_false_on_outage(self):
+        db = MagicMock()
+        db.set_canonical_slug.side_effect = RuntimeError("db down")
+        resolver = _make_resolver(db=db)
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is False
+
+    def test_resolve_backfill_failure_raises_explicit_error(self, tmp_path):
+        """Plan 121 Step 2: FS-recovered but DB backfill fails → explicit
+        per-item error, never silent recovery as locked."""
+        from news_collector.logic.workflows.publication_identity import (
+            IdentityPersistenceError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        db.set_canonical_slug.return_value = False  # backfill refused
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+        existing = posts_dir / "2025-06-01-old-slug.md"
+        existing.write_text("---\n---\nContent")
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = existing
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+        with pytest.raises(IdentityPersistenceError) as exc_info:
+            resolver.resolve(article_id="77", article={}, posts_dir=posts_dir)
+        assert exc_info.value.error_code == "E_IDENTITY_PERSISTENCE"
 
     def test_register_slug_returns_bool(self):
         db = MagicMock()
@@ -584,12 +617,39 @@ class TestSlugPersistence:
         result = resolver.register_slug("42", "2025-01-01-new-slug")
         assert result is True
 
-    def test_register_slug_returns_false_when_already_exists(self):
+    def test_register_reregistration_vs_collision(self):
+        """Plan 121 Step 2: same-row retry locks (True); different article
+        same slug collides (typed error) — repository distinction plumbed
+        through, never conflated."""
+        from news_collector.logic.workflows.publication_identity import (
+            SlugCollisionError,
+        )
+
+        # Same article retries its own slug → True (idempotent, per repository:
+        # same-row same-slug persists as True).
         db = MagicMock()
-        db.set_canonical_slug.return_value = False
-        resolver = _make_resolver(db=db)
-        result = resolver.register_slug("42", "2025-01-01-new-slug")
-        assert result is False
+        db.set_canonical_slug.return_value = True
+        assert _make_resolver(db=db).register_slug("42", "2025-01-01-same") is True
+
+        # Different article, same slug → repository refuses (False) → typed
+        # collision error with error_code for the batch reporter.
+        db2 = MagicMock()
+        db2.set_canonical_slug.return_value = False
+        with pytest.raises(SlugCollisionError) as exc_info:
+            _make_resolver(db=db2).register_slug("43", "2025-01-01-same")
+        assert exc_info.value.error_code == "E_IDENTITY_SLUG_COLLISION"
+        assert exc_info.value.public_message
+
+    def test_register_db_outage_raises_persistence_error(self):
+        from news_collector.logic.workflows.publication_identity import (
+            IdentityPersistenceError,
+        )
+
+        db = MagicMock()
+        db.set_canonical_slug.side_effect = RuntimeError("db down")
+        with pytest.raises(IdentityPersistenceError) as exc_info:
+            _make_resolver(db=db).register_slug("42", "2025-01-01-new-slug")
+        assert exc_info.value.error_code == "E_IDENTITY_PERSISTENCE"
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +728,10 @@ class TestFinalizeSlug:
 
     def test_ident_09_guard_raises_on_non_new_identity(self, tmp_path):
         """IDENT-09: Calling finalize_slug on a locked (is_new=False) identity raises."""
+        from news_collector.logic.workflows.publication_identity import (
+            FinalizeSlugError,
+        )
+
         resolver = _make_resolver()
         locked_identity = PublicationIdentity(
             final_slug="2025-06-01-existing",
@@ -676,10 +740,12 @@ class TestFinalizeSlug:
             is_new=False,
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(FinalizeSlugError) as exc_info:
             resolver.finalize_slug(
                 identity=locked_identity,
                 refined_content="slug: anything",
                 article_id="5",
                 posts_dir=tmp_path,
             )
+        assert exc_info.value.error_code == "E_IDENTITY_FINALIZE_NOT_NEW"
+        assert exc_info.value.public_message

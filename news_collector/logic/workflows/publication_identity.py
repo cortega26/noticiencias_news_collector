@@ -100,6 +100,77 @@ def _require_nonempty_article_id(article_id: str) -> str:
     return str(article_id).strip()
 
 
+class IdentityPersistenceError(ValueError):
+    """Explicit per-item error: DB slug persistence failed (plan 121 Step 2).
+
+    LAW-B7 forbids swallowed exceptions — ``backfill_slug``/``register_slug``
+    DB outages surface here (not silent recovery / conflated ``False``).
+    The engine's ``process_articles`` except-block surfaces ``error_code``/
+    ``public_message`` per article (LAW-B6).
+    """
+
+    error_code = "E_IDENTITY_PERSISTENCE"
+
+    def __init__(self, article_id: str, detail: str = "") -> None:
+        self.article_id = article_id
+        message = (
+            f"Failed to persist canonical slug for article {article_id!r} "
+            f"(DB outage or missing row).{(' ' + detail) if detail else ''}"
+        )
+        super().__init__(message)
+        self.public_message = (
+            "No se pudo guardar la identidad de publicación en la base de "
+            "datos. El artículo no se publica hasta que la identidad quede "
+            "bloqueada. Reintenta más tarde."
+        )
+
+
+class SlugCollisionError(ValueError):
+    """Explicit per-item error: slug locked by a different article (plan 121).
+
+    The repository distinguishes same-row retry (``set_canonical_slug`` True)
+    from genuine collision (False + warning) — this error plumbs the latter
+    through instead of conflating it with idempotent re-registration.
+    """
+
+    error_code = "E_IDENTITY_SLUG_COLLISION"
+
+    def __init__(self, article_id: str, slug: str, detail: str = "") -> None:
+        self.article_id = article_id
+        self.slug = slug
+        message = (
+            f"Canonical slug {slug!r} for article {article_id!r} collides "
+            f"with a different article's locked identity.{(' ' + detail) if detail else ''}"
+        )
+        super().__init__(message)
+        self.public_message = (
+            "El identificador de publicación choca con otro artículo ya "
+            "publicado. El artículo no se publica para no sobrescribirlo. "
+            "Revisa el título/fecha o elige un slug distinto."
+        )
+
+
+class FinalizeSlugError(ValueError):
+    """Typed error replacing the bare assert in finalize_slug (plan 121 Step 2).
+
+    Carries error_code/public_message so the batch reporter surfaces a
+    per-item outcome instead of an untagged AssertionError (LAW-B6).
+    """
+
+    error_code = "E_IDENTITY_FINALIZE_NOT_NEW"
+
+    def __init__(self, detail: str = "") -> None:
+        message = (
+            "finalize_slug only valid for creation-mode identities "
+            f"(is_new=True).{(' ' + detail) if detail else ''}"
+        )
+        super().__init__(message)
+        self.public_message = (
+            "La identidad de publicación ya está bloqueada y no puede "
+            "regenerarse. Reintenta la publicación desde el estado actual."
+        )
+
+
 @dataclass
 class PublicationIdentity:
     final_slug: str  # e.g. "2024-01-25-my-article"
@@ -199,8 +270,13 @@ class PublicationIdentityResolver:
                     f"Recovered post file '{fn}' for article {article_id} has no "
                     "parseable date prefix; refusing to invent a non-deterministic date."
                 )
-            # Self-heal: write slug into DB
-            self.backfill_slug(article_id, slug)
+            # Self-heal: write slug into DB — failure is an explicit per-item
+            # error (LAW-B6), never silent recovery as locked (plan 121 Step 2).
+            if not self.backfill_slug(article_id, slug):
+                raise IdentityPersistenceError(
+                    article_id,
+                    detail=f"FS-recovered slug {slug!r} could not be locked",
+                )
             return PublicationIdentity(
                 final_slug=slug,
                 canonical_date=canonical_date,
@@ -261,9 +337,12 @@ class PublicationIdentityResolver:
         Only valid to call when identity.is_new is True.
 
         Raises EmptyArticleIdError when article_id is empty (LAW-B5 fail-closed).
+        Raises FinalizeSlugError (typed, with error_code/public_message) when
+        called on a locked identity — replaces the bare assert (LAW-B6).
         """
         _require_nonempty_article_id(article_id)
-        assert identity.is_new, "finalize_slug only valid for creation-mode identities"
+        if not identity.is_new:
+            raise FinalizeSlugError()
 
         canonical_date = identity.canonical_date
         _slug_fn = extract_slug_fn if extract_slug_fn is not None else self.extract_slug
@@ -288,36 +367,78 @@ class PublicationIdentityResolver:
             is_new=True,
         )
 
-    def backfill_slug(self, article_id: str, slug: str) -> None:
-        """Write slug to DB (called when identity comes from FS scan)."""
-        if hasattr(self._db, "set_canonical_slug"):
-            try:
-                self._db.set_canonical_slug(article_id, slug)
+    def backfill_slug(self, article_id: str, slug: str) -> bool:
+        """Write slug to DB (called when identity comes from FS scan).
+
+        Returns True when the slug was persisted (or idempotently
+        re-persisted for the same row), False on any failure (collision,
+        missing row, DB outage, missing method). LAW-B7: never raises —
+        the caller in :meth:`resolve` branches on the result and raises an
+        explicit per-item error instead of silently recovering.
+        """
+        try:
+            _require_nonempty_article_id(article_id)
+        except EmptyArticleIdError:
+            logger.error("Refusing to backfill slug for empty article_id")
+            return False
+        if not slug or not str(slug).strip():
+            logger.error("Refusing to backfill empty slug for article {}", article_id)
+            return False
+        if not hasattr(self._db, "set_canonical_slug"):
+            logger.error("DB has no set_canonical_slug; backfill failed")
+            return False
+        try:
+            ok = self._db.set_canonical_slug(article_id, slug)
+            if ok:
                 logger.info("Backfilled canonical slug to DB: {}", slug)
-            except Exception as e:
-                logger.error("Failed to backfill canonical slug: {}", e)
+            else:
+                logger.error(
+                    "Backfill of canonical slug {} for article {} refused "
+                    "(collision or missing row)",
+                    slug,
+                    article_id,
+                )
+            return bool(ok)
+        except Exception as e:
+            logger.error("Failed to backfill canonical slug: {}", e)
+            return False
 
     def register_slug(self, article_id: str, slug: str) -> bool:
         """
-        Write a new slug to DB (called after policy approval, B-02 / F-0018).
-        Returns True if the slug was newly inserted, False if it already existed.
+        Lock a new slug in the DB (called after policy approval, B-02 / F-0018).
+
+        Returns True when the slug is locked for this article — covering both
+        fresh inserts and idempotent same-row retries (the repository returns
+        True for both; LAW-B5 idempotence).
+
+        Raises SlugCollisionError when set_canonical_slug returns False
+        (genuine collision with a different article, overwrite refusal, or
+        missing row — all mean the identity is NOT locked for this article).
+        Raises IdentityPersistenceError on DB outage/misconfiguration or
+        empty inputs. Never returns a conflated False (LAW-B7).
         """
+        _require_nonempty_article_id(article_id)
+        if not slug or not str(slug).strip():
+            raise IdentityPersistenceError(article_id, detail="empty slug refused")
         if not hasattr(self._db, "set_canonical_slug"):
-            return False
+            raise IdentityPersistenceError(
+                article_id, detail="DB has no set_canonical_slug"
+            )
         try:
             result = self._db.set_canonical_slug(article_id, slug)
-            if result:
-                logger.info("Identity Created: {}", slug)
-            else:
-                logger.info(
-                    "Canonical slug already exists for article {}: {}",
-                    article_id,
-                    slug,
-                )
-            return bool(result)
         except Exception as e:
             logger.error("Failed to persist canonical slug: {}", e)
-            return False
+            raise IdentityPersistenceError(article_id, detail=str(e)) from e
+        if result:
+            logger.info("Identity Created: {}", slug)
+            return True
+        logger.error(
+            "Canonical slug {} for article {} not locked (collision or "
+            "missing row); failing explicitly instead of reporting success",
+            slug,
+            article_id,
+        )
+        raise SlugCollisionError(article_id, slug)
 
     # ------------------------------------------------------------------
     # Pure helpers
