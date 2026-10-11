@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 119 | [Make the contract-sync gate see cross-field rules](119-contract-sync-gate.md) | P2 | M | 118 (DONE, archived) | TODO |
 | 120 | [Deterministic dates: undated, naive, calendar](120-deterministic-dates.md) | P1 | M | None | TODO |
 | 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
 | 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
@@ -362,6 +361,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   (27 new contract tests); 2 invalid v2 fixtures corrected (+4 YAML lines
   each, expectations byte-identical); `make lint/type/test/test-contracts`
   green, frontend mirror no-new-divergence. Merged locally, unpushed.
+- 119 (contract-sync cross-field gate) DONE and archived — six-invariant
+  table with file-level evidence coupling, allowlist shrunk to the
+  pre-existing `AstroPost.date` entry (negative controls proved both
+  directions fail); 6 new gate tests + 4 backend case names added;
+  frontend sync normal+strict and `make test-contracts` green. Merged
+  locally (backend) + frontend branch merged and pushed; unpushed backend.
 
 ### Eighth-pass findings considered and rejected (do not re-audit)
 
