@@ -178,7 +178,7 @@ class AstroPost(BaseModel):
     confidence: Optional[str] = None
     investigation: bool = Field(default=False)
     featured: bool = Field(default=False)
-    featured_rank: Optional[int] = None
+    featured_rank: Optional[int] = Field(default=None, gt=0)
     summary_points: Optional[List[str]] = None
     uncertainty_note: Optional[str] = None
     glossary: Optional[List[GlossaryItem]] = None
@@ -216,6 +216,13 @@ class AstroPost(BaseModel):
     def _correction_travels_together(self):
         if bool(self.corrected_at) != bool(self.correction_summary):
             raise ValueError("corrected_at and correction_summary must be set together")
+        return self
+
+    @model_validator(mode="after")
+    def _featured_rank_required_when_featured(self) -> "AstroPost":
+        # Mirror `featured === true requires featured_rank` in content.config.ts.
+        if self.featured is True and self.featured_rank is None:
+            raise ValueError("featured_rank is required when featured is true")
         return self
 
     @model_validator(mode="after")

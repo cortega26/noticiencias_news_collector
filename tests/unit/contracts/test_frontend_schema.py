@@ -179,3 +179,33 @@ def test_v2_why_it_matters_absent_is_valid():
     # P0-06 / DEC-003: no minimum — absence beats fabrication.
     post = AstroPost(**_base_v2_post())
     assert post.why_it_matters is None
+
+
+# --------------------------------------------------------------------------- #
+# featured_rank (mirrors featured_rank superRefine in src/content.config.ts)
+# --------------------------------------------------------------------------- #
+
+
+def test_featured_true_without_rank_raises():
+    with pytest.raises(ValidationError, match="featured_rank is required"):
+        AstroPost(**_base_post(featured=True))
+
+
+def test_featured_rank_zero_raises():
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(featured=True, featured_rank=0))
+
+
+def test_featured_rank_negative_raises():
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(featured=True, featured_rank=-3))
+
+
+def test_featured_false_without_rank_passes():
+    post = AstroPost(**_base_post(featured=False))
+    assert post.featured_rank is None
+
+
+def test_featured_true_with_rank_passes():
+    post = AstroPost(**_base_post(featured=True, featured_rank=1))
+    assert post.featured_rank == 1
