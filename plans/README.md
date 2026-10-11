@@ -313,3 +313,64 @@ Kept active, with boundaries against 107-114 (no duplicates found):
 - 080 TODO — phases unstarted. 111 uses MinHash-family grouping and treats embeddings as gated by 080's own deferred-decision rule; 114 records a Pagefind trigger without migrating (080 defers Pagefind); 107 instruments existing perf/reporting paths (no new telemetry framework per 080's OTel deferral).
 - 081 IN_PROGRESS — docs reconciliation owns the governance files; the 108, 112, and 113 docs steps stay conditional on it and must not fight its edits.
 - 084 spec-only TODO — vision-model hero alt text; complementary to the 112 hero sweep (which fixes defects with existing checks) and sequenced after it. Needs a confirmed multimodal model plus a monthly call-budget decision before execution; no ledger row (suffixed directory, validator-invisible by design).
+
+## Eighth pass (2026-10-11, full deep audit)
+
+Full nine-category deep audit (correctness, security, performance, tests,
+tech-debt, dependencies, DX, docs, direction) via parallel subagents, with
+code-level vetting of every retained finding and reconciliation against
+this ledger (fifth-pass deferrals, 048/060/080/081/084/107–117 boundaries,
+frontend plans 005/006/009). Operator selected "all the net-positive
+ones" → plans 118–130 below. Direction items stay unplanned (they map to
+existing rows: 048 PARTIAL, 084 spec TODO, 005/006/009 frontend,
+002-build unscheduled, 080 Phase 3) and were not duplicated. Backend tree
+was dirty (~25 files, webhook-inbox-pull/source-health work) at plan time;
+every plan below carries a drift check against its `Planned at` commit.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 118 | [Enforce the v2 editorial contract in the backend mirror](118-contract-parity.md) | P1 | M | None | TODO |
+| 119 | [Make the contract-sync gate see cross-field rules](119-contract-sync-gate.md) | P2 | M | 118 | TODO |
+| 120 | [Deterministic dates: undated, naive, calendar](120-deterministic-dates.md) | P1 | M | None | TODO |
+| 121 | [Harden publication identity: single path, explicit failures, no races](121-identity-hardening.md) | P1 | M | None (read 094 first) | TODO |
+| 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
+| 123 | [Harden serving and fetch edges](123-serving-edge-hardening.md) | P1 | M | None (read 099/021 first) | TODO |
+| 124 | [Publication query scans, ordering, batch setup tax](124-publication-query-perf.md) | P2 | M | None (read 109/045 first) | TODO |
+| 125 | [Bound enrichment fan-out per article](125-enrichment-fanout.md) | P2 | M | 116 (pacing must be DONE) | TODO |
+| 126 | [Fix order-dependent test pollution](126-flaky-order-dependence.md) | P1 | M | None | TODO |
+| 127 | [Public pagination tests, deterministic clocks, honest doubles](127-test-quality.md) | P2 | M | None | TODO |
+| 128 | [Backend hygiene: fetch ownership, env threading, errors, dead code](128-backend-hygiene.md) | P3 | S | None | TODO |
+| 129 | [Backend DX and docs: enforced gates, admin tooling, stale prose](129-backend-dx-docs.md) | P3 | M | None (coordinate with 081) | TODO |
+| 130 | [Backend dependency hygiene: dead deps, manifest, serving pin](130-backend-deps.md) | P2 | S | None | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
+
+### Eighth-pass dependency notes
+
+- 118 → 119: the gate asserts parity 118 establishes; shrinking
+  `ALLOWED_DIVERGENCES` before 118 lands goes red by design.
+- 125 waits on 116 DONE (fan-out without per-host pacing risks source bans).
+- 121/122/124 must not run concurrently with each other on overlapping
+  files (`publication_pipeline.py`, `manual_ingest.py`,
+  `article_repository.py`) — sequence executors, don't parallelize.
+- 129's docs items coordinate with 081 (governance owner); 123 builds on
+  021/099 enforcement floors without re-litigating them.
+
+### Eighth-pass findings considered and rejected (do not re-audit)
+
+- HtmlCollector follow-on SSRF strategy validation: fifth-pass deferred as
+  second-tier (scope discipline); not re-planned.
+- `MYPY_TARGETS` widening + `make type`/`make test` double-suite
+  restructure: fifth-pass deferred; plan 129 records both as standing.
+- Refinery-engine de-mocking: fifth-pass deferred; plan 127 explicitly
+  excludes refinery-engine seams.
+- `serving/api.py` 2,428-line split: real but L/HIGH risk without
+  characterization tests first; deferred until 127-style coverage exists.
+- DNS-rebinding TOCTOU in `validate_url_safety`: LOW-confidence
+  investigate item; noted in plan 123 maintenance, not planned.
+- Four-way HTTP-client consolidation: each tier load-bearing; rule-only
+  verdict recorded in plan 128 maintenance.
+- Direction options (reader-correction loop, social past Buffer MVP,
+  vision hero alt, offline replay, GA4 loop, recursos brief, enrichment
+  labeling): mapped to existing rows/specs (048, 080 Phase 3, 084,
+  frontend 002/005/006/009); no new plans.
