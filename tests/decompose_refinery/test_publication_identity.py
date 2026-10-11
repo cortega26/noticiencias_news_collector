@@ -574,8 +574,41 @@ class TestSlugPersistence:
         db = MagicMock()
         db.set_canonical_slug.return_value = True
         resolver = _make_resolver(db=db)
-        resolver.backfill_slug("77", "2025-06-01-old-slug")
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is True
         db.set_canonical_slug.assert_called_once_with("77", "2025-06-01-old-slug")
+
+    def test_backfill_slug_returns_false_on_refusal(self):
+        db = MagicMock()
+        db.set_canonical_slug.return_value = False
+        resolver = _make_resolver(db=db)
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is False
+
+    def test_backfill_slug_returns_false_on_outage(self):
+        db = MagicMock()
+        db.set_canonical_slug.side_effect = RuntimeError("db down")
+        resolver = _make_resolver(db=db)
+        assert resolver.backfill_slug("77", "2025-06-01-old-slug") is False
+
+    def test_resolve_backfill_failure_raises_explicit_error(self, tmp_path):
+        """Plan 121 Step 2: FS-recovered but DB backfill fails → explicit
+        per-item error, never silent recovery as locked."""
+        from news_collector.logic.workflows.publication_identity import (
+            IdentityPersistenceError,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        db.set_canonical_slug.return_value = False  # backfill refused
+        posts_dir = tmp_path / "src/content/posts"
+        posts_dir.mkdir(parents=True)
+        existing = posts_dir / "2025-06-01-old-slug.md"
+        existing.write_text("---\n---\nContent")
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = existing
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+        with pytest.raises(IdentityPersistenceError) as exc_info:
+            resolver.resolve(article_id="77", article={}, posts_dir=posts_dir)
+        assert exc_info.value.error_code == "E_IDENTITY_PERSISTENCE"
 
     def test_register_slug_returns_bool(self):
         db = MagicMock()
@@ -584,12 +617,39 @@ class TestSlugPersistence:
         result = resolver.register_slug("42", "2025-01-01-new-slug")
         assert result is True
 
-    def test_register_slug_returns_false_when_already_exists(self):
+    def test_register_reregistration_vs_collision(self):
+        """Plan 121 Step 2: same-row retry locks (True); different article
+        same slug collides (typed error) — repository distinction plumbed
+        through, never conflated."""
+        from news_collector.logic.workflows.publication_identity import (
+            SlugCollisionError,
+        )
+
+        # Same article retries its own slug → True (idempotent, per repository:
+        # same-row same-slug persists as True).
         db = MagicMock()
-        db.set_canonical_slug.return_value = False
-        resolver = _make_resolver(db=db)
-        result = resolver.register_slug("42", "2025-01-01-new-slug")
-        assert result is False
+        db.set_canonical_slug.return_value = True
+        assert _make_resolver(db=db).register_slug("42", "2025-01-01-same") is True
+
+        # Different article, same slug → repository refuses (False) → typed
+        # collision error with error_code for the batch reporter.
+        db2 = MagicMock()
+        db2.set_canonical_slug.return_value = False
+        with pytest.raises(SlugCollisionError) as exc_info:
+            _make_resolver(db=db2).register_slug("43", "2025-01-01-same")
+        assert exc_info.value.error_code == "E_IDENTITY_SLUG_COLLISION"
+        assert exc_info.value.public_message
+
+    def test_register_db_outage_raises_persistence_error(self):
+        from news_collector.logic.workflows.publication_identity import (
+            IdentityPersistenceError,
+        )
+
+        db = MagicMock()
+        db.set_canonical_slug.side_effect = RuntimeError("db down")
+        with pytest.raises(IdentityPersistenceError) as exc_info:
+            _make_resolver(db=db).register_slug("42", "2025-01-01-new-slug")
+        assert exc_info.value.error_code == "E_IDENTITY_PERSISTENCE"
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +728,10 @@ class TestFinalizeSlug:
 
     def test_ident_09_guard_raises_on_non_new_identity(self, tmp_path):
         """IDENT-09: Calling finalize_slug on a locked (is_new=False) identity raises."""
+        from news_collector.logic.workflows.publication_identity import (
+            FinalizeSlugError,
+        )
+
         resolver = _make_resolver()
         locked_identity = PublicationIdentity(
             final_slug="2025-06-01-existing",
@@ -676,10 +740,150 @@ class TestFinalizeSlug:
             is_new=False,
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(FinalizeSlugError) as exc_info:
             resolver.finalize_slug(
                 identity=locked_identity,
                 refined_content="slug: anything",
                 article_id="5",
                 posts_dir=tmp_path,
             )
+        assert exc_info.value.error_code == "E_IDENTITY_FINALIZE_NOT_NEW"
+        assert exc_info.value.public_message
+
+
+# ---------------------------------------------------------------------------
+# Plan 121 Step 3: atomic resolve-vs-write (DB lock + O_EXCL primitive)
+# ---------------------------------------------------------------------------
+
+
+class _FakeSlugDB:
+    """Stateful stand-in enforcing real unique-slug semantics (thread-safe).
+
+    Mirrors article_repository.set_canonical_slug: same-row same-slug retry
+    → True; different article same slug → False (collision); missing methods
+    intentionally absent (resolver requires set_canonical_slug).
+    """
+
+    def __init__(self):
+        import threading
+
+        self._lock = threading.Lock()
+        self._by_id: dict[str, str] = {}
+        self._by_slug: dict[str, str] = {}
+
+    def get_canonical_slug(self, article_id):
+        with self._lock:
+            return self._by_id.get(str(article_id))
+
+    def set_canonical_slug(self, article_id, slug):
+        with self._lock:
+            aid = str(article_id)
+            if aid in self._by_id and self._by_id[aid] != slug:
+                return False  # overwrite refusal
+            owner = self._by_slug.get(slug)
+            if owner is not None and owner != aid:
+                return False  # genuine collision
+            self._by_id[aid] = slug
+            self._by_slug[slug] = aid
+            return True
+
+
+class TestAtomicResolveVsWrite:
+    def test_concurrent_same_slug_winner_loser_no_overwrite(self, tmp_path):
+        """Two finalize+register flows, same canonical slug, different ids →
+        exactly one winner (True), one explicit SlugCollisionError loser;
+        winner's file never overwritten."""
+        import threading
+
+        from news_collector.logic.workflows.publication_identity import (
+            PublicationIdentityResolver,
+            SlugCollisionError,
+        )
+
+        db = _FakeSlugDB()
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = None
+        slug = "2026-05-01-same-story"
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, object] = {}
+
+        def _run(article_id: str):
+            resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+            identity = PublicationIdentity(
+                final_slug=None,
+                canonical_date="2026-05-01",
+                output_filename=None,
+                is_new=True,
+            )
+            try:
+                barrier.wait(timeout=10)
+                finalized = resolver.finalize_slug(
+                    identity=identity,
+                    refined_content=f"slug: same-story\ntitle: Same Story",
+                    article_id=article_id,
+                    posts_dir=tmp_path,
+                )
+                assert finalized.final_slug == slug
+                resolver.register_slug(article_id, finalized.final_slug)
+                outcomes[article_id] = "winner"
+            except SlugCollisionError:
+                outcomes[article_id] = "collision"
+            except Exception as exc:  # pragma: no cover - must not happen
+                outcomes[article_id] = f"unexpected:{exc!r}"
+
+        threads = [
+            threading.Thread(target=_run, args=("9001",)),
+            threading.Thread(target=_run, args=("9002",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        assert sorted(outcomes.values()) == ["collision", "winner"]
+        winner_id = next(aid for aid, res in outcomes.items() if res == "winner")
+        # Winner's DB lock intact; loser holds nothing (no overwrite).
+        assert db.get_canonical_slug(winner_id) == slug
+        loser_id = "9002" if winner_id == "9001" else "9001"
+        assert db.get_canonical_slug(loser_id) is None
+        # Winner writes; loser never reaches write (failed at register).
+        target = tmp_path / f"{slug}.md"
+        target.write_text(f"winner:{winner_id}", encoding="utf-8")
+        assert target.read_text(encoding="utf-8") == f"winner:{winner_id}"
+
+    def test_concurrent_exclusive_create_no_overwrite(self, tmp_path):
+        """O_EXCL primitive: two claims, same filename → one winner, one
+        explicit collision, winner content intact (never overwritten)."""
+        import threading
+
+        from news_collector.logic.workflows.publication_identity import (
+            PublicationIdentityResolver,
+            SlugCollisionError,
+        )
+
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, object] = {}
+
+        def _run(name: str):
+            try:
+                barrier.wait(timeout=10)
+                PublicationIdentityResolver.exclusive_create_file(
+                    tmp_path, "2026-05-01-race.md", content=f"content:{name}"
+                )
+                outcomes[name] = "winner"
+            except SlugCollisionError:
+                outcomes[name] = "collision"
+
+        threads = [
+            threading.Thread(target=_run, args=("a",)),
+            threading.Thread(target=_run, args=("b",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+
+        assert sorted(outcomes.values()) == ["collision", "winner"]
+        body = (tmp_path / "2026-05-01-race.md").read_text(encoding="utf-8")
+        winner = next(name for name, res in outcomes.items() if res == "winner")
+        assert body == f"content:{winner}"

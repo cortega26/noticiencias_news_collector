@@ -137,71 +137,67 @@ class TestIsFileLockError:
 
 
 # ---------------------------------------------------------------------------
-# _unique_post_slug
+# Single identity path (plan 121 Step 1): no second slug path in the pipeline.
+# PublicationIdentityResolver is the sole owner (LAW-B5); empty article_id
+# fails closed with a typed error, never uuid randomness.
 # ---------------------------------------------------------------------------
 
 
-class TestUniquePostSlug:
-    def test_base_slug_available(self, tmp_path):
-        slug, path = pipeline_mod._unique_post_slug(
-            posts_dir=tmp_path,
-            date_str="2026-01-01",
-            base_slug="science",
-            article_id="10",
-        )
-        assert slug == "science"
-        assert path == tmp_path / "2026-01-01-science.md"
+class TestSingleIdentityPath:
+    def test_no_second_slug_path_in_pipeline(self):
+        assert not hasattr(pipeline_mod, "_unique_post_slug")
 
-    def test_suffix_collision_resolved(self, tmp_path):
-        (tmp_path / "2026-01-01-science.md").touch()
-        slug, path = pipeline_mod._unique_post_slug(
-            posts_dir=tmp_path,
-            date_str="2026-01-01",
-            base_slug="science",
-            article_id="42",
-        )
-        assert slug == "science-42"
-        assert path == tmp_path / "2026-01-01-science-42.md"
+    def test_no_uuid_import_in_pipeline(self):
+        import pathlib
 
-    def test_empty_article_id_uses_uuid(self, tmp_path):
-        (tmp_path / "2026-01-01-science.md").touch()
-        with patch(
-            "news_collector.logic.workflows.publication_pipeline.uuid.uuid4"
-        ) as mock_uuid:
-            mock_uuid.return_value.hex = "abcdef123456"
-            slug, _ = pipeline_mod._unique_post_slug(
+        src = pathlib.Path(pipeline_mod.__file__).read_text(encoding="utf-8")
+        assert "uuid" not in src
+
+    def test_empty_article_id_fails_closed_via_resolver(self, tmp_path):
+        from news_collector.logic.workflows.publication_identity import (
+            EmptyArticleIdError,
+            PublicationIdentityResolver,
+        )
+
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = None
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
+        with pytest.raises(EmptyArticleIdError) as exc_info:
+            resolver.resolve(
+                article_id="   ",
+                article={"published_date": datetime(2026, 1, 1, tzinfo=timezone.utc)},
                 posts_dir=tmp_path,
-                date_str="2026-01-01",
-                base_slug="science",
-                article_id="!!!",
             )
-        assert slug == "science-abcdef"
+        assert exc_info.value.error_code == "E_IDENTITY_EMPTY_ID"
+        assert exc_info.value.public_message
 
-    def test_numeric_attempt_loop(self, tmp_path):
-        (tmp_path / "2026-01-01-science.md").touch()
-        for suffix in ("42", "42-2", "42-3", "42-4"):
-            (tmp_path / f"2026-01-01-science-{suffix}.md").touch()
-        slug, path = pipeline_mod._unique_post_slug(
-            posts_dir=tmp_path,
-            date_str="2026-01-01",
-            base_slug="science",
-            article_id="42",
+    def test_resolver_collision_avoidance_single_path(self, tmp_path):
+        """Provisional creation-mode slug avoids existing files (resolver only)."""
+        from news_collector.logic.workflows.publication_identity import (
+            PublicationIdentityResolver,
         )
-        assert slug == "science-42-5"
-        assert path == tmp_path / "2026-01-01-science-42-5.md"
 
-    def test_exhausted_raises(self, tmp_path):
+        db = MagicMock()
+        db.get_canonical_slug.return_value = None
+        manifest = MagicMock()
+        manifest.find_existing_file.return_value = None
+        resolver = PublicationIdentityResolver(db=db, manifest=manifest)
         (tmp_path / "2026-01-01-science.md").touch()
-        (tmp_path / "2026-01-01-science-42.md").touch()
-        for attempt in range(2, 100):
-            (tmp_path / f"2026-01-01-science-42-{attempt}.md").touch()
-        with pytest.raises(RuntimeError, match="Unable to generate unique slug"):
-            pipeline_mod._unique_post_slug(
-                posts_dir=tmp_path,
-                date_str="2026-01-01",
-                base_slug="science",
-                article_id="42",
-            )
+        # Title "Science" on 2026-01-01 collides with the pre-created file,
+        # so the resolver must bump (single path, deterministic, no uuid).
+        identity = resolver.resolve(
+            article_id="42",
+            article={
+                "published_date": datetime(2026, 1, 1, tzinfo=timezone.utc),
+                "title": "Science",
+            },
+            posts_dir=tmp_path,
+        )
+        assert identity.final_slug != "2026-01-01-science"
+        assert identity.final_slug.startswith("2026-01-01-")
+        assert identity.is_new is True
 
 
 # ---------------------------------------------------------------------------
