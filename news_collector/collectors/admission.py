@@ -22,6 +22,7 @@ from typing import Any, Dict, Optional
 
 from news_collector.config.settings import RuntimeConfigSnapshot
 from news_collector.contracts import CollectorArticleModel
+from news_collector.utils.datetime_utils import assume_utc
 
 
 class AdmissionReason(str, enum.Enum):
@@ -62,8 +63,9 @@ def is_too_old(
     """
     if not isinstance(published, datetime):
         return False
-    if published.tzinfo is None:
-        published = published.replace(tzinfo=timezone.utc)
+    # Plan 120: naive datetimes are assumed UTC via the single assumption
+    # point (assume_utc), not a scattered replace() call.
+    published = assume_utc(published)
     reference = now or datetime.now(timezone.utc)
     return published < reference - timedelta(days=max_age_days)
 

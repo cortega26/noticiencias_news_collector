@@ -35,6 +35,7 @@ from news_collector.enrichment import enrichment_pipeline
 from news_collector.logic.parsers.image_extractor import ImageCandidate, ImageExtractor
 from news_collector.logic.parsers.rss_parser import RssParser
 from news_collector.scoring.pre_scorer import PreScorer
+from news_collector.utils.datetime_utils import assume_utc
 from news_collector.utils.url_canonicalizer import (
     canonicalize_url,
     configure_canonicalization_cache,
@@ -804,8 +805,9 @@ class RSSCollector(BaseCollector):
             # whole source).
             published = cand.get("published_date")
             if isinstance(published, datetime):
-                if published.tzinfo is None:
-                    published = published.replace(tzinfo=timezone.utc)
+                # Plan 120: naive feed timestamps are assumed UTC at one
+                # explicit point (assume_utc), not scattered replace() calls.
+                published = assume_utc(published, source_id=source_id)
                 if published < recent_threshold:
                     continue
 

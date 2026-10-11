@@ -60,6 +60,28 @@ def parse_to_utc_with_tzinfo(
     return dt_utc, tz_offset, tzname
 
 
+def assume_utc(dt: datetime, *, source_id: str = "") -> datetime:
+    """Normalize a feed timestamp to an aware UTC datetime.
+
+    Single explicit assumption point for naive feed timestamps (plan 120):
+    feeds rarely declare a zone, so a naive datetime is ASSUMED to be UTC
+    and labeled as such. Aware datetimes are converted to UTC, preserving
+    the instant.
+
+    A datetime cannot carry provenance, so callers that build a
+    ``CollectorArticleModel`` from a naive input must record the assumption
+    via the existing model fields (``published_tz_offset_minutes=0``,
+    ``published_tz_name="UTC (assumed)"``).
+
+    A source known to publish in a non-UTC zone needs explicit per-source
+    handling (future work, not here); ``source_id`` names the source for
+    that future mapping and for log context.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def to_display_tz(dt_utc: datetime, tz: str = "America/Santiago") -> datetime:
     """Convert a UTC datetime to the given display timezone (zoneinfo key)."""
     if dt_utc.tzinfo is None:

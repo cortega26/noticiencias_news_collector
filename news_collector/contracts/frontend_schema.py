@@ -218,6 +218,22 @@ class AstroPost(BaseModel):
             raise ValueError("corrected_at and correction_summary must be set together")
         return self
 
+    @field_validator("review_date", "corrected_at")
+    @classmethod
+    def _calendar_dates_must_be_real(cls, v):
+        # Plan 120: the shape pattern above admits non-calendar dates
+        # (2026-13-40 passes the regex); fromisoformat rejects them with
+        # the same field-scoped error shape.
+        if v is None:
+            return v
+        try:
+            dt_date.fromisoformat(v)
+        except ValueError as exc:
+            raise ValueError(
+                f"must be a real calendar date (YYYY-MM-DD): {v!r}"
+            ) from exc
+        return v
+
     @model_validator(mode="after")
     def _featured_rank_required_when_featured(self) -> "AstroPost":
         # Mirror `featured === true requires featured_rank` in content.config.ts.

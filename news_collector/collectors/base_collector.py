@@ -35,6 +35,7 @@ from news_collector.config.settings import get_runtime_config
 from news_collector.contracts import CollectorArticleModel
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 from news_collector.storage.database import get_database_manager
+from news_collector.utils.datetime_utils import assume_utc
 from news_collector.utils.logger import get_logger
 
 # Batch size for enrichment_metrics writes during a collection cycle (plan
@@ -714,9 +715,9 @@ class BaseCollector(ABC):
                     return None
                 if not isinstance(dt, datetime):
                     return None
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                return dt
+                # Plan 120: naive Retry-After dates are assumed UTC (HTTP
+                # dates are GMT by spec) via the single assumption point.
+                return assume_utc(dt)
             except Exception:
                 return None
 
