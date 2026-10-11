@@ -316,6 +316,23 @@ editor:
 
     ---
 
+    ## Limitaciones obligatorias (preprints y modelos animales)
+
+    Dos tipos de fuente exigen una frase explícita de limitación en el
+    cuerpo, sin excepción:
+
+    - **Preprint sin revisión por pares** (bioRxiv, arXiv, medRxiv o
+      equivalente): indica que los resultados aún no pasaron revisión por
+      pares independiente y podrían cambiar.
+    - **Estudio en modelo animal** (ratones, ratas, roedores en general):
+      indica la especie y que los resultados no son directamente
+      extrapolables a humanos sin validación clínica.
+
+    Una frase sobria basta ("estudio en ratones; falta validación en
+    humanos"). Omitirla es ocultar limitaciones.
+
+    ---
+
     ## Restricciones Absolutas
 
     Nunca:

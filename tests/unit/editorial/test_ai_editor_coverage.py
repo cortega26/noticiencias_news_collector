@@ -1083,6 +1083,31 @@ class TestProcessArticlePaths:
         assert calls == []
         assert "Direct Headline" in result
 
+    def test_editorial_critic_cache_hit_records_provenance(self, tmp_path):
+        """Cache-hit verdict provenance (spec-editorial-quality-lifts L1).
+
+        A skipped gate must record its historical pass (with from_cache
+        provenance) instead of leaving `last_critic_verdict` as None, so
+        per-flow verdict capture is complete for harnesses and reviewers.
+        """
+        agent = self._pipeline_agent(tmp_path)
+        article = {
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "url": "https://example.com/source",
+        }
+        cache = agent._get_cache_path("unknown", EditorialStage.EDITORIAL_CRITIC_OK)
+        cache.write_text("ok", encoding="utf-8")
+
+        def _must_not_run(*a, **k):
+            raise AssertionError("gate must be skipped on cache hit")
+
+        agent._critic_editorial_pass = _must_not_run
+        result = agent.process_article(article, override_date="2026-03-02")
+        assert "Direct Headline" in result
+        assert agent.last_critic_verdict == {"approved": True, "from_cache": True}
+
     def test_legacy_editorial_critic_checkpoint_does_not_skip_new_gate(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
         article = {
