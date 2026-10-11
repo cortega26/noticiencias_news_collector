@@ -272,6 +272,20 @@ class AstroPost(BaseModel):
             )
         return v
 
+    @field_validator(
+        "summary_points", "why_it_matters", "known_points", "open_questions"
+    )
+    @classmethod
+    def _list_items_must_be_non_empty(cls, v):
+        # Mirror z.string().min(1) on list items, hardened against
+        # whitespace-only strings (["  "] fails).
+        if v is None:
+            return v
+        for item in v:
+            if not (item or "").strip():
+                raise ValueError("list items must be non-empty")
+        return v
+
     @field_validator("date")
     @classmethod
     def ensure_date_format(cls, v):

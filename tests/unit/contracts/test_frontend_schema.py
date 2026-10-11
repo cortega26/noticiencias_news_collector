@@ -209,3 +209,25 @@ def test_featured_false_without_rank_passes():
 def test_featured_true_with_rank_passes():
     post = AstroPost(**_base_post(featured=True, featured_rank=1))
     assert post.featured_rank == 1
+
+
+# --------------------------------------------------------------------------- #
+# non-empty list items (mirrors z.string().min(1), hardened vs whitespace)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "field", ["summary_points", "why_it_matters", "known_points", "open_questions"]
+)
+@pytest.mark.parametrize("bad_item", ["", "  "])
+def test_list_items_reject_empty(field, bad_item):
+    with pytest.raises(ValidationError):
+        AstroPost(**_base_post(**{field: [bad_item]}))
+
+
+@pytest.mark.parametrize(
+    "field", ["summary_points", "why_it_matters", "known_points", "open_questions"]
+)
+def test_list_items_accept_non_empty(field):
+    post = AstroPost(**_base_post(**{field: ["Real content"]}))
+    assert getattr(post, field) == ["Real content"]
