@@ -275,11 +275,13 @@ test-integration: bootstrap ## Run integration tests and root-level tests marked
 	@$(PYTEST) tests/integration --no-cov
 	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "e2e" --no-cov
 
-test-e2e: bootstrap ## Run the isolated pipeline E2E suite in fixed order
-	# e2e scenarios assume a clean environment and are order-sensitive;
-	# pytest-randomly reorganizes the suite by default, so disable it for
-	# this directory (the unit suite stays randomized, 2026-08-12).
-	@$(PYTEST) tests/e2e_pipeline --no-cov --randomly-dont-reorganize
+test-e2e: bootstrap ## Run the isolated pipeline E2E suite (randomized order)
+	# e2e scenarios are tmp_path-isolated and order-safe under
+	# pytest-randomly (plan 126 verification: seeds 9/13/31 → 13/13 each,
+	# 2026-10-12). The historical --randomly-dont-reorganize workaround was
+	# added 2026-08-12 and the global-state bugs it papered over were fixed
+	# in 7d82a18 the next day.
+	@$(PYTEST) tests/e2e_pipeline --no-cov
 
 check-coverage: bootstrap ## Check if coverage meets the required threshold (fails under 80%)
 	@echo "[coverage] Checking coverage threshold..."
