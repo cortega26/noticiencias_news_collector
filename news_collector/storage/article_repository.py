@@ -362,9 +362,20 @@ class ArticleRepository:
         updated = 0
         transitioned: list[tuple[int, str]] = []
         with self._session() as session:
+            # Plan 124 Step 1: SQL-side refinery_id predicate so only named
+            # attempts load (was: load ALL 'publishing' rows, filter in
+            # Python). Portable JSON path via SQLAlchemy subscript +
+            # as_string() (json_extract on SQLite, ->> on PostgreSQL).
+            # The Python `wanted` check below stays as the semantic guard
+            # (NULL/missing paths never match; idempotency unchanged).
             candidates = (
                 session.query(Article)
                 .filter(Article.processing_status == "publishing")
+                .filter(
+                    Article.article_metadata["publication"]["refinery_id"]
+                    .as_string()
+                    .in_(list(wanted))
+                )
                 .all()
             )
             for article in candidates:
@@ -428,9 +439,16 @@ class ArticleRepository:
         updated = 0
         transitioned: list[tuple[int, str]] = []
         with self._session() as session:
+            # Plan 124 Step 1: same SQL-side refinery_id predicate as
+            # reject_publication_attempts — only named attempts load.
             candidates = (
                 session.query(Article)
                 .filter(Article.processing_status == "publishing")
+                .filter(
+                    Article.article_metadata["publication"]["refinery_id"]
+                    .as_string()
+                    .in_(list(wanted))
+                )
                 .all()
             )
             for article in candidates:
