@@ -1,5 +1,10 @@
 # Spec — Curation Desk revamp (apps/admin): sober ES UI, action hierarchy, comprehension
 
+> Implemented (2026-09-21) — the desk shipped in full (`c66886e` "revamp(desk):
+> full Spanish UI, hierarchy, desktop-only curaduría"; P0–P3 across PRs
+> #315/#318). This spec never had a todo counterpart: the work landed
+> directly. Archived here for history.
+
 Operator decision: Spanish UI, desktop-only. No backend/API changes. No new
 pages, deps, or component library. Design system (global.css palette, Fraunces/
 Manrope/JetBrains Mono) stays; only decorative layers go.
