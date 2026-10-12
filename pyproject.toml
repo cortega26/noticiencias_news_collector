@@ -15,7 +15,6 @@ dependencies = [
     "sqlalchemy>=2.0.43",
     "psycopg[binary]>=3.2.0",  # PostgreSQL driver — plan 046 (docker-compose already declares DATABASE_URL)
     "python-dotenv>=1.1.1",
-    "schedule>=1.2.2",
     "ruamel.yaml>=0.18.6",
     "PyYAML>=6.0.1",
     "tomli-w>=1.0.0",
@@ -30,7 +29,6 @@ dependencies = [
     "playwright>=1.58.0",
     "scrapling[fetchers]>=0.4.0",
     "numpy>=2.3.3,!=2.4.0",
-    "toml>=0.10.2",
     "alembic>=1.13.1",
     "starlette>=0.49.1",
     "types-requests>=2.31.0",
@@ -45,7 +43,6 @@ refinery = [
     "streamlit>=1.30.0",
     "watchdog>=4.0.0",
     "pandas>=2.0.0",
-    "toml>=0.10.2",
 ]
 security = [
     "bandit>=1.7.9",

@@ -1,7 +1,8 @@
 # Slim image for the Noticiencias webhook serving layer (news_collector.serving).
 # NOT the full collector: no playwright browsers, no ollama, no refinery UI.
 # Purpose: receive backend webhook notifications (e.g. /api/v1/webhook/frontend).
-FROM python:3.13-slim
+# Base: python:3.13-slim pinned to its multi-arch index digest (resolved 2026-10-12).
+FROM python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -17,12 +18,15 @@ ENV NOTICIENCIAS__APP__ENVIRONMENT=production
 
 WORKDIR /app
 
-COPY pyproject.toml README.md LICENSE ./
+COPY pyproject.toml README.md LICENSE requirements.lock ./
 COPY config.toml ./
 COPY news_collector ./news_collector
 COPY noticiencias ./noticiencias
 
-RUN pip install --no-cache-dir .
+# Hash-pinned runtime install per ADR-0002 (same pattern as the collector
+# image). The full lock, no subset prune: the serving import surface reaches
+# collector workflows that ride the whole runtime tree.
+RUN pip install --no-cache-dir --require-hashes -r requirements.lock
 
 EXPOSE 8000
 

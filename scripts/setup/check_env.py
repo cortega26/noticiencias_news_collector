@@ -6,7 +6,6 @@ REQUIRED_PACKAGES = [
     "pandas",
     "git",  # GitPython
     "yaml",  # PyYAML
-    "toml",
     "requests",  # Standard
     "dotenv",  # python-dotenv
 ]
@@ -25,7 +24,7 @@ def check_imports():
 
     if missing:
         print("\n⚠️  Environment Incomplete. Please run:")
-        print("    pip install -r requirements.txt")
+        print("    make bootstrap-refinery")
         sys.exit(1)
     else:
         print("\n✅ Environment looks good!")
