@@ -55,9 +55,7 @@ class TestDeterministicRankingOrder:
         # ... and matching the serving API's 3-key order (id DESC on ties).
         assert first == sorted(ids, reverse=True)
 
-    def test_category_query_ties_break_by_id_desc(
-        self, db_manager: DatabaseManager
-    ):
+    def test_category_query_ties_break_by_id_desc(self, db_manager: DatabaseManager):
         ids, _ = _seed_tied(db_manager, 4)
         first = [
             a.id for a in db_manager.get_articles_by_category("tech", days_back=30)

@@ -59,9 +59,7 @@ def _walk_rescore_pages(db_manager: DatabaseManager, limit: int, days_back: int)
 
 
 class TestLegacyMigration:
-    def test_keyset_pages_match_legacy_rescore_set(
-        self, db_manager: DatabaseManager
-    ):
+    def test_keyset_pages_match_legacy_rescore_set(self, db_manager: DatabaseManager):
         _seed_completed(db_manager, 12)
         legacy_ids = sorted(
             a.id
@@ -73,9 +71,7 @@ class TestLegacyMigration:
         assert paged_ids == legacy_ids
         assert len(paged_ids) == 12
 
-    def test_bounded_category_read_is_top_n_prefix(
-        self, db_manager: DatabaseManager
-    ):
+    def test_bounded_category_read_is_top_n_prefix(self, db_manager: DatabaseManager):
         _seed_completed(db_manager, 8)
         full = db_manager.articles.get_articles_by_category("tech", days_back=30)
         bounded = db_manager.articles.get_articles_by_category(
@@ -84,9 +80,7 @@ class TestLegacyMigration:
         assert len(full) == 8
         assert [a.id for a in bounded] == [a.id for a in full[:3]]
 
-    def test_unbounded_category_default_preserved(
-        self, db_manager: DatabaseManager
-    ):
+    def test_unbounded_category_default_preserved(self, db_manager: DatabaseManager):
         _seed_completed(db_manager, 4)
         rows = db_manager.articles.get_articles_by_category("tech", days_back=30)
         assert len(rows) == 4

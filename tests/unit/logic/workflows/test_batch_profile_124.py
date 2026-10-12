@@ -67,9 +67,7 @@ class TestBatchPerItemIsolationPinned:
         # threaded through; each call builds its own (Step-4 skip pinned).
         assert all(kw == calls[0][1] for _, kw in calls)
 
-    def test_per_item_outcomes_byte_identical_on_fixtures(
-        self, monkeypatch
-    ) -> None:
+    def test_per_item_outcomes_byte_identical_on_fixtures(self, monkeypatch) -> None:
         from news_collector.logic.workflows.publication_pipeline import (
             run_publication_batch,
         )

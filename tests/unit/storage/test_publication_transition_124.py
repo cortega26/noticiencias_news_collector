@@ -64,9 +64,7 @@ def _seed_publishing(db_manager: DatabaseManager, n: int, start_idx: int = 7000)
 
 
 class TestTransitionSqlFilter:
-    def test_candidate_query_only_loads_named_rows(
-        self, db_manager: DatabaseManager
-    ):
+    def test_candidate_query_only_loads_named_rows(self, db_manager: DatabaseManager):
         ids = _seed_publishing(db_manager, 10)
         named = [str(ids[0]), str(ids[1])]
         with db_manager.get_session() as session:
@@ -81,17 +79,13 @@ class TestTransitionSqlFilter:
                 .all()
             )
             assert len(rows) == 2
-            assert {str(r.article_metadata["publication"]["refinery_id"]) for r in rows} == set(
-                named
-            )
+            assert {
+                str(r.article_metadata["publication"]["refinery_id"]) for r in rows
+            } == set(named)
 
-    def test_reject_only_named_rows_transition(
-        self, db_manager: DatabaseManager
-    ):
+    def test_reject_only_named_rows_transition(self, db_manager: DatabaseManager):
         ids = _seed_publishing(db_manager, 5)
-        updated = db_manager.reject_publication_attempts(
-            [str(ids[2])], reason="probe"
-        )
+        updated = db_manager.reject_publication_attempts([str(ids[2])], reason="probe")
         assert updated == 1
         with db_manager.get_session() as session:
             states = {
@@ -103,9 +97,7 @@ class TestTransitionSqlFilter:
             if other != ids[2]:
                 assert states[other] == "publishing"
 
-    def test_complete_only_named_rows_transition(
-        self, db_manager: DatabaseManager
-    ):
+    def test_complete_only_named_rows_transition(self, db_manager: DatabaseManager):
         ids = _seed_publishing(db_manager, 5, start_idx=7100)
         updated = db_manager.complete_publication_attempts(
             [str(ids[0]), str(ids[1])], "https://x/live"
