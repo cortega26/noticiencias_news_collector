@@ -8,6 +8,7 @@ without the receipts repository keeps working.
 
 from __future__ import annotations
 
+import hashlib
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -20,29 +21,45 @@ from news_collector.storage.models import Article
 
 ARTICLE_URL = "https://example.com/receipts"
 REFINERY_ID = "refinery-receipt-1"
+PULL_REQUEST_NUMBER = 52
+ATTEMPT_ID = "receipt-test-attempt"
+CONTENT_SHA256 = hashlib.sha256(b"receipt test publication bytes").hexdigest()
 
 
 @pytest.fixture()
 def db_manager(tmp_path) -> DatabaseManager:
     manager = DatabaseManager({"type": "sqlite", "path": tmp_path / "receipts.db"})
     with manager.get_session() as session:
-        session.add(
-            Article(
-                title="Receipt test",
-                url=ARTICLE_URL,
-                summary="A test article",
-                source_id="test-source",
-                source_name="Test Source",
-                category="science",
-                processing_status="publishing",
-                article_metadata={
-                    "publication": {
-                        "state": "PR_CREATED",
-                        "refinery_id": REFINERY_ID,
-                    },
+        article = Article(
+            title="Receipt test",
+            url=ARTICLE_URL,
+            summary="A test article",
+            source_id="test-source",
+            source_name="Test Source",
+            category="science",
+            processing_status="publishing",
+            article_metadata={
+                "publication": {
+                    "state": "PR_CREATED",
+                    "refinery_id": REFINERY_ID,
                 },
-            )
+            },
         )
+        session.add(article)
+        session.flush()
+        article_id = int(article.id)
+    manager.mark_article_publishing(
+        article_id,
+        "content/update-receipts",
+        publication_attempt_id=ATTEMPT_ID,
+    )
+    manager.mark_article_published(
+        article_id,
+        f"https://github.com/cortega26/noticiencias/pull/{PULL_REQUEST_NUMBER}",
+        REFINERY_ID,
+        publication_attempt_id=ATTEMPT_ID,
+        content_sha256=CONTENT_SHA256,
+    )
     yield manager
     manager.close()
 
@@ -63,6 +80,13 @@ def _publish_payload() -> dict:
         "frontend_ref": "abc123def",
         "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
         "publication_ids": [REFINERY_ID],
+        "publication_attempt_refs": [
+            {
+                "refinery_id": REFINERY_ID,
+                "pull_request_number": PULL_REQUEST_NUMBER,
+                "content_sha256": CONTENT_SHA256,
+            }
+        ],
     }
 
 
@@ -78,6 +102,13 @@ def _validation_fail_payload() -> dict:
         "frontend_ref": "abc123def",
         "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
         "publication_ids": [REFINERY_ID],
+        "publication_attempt_refs": [
+            {
+                "refinery_id": REFINERY_ID,
+                "pull_request_number": PULL_REQUEST_NUMBER,
+                "content_sha256": CONTENT_SHA256,
+            }
+        ],
     }
 
 
@@ -103,11 +134,14 @@ class TestIdempotentDelivery:
 
         result = handle_webhook_event(event, db_manager)
 
-        assert result["result"] == {
-            "action": "completed",
-            "updated": 1,
-            "deploy_url": "https://noticiencias.com",
-        }
+        business_result = result["result"]
+        assert business_result["action"] == "completed"
+        assert business_result["updated"] == 1
+        assert business_result["article_updated"] == 1
+        assert business_result["matched"] == 1
+        assert business_result["unmatched"] == 0
+        assert business_result["needs_attention"] is False
+        assert business_result["deploy_url"] == "https://noticiencias.com"
         assert _article_status(db_manager) == "completed"
         receipt = db_manager.webhook_receipts.get_receipt(compute_delivery_key(event))
         assert receipt is not None
@@ -156,7 +190,9 @@ class TestFailureRetention:
 
         retry = handle_webhook_event(event, db_manager)
 
-        assert retry["result"] == {"action": "rejected", "updated": 1}
+        assert retry["result"]["action"] == "rejected"
+        assert retry["result"]["updated"] == 1
+        assert retry["result"]["needs_attention"] is False
         assert _article_status(db_manager) == "rejected"
         recovered = db_manager.webhook_receipts.get_receipt(key)
         assert recovered is not None
@@ -185,11 +221,13 @@ class TestCrashRecovery:
 
 
 class TestLegacyFallback:
-    def test_manager_without_receipts_repo_still_processes(self):
+    def test_manager_without_lifecycle_does_not_guess_by_refinery_id(self):
         db = SimpleNamespace(reject_publication_attempts=MagicMock(return_value=2))
         event = parse_webhook_payload(_validation_fail_payload())
 
         result = handle_webhook_event(event, db)
 
-        assert result["result"] == {"action": "rejected", "updated": 2}
-        db.reject_publication_attempts.assert_called_once()
+        assert result["result"]["action"] == "unmatched"
+        assert result["result"]["reason"] == "correlated_callback_storage_unavailable"
+        assert result["result"]["needs_attention"] is True
+        db.reject_publication_attempts.assert_not_called()

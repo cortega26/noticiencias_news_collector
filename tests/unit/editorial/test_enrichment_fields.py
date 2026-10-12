@@ -10,6 +10,7 @@ import pytest
 import yaml
 
 from news_collector.components.editorial.ai_editor import EditorAgent
+from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 
 
 def parse_frontmatter(content: str) -> dict:
@@ -288,7 +289,7 @@ class TestEnrichmentInProcessArticle:
         # Mock all LLM calls
         agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
         agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
-        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
+        agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)  # type: ignore[method-assign]
         agent._generate_headlines = lambda *args, **kwargs: {  # type: ignore[method-assign]
             "direct": "Direct Headline",
             "question": "Question Headline?",
@@ -340,7 +341,7 @@ class TestEnrichmentInProcessArticle:
         )
         agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
         agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
-        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
+        agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)  # type: ignore[method-assign]
         agent._generate_headlines = lambda *args, **kwargs: {  # type: ignore[method-assign]
             "direct": "Direct Headline",
             "question": "Question Headline?",
@@ -387,7 +388,7 @@ class TestEnrichmentInProcessArticle:
         )
         agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
         agent._critic_pass = lambda *args: (True, None)
-        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)
+        agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)
         agent._generate_headlines = lambda *args, **kwargs: {
             "direct": "A v2 article missing enrichment",
             "question": "Q?",
@@ -424,7 +425,7 @@ class TestEnrichmentInProcessArticle:
         )
         agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
         agent._critic_pass = lambda *args: (True, None)
-        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)
+        agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)
         agent._generate_headlines = lambda *args, **kwargs: {
             "direct": "Full V2 Article",
             "question": "Q?",
@@ -485,7 +486,7 @@ class TestPoisonedStage4Cache:
         )
         agent._send_prompt = MagicMock(return_value=SAMPLE_OUTPUT)
         agent._critic_pass = lambda *args: (True, None)  # type: ignore[method-assign]
-        agent._critic_editorial_pass = lambda *args, **kwargs: (True, None, True)  # type: ignore[method-assign]
+        agent._critic_editorial_pass = lambda *args, **kwargs: CriticVerdict(True)  # type: ignore[method-assign]
         agent._generate_headlines = lambda *args, **kwargs: {  # type: ignore[method-assign]
             "direct": "Direct Headline",
             "question": "Question Headline?",

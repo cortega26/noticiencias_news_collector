@@ -35,8 +35,8 @@ class FakeDB:
     def __init__(self):
         self.marks: list[tuple] = []
 
-    def mark_article_published(self, numeric_id, pr_url, refinery_id):
-        self.marks.append((numeric_id, pr_url, refinery_id))
+    def mark_article_published(self, numeric_id, pr_url, refinery_id, **kwargs):
+        self.marks.append((numeric_id, pr_url, refinery_id, kwargs))
 
 
 def _orchestrator(git, db) -> PROrchestrator:
@@ -85,7 +85,17 @@ def test_create_pr_accepts_numeric_id_and_marks_published():
 
     assert result.pr_url == "https://example.test/pr/1"
     assert len(git.calls) == 1
-    assert db.marks == [(123, "https://example.test/pr/1", "123")]
+    assert db.marks == [
+        (
+            123,
+            "https://example.test/pr/1",
+            "123",
+            {
+                "publication_attempt_id": None,
+                "content_sha256": None,
+            },
+        )
+    ]
 
 
 def test_review_notes_are_appended_to_the_pr_body_only_when_given():

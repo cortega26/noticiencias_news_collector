@@ -63,6 +63,13 @@ def make_article(article_id="42"):
     }
 
 
+def _target_with_recovery_artifact(tmp_path, filename="2024-01-01-test.md"):
+    artifact = tmp_path / "src/content/posts" / filename
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("# recovered post\n", encoding="utf-8")
+    return tmp_path
+
+
 # ---------------------------------------------------------------------------
 # PR-01: create_pr calls git.create_pull_request with correct repo_url
 # ---------------------------------------------------------------------------
@@ -122,7 +129,7 @@ class TestCreatePR:
         mock_db.mark_article_published.assert_not_called()
 
     def test_pr_10_pr_body_contains_required_fields(
-        self, mock_git, mock_db, config_obj
+        self, mock_git, mock_db, config_obj, tmp_path
     ):
         """PR-10: PR body contains article_id, source_id, source_name (no raw format drift)."""
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
@@ -155,6 +162,7 @@ class TestCreatePR:
             numeric_id=42,
             article_id="42",
             article=make_article("42"),
+            target_dir=_target_with_recovery_artifact(tmp_path, "test.md"),
         )
         recovery_body = mock_git.create_pull_request.call_args.kwargs.get("body", "")
 
@@ -255,7 +263,7 @@ class TestAttemptRecovery:
 
         assert result is None
 
-    def test_pr_09_recovery_succeeds(self, mock_git, mock_db, config_obj):
+    def test_pr_09_recovery_succeeds(self, mock_git, mock_db, config_obj, tmp_path):
         """PR-09: Article in publishing state within timeout → recovery PR created."""
         recent_time = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
         mock_db.get_publishing_state.return_value = {
@@ -268,13 +276,16 @@ class TestAttemptRecovery:
             numeric_id=42,
             article_id="42",
             article=make_article(),
+            target_dir=_target_with_recovery_artifact(tmp_path),
         )
 
         assert result is not None
         assert result.pr_url == "https://github.com/org/repo/pull/1"
         assert result.recovered is True
 
-    def test_pr_09_recovery_calls_mark_published(self, mock_git, mock_db, config_obj):
+    def test_pr_09_recovery_calls_mark_published(
+        self, mock_git, mock_db, config_obj, tmp_path
+    ):
         """PR-09: Recovery success calls db.mark_article_published."""
         recent_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
         mock_db.get_publishing_state.return_value = {
@@ -287,9 +298,36 @@ class TestAttemptRecovery:
             numeric_id=42,
             article_id="42",
             article=make_article(),
+            target_dir=_target_with_recovery_artifact(tmp_path),
         )
 
         mock_db.mark_article_published.assert_called_once()
+        assert mock_db.mark_article_published.call_args.kwargs["publication_attempt_id"]
+        assert (
+            len(mock_db.mark_article_published.call_args.kwargs["content_sha256"]) == 64
+        )
+
+    def test_recovery_refuses_to_create_pr_without_artifact(
+        self, mock_git, mock_db, config_obj, tmp_path
+    ):
+        recent_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+        mock_db.get_publishing_state.return_value = {
+            "publishing_started_at": recent_time,
+            "publishing_branch": "content/update-2024-01-01-test",
+            "publication_attempt_id": "attempt-1",
+        }
+        orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
+
+        result = orchestrator.attempt_recovery(
+            numeric_id=42,
+            article_id="42",
+            article=make_article(),
+            target_dir=tmp_path,
+        )
+
+        assert result is None
+        mock_git.create_pull_request.assert_not_called()
+        mock_db.mark_article_published.assert_not_called()
 
     def test_attempt_recovery_no_branch_info_returns_none(
         self, mock_git, mock_db, config_obj
@@ -310,7 +348,9 @@ class TestAttemptRecovery:
 
         assert result is None
 
-    def test_attempt_recovery_git_failure_returns_none(self, mock_db, config_obj):
+    def test_attempt_recovery_git_failure_returns_none(
+        self, mock_db, config_obj, tmp_path
+    ):
         """attempt_recovery returns None when PR creation raises an exception."""
         mock_git = MagicMock()
         mock_git.create_pull_request.side_effect = RuntimeError("API error")
@@ -326,6 +366,7 @@ class TestAttemptRecovery:
             numeric_id=42,
             article_id="42",
             article=make_article(),
+            target_dir=_target_with_recovery_artifact(tmp_path),
         )
 
         assert result is None

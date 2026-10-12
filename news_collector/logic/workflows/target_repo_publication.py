@@ -17,9 +17,11 @@ Does NOT own:
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, cast
+from uuid import uuid4
 
 from news_collector.contracts.publication_validation import PublicationFailureClass
 from news_collector.logic.workflows.frontend_publication_validation import (
@@ -100,8 +102,13 @@ class TargetRepoPublicationWorkflow:
             return PublicationOutcome(success=False)
 
         output_filename = request.output_filename
+        publication_attempt_id = uuid4().hex
         branch_name, publishing_token = self._create_publication_branch(
-            request, deps, output_filename, record_stage
+            request,
+            deps,
+            output_filename,
+            record_stage,
+            publication_attempt_id=publication_attempt_id,
         )
         if not self._write_post(request, deps, output_filename, record_stage):
             self._release_publishing_state(
@@ -110,6 +117,7 @@ class TargetRepoPublicationWorkflow:
                 record_stage,
                 reason="file_write_failed",
                 branch_name=publishing_token,
+                publication_attempt_id=publication_attempt_id,
             )
             return PublicationOutcome(success=False, branch_name=branch_name)
         validation = self._validate_post_frontend(
@@ -123,6 +131,7 @@ class TargetRepoPublicationWorkflow:
                 reason="frontend_validation_failed",
                 failure_class=validation.failure_class,
                 branch_name=publishing_token,
+                publication_attempt_id=publication_attempt_id,
             )
             return PublicationOutcome(
                 success=False,
@@ -130,8 +139,43 @@ class TargetRepoPublicationWorkflow:
                 validation_summary_path=validation.summary_path,
                 failure_class=validation.failure_class,
             )
+        post_path = request.target_dir / "src/content/posts" / output_filename
+        try:
+            content_sha256 = hashlib.sha256(post_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            logger.error(
+                "Cannot fingerprint publication artifact {}: {}",
+                output_filename,
+                exc,
+            )
+            record_stage("publication_content_fingerprint", False)
+            self._release_publishing_state(
+                request,
+                deps,
+                record_stage,
+                reason="publication_content_fingerprint_failed",
+                branch_name=publishing_token,
+                publication_attempt_id=publication_attempt_id,
+            )
+            return PublicationOutcome(
+                success=False,
+                branch_name=branch_name,
+                validation_summary_path=validation.summary_path,
+            )
+        record_stage(
+            "publication_content_fingerprint",
+            True,
+            content_sha256=content_sha256,
+        )
         self._commit_and_push(request, deps, output_filename, branch_name, record_stage)
-        pr_url = self._create_pr(request, deps, output_filename, branch_name)
+        pr_url = self._create_pr(
+            request,
+            deps,
+            output_filename,
+            branch_name,
+            publication_attempt_id=publication_attempt_id,
+            content_sha256=content_sha256,
+        )
         if not pr_url:
             logger.error("Failed to create PR.")
             record_stage("pr_created", False)
@@ -158,6 +202,8 @@ class TargetRepoPublicationWorkflow:
         deps: PublicationDeps,
         output_filename: str,
         record_stage: StageRecorder,
+        *,
+        publication_attempt_id: str,
     ) -> tuple[str, str]:
         """4. Create Branch: before writing files, so branch collisions or
         remote sync failures do not leave uncommitted content edits behind.
@@ -174,7 +220,11 @@ class TargetRepoPublicationWorkflow:
             deps.db, "mark_article_publishing"
         ):
             try:
-                deps.db.mark_article_publishing(request.numeric_id, expected_branch)
+                deps.db.mark_article_publishing(
+                    request.numeric_id,
+                    expected_branch,
+                    publication_attempt_id=publication_attempt_id,
+                )
                 logger.info(
                     f"Marked article {request.article_id} as 'publishing' "
                     f"(branch: {expected_branch})"
@@ -325,6 +375,7 @@ class TargetRepoPublicationWorkflow:
         reason: str,
         failure_class: Optional[PublicationFailureClass] = None,
         branch_name: Optional[str] = None,
+        publication_attempt_id: str | None = None,
     ) -> None:
         """Undo the pre-PR `publishing` mark after a clean failure.
 
@@ -348,6 +399,7 @@ class TargetRepoPublicationWorkflow:
                 reason=reason,
                 failure_class=failure_class,
                 branch_name=branch_name,
+                publication_attempt_id=publication_attempt_id,
             )
         except Exception as e:
             logger.warning(
@@ -447,6 +499,9 @@ class TargetRepoPublicationWorkflow:
         deps: PublicationDeps,
         output_filename: str,
         branch_name: str,
+        *,
+        publication_attempt_id: str,
+        content_sha256: str,
     ) -> str | None:
         pr_result = deps.pr_orchestrator.create_pr(
             article_id=request.article_id,
@@ -455,5 +510,7 @@ class TargetRepoPublicationWorkflow:
             output_filename=output_filename,
             git_handler=deps.git,
             review_notes=request.grounding_notes,
+            publication_attempt_id=publication_attempt_id,
+            content_sha256=content_sha256,
         )
         return cast(Optional[str], pr_result.pr_url)

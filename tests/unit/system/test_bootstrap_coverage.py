@@ -442,6 +442,7 @@ class TestSourceHealthCoverage:
             pipeline_ok=False,
             articles_saved=0,
             last_error_message=None,
+            failure_stage="collector.fetch",
         )
         assert result == "feed_fetch_failure"
 
@@ -460,6 +461,8 @@ class TestSourceHealthCoverage:
             articles_found=10,
             articles_saved=8,
             save_ratio=0.8,
+            feed_ok=True,
+            pipeline_ok=True,
         )
         assert result == "healthy_full_text"
 
@@ -469,6 +472,8 @@ class TestSourceHealthCoverage:
             articles_found=10,
             articles_saved=5,
             save_ratio=0.5,
+            feed_ok=True,
+            pipeline_ok=True,
         )
         assert result == "healthy_summary_only"
 
@@ -483,7 +488,11 @@ class TestSourceHealthCoverage:
 
     def test_classify_operational_state_failing(self):
         result = classify_operational_state(
-            content_mode="full_text", articles_found=0, articles_saved=0, save_ratio=0.0
+            content_mode="full_text",
+            articles_found=0,
+            articles_saved=0,
+            save_ratio=0.0,
+            failure_taxonomy="feed_fetch_failure",
         )
         assert result == "failing_suppressed_candidate"
 

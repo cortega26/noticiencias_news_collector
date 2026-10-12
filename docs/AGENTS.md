@@ -334,6 +334,12 @@ make type
 make test
 ```
 
+The unit suite intentionally excludes integration tests, pipeline E2E scenarios,
+and performance benchmarks. Keep those diagnostics separate with
+`make test-integration`, `make test-e2e`, and `make perf`; `make verify-ci` runs
+the integration and pipeline E2E targets, while `make test-all` also runs the
+performance suite.
+
 Add the relevant targeted gates:
 
 - Contract or adapter changes:

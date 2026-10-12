@@ -44,6 +44,13 @@ payload with a deterministic `delivery_key`), and a local ops script pulls
 them through the same handler the serving webhook uses — receipt-first and
 idempotent, so replays are no-ops.
 
+The local puller durably stages each page before advancing its persistent
+hosted-ID cursor. A separate lease-backed queue applies staged rows in order,
+retains failed payloads for retry, and stops before later IDs when an earlier
+callback has not been acknowledged. A cursor advance therefore proves local
+receipt, not successful application; the command exposes fetched, staged,
+applied, failed, and pending counts separately.
+
 This inverts the sync direction: pulling works behind NAT, needs no tunnel,
 no secret flipping, and tolerates the deploy arriving hours after the
 publish session — the exact conditions that caused the 2671 incident.

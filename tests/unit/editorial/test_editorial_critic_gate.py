@@ -75,6 +75,29 @@ def test_gate_passes_on_first_verdict() -> None:
     assert repairs == []
 
 
+def test_gate_keeps_fail_open_pass_out_of_review_checkpoint() -> None:
+    passed: list[bool] = []
+
+    result = run_critic_gate(
+        CriticGatePolicy(EditorialStage.EDITORIAL_CRITIC_OK, 1),
+        CriticGateHooks(
+            evaluate=lambda content: CriticVerdict(True, checkpointable=False),
+            is_repairable=_always_repairable,
+            repair=_unused_repair,
+            cleanup=_identity,
+            on_pass=lambda: passed.append(True),
+            on_rejection=_ignore_rejection,
+            on_repair=_ignore_repair,
+        ),
+        content="draft",
+        fallback_content="fallback",
+    )
+
+    assert result.passed is True
+    assert result.content == "draft"
+    assert passed == []
+
+
 def test_gate_repairs_from_fallback_when_base_not_repairable() -> None:
     verdicts = iter(
         [
@@ -224,6 +247,62 @@ def test_gate_exhausts_retries_with_last_repaired_content() -> None:
     assert passed == []
     assert rejections == [(1, "still bad")]
     assert repaired_contents == ["repair-1"]
+
+
+def test_editorial_gate_preserves_candidate_when_repair_fails() -> None:
+    passed: list[bool] = []
+    repaired: list[str] = []
+    evaluated: list[str] = []
+
+    def repair(base: str, reason: str | None) -> str:
+        raise TimeoutError("provider details must not be copied into the outcome")
+
+    def evaluate(content: str) -> CriticVerdict:
+        evaluated.append(content)
+        return CriticVerdict(False, "rewrite the opening", True)
+
+    result = run_critic_gate(
+        EDITORIAL_CRITIC_GATE,
+        CriticGateHooks(
+            evaluate=evaluate,
+            is_repairable=_always_repairable,
+            repair=repair,
+            cleanup=_identity,
+            on_pass=lambda: passed.append(True),
+            on_rejection=_ignore_rejection,
+            on_repair=repaired.append,
+        ),
+        content="Original publishable candidate",
+        fallback_content="Original translated text",
+    )
+
+    assert result.content == "Original publishable candidate"
+    assert result.attempts == 1
+    assert result.passed is False
+    assert result.failure_code == CriticFailureCode.REPAIR_FAILED
+    assert result.failure_reason == "repair failed with TimeoutError"
+    assert "provider details" not in result.failure_reason
+    assert evaluated == ["Original publishable candidate"]
+    assert passed == []
+    assert repaired == []
+
+
+def test_technical_gate_still_propagates_repair_errors() -> None:
+    with pytest.raises(TimeoutError):
+        run_critic_gate(
+            TECHNICAL_CRITIC_GATE,
+            CriticGateHooks(
+                evaluate=lambda content: CriticVerdict(False, "invalid", True),
+                is_repairable=_always_repairable,
+                repair=lambda base, reason: (_ for _ in ()).throw(TimeoutError()),
+                cleanup=_identity,
+                on_pass=_noop,
+                on_rejection=_ignore_rejection,
+                on_repair=_ignore_repair,
+            ),
+            content="candidate",
+            fallback_content="source",
+        )
 
 
 def test_gate_with_zero_retries_returns_first_verdict() -> None:

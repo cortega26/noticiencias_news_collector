@@ -14,6 +14,7 @@ Import path after implementation:
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -81,7 +82,19 @@ def _deps(**overrides) -> PublicationDeps:
 
 
 def _publish(request, deps, stages: StageLog):
+    if deps.writer.write_article.side_effect is None:
+
+        def write_article_fixture(**kwargs) -> None:
+            post_path = Path(kwargs["posts_dir"]) / kwargs["output_filename"]
+            if not post_path.exists():
+                post_path.write_text(kwargs["content"], encoding="utf-8")
+
+        deps.writer.write_article.side_effect = write_article_fixture
     return TargetRepoPublicationWorkflow().publish(request, deps, stages)
+
+
+def _publication_attempt_id(deps) -> str:
+    return deps.db.mark_article_publishing.call_args.kwargs["publication_attempt_id"]
 
 
 # ---------------------------------------------------------------------------
@@ -105,9 +118,21 @@ class TestHappyPath:
             "branch_created",
             "file_written",
             "frontend_publication_validation",
+            "publication_content_fingerprint",
             "commit_pushed",
             "pr_created",
         ]
+        fingerprint_stage = stages.get("publication_content_fingerprint")[0]
+        expected_sha256 = hashlib.sha256(
+            request.refined_content.encode("utf-8")
+        ).hexdigest()
+        assert fingerprint_stage[1] is True
+        assert fingerprint_stage[2]["content_sha256"] == expected_sha256
+        create_pr_kwargs = deps.pr_orchestrator.create_pr.call_args.kwargs
+        assert create_pr_kwargs["publication_attempt_id"] == _publication_attempt_id(
+            deps
+        )
+        assert create_pr_kwargs["content_sha256"] == expected_sha256
         skipped = stages.get("frontend_publication_validation")[0][2]
         assert skipped["skipped"] is True
         assert skipped["reason"] == "frontend_workspace_not_detected"
@@ -192,6 +217,7 @@ class TestFailurePaths:
             reason="file_write_failed",
             failure_class=None,
             branch_name="content/update-2024-01-25-test",
+            publication_attempt_id=_publication_attempt_id(deps),
         )
 
     def test_fast_frontmatter_failure_skips_full_validation(self, tmp_path: Path):
@@ -485,6 +511,7 @@ class TestSelfHealingRepair:
             reason="frontend_validation_failed",
             failure_class="frontend_build_failure",
             branch_name="content/update-2024-01-25-test",
+            publication_attempt_id=_publication_attempt_id(deps),
         )
         released = stages.get("publishing_state_released")
         assert released and released[0][1] is True
@@ -569,7 +596,14 @@ class TestPublishingMark:
 
         assert events == ["mark", "branch"]
         db.mark_article_publishing.assert_called_once_with(
-            42, "content/update-2024-01-25-test"
+            42,
+            "content/update-2024-01-25-test",
+            publication_attempt_id=db.mark_article_publishing.call_args.kwargs[
+                "publication_attempt_id"
+            ],
+        )
+        assert isinstance(
+            db.mark_article_publishing.call_args.kwargs["publication_attempt_id"], str
         )
 
     def test_skips_mark_when_db_lacks_method(self, tmp_path: Path):

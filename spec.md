@@ -429,3 +429,102 @@ handled the same kind of boundary earlier in this session.
 - Every ~20 iterations: spawn a fresh subagent to review this spec.md plus
   the current diff/`plans/README.md` state for gaps (scope drift, skipped
   Done Criteria, silently-broken tests) and loop on its feedback.
+
+## Isolated task: source-aware editorial review (2026-10-09)
+
+### Goal and acceptance criteria
+
+Improve the existing Stage 4 editorial critic so it can compare a draft with
+the original source material and identify unsupported expansion, borrowed
+first-person narration, and paraphrase that adds no useful synthesis. This is
+a preventive quality check, not a claim that model review proves originality
+or policy compliance.
+
+- Production Stage 4 receives a bounded representative sample of the cleaned
+  original title and content, plus an explicit indication of whether the input was full text
+  or a summary.
+- Source-bearing prompts delimit and escape untrusted text and place the
+  instruction to ignore embedded directives in the system message. This
+  mitigates prompt injection but does not guarantee model compliance.
+- The rubric distinguishes a useful summary from near-source paraphrase; it
+  does not require extra sources, interviews, or invented regional context.
+- Existing score fields, thresholds, bounded repair behavior, advisory
+  terminal semantics, and infrastructure fail-open behavior remain unchanged.
+- Old Stage 4 pass checkpoints do not bypass the new comparison; their cache
+  key is versioned so cached article content is reviewed again on resume.
+- Fail-open approval remains publishable but is not stored as a successful
+  editorial-review checkpoint; an actual approved verdict remains cacheable.
+- A provider error during the advisory Stage 4 repair retains the current
+  candidate, records a repair-failed outcome without provider error details,
+  and continues without a successful-review checkpoint. The technical Stage 3
+  repair remains blocking.
+- Invalid critic verdicts are non-blocking and are not stored as approvals or
+  successful-review checkpoints.
+- No generated article is published as part of this task.
+
+### Implementation
+
+- `news_collector/components/editorial/ai_editor.py`: pass `content_mode` in
+  editor context; add bounded, escaped source-data blocks to publication
+  prompts; wire the cleaned original title/content into Stage 4; require
+  coherent critic booleans and scores.
+- `news_collector/components/editorial/editorial_input.py`: classify an empty
+  content field filled from a summary as `summary_fallback`, including when a
+  default `full_text` value was supplied.
+- `news_collector/components/editorial/editorial_stages.py`: version the
+  Stage 4 success checkpoint; old files remain on disk but are ignored.
+- `config/prompts.yaml`: add comparison instructions while retaining the
+  existing JSON output schema and seven dimensions.
+- `tests/unit/editorial/test_ai_editor_coverage.py`: prove source reference
+  delivery, truncation, scope context, and legacy-checkpoint invalidation.
+- `tests/unit/editorial/test_editorial_critic_gate.py`: prove a publishable
+  fail-open verdict does not invoke the successful-review checkpoint hook.
+
+### Candidate acceptance checks
+
+- Run focused editorial regressions, then `make lint`, `make type`, and
+  `make test` on the candidate. Reproduce the two previously reported suite
+  failures against both a clean baseline and the candidate before attributing
+  them.
+- Run one bounded real LLM canary (`make llm-canary ARGS="--items 1 --require-keys"`)
+  if credentials and runtime are available; report it
+  separately from deterministic tests.
+- Review the full diff and verify no publication, push, or deployment occurs.
+
+## Isolated task: callback attempt correlation and terminal-state integrity (2026-10-10)
+
+### Callback-order goals
+
+- A Content Guard failure can reject only the exact publication attempt whose artifact produced the callback.
+- A successful deployment for a later attempt remains applicable when an older attempt's failure callback is delivered first or late.
+- A failed validation never turns the same failed attempt into a successful publication, and terminal attempt states are not reopened globally.
+- `articles.processing_status` is a projection of the current attempt only; callbacks for older attempts may update their own lifecycle row without rewriting the current article's state.
+- A callback without a trustworthy attempt reference is retained as an explicit unmatched business outcome; a transport-level receipt count cannot disguise that outcome.
+- Preserve stable article `refinery_id`, receipt idempotency, append-only publication audit, and existing SQLite data. Regression tests use only temporary SQLite databases.
+
+### Evidence and design decisions
+
+- Current frontend callbacks carry stable `publication_ids` plus commit, branch, and run metadata, but no identity for the backend `publication_attempts` row.
+- Multiple lifecycle attempts can share one `refinery_id`; current callback code changes the article by that stable ID and dual-writes the newest in-flight attempt. Callback branch/commit/run metadata is audit-only.
+- Frontend callbacks keep `publication_ids` unchanged and add typed `publication_attempt_refs` containing the stable `refinery_id`, originating GitHub PR number, and SHA-256 of the exact Markdown bytes checked or deployed. The frontend obtains the PR number from the pull request event or GitHub's commit-to-pull-request association for push/deploy events; no article frontmatter or Astro content-schema change is needed.
+- The backend generates an internal UUID for each publication workflow run and stores it only in the existing attempt `details` JSON and current article metadata. It is not exposed to the frontend. `pr_created` audit details store the exact post hash and PR URL; the callback matches `(refinery_id, PR number, content_sha256)`. If this evidence identifies zero or multiple attempts, it fails closed. Identical bytes retried into the same PR can remain ambiguous; that event is observable and requires stronger evidence rather than a guessed transition.
+- Crash recovery carries forward the stored workflow UUID and hashes the exact Markdown file in the target checkout before creating/recovering a PR. Legacy in-flight rows without a UUID receive a recovery UUID; a missing/unreadable artifact prevents recovery PR creation so no callback can be accepted without content evidence.
+- Apply exact callback transitions transactionally with the lifecycle row and current article projection. Only PUBLISHING/PR_CREATED may transition to REJECTED or COMPLETED. Terminal conflicts are explicit no-ops; no global REJECTED-to-COMPLETED transition is introduced.
+- An exact repeated callback is a clean idempotent no-op (`duplicates=1`, `conflicts=0`, `needs_attention=false`); a conflicting terminal state or unresolved reference remains observable as attention.
+- Frontend callbacks without attempt refs remain accepted at transport level, but cannot mutate publication state; return/log an explicit unmatched result.
+- A changed artifact pushed to an existing PR whose SHA was not recorded for the backend attempt remains unmatched. This is fail-closed; it requires an explicit new/updated backend attempt reference before the callback may change state.
+
+### Files and implementation
+
+- Backend webhook contract, callback workflow/handler, lifecycle and article persistence, target-repo publication workflow/writer, PR orchestrator, callback/publisher tests, and `docs/PIPELINE_CONTRACTS.md`.
+- Frontend changed-post reference extraction, callback envelope/CLI/workflow integration, narrowly scoped read access to the commit-to-PR association endpoint, and focused contract tests.
+- Regression matrix covers pass then deploy, fail without deploy, old failure vs newer deploy in either delivery order, insufficient correlation, multiple attempts, duplicate deliveries/retries, and unknown article/attempt.
+
+### Callback-order verification
+
+- First add a temporary-SQLite regression that fails on current code for the stale-attempt-failure followed by authentic later deploy sequence. (DONE: reproduced against clean `f61644f` baseline.)
+- Focused backend regression and target-repository writer tests pass after implementation; the duplicate delivery result is explicitly attention-free. Recovery tests also assert the exact artifact hash and preserve a pre-existing workflow UUID.
+- Frontend callback/schema audit, build, dist sanity, and contract parity pass in an isolated frontend worktree.
+- `make lint`, `make test-contracts` (177), `make test-boundaries` (3), and `make quality-gate` pass. The focused callback/recovery/storage set passes; the end-to-end frontend sender bridge passes with `FRONTEND_REPO_PATH` set. `make type` mypy passes, but the full unit/coverage run was interrupted at 47% after watchdog timeouts; isolated follow-up found and fixed two outdated fixtures and confirmed one unrelated network-dependent test fails because this environment cannot resolve `example.com`. The full suite still requires CI evidence.
+- Review complete backend/frontend diffs, open normal PRs, verify CI, and integrate only green changes. Update the local timer runtime only after merge; verify SQLite integrity and an ordinary pull without changing the 37-receipt cursor or unresolved article 2422 attempt #1.
+- PR #371 coverage-ratchet follow-up: CI's functional, integration, pipeline E2E, performance, lint, and publication-smoke jobs pass; the `make type` and Code Quality jobs fail only because `article_repository.py` and `database.py` fall below their `origin/main` coverage floors. Add temporary-SQLite tests for an attempt-token mismatch during release and for refusing a PR-created lifecycle transition when the exact attempt token is absent. Re-run focused storage/callback tests, lint, boundary/contract gates, then push and require the full CI set to pass before merge.

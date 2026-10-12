@@ -5,6 +5,7 @@ from noticiencias.config_schema import OllamaConfig
 from pydantic import ValidationError
 
 from news_collector.components.editorial.ai_editor import EditorAgent
+from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 from news_collector.infrastructure.llm.model_registry import InvalidModelIdError
 
 
@@ -142,7 +143,7 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
     monkeypatch.setattr(
         agent,
         "_critic_editorial_pass",
-        lambda *args, **kwargs: (True, None, True),
+        lambda *args, **kwargs: CriticVerdict(True),
     )
     monkeypatch.setattr(
         agent,
@@ -249,7 +250,7 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
     monkeypatch.setattr(
         agent,
         "_critic_editorial_pass",
-        lambda *args, **kwargs: (True, None, True),
+        lambda *args, **kwargs: CriticVerdict(True),
     )
     monkeypatch.setattr(
         agent,

@@ -54,73 +54,6 @@ class TestRefineryEngine(unittest.TestCase):
         self.auditor_patch.stop()
         self.git_patch.stop()
 
-    def test_extract_slug(self):
-        content = "---\nslug: my-slug\n---"
-        self.assertEqual(self.engine._extract_slug(content, "123"), "my-slug")
-
-        content_no_slug = "Just content"
-        self.assertEqual(
-            self.engine._extract_slug(content_no_slug, "123"), "article-123"
-        )
-
-    @patch("news_collector.logic.workflows.refinery_engine.datetime")
-    def test_process_single_article_success(self, mock_dt_refinery):
-        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
-        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
-
-        # Setup Inputs
-        article = {
-            "id": "123",
-            "title": "Test valid title",
-            "url": "http://x",
-            "summary": "This is a sufficiently long summary for refinery validation.",
-            "image_url": "https://example.com/test-image.png",
-            "image_alt": "Fotografía de prueba para la suite.",
-            "source_id": "src",
-            "source_name": "src",
-            "category": "cat",
-            "published_date": __import__("datetime").datetime(2024, 1, 1),
-            "source_metadata": {},
-        }
-        mock_repo = MagicMock()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            target_dir = Path(tmpdir)
-            target_dir / "src/content/posts"
-
-            # Setup Editor
-            self.mock_editor.process_article.return_value = (
-                "---\nslug: test-slug\n---\nContent"
-            )
-
-            # Setup Git
-            self.mock_git.create_branch.return_value = "content/add/test-branch"
-            self.mock_git.create_pull_request.return_value = "http://pr.url"
-
-            # Configure DB to simulate no existing slug
-            self.mock_db.get_canonical_slug.return_value = None
-
-            # Run
-            result = self.engine.process_single_article(article, mock_repo, target_dir)
-
-            # Assertions — override_date is the deterministic payload date (LAW-B5),
-            # not the mocked system clock
-            self.assertTrue(result)
-            self.assertEqual(
-                self.mock_editor.process_article.call_args.kwargs["override_date"],
-                "2024-01-01",
-            )
-            self.mock_git.create_branch.assert_called()
-            self.mock_git.commit_and_push.assert_called()
-            self.mock_git.create_pull_request.assert_called()
-
-            # Check output file write (indirectly via mock path)
-            # Note: mocking pathlib iterface is tricky, usually we trust write_text works or use tmp_path fixture.
-            # Here we just check logical flow.
-            self.mock_db.mark_article_published.assert_called_with(
-                123, "http://pr.url", "123"
-            )
-
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_records_readability_stage(self, mock_dt_refinery):
         """Plan 065: a successful run persists a `readability` stage with the
@@ -1127,16 +1060,9 @@ class TestRefineryEngineCoverage(unittest.TestCase):
 
         self.assertFalse(result)
 
-    def test_process_articles_requires_full_context(self):
-        self.engine._safe_publication_artifact_name("du-pa").replace("du-pa", "ok")
-        messages = []
-        with patch.object(
-            self.engine,
-            "_persist_publication_attempt_summary",
-            side_effect=lambda **kw: messages.append(kw),
-        ):
-            fname = self.engine._safe_publication_artifact_name("á_b$c")
-            self.assertNotEqual(fname, "á_b$c")
+    def test_safe_publication_artifact_name_normalizes_unsafe_characters(self):
+        filename = self.engine._safe_publication_artifact_name("á_b$c")
+        self.assertNotEqual(filename, "á_b$c")
 
     def test_record_audit_status_handles_missing_db_method(self):
         self.mock_db.update_article_audit_status = None

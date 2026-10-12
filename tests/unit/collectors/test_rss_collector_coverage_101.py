@@ -18,6 +18,7 @@ import requests
 from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
+from news_collector.diagnostics import SourceHealthTracker
 
 SOURCE_ID = "coverage_src"
 BASE_CONFIG = {
@@ -144,6 +145,77 @@ def test_network_error_records_tracker_failure():
     assert stats["success"] is False
     assert "red general" in stats["error_message"]
     instance.health_tracker.record_failure.assert_called_once()
+
+
+def test_rss_http_503_is_recorded_as_a_fetch_failure(collector):
+    tracker = SourceHealthTracker()
+    collector.health_tracker = tracker
+
+    with (
+        patch.object(collector, "_respect_robots", return_value=(True, 0.0)),
+        patch.object(
+            collector,
+            "_fetch_feed_robust",
+            return_value=_ok_fetch(
+                success=False, status_code=503, error_message="HTTP 503"
+            ),
+        ),
+    ):
+        stats = collector.collect_from_source(SOURCE_ID, dict(BASE_CONFIG))
+
+    source = tracker.get_source(SOURCE_ID)
+    assert stats["success"] is False
+    assert source.primary_failure_stage == "collector.fetch"
+    assert source.primary_failure_reason == "HTTP 503"
+    assert source.http_status == 503
+    assert source.fetch_ok == 0
+
+
+def test_http_200_with_invalid_feed_is_not_recorded_as_healthy(collector):
+    tracker = SourceHealthTracker()
+    collector.health_tracker = tracker
+
+    with (
+        patch.object(collector, "_respect_robots", return_value=(True, 0.0)),
+        patch.object(collector, "_fetch_feed_robust", return_value=_ok_fetch()),
+        patch.object(
+            collector,
+            "_parse_feed_robust",
+            return_value={
+                "success": False,
+                "error_message": "Malformed Feed: invalid XML",
+            },
+        ),
+    ):
+        stats = collector.collect_from_source(SOURCE_ID, dict(BASE_CONFIG))
+
+    source = tracker.get_source(SOURCE_ID)
+    assert stats["success"] is False
+    assert source.primary_failure_stage == "collector.parse"
+    assert source.fetch_ok == 0
+    assert source.parsed_ok == 0
+
+
+def test_valid_empty_rss_feed_is_a_successful_observation(collector):
+    tracker = SourceHealthTracker()
+    collector.health_tracker = tracker
+
+    with (
+        patch.object(collector, "_respect_robots", return_value=(True, 0.0)),
+        patch.object(collector, "_fetch_feed_robust", return_value=_ok_fetch()),
+        patch.object(
+            collector,
+            "_parse_feed_robust",
+            return_value={"success": True, "parsed_feed": SimpleNamespace(entries=[])},
+        ),
+        patch.object(collector, "_extract_articles_from_feed", return_value=[]),
+    ):
+        stats = collector.collect_from_source(SOURCE_ID, dict(BASE_CONFIG))
+
+    source = tracker.get_source(SOURCE_ID)
+    assert stats["success"] is True
+    assert source.fetch_ok == 1
+    assert source.parse_succeeded is True
 
 
 def test_unexpected_error_is_contained(collector):

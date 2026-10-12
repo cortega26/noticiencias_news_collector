@@ -3,7 +3,7 @@ Module role: Typed critic-gate policy for the EditorAgent repair loops
 (plan 060 Phase 7c-2).
 
 Owns:
-- CriticVerdict: normalized (is_valid, reason, recoverable) decision
+- CriticVerdict: normalized decision and whether a pass may be cached
 - CriticFailureCode / CriticGateOutcome: terminal outcome vocabulary
 - CriticGatePolicy + the stage policies of the technical and editorial gates
 - CriticGateHooks: the typed host-callback bundle the gate drives
@@ -28,17 +28,19 @@ from news_collector.components.editorial.editorial_stages import EditorialStage
 
 @dataclass(frozen=True)
 class CriticVerdict:
-    """One critic decision, normalized from the legacy tuple shapes."""
+    """One critic decision, including whether it can be cached as reviewed."""
 
     is_valid: bool
     reason: str | None = None
     recoverable: bool = True
+    checkpointable: bool = True
 
 
 class CriticFailureCode(StrEnum):
     """Terminal gate outcomes; the gate returns them, callers act on them."""
 
     IRRECOVERABLE = "critic_irrecoverable"
+    REPAIR_FAILED = "critic_repair_failed"
     RETRIES_EXHAUSTED = "critic_retries_exhausted"
 
 
@@ -48,10 +50,13 @@ class CriticGatePolicy:
 
     stage: EditorialStage
     max_retries: int
+    repair_failure_is_nonblocking: bool = False
 
 
 TECHNICAL_CRITIC_GATE = CriticGatePolicy(EditorialStage.TECHNICAL_CRITIC_OK, 2)
-EDITORIAL_CRITIC_GATE = CriticGatePolicy(EditorialStage.EDITORIAL_CRITIC_OK, 1)
+EDITORIAL_CRITIC_GATE = CriticGatePolicy(
+    EditorialStage.EDITORIAL_CRITIC_OK, 1, repair_failure_is_nonblocking=True
+)
 
 
 @dataclass(frozen=True)
@@ -96,7 +101,8 @@ def run_critic_gate(
     for attempt in range(policy.max_retries + 1):
         verdict = hooks.evaluate(content)
         if verdict.is_valid:
-            hooks.on_pass()
+            if verdict.checkpointable:
+                hooks.on_pass()
             return CriticGateOutcome(content, attempt + 1, True)
 
         if not verdict.recoverable:
@@ -111,7 +117,19 @@ def run_critic_gate(
         if attempt < policy.max_retries:
             hooks.on_rejection(attempt + 1, verdict.reason)
             repair_base = content if hooks.is_repairable(content) else fallback_content
-            content = hooks.cleanup(hooks.repair(repair_base, verdict.reason))
+            try:
+                repaired_content = hooks.repair(repair_base, verdict.reason)
+            except Exception as exc:
+                if not policy.repair_failure_is_nonblocking:
+                    raise
+                return CriticGateOutcome(
+                    content,
+                    attempt + 1,
+                    False,
+                    CriticFailureCode.REPAIR_FAILED,
+                    f"repair failed with {type(exc).__name__}",
+                )
+            content = hooks.cleanup(repaired_content)
             hooks.on_repair(content)
         else:
             return CriticGateOutcome(

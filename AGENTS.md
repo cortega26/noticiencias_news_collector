@@ -21,14 +21,20 @@
 
 ```bash
 make lint       # black --check + ruff (isort runs separately in pre-commit) + Makefile-tab + Streamlit-deprecation checks
-make type       # mypy (incremental: 3 files only) + pytest coverage run + coverage ratchet gate
-make test       # unit suite (excludes slow tests/e2e_pipeline; use make test-all for the full suite)
+make type       # mypy (incremental: 3 files only) + unit-test coverage run + coverage ratchet gate
+make test       # unit suite; integration, E2E, and performance suites have separate targets
+make test-integration
+make test-e2e
+make perf
+make test-all   # all test groups
 ```
 
 > `make type` is not a strict-mypy gate. It type-checks a small target list
 > (`scripts/generate_api_docs.py`, `utils/logger.py`, `utils/url_canonicalizer.py`),
-> then runs pytest with coverage and fails if changed files drop below the
-> coverage ratchet baseline (computed against `origin/main`).
+> then runs the unit suite with coverage and fails if changed files drop below the
+> coverage ratchet baseline (computed against `origin/main`). Integration, pipeline
+> E2E, and performance tests remain separate and are run by `make verify-ci` or
+> `make test-all` as applicable.
 
 Additional gates by change type:
 

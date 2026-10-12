@@ -15,9 +15,12 @@ Does NOT own:
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict
+from uuid import uuid4
 
 from news_collector.utils.logger import get_logger
 
@@ -60,6 +63,8 @@ class PROrchestrator:
         git_handler: Any = None,
         recovered: bool = False,
         review_notes: str = "",
+        publication_attempt_id: str | None = None,
+        content_sha256: str | None = None,
     ) -> PRResult:
         """
         Create a pull request for a published article.
@@ -128,7 +133,13 @@ class PROrchestrator:
             # webhook_handler match this exact publication attempt.
             # Non-numeric ids are rejected at the top of this method, so
             # the int() conversion there guarantees numeric_id is valid here.
-            self._db.mark_article_published(numeric_id, pr_url, article_id)
+            self._db.mark_article_published(
+                numeric_id,
+                pr_url,
+                article_id,
+                publication_attempt_id=publication_attempt_id,
+                content_sha256=content_sha256,
+            )
 
         return PRResult(pr_url=pr_url, recovered=recovered)
 
@@ -157,6 +168,64 @@ class PROrchestrator:
             repo_url = self._config.get("target_repo_url")
         return str(repo_url) if repo_url is not None else None
 
+    @staticmethod
+    def _recovery_correlation(
+        *,
+        article_id: str,
+        publishing_info: Dict[str, Any],
+        target_dir: Path | None,
+        output_filename: str,
+    ) -> tuple[str, str] | None:
+        """Bind a recovered PR to its exact artifact and workflow attempt."""
+        if target_dir is None:
+            logger.warning(
+                "Cannot recover publication for article {} without its target directory; "
+                "refusing an uncorrelated PR.",
+                article_id,
+            )
+            return None
+        artifact_path = target_dir / "src/content/posts" / output_filename
+        try:
+            content_sha256 = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            logger.warning(
+                "Cannot fingerprint recovery artifact for article {}: {}; "
+                "refusing an uncorrelated PR.",
+                article_id,
+                exc,
+            )
+            return None
+        publication_attempt_id = publishing_info.get("publication_attempt_id")
+        if not publication_attempt_id:
+            # Legacy publishing rows predate attempt tokens. Give this recovery
+            # run its own identity; the exact PR and artifact hash still bind
+            # any callback to the recovered publication.
+            publication_attempt_id = uuid4().hex
+        return str(publication_attempt_id), content_sha256
+
+    @staticmethod
+    def _recovery_timed_out(publishing_started_at: str | None, article_id: str) -> bool:
+        if not publishing_started_at:
+            return False
+        try:
+            started = datetime.fromisoformat(publishing_started_at)
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+        except (ValueError, TypeError) as exc:
+            logger.warning("Could not parse publishing_started_at: {}", exc)
+            return False
+        if elapsed > PUBLISHING_TIMEOUT_SECONDS:
+            logger.warning(
+                "Article {} stuck in 'publishing' for {:.1f}h (>{:.0f}h). "
+                "Allowing reprocessing.",
+                article_id,
+                elapsed / 3600,
+                PUBLISHING_TIMEOUT_SECONDS / 3600,
+            )
+            return True
+        return False
+
     def attempt_recovery(
         self,
         *,
@@ -164,6 +233,7 @@ class PROrchestrator:
         article_id: str,
         article: Dict[str, Any],
         git_handler: Any = None,
+        target_dir: Path | None = None,
     ) -> PRResult | None:
         """
         B-01 / F-0012 / F-0015: If article is stuck in 'publishing' state, attempt recovery.
@@ -184,23 +254,8 @@ class PROrchestrator:
         publishing_branch = publishing_info.get("publishing_branch")
 
         # Check timeout
-        if publishing_started_at:
-            try:
-                started = datetime.fromisoformat(publishing_started_at)
-                if started.tzinfo is None:
-                    started = started.replace(tzinfo=timezone.utc)
-                elapsed = (datetime.now(timezone.utc) - started).total_seconds()
-                if elapsed > PUBLISHING_TIMEOUT_SECONDS:
-                    logger.warning(
-                        "Article {} stuck in 'publishing' for {:.1f}h (>{:.0f}h). "
-                        "Allowing reprocessing.",
-                        article_id,
-                        elapsed / 3600,
-                        PUBLISHING_TIMEOUT_SECONDS / 3600,
-                    )
-                    return None
-            except (ValueError, TypeError) as e:
-                logger.warning("Could not parse publishing_started_at: {}", e)
+        if self._recovery_timed_out(publishing_started_at, article_id):
+            return None
 
         if not publishing_branch:
             logger.warning(
@@ -219,6 +274,15 @@ class PROrchestrator:
         git = git_handler if git_handler is not None else self._git
         slug = publishing_branch.replace("content/update-", "", 1)
         output_filename = f"{slug}.md"
+        correlation = self._recovery_correlation(
+            article_id=article_id,
+            publishing_info=publishing_info,
+            target_dir=target_dir,
+            output_filename=output_filename,
+        )
+        if correlation is None:
+            return None
+        publication_attempt_id, content_sha256 = correlation
 
         try:
             result = self.create_pr(
@@ -228,6 +292,8 @@ class PROrchestrator:
                 output_filename=output_filename,
                 git_handler=git,
                 recovered=True,
+                publication_attempt_id=publication_attempt_id,
+                content_sha256=content_sha256,
             )
         except Exception as e:
             logger.warning(

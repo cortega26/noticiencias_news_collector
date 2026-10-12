@@ -8,6 +8,7 @@ publisher collaborator) and asserted with a tripwire monkeypatch.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -21,6 +22,8 @@ from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, WorkflowRun
 
 REFINERY_ID = "refinery-reconcile-1"
+PULL_REQUEST_NUMBER = 42
+ATTEMPT_CONTENT_SHA256 = hashlib.sha256(b"test publication artifact").hexdigest()
 
 
 @pytest.fixture()
@@ -50,9 +53,18 @@ def _pr_created_article(db_manager: DatabaseManager, *, suffix: str = "a") -> in
         session.add(article)
         session.flush()
         article_id = int(article.id)
-    db_manager.mark_article_publishing(article_id, f"content/update-{suffix}")
+    attempt_id = f"reconcile-attempt-{suffix}"
+    db_manager.mark_article_publishing(
+        article_id,
+        f"content/update-{suffix}",
+        publication_attempt_id=attempt_id,
+    )
     db_manager.mark_article_published(
-        article_id, f"https://github.com/pr/{suffix}", REFINERY_ID
+        article_id,
+        f"https://github.com/cortega26/noticiencias/pull/{PULL_REQUEST_NUMBER}",
+        REFINERY_ID,
+        publication_attempt_id=attempt_id,
+        content_sha256=ATTEMPT_CONTENT_SHA256,
     )
     return article_id
 
@@ -81,6 +93,13 @@ def _publish_payload(
         "frontend_ref": "abc123def",
         "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
         "publication_ids": [refinery_id],
+        "publication_attempt_refs": [
+            {
+                "refinery_id": refinery_id,
+                "pull_request_number": PULL_REQUEST_NUMBER,
+                "content_sha256": ATTEMPT_CONTENT_SHA256,
+            }
+        ],
     }
 
 
@@ -96,6 +115,13 @@ def _validation_payload(*, refinery_id: str = REFINERY_ID) -> dict:
         "frontend_ref": "abc123def",
         "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
         "publication_ids": [refinery_id],
+        "publication_attempt_refs": [
+            {
+                "refinery_id": refinery_id,
+                "pull_request_number": PULL_REQUEST_NUMBER,
+                "content_sha256": ATTEMPT_CONTENT_SHA256,
+            }
+        ],
     }
 
 

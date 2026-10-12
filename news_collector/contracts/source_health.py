@@ -11,6 +11,7 @@ SourceOperationalState = Literal[
     "healthy_summary_only",
     "partial_yield_flaky",
     "failing_suppressed_candidate",
+    "unknown",
 ]
 
 SourceFailureTaxonomy = Literal[
@@ -65,6 +66,7 @@ class SourceHealthRecord(BaseModel):
     latency: float = Field(default=0.0, ge=0.0)
     last_error_message: Optional[str] = None
     failure_taxonomy: Optional[SourceFailureTaxonomy] = None
+    failure_count: int = Field(default=0, ge=0)
     operational_state: SourceOperationalState
     # Live circuit-breaker state merged at read time (plan 110). Absent
     # (None) for export files written before the merge or sources with no

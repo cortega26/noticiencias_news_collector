@@ -88,7 +88,7 @@ def _make_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _run_check(root: Path) -> subprocess.CompletedProcess:
+def _run_check(root: Path, profile: str = "full") -> subprocess.CompletedProcess:
     return subprocess.run(
         [str(RATCHET), "check", "--base-ref", "base"],
         cwd=root,
@@ -98,8 +98,24 @@ def _run_check(root: Path) -> subprocess.CompletedProcess:
             **os.environ,
             "COVERAGE_XML": str(root / "coverage.xml"),
             "BASELINE_FILE": str(root / ".coverage-baseline"),
+            "COVERAGE_PROFILE": profile,
         },
     )
+
+
+def _set_unit_profile(root: Path, files: dict[str, dict[str, float | None]]) -> None:
+    baseline_path = root / ".coverage-baseline"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    baseline["total_line"] = 91.25
+    baseline["total_branch"] = 80.92
+    baseline["profiles"] = {
+        "unit": {
+            "total_line": 74.0,
+            "total_branch": 70.0,
+            "files": files,
+        }
+    }
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
 
 def test_check_ignores_deleted_files_in_diff(tmp_path: Path) -> None:
@@ -174,6 +190,59 @@ def test_check_fails_loudly_when_base_has_no_common_ancestor(tmp_path: Path) -> 
     _git(root, "commit", "-q", "-m", "unrelated history")
 
     result = _run_check(root)
+
+    assert result.returncode == 1
+    assert "below 90%" in result.stderr
+
+
+def test_unit_profile_uses_its_total_and_preserves_legacy_file_coverage(
+    tmp_path: Path,
+):
+    root = _make_repo(tmp_path)
+    _set_unit_profile(
+        root,
+        {
+            "news_collector/b.py": {"line": 0.0, "branch": None},
+        },
+    )
+    _write(root, "news_collector/b.py", "B = 2\n")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "change legacy low coverage module")
+
+    result = _run_check(root, profile="unit")
+
+    assert result.returncode == 0, result.stderr
+    assert "profile unit" in result.stderr
+
+
+def test_unit_profile_fails_when_legacy_file_coverage_regresses(tmp_path: Path):
+    root = _make_repo(tmp_path)
+    _set_unit_profile(
+        root,
+        {
+            "news_collector/b.py": {"line": 25.0, "branch": None},
+        },
+    )
+    _write(root, "news_collector/b.py", "B = 2\n")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "regress legacy low coverage module")
+
+    result = _run_check(root, profile="unit")
+
+    assert result.returncode == 1
+    assert "regressed below their unit line baseline" in result.stderr
+
+
+def test_unit_profile_keeps_ninety_percent_floor_for_unbaselined_files(
+    tmp_path: Path,
+):
+    root = _make_repo(tmp_path)
+    _set_unit_profile(root, {})
+    _write(root, "news_collector/b.py", "B = 2\n")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "touch file without unit baseline")
+
+    result = _run_check(root, profile="unit")
 
     assert result.returncode == 1
     assert "below 90%" in result.stderr

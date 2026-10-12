@@ -16,6 +16,7 @@ repos present side by side.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -58,6 +59,7 @@ def _build_envelope_via_frontend(
     status: str,
     diagnostics: Any,
     publication_ids: list[str],
+    publication_attempt_refs: list[dict[str, Any]] | None = None,
     github_env: dict[str, str] | None = None,
 ) -> dict:
     """Invoke the frontend's real buildEnvelope() in a Node subprocess.
@@ -74,6 +76,7 @@ def _build_envelope_via_frontend(
         f"  status: {json.dumps(status)},\n"
         f"  diagnostics: {json.dumps(diagnostics)},\n"
         f"  publicationIds: {json.dumps(publication_ids)},\n"
+        f"  publicationAttemptRefs: {json.dumps(publication_attempt_refs or [])},\n"
         f"  githubEnv: {json.dumps(github_env or {})},\n"
         "});\n"
         "console.log(JSON.stringify(envelope));\n"
@@ -105,7 +108,7 @@ def api_client(db_manager: DatabaseManager) -> TestClient:
 
 def _create_pr_created_article(
     db_manager: DatabaseManager, *, refinery_id: str, url_suffix: str
-) -> int:
+) -> tuple[int, dict[str, Any]]:
     """Insert an article and drive it through the *real* PR-created
     transition (mark_article_published), exactly like PROrchestrator does."""
     with db_manager.get_session() as session:
@@ -122,13 +125,27 @@ def _create_pr_created_article(
         session.flush()
         article_id = article.id
 
-    db_manager.mark_article_publishing(article_id, f"content/update-{refinery_id}")
+    content = f"Cross-repo contract bytes for {refinery_id}".encode("utf-8")
+    content_sha256 = hashlib.sha256(content).hexdigest()
+    publication_attempt_id = f"attempt-{refinery_id}"
+    pull_request_number = 42
+    db_manager.mark_article_publishing(
+        article_id,
+        f"content/update-{refinery_id}",
+        publication_attempt_id=publication_attempt_id,
+    )
     db_manager.mark_article_published(
         article_id,
-        f"https://github.com/cortega26/noticiencias/pull/{refinery_id}",
+        f"https://github.com/cortega26/noticiencias/pull/{pull_request_number}",
         refinery_id,
+        publication_attempt_id=publication_attempt_id,
+        content_sha256=content_sha256,
     )
-    return article_id
+    return article_id, {
+        "refinery_id": refinery_id,
+        "pull_request_number": pull_request_number,
+        "content_sha256": content_sha256,
+    }
 
 
 def _article_state(db_manager: DatabaseManager, article_id: int) -> dict:
@@ -146,7 +163,7 @@ def _article_state(db_manager: DatabaseManager, article_id: int) -> dict:
 
 class TestPRFailure:
     def test_content_guard_failure_rejects_the_named_article(self, db_manager):
-        article_id = _create_pr_created_article(
+        article_id, attempt_ref = _create_pr_created_article(
             db_manager, refinery_id="cg-fail-1", url_suffix="cg-fail-1"
         )
 
@@ -157,6 +174,7 @@ class TestPRFailure:
                 {"check": "frontmatter-dates", "status": "fail", "errors": ["bad date"]}
             ],
             publication_ids=["cg-fail-1"],
+            publication_attempt_refs=[attempt_ref],
             github_env={
                 "GITHUB_SHA": "abc123",
                 "GITHUB_REF_NAME": "content/update-cg-fail-1",
@@ -173,7 +191,7 @@ class TestPRFailure:
 
 class TestDeploySuccess:
     def test_deploy_success_completes_the_named_article(self, db_manager):
-        article_id = _create_pr_created_article(
+        article_id, attempt_ref = _create_pr_created_article(
             db_manager, refinery_id="deploy-ok-1", url_suffix="deploy-ok-1"
         )
 
@@ -187,6 +205,7 @@ class TestDeploySuccess:
                 "deploy_url": "https://noticiencias.com/deploy-ok-1",
             },
             publication_ids=["deploy-ok-1"],
+            publication_attempt_refs=[attempt_ref],
             github_env={"GITHUB_SHA": "def456", "GITHUB_REF_NAME": "main"},
         )
 
@@ -202,7 +221,7 @@ class TestDeploySuccess:
 
 class TestReplay:
     def test_replaying_a_completed_callback_is_a_no_op(self, db_manager):
-        article_id = _create_pr_created_article(
+        article_id, attempt_ref = _create_pr_created_article(
             db_manager, refinery_id="replay-1", url_suffix="replay-1"
         )
 
@@ -215,23 +234,27 @@ class TestReplay:
                 "deploy_url": "https://noticiencias.com/replay-1",
             },
             publication_ids=["replay-1"],
+            publication_attempt_refs=[attempt_ref],
         )
         event = parse_webhook_payload(envelope)
 
-        process_publish_complete(event, db_manager)
+        first_result = process_publish_complete(event, db_manager)
         first_state = _article_state(db_manager, article_id)
 
         # Replay the identical callback again — the article is no longer
         # "publishing", so it must not be matched or mutated a second time.
-        process_publish_complete(event, db_manager)
+        duplicate_result = process_publish_complete(event, db_manager)
         second_state = _article_state(db_manager, article_id)
 
         assert first_state == second_state
+        assert first_result["updated"] == 1
+        assert duplicate_result["duplicates"] == 1
+        assert duplicate_result["needs_attention"] is False
 
 
 class TestUnrelatedId:
     def test_an_id_naming_a_different_article_does_not_touch_this_one(self, db_manager):
-        article_id = _create_pr_created_article(
+        article_id, _attempt_ref = _create_pr_created_article(
             db_manager, refinery_id="mine-1", url_suffix="unrelated-mine-1"
         )
 
@@ -253,7 +276,7 @@ class TestAuthEnabled:
     def test_a_real_envelope_is_accepted_through_the_authenticated_http_endpoint(
         self, api_client: TestClient, db_manager: DatabaseManager
     ):
-        article_id = _create_pr_created_article(
+        article_id, attempt_ref = _create_pr_created_article(
             db_manager, refinery_id="auth-ok-1", url_suffix="auth-ok-1"
         )
 
@@ -266,6 +289,7 @@ class TestAuthEnabled:
                 "deploy_url": "https://noticiencias.com/auth-ok-1",
             },
             publication_ids=["auth-ok-1"],
+            publication_attempt_refs=[attempt_ref],
         )
 
         with patch.dict(os.environ, {"WEBHOOK_API_KEY": "cross-repo-secret"}):

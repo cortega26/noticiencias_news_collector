@@ -252,13 +252,19 @@ class TestPublishingStateTransitions:
         )
         assert article is not None
 
-        result = db_manager.mark_article_publishing(article.id, "content/update-test")
+        attempt_id = "attempt-token-123"
+        result = db_manager.mark_article_publishing(
+            article.id,
+            "content/update-test",
+            publication_attempt_id=attempt_id,
+        )
         assert result is True
 
         state = db_manager.get_publishing_state(article.id)
         assert state is not None
         assert state["publishing_branch"] == "content/update-test"
         assert state["publishing_started_at"] is not None
+        assert state["publication_attempt_id"] == attempt_id
 
     def test_get_publishing_state_not_in_publishing(self, db_manager):
         article = db_manager.save_article(

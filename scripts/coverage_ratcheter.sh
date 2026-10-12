@@ -13,6 +13,7 @@ Environment variables:
   COVERAGE_XML   Path to the Cobertura XML report (default: reports/coverage/coverage.xml).
   BASELINE_FILE  File used to store the baseline snapshot (default: .coverage-baseline).
   BASE_REF       Git ref used to compute changed modules (default: origin/main).
+  COVERAGE_PROFILE  Coverage baseline profile (default: full).
 USAGE
 }
 
@@ -187,18 +188,30 @@ import sys
 import os
 
 baseline_path = Path(os.environ.get("BASELINE_FILE", ".coverage-baseline"))
-baseline_path.write_text(
-    json.dumps(
-        {
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
-            "total_line": json.loads(os.environ["SNAPSHOT_JSON"])["total_line"],
-            "total_branch": json.loads(os.environ["SNAPSHOT_JSON"]).get("total_branch"),
-        },
-        indent=2,
-        sort_keys=True,
+snapshot = json.loads(os.environ["SNAPSHOT_JSON"])
+profile = os.environ.get("COVERAGE_PROFILE", "full").strip() or "full"
+recorded_at = datetime.now(timezone.utc).isoformat()
+
+if profile == "full":
+    baseline = {
+        "recorded_at": recorded_at,
+        "total_line": snapshot["total_line"],
+        "total_branch": snapshot.get("total_branch"),
+    }
+else:
+    baseline = (
+        json.loads(baseline_path.read_text("utf-8")) if baseline_path.exists() else {}
     )
-    + "\n",
-    encoding="utf-8",
+    profiles = baseline.setdefault("profiles", {})
+    profiles[profile] = {
+        "recorded_at": recorded_at,
+        "total_line": snapshot["total_line"],
+        "total_branch": snapshot.get("total_branch"),
+        "files": snapshot.get("files", {}),
+    }
+
+baseline_path.write_text(
+    json.dumps(baseline, indent=2, sort_keys=True) + "\n", encoding="utf-8"
 )
 print(f"[coverage-ratchet] baseline recorded at {baseline_path}")
 PY
@@ -234,6 +247,18 @@ if not baseline_path.exists():
     )
     sys.exit(1)
 baseline = json.loads(baseline_path.read_text("utf-8"))
+profile = os.environ.get("COVERAGE_PROFILE", "full").strip() or "full"
+if profile == "full":
+    baseline = baseline.get("profiles", {}).get("full", baseline)
+else:
+    profile_baseline = baseline.get("profiles", {}).get(profile)
+    if not isinstance(profile_baseline, dict):
+        print(
+            f"[coverage-ratchet] baseline profile '{profile}' missing from '{baseline_path}'",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    baseline = profile_baseline
 
 minimum_global = 72.0  # honest full-package baseline (news_collector + apps)
 minimum_changed = 90.0
@@ -247,16 +272,19 @@ if current_total + 1e-6 < minimum_global:
 baseline_total = baseline.get("total_line", 0.0)
 if current_total + 0.05 < baseline_total:
     print(
-        f"[coverage-ratchet] Coverage {current_total:.2f}% dropped below baseline {baseline_total:.2f}%",
+        f"[coverage-ratchet] {profile} coverage {current_total:.2f}% dropped below baseline {baseline_total:.2f}%",
         file=sys.stderr,
     )
     sys.exit(1)
 
 changed = [line.strip() for line in os.environ.get("CHANGED_MODULES", "").splitlines() if line.strip()]
 files = snapshot.get("files", {})
+baseline_files = baseline.get("files", {})
 missing = []
-violations = []
-branch_violations = []
+threshold_violations = []
+baseline_violations = []
+branch_threshold_violations = []
+branch_baseline_violations = []
 
 # Files excluded from measurement (pyproject [tool.coverage.run] omit)
 # never appear in the XML; a PR touching them must not trip the gate.
@@ -282,12 +310,32 @@ for path in changed:
     if stats is None:
         missing.append(path)
         continue
+
+    stripped = path.removeprefix("news_collector/").removeprefix("apps/")
+    previous = baseline_files.get(path, baseline_files.get(stripped, {}))
     line_cov = stats.get("line", 0.0)
-    if line_cov + 1e-6 < minimum_changed:
-        violations.append((path, line_cov))
+    previous_line = previous.get("line")
+    line_floor = minimum_changed
+    if previous_line is not None and previous_line + 1e-6 < minimum_changed:
+        line_floor = previous_line
+    if line_cov + 1e-6 < line_floor:
+        violation = (path, line_cov, line_floor)
+        if line_floor == minimum_changed:
+            threshold_violations.append(violation)
+        else:
+            baseline_violations.append(violation)
+
     branch_cov = stats.get("branch")
-    if branch_cov is not None and branch_cov + 1e-6 < minimum_branch:
-        branch_violations.append((path, branch_cov))
+    previous_branch = previous.get("branch")
+    branch_floor = minimum_branch
+    if previous_branch is not None and previous_branch + 1e-6 < minimum_branch:
+        branch_floor = previous_branch
+    if branch_cov is not None and branch_cov + 1e-6 < branch_floor:
+        violation = (path, branch_cov, branch_floor)
+        if branch_floor == minimum_branch:
+            branch_threshold_violations.append(violation)
+        else:
+            branch_baseline_violations.append(violation)
 
 if missing:
     print(
@@ -296,24 +344,55 @@ if missing:
     )
     sys.exit(1)
 
-if violations:
-    msgs = ", ".join(f"{path} ({value:.2f}%)" for path, value in violations)
+if threshold_violations:
+    msgs = ", ".join(
+        f"{path} ({value:.2f}%)" for path, value, _floor in threshold_violations
+    )
     print(
         f"[coverage-ratchet] Changed modules below {minimum_changed:.0f}% line coverage: {msgs}",
         file=sys.stderr,
     )
-    sys.exit(1)
 
-if branch_violations:
-    msgs = ", ".join(f"{path} ({value:.2f}%)" for path, value in branch_violations)
+if baseline_violations:
+    msgs = ", ".join(
+        f"{path} ({value:.2f}% < {profile} baseline {floor:.2f}%)"
+        for path, value, floor in baseline_violations
+    )
+    print(
+        f"[coverage-ratchet] Changed modules regressed below their {profile} line baseline: {msgs}",
+        file=sys.stderr,
+    )
+
+if branch_threshold_violations:
+    msgs = ", ".join(
+        f"{path} ({value:.2f}%)"
+        for path, value, _floor in branch_threshold_violations
+    )
     print(
         f"[coverage-ratchet] Branch coverage below {minimum_branch:.0f}% for: {msgs}",
         file=sys.stderr,
     )
+
+if branch_baseline_violations:
+    msgs = ", ".join(
+        f"{path} ({value:.2f}% < {profile} baseline {floor:.2f}%)"
+        for path, value, floor in branch_baseline_violations
+    )
+    print(
+        f"[coverage-ratchet] Changed modules regressed below their {profile} branch baseline: {msgs}",
+        file=sys.stderr,
+    )
+
+if (
+    threshold_violations
+    or baseline_violations
+    or branch_threshold_violations
+    or branch_baseline_violations
+):
     sys.exit(1)
 
 print(
-    f"[coverage-ratchet] OK — total {current_total:.2f}%, baseline {baseline_total:.2f}%, changed files passed",
+    f"[coverage-ratchet] OK — profile {profile}, total {current_total:.2f}%, baseline {baseline_total:.2f}%, changed files passed",
     file=sys.stderr,
 )
 PY

@@ -18,6 +18,7 @@ from news_collector.components.editorial.ai_editor import (
     EditorAgent,
     _extract_publishable_body,
 )
+from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 
 
 def _bare_agent() -> EditorAgent:
@@ -94,14 +95,18 @@ class TestKeylessCriticVerdictFailsOpen:
         """Keyless critic prose approves instead of scoring a 0/10 REJECT."""
         agent = _bare_agent()
         agent._send_prompt = MagicMock(return_value=_KEYLESS_PROSE)
-        assert agent._critic_editorial_pass("real body") == (True, None, True)
+        verdict = agent._critic_editorial_pass("real body")
+        assert verdict.is_valid is True
+        assert verdict.checkpointable is False
         assert agent.last_critic_verdict is None
 
     def test_empty_dict_verdict_fails_open(self):
         """A bare {} verdict (generic-extractor fallback) also fails open."""
         agent = _bare_agent()
         agent._send_prompt = MagicMock(return_value="plain prose, no braces")
-        assert agent._critic_editorial_pass("real body") == (True, None, True)
+        verdict = agent._critic_editorial_pass("real body")
+        assert verdict.is_valid is True
+        assert verdict.checkpointable is False
 
     def test_genuine_rejection_still_rejects(self):
         """A real approved=false verdict with scores still returns REJECT."""
@@ -110,7 +115,7 @@ class TestKeylessCriticVerdictFailsOpen:
             return_value=json.dumps(
                 {
                     "approved": False,
-                    "average": 4.0,
+                    "average": 4.6,
                     "hook_score": 3,
                     "clarity_score": 5,
                     "structure_score": 5,
@@ -123,10 +128,10 @@ class TestKeylessCriticVerdictFailsOpen:
                 }
             )
         )
-        is_valid, feedback, recoverable = agent._critic_editorial_pass("real body")
-        assert is_valid is False
-        assert feedback == "La apertura es genérica; reescribir el gancho."
-        assert recoverable is True
+        verdict = agent._critic_editorial_pass("real body")
+        assert verdict.is_valid is False
+        assert verdict.reason == "La apertura es genérica; reescribir el gancho."
+        assert verdict.recoverable is True
 
 
 class TestBlankHeadlineInputShortCircuits:
@@ -174,3 +179,45 @@ class TestIncident1181Replay:
         )
         agent._repair_editorial.assert_not_called()
         assert "Direct Headline" in result
+
+
+class TestEditorialRepairProviderFailure:
+    def test_provider_failure_during_advisory_repair_keeps_article_publishable(
+        self, tmp_path
+    ):
+        agent = _full_agent(tmp_path)
+        agent._send_prompt = lambda prompt, *a, **k: _LONG_BODY
+        agent._critic_pass = lambda *a: (True, None, True)
+        agent._critic_editorial_pass = lambda *a, **k: CriticVerdict(
+            False, "rewrite the opening", True
+        )
+        agent._repair_editorial = MagicMock(side_effect=TimeoutError("provider down"))
+        agent._generate_enrichment_fields = lambda *a, **k: dict(
+            _VALID_ENRICHMENT_FIELDS
+        )
+        agent._send_fact_check_prompt = lambda *a, **k: {"status": "confirmed"}
+        agent._generate_headlines = lambda *a, **k: {
+            "direct": "Direct Headline",
+            "question": "Question Headline?",
+            "benefit": "Benefit Headline",
+            "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
+            "tags": ["espacio"],
+        }
+
+        result = agent.process_article(
+            {
+                "title": "Demo",
+                "summary": "Resumen",
+                "content": "Contenido " * 200,
+                "url": "https://example.com/source",
+            },
+            override_date="2026-03-02",
+        )
+
+        assert "Direct Headline" in result
+        agent._repair_editorial.assert_called_once()
+        assert not any(
+            "stage2_6_editorial_critic_source_aware_v2_ok" in p.name
+            for p in agent.cache_dir.rglob("*")
+            if p.is_file()
+        )
