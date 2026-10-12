@@ -31,6 +31,12 @@ repos:
         files: ^news_collector/
   - repo: local
     hooks:
+      - id: admin-lint
+        name: admin lint (prettier + eslint)
+        entry: npm --prefix apps/admin run lint
+        language: system
+        files: ^apps/admin/
+        pass_filenames: false
       - id: mypy
         name: mypy
         entry: python -m mypy

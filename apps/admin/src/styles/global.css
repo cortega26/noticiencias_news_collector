@@ -1,12 +1,12 @@
-@import "tailwindcss";
-@import "@fontsource-variable/fraunces";
-@import "@fontsource-variable/manrope";
-@import "@fontsource-variable/jetbrains-mono";
+@import 'tailwindcss';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/jetbrains-mono';
 
 @theme {
-  --font-display: "Fraunces Variable", serif;
-  --font-sans: "Manrope Variable", sans-serif;
-  --font-mono: "JetBrains Mono Variable", monospace;
+  --font-display: 'Fraunces Variable', serif;
+  --font-sans: 'Manrope Variable', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', monospace;
 
   --color-ink-950: #0c0e10;
   --color-ink-900: #121417;
@@ -47,199 +47,204 @@ body {
  * layer (e.g. `.hidden`) always wins over them — an unlayered display rule
  * would otherwise keep hidden buttons visible. */
 @layer components {
-/* ---------- typography ---------- */
+  /* ---------- typography ---------- */
 
-.display-title {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 72, "wght" 560;
-  letter-spacing: -0.01em;
-}
+  .display-title {
+    font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' 72,
+      'wght' 560;
+    letter-spacing: -0.01em;
+  }
 
-.data-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--color-ink-400);
-}
+  .data-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-ink-400);
+  }
 
-/* ---------- components ---------- */
+  /* ---------- components ---------- */
 
-.card {
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-ink-700);
-  background-color: color-mix(in srgb, var(--color-ink-850) 70%, transparent);
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-ink-100) 4%, transparent) inset,
-    0 12px 32px -18px rgb(0 0 0 / 0.55);
-}
+  .card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-ink-700);
+    background-color: color-mix(in srgb, var(--color-ink-850) 70%, transparent);
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--color-ink-100) 4%, transparent) inset,
+      0 12px 32px -18px rgb(0 0 0 / 0.55);
+  }
 
-.btn,
-.btn-primary,
-.btn-ghost,
-.btn-danger,
-.btn-success {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
-  cursor: pointer;
-  user-select: none;
-}
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger,
+  .btn-success {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition:
+      color 0.15s,
+      background-color 0.15s,
+      border-color 0.15s;
+    cursor: pointer;
+    user-select: none;
+  }
 
-.btn-primary {
-  background-color: var(--color-amber-500);
-  color: var(--color-ink-950);
-}
-.btn-primary:hover {
-  background-color: var(--color-amber-400);
-}
+  .btn-primary {
+    background-color: var(--color-amber-500);
+    color: var(--color-ink-950);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-amber-400);
+  }
 
-.btn-ghost {
-  border: 1px solid var(--color-ink-700);
-  background: transparent;
-  color: var(--color-ink-200);
-}
-.btn-ghost:hover {
-  border-color: var(--color-ink-600);
-  background-color: var(--color-ink-800);
-}
+  .btn-ghost {
+    border: 1px solid var(--color-ink-700);
+    background: transparent;
+    color: var(--color-ink-200);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-ink-600);
+    background-color: var(--color-ink-800);
+  }
 
-.btn-danger {
-  background-color: color-mix(in srgb, var(--color-rose-500) 90%, transparent);
-  color: white;
-}
-.btn-danger:hover {
-  background-color: var(--color-rose-400);
-}
+  .btn-danger {
+    background-color: color-mix(in srgb, var(--color-rose-500) 90%, transparent);
+    color: white;
+  }
+  .btn-danger:hover {
+    background-color: var(--color-rose-400);
+  }
 
-.btn-success {
-  background-color: color-mix(in srgb, var(--color-verdigris-500) 90%, transparent);
-  color: var(--color-ink-950);
-}
-.btn-success:hover {
-  background-color: var(--color-verdigris-400);
-}
-.kbd {
-  display: inline-flex;
-  min-width: 1.6rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.25rem;
-  border: 1px solid var(--color-ink-600);
-  background-color: var(--color-ink-800);
-  padding: 0.125rem 0.375rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-ink-200);
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink-950) 60%, transparent);
-}
+  .btn-success {
+    background-color: color-mix(in srgb, var(--color-verdigris-500) 90%, transparent);
+    color: var(--color-ink-950);
+  }
+  .btn-success:hover {
+    background-color: var(--color-verdigris-400);
+  }
+  .kbd {
+    display: inline-flex;
+    min-width: 1.6rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    border: 1px solid var(--color-ink-600);
+    background-color: var(--color-ink-800);
+    padding: 0.125rem 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-ink-200);
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--color-ink-950) 60%, transparent);
+  }
 
-/* visible keyboard focus (desktop, keyboard-first desk) */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--color-amber-400);
-  outline-offset: 2px;
-}
+  /* visible keyboard focus (desktop, keyboard-first desk) */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--color-amber-400);
+    outline-offset: 2px;
+  }
 
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 9999px;
-  padding: 0.125rem 0.625rem;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 
-.status-pending {
-  color: var(--color-indigo-400);
-  border: 1px solid color-mix(in srgb, var(--color-indigo-400) 30%, transparent);
-  background-color: color-mix(in srgb, var(--color-indigo-400) 15%, transparent);
-}
+  .status-pending {
+    color: var(--color-indigo-400);
+    border: 1px solid color-mix(in srgb, var(--color-indigo-400) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-indigo-400) 15%, transparent);
+  }
 
-.status-publishing {
-  color: var(--color-amber-400);
-  border: 1px solid color-mix(in srgb, var(--color-amber-400) 30%, transparent);
-  background-color: color-mix(in srgb, var(--color-amber-400) 15%, transparent);
-}
+  .status-publishing {
+    color: var(--color-amber-400);
+    border: 1px solid color-mix(in srgb, var(--color-amber-400) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-amber-400) 15%, transparent);
+  }
 
-.status-rejected {
-  color: var(--color-rose-400);
-  border: 1px solid color-mix(in srgb, var(--color-rose-400) 30%, transparent);
-  background-color: color-mix(in srgb, var(--color-rose-400) 15%, transparent);
-}
+  .status-rejected {
+    color: var(--color-rose-400);
+    border: 1px solid color-mix(in srgb, var(--color-rose-400) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-rose-400) 15%, transparent);
+  }
 
-.status-completed {
-  color: var(--color-verdigris-400);
-  border: 1px solid color-mix(in srgb, var(--color-verdigris-400) 30%, transparent);
-  background-color: color-mix(in srgb, var(--color-verdigris-400) 15%, transparent);
-}
+  .status-completed {
+    color: var(--color-verdigris-400);
+    border: 1px solid color-mix(in srgb, var(--color-verdigris-400) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-verdigris-400) 15%, transparent);
+  }
 
-.status-new {
-  color: var(--color-ink-300);
-  border: 1px solid color-mix(in srgb, var(--color-ink-600) 40%, transparent);
-  background-color: color-mix(in srgb, var(--color-ink-400) 15%, transparent);
-}
+  .status-new {
+    color: var(--color-ink-300);
+    border: 1px solid color-mix(in srgb, var(--color-ink-600) 40%, transparent);
+    background-color: color-mix(in srgb, var(--color-ink-400) 15%, transparent);
+  }
 
-.status-validated {
-  color: var(--color-ink-200);
-  border: 1px solid color-mix(in srgb, var(--color-ink-500) 45%, transparent);
-  background-color: color-mix(in srgb, var(--color-ink-400) 12%, transparent);
-}
+  .status-validated {
+    color: var(--color-ink-200);
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 45%, transparent);
+    background-color: color-mix(in srgb, var(--color-ink-400) 12%, transparent);
+  }
 
-/* ---------- triage queue (dynamic DOM) ---------- */
-/* NOTE: these MUST live here, not in a scoped <style> block — Astro adds
+  /* ---------- triage queue (dynamic DOM) ---------- */
+  /* NOTE: these MUST live here, not in a scoped <style> block — Astro adds
  * a data-astro-cid scope to component styles that never matches elements
  * created at runtime via innerHTML/createElement (plan 061). */
 
-.queue-item > * + * {
-  margin-top: 0.375rem;
-}
+  .queue-item > * + * {
+    margin-top: 0.375rem;
+  }
 
-.queue-card {
-  display: block;
-  width: 100%;
-  cursor: pointer;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-ink-700);
-  background-color: color-mix(in srgb, var(--color-ink-900) 60%, transparent);
-  padding: 0.875rem;
-  text-align: left;
-  color: var(--color-ink-200);
-  transition: border-color 0.15s, background-color 0.15s;
-}
-.queue-card:hover {
-  border-color: var(--color-ink-600);
-  background-color: color-mix(in srgb, var(--color-ink-800) 70%, transparent);
-}
-.queue-card.active {
-  border-color: color-mix(in srgb, var(--color-amber-500) 70%, transparent);
-  background-color: var(--color-ink-800);
-  box-shadow: 0 0 0 1px
-    color-mix(in srgb, var(--color-amber-500) 40%, transparent);
-}
+  .queue-card {
+    display: block;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-ink-700);
+    background-color: color-mix(in srgb, var(--color-ink-900) 60%, transparent);
+    padding: 0.875rem;
+    text-align: left;
+    color: var(--color-ink-200);
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+  .queue-card:hover {
+    border-color: var(--color-ink-600);
+    background-color: color-mix(in srgb, var(--color-ink-800) 70%, transparent);
+  }
+  .queue-card.active {
+    border-color: color-mix(in srgb, var(--color-amber-500) 70%, transparent);
+    background-color: var(--color-ink-800);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-amber-500) 40%, transparent);
+  }
 
-.score-chip {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-amber-400);
-}
+  .score-chip {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-amber-400);
+  }
 
-.btn-primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
 } /* @layer components */

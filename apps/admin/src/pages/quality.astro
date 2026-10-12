@@ -1,6 +1,6 @@
 ---
-import AuthGate from "../components/AuthGate.astro";
-import AdminLayout from "../layouts/AdminLayout.astro";
+import AuthGate from '../components/AuthGate.astro';
+import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Calidad" current="/quality">
@@ -34,39 +34,41 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         Sin procesos de publicación.
       </div>
     </div>
-    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div
+      id="toast"
+      role="status"
+      class="fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"
+    >
+    </div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getQualityRecent, showAuthGate } from "../lib/api";
-  import type {
-    AdminQualityRecentEnvelope,
-    AdminQualityRunItem,
-  } from "../lib/types";
+  import { clearToken, getQualityRecent, showAuthGate } from '../lib/api';
+  import type { AdminQualityRecentEnvelope, AdminQualityRunItem } from '../lib/types';
 
-  const rowsEl = document.getElementById("rows");
-  const emptyEl = document.getElementById("empty");
-  const metaEl = document.getElementById("meta");
-  const toastEl = document.getElementById("toast");
+  const rowsEl = document.getElementById('rows');
+  const emptyEl = document.getElementById('empty');
+  const metaEl = document.getElementById('meta');
+  const toastEl = document.getElementById('toast');
 
   function esc(s: unknown): string {
-    if (s == null) return "";
-    const div = document.createElement("div");
+    if (s == null) return '';
+    const div = document.createElement('div');
     div.textContent = String(s);
     return div.innerHTML;
   }
 
-  function showToast(message: string, kind: "ok" | "err" = "ok") {
+  function showToast(message: string, kind: 'ok' | 'err' = 'ok') {
     if (!toastEl) return;
     toastEl.textContent = message;
     toastEl.className =
       `fixed bottom-6 right-6 z-50 hidden max-w-md rounded-lg border px-4 py-3 text-sm shadow-xl ` +
-      (kind === "ok"
-        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
-        : "border-rose-500/50 bg-ink-900 text-rose-400");
-    toastEl.classList.remove("hidden");
-    window.setTimeout(() => toastEl?.classList.add("hidden"), 4000);
+      (kind === 'ok'
+        ? 'border-verdigris-500/50 bg-ink-900 text-verdigris-400'
+        : 'border-rose-500/50 bg-ink-900 text-rose-400');
+    toastEl.classList.remove('hidden');
+    window.setTimeout(() => toastEl?.classList.add('hidden'), 4000);
   }
 
   function readabilityBadge(run: AdminQualityRunItem): string {
@@ -77,33 +79,33 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     const suit = r.suitability ?? 0;
     const color =
       suit >= 0.75
-        ? "border-verdigris-500/40 text-verdigris-400"
+        ? 'border-verdigris-500/40 text-verdigris-400'
         : suit >= 0.5
-          ? "border-amber-500/40 text-amber-400"
-          : "border-rose-500/40 text-rose-400";
+          ? 'border-amber-500/40 text-amber-400'
+          : 'border-rose-500/40 text-rose-400';
     const detail = [
       r.grade ? `nivel: ${r.grade}` : null,
       r.words != null ? `${r.words} palabras` : null,
       r.sentences != null ? `${r.sentences} frases` : null,
     ]
       .filter(Boolean)
-      .join(" · ");
-    return `<span class="inline-flex items-center gap-2 rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs" title="${esc(detail)}">${esc(r.ifsz.toFixed(1))} · ${esc(r.grade ?? "?")}</span>`;
+      .join(' · ');
+    return `<span class="inline-flex items-center gap-2 rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs" title="${esc(detail)}">${esc(r.ifsz.toFixed(1))} · ${esc(r.grade ?? '?')}</span>`;
   }
 
   function outcomeCell(run: AdminQualityRunItem): string {
     if (run.pr_url) {
       return `<a class="font-mono text-xs text-amber-400 underline" href="${esc(run.pr_url)}" target="_blank" rel="noopener">PR ↗</a>`;
     }
-    if (run.failure_class || run.status === "failed") {
+    if (run.failure_class || run.status === 'failed') {
       const label = run.failure_class ?? run.status;
-      return `<span class="inline-flex items-center rounded-full border border-rose-500/40 px-2.5 py-0.5 font-mono text-xs text-rose-400" title="${esc(run.error ?? "")}">${esc(label)}</span>`;
+      return `<span class="inline-flex items-center rounded-full border border-rose-500/40 px-2.5 py-0.5 font-mono text-xs text-rose-400" title="${esc(run.error ?? '')}">${esc(label)}</span>`;
     }
     return `<span class="font-mono text-xs text-ink-300">${esc(run.status)}</span>`;
   }
 
   function articleCell(run: AdminQualityRunItem): string {
-    const label = run.final_slug ?? run.output_filename ?? run.article_id ?? "—";
+    const label = run.final_slug ?? run.output_filename ?? run.article_id ?? '—';
     const numericId = run.article_id != null && /^\d+$/.test(run.article_id);
     if (numericId) {
       return `<a class="text-sm font-medium text-ink-100 hover:text-amber-400 hover:underline" href="/article?id=${esc(run.article_id)}">${esc(label)}</a>
@@ -121,15 +123,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     const items = stages
       .map(
         (s) =>
-          `<li class="flex items-center gap-2 font-mono text-[11px] ${s.success ? "text-ink-300" : "text-rose-400"}"><span>${s.success ? "✓" : "✗"}</span><span>${esc(s.name)}</span></li>`,
+          `<li class="flex items-center gap-2 font-mono text-[11px] ${s.success ? 'text-ink-300' : 'text-rose-400'}"><span>${s.success ? '✓' : '✗'}</span><span>${esc(s.name)}</span></li>`
       )
-      .join("");
+      .join('');
     return `<details><summary class="cursor-pointer font-mono text-xs text-ink-300 hover:text-ink-100">${ok}/${stages.length} ✓</summary><ul class="mt-2 space-y-1">${items}</ul></details>`;
   }
 
   function whenCell(run: AdminQualityRunItem): string {
-    const raw = run.started_at ?? run.finished_at ?? "";
-    return `<span class="font-mono text-xs text-ink-400">${esc(raw.slice(0, 16).replace("T", " "))}</span>`;
+    const raw = run.started_at ?? run.finished_at ?? '';
+    return `<span class="font-mono text-xs text-ink-400">${esc(raw.slice(0, 16).replace('T', ' '))}</span>`;
   }
 
   function auditBadge(run: AdminQualityRunItem): string {
@@ -138,36 +140,36 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       return `<span class="font-mono text-xs text-ink-600">—</span>`;
     }
     const label =
-      state === "passed"
-        ? "aprobada"
-        : state === "failed"
-          ? "suspendida"
-          : state === "pending"
-            ? "pendiente"
+      state === 'passed'
+        ? 'aprobada'
+        : state === 'failed'
+          ? 'suspendida'
+          : state === 'pending'
+            ? 'pendiente'
             : state;
     const color =
-      state === "passed"
-        ? "border-verdigris-500/40 text-verdigris-400"
-        : state === "failed"
-          ? "border-rose-500/40 text-rose-400"
-          : state === "pending"
-            ? "border-amber-500/40 text-amber-400"
-            : "border-ink-600 text-ink-300";
+      state === 'passed'
+        ? 'border-verdigris-500/40 text-verdigris-400'
+        : state === 'failed'
+          ? 'border-rose-500/40 text-rose-400'
+          : state === 'pending'
+            ? 'border-amber-500/40 text-amber-400'
+            : 'border-ink-600 text-ink-300';
     return `<span class="inline-flex items-center rounded-full border ${color} px-2.5 py-0.5 font-mono text-xs">${esc(label)}</span>`;
   }
 
   async function load() {
     try {
       const envelope: AdminQualityRecentEnvelope = await getQualityRecent(20);
-      if (emptyEl) emptyEl.classList.toggle("hidden", envelope.runs.length > 0);
+      if (emptyEl) emptyEl.classList.toggle('hidden', envelope.runs.length > 0);
       const agg = envelope.aggregate;
       if (metaEl) {
         metaEl.innerHTML = `
           <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">procesos ${agg.count}</div>
           <div class="card px-4 py-2.5 font-mono text-xs text-verdigris-400">conseguidos ${agg.succeeded}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs ${agg.failed ? "text-rose-400" : "text-ink-200"}">fallidos ${agg.failed}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs ${agg.failed ? 'text-rose-400' : 'text-ink-200'}">fallidos ${agg.failed}</div>
           <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">con legibilidad ${agg.with_readability}</div>
-          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">aptitud media ${agg.avg_suitability != null ? agg.avg_suitability.toFixed(3) : "—"}</div>
+          <div class="card px-4 py-2.5 font-mono text-xs text-amber-400">aptitud media ${agg.avg_suitability != null ? agg.avg_suitability.toFixed(3) : '—'}</div>
         `;
       }
       if (!rowsEl) return;
@@ -182,20 +184,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
             <td class="px-5 py-3">${readabilityBadge(run)}</td>
             <td class="px-5 py-3">${auditBadge(run)}</td>
             <td class="px-5 py-3">${stagesCell(run)}</td>
-          </tr>`,
+          </tr>`
         )
-        .join("");
+        .join('');
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("No se pudo cargar la revisión: " + (e as Error).message, "err");
+      showToast('No se pudo cargar la revisión: ' + (e as Error).message, 'err');
     }
   }
 
-  document.getElementById("refresh")?.addEventListener("click", () => void load());
+  document.getElementById('refresh')?.addEventListener('click', () => void load());
   void load();
-  window.addEventListener("auth:ready", () => void load());
+  window.addEventListener('auth:ready', () => void load());
 </script>

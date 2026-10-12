@@ -1,6 +1,6 @@
 ---
-import AuthGate from "../components/AuthGate.astro";
-import AdminLayout from "../layouts/AdminLayout.astro";
+import AuthGate from '../components/AuthGate.astro';
+import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Analítica" current="/analytics">
@@ -29,16 +29,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 </AdminLayout>
 
 <script>
-  import { clearToken, getAnalytics, showAuthGate } from "../lib/api";
+  import { clearToken, getAnalytics, showAuthGate } from '../lib/api';
 
-  const kpisEl = document.getElementById("kpis");
-  const topEl = document.getElementById("top-sources");
-  const distEl = document.getElementById("dist");
-  const asOfEl = document.getElementById("as-of");
+  const kpisEl = document.getElementById('kpis');
+  const topEl = document.getElementById('top-sources');
+  const distEl = document.getElementById('dist');
+  const asOfEl = document.getElementById('as-of');
 
   function esc(s: unknown): string {
-    if (s == null) return "";
-    const div = document.createElement("div");
+    if (s == null) return '';
+    const div = document.createElement('div');
     div.textContent = String(s);
     return div.innerHTML;
   }
@@ -49,32 +49,32 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       if (asOfEl) asOfEl.textContent = `actualizado ${data.as_of}`;
       const maxScore = Math.max(
         0,
-        ...(data.source_perf as Array<Record<string, unknown>>).map(
-          (s) => Number(s.avg_score) || 0,
-        ),
+        ...(data.source_perf as Array<Record<string, unknown>>).map((s) => Number(s.avg_score) || 0)
       );
 
       if (kpisEl) {
         kpisEl.innerHTML = [
-          ["ARTÍCULOS", String(data.total_articles)],
-          ["PUNTUACIÓN MEDIA", data.avg_score_overall.toFixed(3)],
-          ["FUENTES", String(data.source_perf.length)],
-          ["CATEGORÍAS", String(data.cats.length)],
+          ['ARTÍCULOS', String(data.total_articles)],
+          ['PUNTUACIÓN MEDIA', data.avg_score_overall.toFixed(3)],
+          ['FUENTES', String(data.source_perf.length)],
+          ['CATEGORÍAS', String(data.cats.length)],
         ]
           .map(
             ([label, value]) => `
           <div class="card px-5 py-4">
             <div class="data-label">${label}</div>
             <div class="mt-1.5 font-mono text-2xl font-bold text-amber-400">${esc(value)}</div>
-          </div>`,
+          </div>`
           )
-          .join("");
+          .join('');
       }
 
       if (topEl) {
         const top = data.top_sources as Array<Record<string, unknown>>;
         topEl.innerHTML = top.length
-          ? top.map((s, i) => `
+          ? top
+              .map(
+                (s, i) => `
             <div class="mb-3">
               <div class="mb-1 flex justify-between font-mono text-xs">
                 <span class="text-ink-200">${i + 1}. ${esc(s.source_name ?? s.source_id)}</span>
@@ -84,7 +84,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
                 <div class="h-full rounded-full bg-verdigris-500/80" style="width:${maxScore ? (Number(s.avg_score) / maxScore) * 100 : 0}%"></div>
               </div>
             </div>
-          `).join("")
+          `
+              )
+              .join('')
           : '<p class="text-sm text-ink-400">Sin datos.</p>';
       }
 
@@ -93,7 +95,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const entries = Object.entries(dist).sort((a, b) => a[0].localeCompare(b[0]));
         const max = Math.max(1, ...entries.map(([, v]) => v));
         distEl.innerHTML = entries.length
-          ? entries.map(([bucket, count]) => `
+          ? entries
+              .map(
+                ([bucket, count]) => `
             <div class="mb-2 flex items-center gap-3">
               <span class="w-10 shrink-0 font-mono text-[11px] text-ink-400">${esc(bucket)}</span>
               <div class="h-4 flex-1 overflow-hidden rounded bg-ink-800">
@@ -101,19 +105,22 @@ import AdminLayout from "../layouts/AdminLayout.astro";
               </div>
               <span class="w-8 shrink-0 text-right font-mono text-[11px] text-ink-300">${count}</span>
             </div>
-          `).join("")
+          `
+              )
+              .join('')
           : '<p class="text-sm text-ink-400">Sin datos.</p>';
       }
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      if (kpisEl) kpisEl.innerHTML = `<div class="card col-span-full px-5 py-8 text-center text-rose-400">Falló: ${esc((e as Error).message)}</div>`;
+      if (kpisEl)
+        kpisEl.innerHTML = `<div class="card col-span-full px-5 py-8 text-center text-rose-400">Falló: ${esc((e as Error).message)}</div>`;
     }
   }
 
   void load();
-  window.addEventListener("auth:ready", () => void load());
+  window.addEventListener('auth:ready', () => void load());
 </script>

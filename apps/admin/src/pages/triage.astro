@@ -1,6 +1,6 @@
 ---
-import AuthGate from "../components/AuthGate.astro";
-import AdminLayout from "../layouts/AdminLayout.astro";
+import AuthGate from '../components/AuthGate.astro';
+import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Triage" current="/triage">
@@ -8,16 +8,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     <header class="mb-8 flex items-end justify-between gap-4">
       <div>
         <h1 class="display-title text-4xl text-paper-100">Curaduría</h1>
-        <p class="data-label mt-2">TECLADO PRIMERO · J/K NAVEGAR · P PUBLICAR · R RECHAZAR · A/F AUDITORÍA · O ABRIR</p>
+        <p class="data-label mt-2">
+          TECLADO PRIMERO · J/K NAVEGAR · P PUBLICAR · R RECHAZAR · A/F AUDITORÍA · O ABRIR
+        </p>
       </div>
       <div class="flex items-center gap-3">
         <label class="flex cursor-pointer items-center gap-2 font-mono text-xs text-ink-300">
           <input id="dry-run" type="checkbox" class="accent-amber-500" />
           simulación
         </label>
-        <button id="collect-btn" class="btn-primary" type="button">
-          Buscar noticias
-        </button>
+        <button id="collect-btn" class="btn-primary" type="button"> Buscar noticias </button>
         <button id="logout-btn" class="btn-ghost" type="button">Salir</button>
       </div>
     </header>
@@ -34,8 +34,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       </button>
     </form>
 
-    <div id="collect-status" role="status" aria-live="polite" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
-    <div id="publish-status" role="status" aria-live="polite" class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"></div>
+    <div
+      id="collect-status"
+      role="status"
+      aria-live="polite"
+      class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"
+    >
+    </div>
+    <div
+      id="publish-status"
+      role="status"
+      aria-live="polite"
+      class="mb-6 hidden rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"
+    >
+    </div>
 
     <div id="status-filter" class="mb-6 flex flex-wrap gap-2"></div>
 
@@ -50,7 +62,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <button id="batch-publish-btn" class="btn-ghost whitespace-nowrap" type="button" disabled>
             Publicar selección (<span id="batch-count">0</span>/5)
           </button>
-          <span class="font-mono text-[11px] text-ink-500">marca filas publicables · de una en una</span>
+          <span class="font-mono text-[11px] text-ink-500"
+            >marca filas publicables · de una en una</span
+          >
         </div>
         <div id="queue" class="max-h-[68vh] space-y-2 overflow-y-auto pr-1"></div>
         <button id="load-more" class="btn-ghost mt-4 hidden w-full justify-center" type="button">
@@ -63,7 +77,10 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
       <!-- detail -->
       <section class="card min-h-[68vh] p-6">
-        <div id="detail-empty" class="flex h-full flex-col items-center justify-center py-16 text-center">
+        <div
+          id="detail-empty"
+          class="flex h-full flex-col items-center justify-center py-16 text-center"
+        >
           <div class="display-title text-2xl text-ink-400">Ningún artículo seleccionado</div>
           <p class="mt-2 max-w-sm text-sm text-ink-400">
             Navega la cola con <span class="kbd">j</span> /
@@ -71,7 +88,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           </p>
         </div>
         <div id="detail" class="hidden"></div>
-        <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+        <div
+          id="toast"
+          role="status"
+          class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"
+        >
+        </div>
       </section>
     </div>
   </AuthGate>
@@ -116,8 +138,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     animation-play-state: paused;
   }
   @keyframes pp-sweep {
-    0%, 30%, 100% { color: var(--color-ink-400); }
-    10% { color: var(--color-amber-400); text-shadow: 0 0 6px color-mix(in srgb, var(--color-amber-400) 60%, transparent); }
+    0%,
+    30%,
+    100% {
+      color: var(--color-ink-400);
+    }
+    10% {
+      color: var(--color-amber-400);
+      text-shadow: 0 0 6px color-mix(in srgb, var(--color-amber-400) 60%, transparent);
+    }
   }
   :global(.pp-phase) {
     color: var(--color-ink-100);
@@ -145,7 +174,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     background: var(--color-amber-500);
   }
   :global(.pp-bar li.now) {
-    background: linear-gradient(90deg, var(--color-ink-700), var(--color-amber-400), var(--color-ink-700));
+    background: linear-gradient(
+      90deg,
+      var(--color-ink-700),
+      var(--color-amber-400),
+      var(--color-ink-700)
+    );
     background-size: 200% 100%;
     animation: pp-bar 1.4s linear infinite;
   }
@@ -153,8 +187,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     animation-play-state: paused;
   }
   @keyframes pp-bar {
-    from { background-position: 100% 0; }
-    to { background-position: -100% 0; }
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
   }
   :global(.pp-meta) {
     color: var(--color-ink-400);
@@ -186,7 +224,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     startPublish,
     startPublishBatch,
     updateAuditStatus,
-  } from "../lib/api";
+  } from '../lib/api';
   import {
     PUBLISH_PHASES,
     STALL_AFTER_SECONDS,
@@ -195,40 +233,36 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     formatDuration,
     parseServerTime,
     secondsSinceLastSign,
-  } from "../lib/publishProgress";
+  } from '../lib/publishProgress';
   import type {
     AdminCollectStarted,
     AdminPublishBatchItem,
     AdminPublishStarted,
     AdminPublishStatus,
-  } from "../lib/types";
-  import type {
-    AdminArticleDetail,
-    AdminArticleListItem,
-    ArticleStatus,
-  } from "../lib/types";
+  } from '../lib/types';
+  import type { AdminArticleDetail, AdminArticleListItem, ArticleStatus } from '../lib/types';
 
   const STATUSES: ArticleStatus[] = [
-    "publishable",
-    "validated",
-    "pending",
-    "publishing",
-    "rejected",
-    "completed",
+    'publishable',
+    'validated',
+    'pending',
+    'publishing',
+    'rejected',
+    'completed',
   ];
 
   /** Operator labels for pipeline statuses (values stay API-contract). */
   const STATUS_LABEL: Record<string, string> = {
-    publishable: "Listos",
-    validated: "Recolectadas",
-    pending: "Pendientes",
-    publishing: "Publicando",
-    rejected: "Rechazados",
-    completed: "Completados",
-    new: "Nuevo",
+    publishable: 'Listos',
+    validated: 'Recolectadas',
+    pending: 'Pendientes',
+    publishing: 'Publicando',
+    rejected: 'Rechazados',
+    completed: 'Completados',
+    new: 'Nuevo',
   };
 
-  let status: ArticleStatus = "publishable";
+  let status: ArticleStatus = 'publishable';
   let items: AdminArticleListItem[] = [];
   let selectedId: number | null = null;
   let detail: AdminArticleDetail | null = null;
@@ -239,89 +273,87 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   const BATCH_MAX = 5;
   const batchSelected = new Set<number>();
 
-  const queueEl = document.getElementById("queue");
-  const detailEl = document.getElementById("detail");
-  const detailEmptyEl = document.getElementById("detail-empty");
-  const queueEmptyEl = document.getElementById("queue-empty");
-  const loadMoreBtn = document.getElementById("load-more");
-  const countEl = document.getElementById("queue-count");
-  const filterEl = document.getElementById("status-filter");
-  const toastEl = document.getElementById("toast");
-  const batchBtn = document.getElementById("batch-publish-btn") as HTMLButtonElement | null;
-  const batchCountEl = document.getElementById("batch-count");
+  const queueEl = document.getElementById('queue');
+  const detailEl = document.getElementById('detail');
+  const detailEmptyEl = document.getElementById('detail-empty');
+  const queueEmptyEl = document.getElementById('queue-empty');
+  const loadMoreBtn = document.getElementById('load-more');
+  const countEl = document.getElementById('queue-count');
+  const filterEl = document.getElementById('status-filter');
+  const toastEl = document.getElementById('toast');
+  const batchBtn = document.getElementById('batch-publish-btn') as HTMLButtonElement | null;
+  const batchCountEl = document.getElementById('batch-count');
 
   /** Publishable ids currently ticked AND still loaded (stale ticks drop). */
   function batchIds(): number[] {
-    const loaded = new Set(
-      items.filter((i) => i.publishable).map((i) => i.id),
-    );
+    const loaded = new Set(items.filter((i) => i.publishable).map((i) => i.id));
     return [...batchSelected].filter((id) => loaded.has(id)).slice(0, BATCH_MAX);
   }
 
   function renderBatchBar() {
     const n = batchIds().length;
     if (batchCountEl) batchCountEl.textContent = String(n);
-    batchBtn?.toggleAttribute("disabled", publishInFlight || n === 0);
+    batchBtn?.toggleAttribute('disabled', publishInFlight || n === 0);
   }
 
   function esc(s: string | null | undefined): string {
-    if (s == null) return "";
-    const div = document.createElement("div");
+    if (s == null) return '';
+    const div = document.createElement('div');
     div.textContent = String(s);
     return div.innerHTML;
   }
 
   function statusPillClass(s: string | null | undefined): string {
-    return `status-pill status-${esc(s ?? "new")}`;
+    return `status-pill status-${esc(s ?? 'new')}`;
   }
 
   function statusLabel(s: string | null | undefined): string {
-    const key = esc(s ?? "new");
+    const key = esc(s ?? 'new');
     return STATUS_LABEL[key] ?? key;
   }
 
   /** Why the publish affordance is disabled for this row, if it is. */
   function notPublishableReason(
-    item: Pick<AdminArticleListItem, "processing_status" | "published_url">,
+    item: Pick<AdminArticleListItem, 'processing_status' | 'published_url'>
   ): string {
-    if (item.processing_status === "publishing") {
-      return "En curso — ya hay una publicación abierta para este artículo";
+    if (item.processing_status === 'publishing') {
+      return 'En curso — ya hay una publicación abierta para este artículo';
     }
     if (item.published_url) {
-      return "Ya publicado — verás la URL en el panel de detalle";
+      return 'Ya publicado — verás la URL en el panel de detalle';
     }
-    return "Fuera de la lista actual — busca noticias nuevas o usa Publicar desde URL";
+    return 'Fuera de la lista actual — busca noticias nuevas o usa Publicar desde URL';
   }
 
-  function showToast(message: string, kind: "ok" | "err" = "ok") {
+  function showToast(message: string, kind: 'ok' | 'err' = 'ok') {
     if (!toastEl) return;
     toastEl.textContent = message;
     toastEl.className =
       `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
-      (kind === "ok"
-        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
-        : "border-rose-500/50 bg-ink-900 text-rose-400");
-    toastEl.classList.remove("hidden");
+      (kind === 'ok'
+        ? 'border-verdigris-500/50 bg-ink-900 text-verdigris-400'
+        : 'border-rose-500/50 bg-ink-900 text-rose-400');
+    toastEl.classList.remove('hidden');
     window.clearTimeout((toastEl as HTMLElement & { _t?: number })._t);
     (toastEl as HTMLElement & { _t?: number })._t = window.setTimeout(
-      () => toastEl?.classList.add("hidden"),
-      2600,
+      () => toastEl?.classList.add('hidden'),
+      2600
     );
   }
 
   function renderFilters() {
     if (!filterEl) return;
-    filterEl.innerHTML = "";
+    filterEl.innerHTML = '';
     for (const s of STATUSES) {
-      const btn = document.createElement("button");
-      btn.type = "button";
+      const btn = document.createElement('button');
+      btn.type = 'button';
       btn.textContent = STATUS_LABEL[s] ?? s;
       btn.className =
-        "rounded-full border px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors " +
+        'rounded-full border px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors ' +
         (s === status
-          ? "border-amber-500/70 bg-amber-500/10 text-amber-400"
-          : "border-ink-700 text-ink-300 hover:border-ink-600 hover:text-ink-100");
-      btn.addEventListener("click", () => {
+          ? 'border-amber-500/70 bg-amber-500/10 text-amber-400'
+          : 'border-ink-700 text-ink-300 hover:border-ink-600 hover:text-ink-100');
+      btn.addEventListener('click', () => {
         status = s;
         cursor = null;
         items = [];
@@ -330,7 +362,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         batchSelected.clear();
         renderFilters();
         void loadQueue();
-  window.addEventListener("auth:ready", () => void loadQueue());
+        window.addEventListener('auth:ready', () => void loadQueue());
       });
       filterEl.appendChild(btn);
     }
@@ -344,16 +376,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       items = [...items, ...envelope.data];
       cursor = envelope.pagination.next_cursor;
       renderQueue();
-      loadMoreBtn?.classList.toggle("hidden", !envelope.pagination.has_more);
+      loadMoreBtn?.classList.toggle('hidden', !envelope.pagination.has_more);
       if (items.length > 0 && selectedId == null) {
         select(items[0].id);
       }
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
       } else {
-        showToast("No se pudo cargar la cola: " + (e as Error).message, "err");
+        showToast('No se pudo cargar la cola: ' + (e as Error).message, 'err');
       }
     } finally {
       loading = false;
@@ -362,28 +394,29 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   function renderQueue() {
     if (!queueEl || !countEl || !queueEmptyEl) return;
-    queueEmptyEl.classList.toggle("hidden", items.length > 0);
-    countEl.textContent = `${items.length}${cursor ? "+" : ""} · ${STATUS_LABEL[status] ?? status}`;
-    queueEl.innerHTML = "";
+    queueEmptyEl.classList.toggle('hidden', items.length > 0);
+    countEl.textContent = `${items.length}${cursor ? '+' : ''} · ${STATUS_LABEL[status] ?? status}`;
+    queueEl.innerHTML = '';
     items.forEach((item, index) => {
-      const wrap = document.createElement("div");
-      wrap.className = "queue-item";
+      const wrap = document.createElement('div');
+      wrap.className = 'queue-item';
       // Batch tick (plan 109): only publishable rows are tickable.
       if (item.publishable) {
-        const tick = document.createElement("label");
-        tick.className = "flex cursor-pointer items-center gap-2 font-mono text-[11px] text-ink-400";
-        const box = document.createElement("input");
-        box.type = "checkbox";
-        box.className = "batch-tick accent-amber-500";
+        const tick = document.createElement('label');
+        tick.className =
+          'flex cursor-pointer items-center gap-2 font-mono text-[11px] text-ink-400';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.className = 'batch-tick accent-amber-500';
         box.checked = batchSelected.has(item.id);
         box.disabled = publishInFlight;
-        box.setAttribute("aria-label", `Seleccionar el artículo ${item.id} para el lote`);
-        box.addEventListener("click", (event) => event.stopPropagation());
-        box.addEventListener("change", () => {
+        box.setAttribute('aria-label', `Seleccionar el artículo ${item.id} para el lote`);
+        box.addEventListener('click', (event) => event.stopPropagation());
+        box.addEventListener('change', () => {
           if (box.checked) {
             if (batchSelected.size >= BATCH_MAX && !batchSelected.has(item.id)) {
               box.checked = false;
-              showToast(`El lote admite ${BATCH_MAX} artículos como máximo.`, "err");
+              showToast(`El lote admite ${BATCH_MAX} artículos como máximo.`, 'err');
               return;
             }
             batchSelected.add(item.id);
@@ -392,50 +425,72 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           }
           renderBatchBar();
         });
-        const cap = document.createElement("span");
-        cap.textContent = "lote";
+        const cap = document.createElement('span');
+        cap.textContent = 'lote';
         tick.append(box, cap);
         wrap.appendChild(tick);
       }
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "queue-card" + (item.id === selectedId ? " active" : "");
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'queue-card' + (item.id === selectedId ? ' active' : '');
       card.innerHTML = `
         <div class="mb-1.5 flex items-center justify-between gap-2">
           <span class="${statusPillClass(item.processing_status)}">${statusLabel(item.processing_status)}</span>
-          <span class="score-chip" title="${item.publishable ? "Sobre la línea de publicación" : "Bajo la línea de publicación"}">${item.final_score != null ? item.final_score.toFixed(3) : "—"}</span>
+          <span class="score-chip" title="${item.publishable ? 'Sobre la línea de publicación' : 'Bajo la línea de publicación'}">${item.final_score != null ? item.final_score.toFixed(3) : '—'}</span>
         </div>
-        ${item.similar_group_id ? `<div class="mb-1.5"><span class="rounded bg-indigo-900/50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300" title="Grupo de casi-duplicados ${esc(item.similar_group_id)} — conserva el mejor, publica uno">≈ similares ×${item.similar_group_size ?? "?"}</span></div>` : ""}
+        ${item.similar_group_id ? `<div class="mb-1.5"><span class="rounded bg-indigo-900/50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-300" title="Grupo de casi-duplicados ${esc(item.similar_group_id)} — conserva el mejor, publica uno">≈ similares ×${item.similar_group_size ?? '?'}</span></div>` : ''}
         <div class="font-display text-[15px] leading-snug text-ink-100">${esc(item.title)}</div>
         <div class="mt-1.5 flex items-center gap-2 font-mono text-[11px] text-ink-400">
           <span>${esc(item.source.name)}</span>
           <span>·</span>
-          <span>${esc(item.category ?? "sin categoría")}</span>
-          ${item.refinery_id ? `<span>·</span><span>${esc(item.refinery_id)}</span>` : ""}
+          <span>${esc(item.category ?? 'sin categoría')}</span>
+          ${item.refinery_id ? `<span>·</span><span>${esc(item.refinery_id)}</span>` : ''}
         </div>
-        ${(item.why_ranked ?? []).length ? `<div class="mt-2 flex flex-wrap gap-1">
-          ${(item.why_ranked ?? []).slice(0, 2).map((w) => `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`).join("")}
-          ${(item.why_ranked ?? []).length > 2 ? `<details class="inline"><summary class="cursor-pointer rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-400 hover:text-ink-200">+${(item.why_ranked ?? []).length - 2} más</summary><span class="contents">${(item.why_ranked ?? []).slice(2).map((w) => `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`).join("")}</span></details>` : ""}
-        </div>` : ""}
+        ${
+          (item.why_ranked ?? []).length
+            ? `<div class="mt-2 flex flex-wrap gap-1">
+          ${(item.why_ranked ?? [])
+            .slice(0, 2)
+            .map(
+              (w) =>
+                `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`
+            )
+            .join('')}
+          ${
+            (item.why_ranked ?? []).length > 2
+              ? `<details class="inline"><summary class="cursor-pointer rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-400 hover:text-ink-200">+${(item.why_ranked ?? []).length - 2} más</summary><span class="contents">${(
+                  item.why_ranked ?? []
+                )
+                  .slice(2)
+                  .map(
+                    (w) =>
+                      `<span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-300">${esc(w)}</span>`
+                  )
+                  .join('')}</span></details>`
+              : ''
+          }
+        </div>`
+            : ''
+        }
       `;
-      card.addEventListener("click", () => {
+      card.addEventListener('click', () => {
         select(item.id);
         const el = queueEl.querySelector(`[data-id="${item.id}"]`);
         void el;
       });
-      card.setAttribute("data-id", String(item.id));
-      card.setAttribute("data-index", String(index));
+      card.setAttribute('data-id', String(item.id));
+      card.setAttribute('data-index', String(index));
       wrap.appendChild(card);
       // The +N expander lives inside the card button: stop its clicks from
       // bubbling to the card handler, or select() re-renders and the expander
       // can never stay open.
-      wrap.querySelector("details")?.addEventListener("click", (event) => {
+      wrap.querySelector('details')?.addEventListener('click', (event) => {
         event.stopPropagation();
       });
 
       queueEl.appendChild(wrap);
     });
-    queueEl.querySelector(`[data-id="${selectedId}"]`)?.classList.add("active");
+    queueEl.querySelector(`[data-id="${selectedId}"]`)?.classList.add('active');
     scrollSelectedIntoView();
     renderBatchBar();
   }
@@ -443,7 +498,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function scrollSelectedIntoView() {
     if (!queueEl) return;
     const el = queueEl.querySelector(`[data-id="${selectedId}"]`);
-    el?.scrollIntoView({ block: "nearest" });
+    el?.scrollIntoView({ block: 'nearest' });
   }
 
   async function select(id: number) {
@@ -458,12 +513,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       detail = fresh;
       renderDetail();
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("No se pudo cargar el artículo: " + (e as Error).message, "err");
+      showToast('No se pudo cargar el artículo: ' + (e as Error).message, 'err');
     }
   }
 
@@ -478,8 +533,8 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   function renderDetail() {
     if (!detailEl || !detailEmptyEl || !detail) return;
-    detailEmptyEl.classList.add("hidden");
-    detailEl.classList.remove("hidden");
+    detailEmptyEl.classList.add('hidden');
+    detailEl.classList.remove('hidden');
     const comps = componentBreakdown();
     const audit = detail.audit as Record<string, unknown> | undefined;
     const publication = detail.publication as Record<string, unknown> | undefined;
@@ -508,25 +563,27 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           <button class="px-2 py-2 text-sm font-medium text-rose-400/80 underline-offset-4 hover:text-rose-400 hover:underline" data-action="reject" type="button">Rechazar <span class="kbd">R</span></button>
         </div>
       </div>
-      ${detail.publishable ? "" : `<p class="mb-4 font-mono text-xs text-ink-400">No publicable: ${esc(notPublishableReason(detail))}</p>`}
+      ${detail.publishable ? '' : `<p class="mb-4 font-mono text-xs text-ink-400">No publicable: ${esc(notPublishableReason(detail))}</p>`}
 
       <h2 class="display-title text-3xl leading-tight text-paper-100">${esc(detail.title)}</h2>
       <div class="mt-2 font-mono text-xs text-ink-400">
-        ${esc(detail.source.name)} · ${esc(detail.category ?? "—")} · recopilado ${esc(detail.collected_at ?? "—")}
+        ${esc(detail.source.name)} · ${esc(detail.category ?? '—')} · recopilado ${esc(detail.collected_at ?? '—')}
       </div>
 
-      ${detail.summary ? `<p class="mt-4 text-[15px] leading-relaxed text-ink-200">${esc(detail.summary)}</p>` : ""}
+      ${detail.summary ? `<p class="mt-4 text-[15px] leading-relaxed text-ink-200">${esc(detail.summary)}</p>` : ''}
 
       <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="card p-4">
           <div class="data-label mb-3">PUNTUACIÓN</div>
           <div class="mb-3 flex items-baseline gap-2">
-            <span class="font-mono text-4xl font-bold text-amber-400">${detail.final_score != null ? detail.final_score.toFixed(3) : "—"}</span>
+            <span class="font-mono text-4xl font-bold text-amber-400">${detail.final_score != null ? detail.final_score.toFixed(3) : '—'}</span>
             <span class="text-xs text-ink-400">/ 1.0</span>
           </div>
-          <p class="mb-3 font-mono text-[11px] text-ink-400">${detail.publishable ? "Elegible para publicar" : "No elegible ahora"}</p>
+          <p class="mb-3 font-mono text-[11px] text-ink-400">${detail.publishable ? 'Elegible para publicar' : 'No elegible ahora'}</p>
           <div class="space-y-2">
-            ${comps.map(([k, v]) => `
+            ${comps
+              .map(
+                ([k, v]) => `
               <div>
                 <div class="mb-1 flex justify-between font-mono text-[11px] text-ink-400">
                   <span>${esc(k)}</span><span>${v.toFixed(3)}</span>
@@ -535,72 +592,78 @@ import AdminLayout from "../layouts/AdminLayout.astro";
                   <div class="h-full rounded-full bg-amber-500/80" style="width:${Math.min(100, v * 100)}%"></div>
                 </div>
               </div>
-            `).join("")}
+            `
+              )
+              .join('')}
           </div>
-          ${detail.latest_score != null ? `<div class="mt-3 font-mono text-[11px] text-ink-400">ScoreLog más reciente: ${detail.latest_score.toFixed(3)}</div>` : ""}
+          ${detail.latest_score != null ? `<div class="mt-3 font-mono text-[11px] text-ink-400">ScoreLog más reciente: ${detail.latest_score.toFixed(3)}</div>` : ''}
         </div>
 
         <div class="space-y-4">
           <div class="card p-4">
             <div class="data-label mb-2">POR QUÉ DESTACA</div>
-            ${(detail.why_ranked ?? []).length ? `<ul class="space-y-1.5 text-sm text-ink-200">${detail.why_ranked.map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join("")}</ul>` : `<p class="text-sm text-ink-400">Sin motivos registrados.</p>`}
+            ${(detail.why_ranked ?? []).length ? `<ul class="space-y-1.5 text-sm text-ink-200">${detail.why_ranked.map((w) => `<li class="flex gap-2"><span class="text-amber-400">▸</span>${esc(w)}</li>`).join('')}</ul>` : `<p class="text-sm text-ink-400">Sin motivos registrados.</p>`}
           </div>
           <div class="card p-4">
             <div class="data-label mb-2">ESTADO</div>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
-              <dt class="text-ink-400">publicación</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? "—")}</dd>
-              <dt class="text-ink-400">id de refinería</dt><dd class="text-ink-200">${esc(detail.refinery_id ?? "—")}</dd>
-              <dt class="text-ink-400">auditoría</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? "—")}</dd>
-              <dt class="text-ink-400">temas</dt><dd class="text-ink-200">${esc(detail.topics.join(", ") || "—")}</dd>
+              <dt class="text-ink-400">publicación</dt><dd class="text-ink-200">${esc((publication?.state as string) ?? '—')}</dd>
+              <dt class="text-ink-400">id de refinería</dt><dd class="text-ink-200">${esc(detail.refinery_id ?? '—')}</dd>
+              <dt class="text-ink-400">auditoría</dt><dd class="text-ink-200">${esc((audit?.state as string) ?? '—')}</dd>
+              <dt class="text-ink-400">temas</dt><dd class="text-ink-200">${esc(detail.topics.join(', ') || '—')}</dd>
             </dl>
           </div>
         </div>
       </div>
 
-      ${detail.content ? `
+      ${
+        detail.content
+          ? `
         <div class="card mt-4 p-5">
           <div class="data-label mb-3">CONTENIDO</div>
           <div class="max-h-96 overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-ink-200">${esc(detail.content)}</div>
         </div>
-      ` : ""}
+      `
+          : ''
+      }
     `;
 
-    detailEl.querySelector('[data-action="open"]')?.addEventListener("click", () => {
-      window.open(detail?.url, "_blank", "noopener");
+    detailEl.querySelector('[data-action="open"]')?.addEventListener('click', () => {
+      window.open(detail?.url, '_blank', 'noopener');
     });
     {
       const publishBtn = detailEl.querySelector(
-        '[data-action="publish"]',
+        '[data-action="publish"]'
       ) as HTMLButtonElement | null;
       const current = detail;
       if (publishBtn && current) {
         if (current.publishable) {
-          publishBtn.dataset.armed = "1";
-          publishBtn.title = "Publicar este artículo y abrir el PR";
-          publishBtn.toggleAttribute("disabled", publishInFlight);
-          publishBtn.addEventListener("click", () => {
+          publishBtn.dataset.armed = '1';
+          publishBtn.title = 'Publicar este artículo y abrir el PR';
+          publishBtn.toggleAttribute('disabled', publishInFlight);
+          publishBtn.addEventListener('click', () => {
             void doPublish({ articleId: current.id });
           });
         } else {
-          publishBtn.toggleAttribute("disabled", true);
+          publishBtn.toggleAttribute('disabled', true);
           publishBtn.title = notPublishableReason(current);
         }
       }
     }
-    detailEl.querySelector('[data-action="full"]')?.addEventListener("click", () => {
+    detailEl.querySelector('[data-action="full"]')?.addEventListener('click', () => {
       if (detail) window.location.href = `/article?id=${detail.id}`;
     });
-    detailEl.querySelector('[data-action="reprocess"]')?.addEventListener("click", () => {
+    detailEl.querySelector('[data-action="reprocess"]')?.addEventListener('click', () => {
       void doReprocess();
     });
-    detailEl.querySelector('[data-action="reject"]')?.addEventListener("click", () => {
+    detailEl.querySelector('[data-action="reject"]')?.addEventListener('click', () => {
       void doReject();
     });
-    detailEl.querySelector('[data-action="audit-pass"]')?.addEventListener("click", () => {
-      void doAudit("passed");
+    detailEl.querySelector('[data-action="audit-pass"]')?.addEventListener('click', () => {
+      void doAudit('passed');
     });
-    detailEl.querySelector('[data-action="audit-fail"]')?.addEventListener("click", () => {
-      void doAudit("failed");
+    detailEl.querySelector('[data-action="audit-fail"]')?.addEventListener('click', () => {
+      void doAudit('failed');
     });
   }
 
@@ -609,29 +672,29 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const result = await reprocessArticle(detail.id);
       showToast(result.detail);
-      if (result.status === "ok") {
-        detail.processing_status = "pending";
+      if (result.status === 'ok') {
+        detail.processing_status = 'pending';
         detail.error_message = null;
         renderDetail();
       }
     } catch (e) {
-      showToast("No se pudo reprocesar: " + (e as Error).message, "err");
+      showToast('No se pudo reprocesar: ' + (e as Error).message, 'err');
     }
   }
 
   async function doReject() {
     if (detail == null) return;
     // Single confirmation gate for every entry point (button + R hotkey).
-    if (!window.confirm("¿Rechazar este artículo?")) return;
+    if (!window.confirm('¿Rechazar este artículo?')) return;
     try {
       const result = await rejectArticle(detail.id);
       showToast(result.detail);
-      if (result.status === "ok") {
-        detail.processing_status = "rejected";
+      if (result.status === 'ok') {
+        detail.processing_status = 'rejected';
         renderDetail();
       }
     } catch (e) {
-      showToast("No se pudo rechazar: " + (e as Error).message, "err");
+      showToast('No se pudo rechazar: ' + (e as Error).message, 'err');
     }
   }
 
@@ -640,12 +703,12 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const result = await updateAuditStatus(detail.id, state);
       showToast(result.detail);
-      if (result.status === "ok") {
+      if (result.status === 'ok') {
         detail.audit = { ...(detail.audit as object), state };
         renderDetail();
       }
     } catch (e) {
-      showToast("No se pudo auditar: " + (e as Error).message, "err");
+      showToast('No se pudo auditar: ' + (e as Error).message, 'err');
     }
   }
 
@@ -659,58 +722,58 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     if (next) void select(next.id);
   }
 
-  document.addEventListener("keydown", (event) => {
+  document.addEventListener('keydown', (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       selectedId = null;
       detail = null;
       renderQueue();
-      detailEl?.classList.add("hidden");
-      detailEmptyEl?.classList.remove("hidden");
+      detailEl?.classList.add('hidden');
+      detailEmptyEl?.classList.remove('hidden');
       return;
     }
     switch (event.key.toLowerCase()) {
-      case "j":
+      case 'j':
         move(1);
         break;
-      case "k":
+      case 'k':
         move(-1);
         break;
-      case "r":
+      case 'r':
         event.preventDefault();
         void doReject();
         break;
-      case "a":
+      case 'a':
         event.preventDefault();
-        void doAudit("passed");
+        void doAudit('passed');
         break;
-      case "f":
+      case 'f':
         event.preventDefault();
-        void doAudit("failed");
+        void doAudit('failed');
         break;
-      case "o":
+      case 'o':
         event.preventDefault();
-        if (detail?.url) window.open(detail.url, "_blank", "noopener");
+        if (detail?.url) window.open(detail.url, '_blank', 'noopener');
         break;
-      case "p": {
+      case 'p': {
         event.preventDefault();
         if (detail == null) break;
         if (detail.publishable) {
           void doPublish({ articleId: detail.id });
         } else {
-          showToast(notPublishableReason(detail), "err");
+          showToast(notPublishableReason(detail), 'err');
         }
         break;
       }
     }
   });
 
-  loadMoreBtn?.addEventListener("click", () => void loadQueue());
-  document.getElementById("logout-btn")?.addEventListener("click", () => {
+  loadMoreBtn?.addEventListener('click', () => void loadQueue());
+  document.getElementById('logout-btn')?.addEventListener('click', () => {
     clearToken();
-    window.location.href = "/triage";
+    window.location.href = '/triage';
   });
 
   // ------------------------------------------------------------------
@@ -718,15 +781,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   // refresh the queue when it completes.
   // ------------------------------------------------------------------
 
-  const collectBtn = document.getElementById("collect-btn");
-  const collectStatusEl = document.getElementById("collect-status");
-  const dryRunInput = document.getElementById("dry-run") as HTMLInputElement | null;
+  const collectBtn = document.getElementById('collect-btn');
+  const collectStatusEl = document.getElementById('collect-status');
+  const dryRunInput = document.getElementById('dry-run') as HTMLInputElement | null;
   let pollTimer: number | undefined;
 
   function renderCollectStatus(text: string) {
     if (!collectStatusEl) return;
     collectStatusEl.textContent = text;
-    collectStatusEl.classList.remove("hidden");
+    collectStatusEl.classList.remove('hidden');
   }
 
   async function pollCollect(runId: string) {
@@ -740,34 +803,36 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       try {
         const st = await getCollectStatus(runId);
         transientFailures = 0;
-        if (st.status === "running" || st.status === "queued") {
-          renderCollectStatus(`Recopilando… (${runId}) — inicio ${st.started_at ?? "ahora"}`);
+        if (st.status === 'running' || st.status === 'queued') {
+          renderCollectStatus(`Recopilando… (${runId}) — inicio ${st.started_at ?? 'ahora'}`);
           return;
         }
         window.clearInterval(pollTimer);
-        if (st.status === "succeeded") {
+        if (st.status === 'succeeded') {
           const processed =
             (st.summary?.collection_summary as Record<string, unknown> | undefined)
-              ?.sources_processed ?? "?";
-          renderCollectStatus(`Recopilación terminada: ${processed} fuentes procesadas. Actualizando la cola…`);
+              ?.sources_processed ?? '?';
+          renderCollectStatus(
+            `Recopilación terminada: ${processed} fuentes procesadas. Actualizando la cola…`
+          );
           setTimeout(() => {
-            collectStatusEl?.classList.add("hidden");
-            status = "pending";
+            collectStatusEl?.classList.add('hidden');
+            status = 'pending';
             cursor = null;
             items = [];
             void loadQueue();
           }, 1200);
-        } else if (st.status === "cancelled") {
-          renderCollectStatus(`Recopilación cancelada${st.error ? `: ${st.error}` : "."}`);
-        } else if (st.status === "interrupted") {
+        } else if (st.status === 'cancelled') {
+          renderCollectStatus(`Recopilación cancelada${st.error ? `: ${st.error}` : '.'}`);
+        } else if (st.status === 'interrupted') {
           renderCollectStatus(
-            `Recopilación interrumpida (el servidor se reinició)${st.error ? `: ${st.error}` : "."}`,
+            `Recopilación interrumpida (el servidor se reinició)${st.error ? `: ${st.error}` : '.'}`
           );
         } else {
-          renderCollectStatus(`Falló la recopilación: ${st.error ?? "error desconocido"}`);
+          renderCollectStatus(`Falló la recopilación: ${st.error ?? 'error desconocido'}`);
         }
       } catch (e) {
-        if (e instanceof Error && e.name === "AuthError") {
+        if (e instanceof Error && e.name === 'AuthError') {
           window.clearInterval(pollTimer);
           clearToken();
           showAuthGate();
@@ -776,7 +841,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
           transientFailures += 1;
           renderCollectStatus(
-            `Recopilando… (${runId}) — API fuera de alcance, reintentando (${transientFailures}/${MAX_TRANSIENT})`,
+            `Recopilando… (${runId}) — API fuera de alcance, reintentando (${transientFailures}/${MAX_TRANSIENT})`
           );
           return;
         }
@@ -786,16 +851,16 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }, 2000);
   }
 
-  collectBtn?.addEventListener("click", async () => {
-    collectBtn.setAttribute("disabled", "true");
+  collectBtn?.addEventListener('click', async () => {
+    collectBtn.setAttribute('disabled', 'true');
     try {
       const started = await startCollect(dryRunInput?.checked ?? false);
       renderCollectStatus(
-        started.detail + ` (${started.run_id}) — actualizando la cola al terminar.`,
+        started.detail + ` (${started.run_id}) — actualizando la cola al terminar.`
       );
       await pollCollect(started.run_id);
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
@@ -804,15 +869,15 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminCollectStarted>;
         if (existing.run_id) {
           renderCollectStatus(
-            `Ya hay una recopilación en curso (${existing.run_id}) — observándola.`,
+            `Ya hay una recopilación en curso (${existing.run_id}) — observándola.`
           );
           await pollCollect(existing.run_id);
           return;
         }
       }
-      renderCollectStatus("No se pudo iniciar la recopilación: " + (e as Error).message);
+      renderCollectStatus('No se pudo iniciar la recopilación: ' + (e as Error).message);
     } finally {
-      collectBtn.removeAttribute("disabled");
+      collectBtn.removeAttribute('disabled');
     }
   });
 
@@ -822,10 +887,10 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   // surface the PR link or the editorial-rejection reason.
   // ------------------------------------------------------------------
 
-  const publishStatusEl = document.getElementById("publish-status");
-  const publishUrlForm = document.getElementById("publish-url-form") as HTMLFormElement | null;
-  const publishUrlInput = document.getElementById("publish-url") as HTMLInputElement | null;
-  const publishUrlBtn = document.getElementById("publish-url-btn");
+  const publishStatusEl = document.getElementById('publish-status');
+  const publishUrlForm = document.getElementById('publish-url-form') as HTMLFormElement | null;
+  const publishUrlInput = document.getElementById('publish-url') as HTMLInputElement | null;
+  const publishUrlBtn = document.getElementById('publish-url-btn');
   let publishPollTimer: number | undefined;
   let publishInFlight = false;
 
@@ -849,10 +914,10 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   }
 
   function progressSkeleton(runId: string): string {
-    const letters = [..."Procesando…"]
+    const letters = [...'Procesando…']
       .map((ch, i) => `<span style="animation-delay:${(i * 0.09).toFixed(2)}s">${ch}</span>`)
-      .join("");
-    const bars = PUBLISH_PHASES.map((p) => `<li title="${esc(p.label)}"></li>`).join("");
+      .join('');
+    const bars = PUBLISH_PHASES.map((p) => `<li title="${esc(p.label)}"></li>`).join('');
     return `<div class="pp" data-pp-run="${esc(runId)}">
       <div class="pp-row">
         <span class="pp-shimmer" aria-hidden="true">${letters}</span>
@@ -867,38 +932,39 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function paintProgress() {
     if (!progress || !publishStatusEl) return;
     const { runId, st, retrying } = progress;
-    let root = publishStatusEl.querySelector<HTMLElement>(".pp");
+    let root = publishStatusEl.querySelector<HTMLElement>('.pp');
     if (!root || root.dataset.ppRun !== runId) {
       publishStatusEl.innerHTML = progressSkeleton(runId);
-      publishStatusEl.classList.remove("hidden");
-      root = publishStatusEl.querySelector<HTMLElement>(".pp");
+      publishStatusEl.classList.remove('hidden');
+      root = publishStatusEl.querySelector<HTMLElement>('.pp');
     }
     if (!root) return;
 
     const now = Date.now();
     const p = st.progress;
     const itemCount = p?.item_count ?? 1;
-    const idx = st.status === "queued" ? 0 : currentPhaseIndex(p?.stages);
+    const idx = st.status === 'queued' ? 0 : currentPhaseIndex(p?.stages);
     const phase = PUBLISH_PHASES[idx];
     const started = parseServerTime(st.started_at);
     const elapsed = started ? (now - started) / 1000 : 0;
     const quiet = secondsSinceLastSign(now, st.heartbeat_at, p?.updated_at, st.started_at);
     const stalled = retrying !== null || (quiet !== null && quiet > STALL_AFTER_SECONDS);
 
-    const item = itemCount > 1 ? `Artículo ${(p?.item_index ?? 0) + 1}/${itemCount} · ` : "";
+    const item = itemCount > 1 ? `Artículo ${(p?.item_index ?? 0) + 1}/${itemCount} · ` : '';
     const phaseText =
-      st.status === "queued"
-        ? "En cola…"
+      st.status === 'queued'
+        ? 'En cola…'
         : `${item}Fase ${idx + 1}/${PUBLISH_PHASES.length} · ${phase.label}`;
     const phaseEl = root.querySelector('[data-pp="phase"]');
     if (phaseEl && phaseEl.textContent !== phaseText) phaseEl.textContent = phaseText;
 
     const timeEl = root.querySelector('[data-pp="time"]');
-    if (timeEl) timeEl.textContent = `${formatDuration(elapsed)} · ${describeEta(elapsed, st.typical_seconds, itemCount)}`;
+    if (timeEl)
+      timeEl.textContent = `${formatDuration(elapsed)} · ${describeEta(elapsed, st.typical_seconds, itemCount)}`;
 
-    root.querySelectorAll(".pp-bar li").forEach((li, i) => {
-      li.classList.toggle("done", i < idx);
-      li.classList.toggle("now", i === idx && st.status !== "queued");
+    root.querySelectorAll('.pp-bar li').forEach((li, i) => {
+      li.classList.toggle('done', i < idx);
+      li.classList.toggle('now', i === idx && st.status !== 'queued');
     });
 
     let meta = `proceso ${runId}`;
@@ -909,51 +975,51 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         : ` · última señal hace ${Math.round(quiet)} s`;
     const metaEl = root.querySelector('[data-pp="meta"]');
     if (metaEl) metaEl.textContent = meta;
-    root.classList.toggle("pp-stalled", stalled);
+    root.classList.toggle('pp-stalled', stalled);
   }
 
   function renderPublishStatus(html: string) {
     if (!publishStatusEl) return;
     stopProgress();
     publishStatusEl.innerHTML = html;
-    publishStatusEl.classList.remove("hidden");
+    publishStatusEl.classList.remove('hidden');
   }
 
   function setPublishInFlight(active: boolean) {
     publishInFlight = active;
-    publishUrlBtn?.toggleAttribute("disabled", active);
-    batchBtn?.toggleAttribute("disabled", active || batchIds().length === 0);
+    publishUrlBtn?.toggleAttribute('disabled', active);
+    batchBtn?.toggleAttribute('disabled', active || batchIds().length === 0);
     // Only the armed detail publish button is toggled: the queue publishes
     // from the batch bar and the P hotkey.
     document
       .querySelectorAll('#detail [data-action="publish"][data-armed]')
-      .forEach((btn) => btn.toggleAttribute("disabled", active));
+      .forEach((btn) => btn.toggleAttribute('disabled', active));
     document
       .querySelectorAll('.batch-tick')
-      .forEach((btn) => btn.toggleAttribute("disabled", active));
+      .forEach((btn) => btn.toggleAttribute('disabled', active));
   }
 
   /** Render a batch run's per-item outcomes (plan 109) into the status box. */
   function renderBatchItems(runId: string, items: unknown): boolean {
     if (!Array.isArray(items) || items.length === 0) return false;
     const lines = (items as Partial<AdminPublishBatchItem>[]).map((item) => {
-      const id = esc(String(item.article_id ?? "?"));
-      if (item.status === "succeeded" && item.pr_url) {
+      const id = esc(String(item.article_id ?? '?'));
+      if (item.status === 'succeeded' && item.pr_url) {
         return `#${id} ✓ <a class="text-amber-400 underline" href="${esc(item.pr_url)}" target="_blank" rel="noopener">${esc(item.pr_url)}</a>`;
       }
-      const reason = esc(item.failure_class ?? item.message ?? "unknown error");
+      const reason = esc(item.failure_class ?? item.message ?? 'unknown error');
       return `#${id} ✗ ${reason}`;
     });
     renderPublishStatus(
-      `Lote ${esc(runId)} terminado:<br>${lines.join("<br>")} <span class="text-ink-500">(actualizando la cola…)</span>`,
+      `Lote ${esc(runId)} terminado:<br>${lines.join('<br>')} <span class="text-ink-500">(actualizando la cola…)</span>`
     );
     return true;
   }
 
   function scheduleQueueRefresh() {
     setTimeout(() => {
-      publishStatusEl?.classList.add("hidden");
-      status = "pending";
+      publishStatusEl?.classList.add('hidden');
+      status = 'pending';
       cursor = null;
       items = [];
       selectedId = null;
@@ -971,37 +1037,37 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       try {
         const st = await getPublishStatus(runId);
         transientFailures = 0;
-        if (st.status === "running" || st.status === "queued") {
+        if (st.status === 'running' || st.status === 'queued') {
           showProgress(runId, st);
           return;
         }
         window.clearInterval(publishPollTimer);
         setPublishInFlight(false);
         const batchItems = (st.summary as Record<string, unknown> | undefined)?.items;
-        if (st.status === "succeeded" && st.pr_url) {
+        if (st.status === 'succeeded' && st.pr_url) {
           renderPublishStatus(
-            `Publicado — PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`,
+            `Publicado — PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`
           );
           scheduleQueueRefresh();
-        } else if (st.status === "succeeded" && renderBatchItems(runId, batchItems)) {
+        } else if (st.status === 'succeeded' && renderBatchItems(runId, batchItems)) {
           batchSelected.clear();
           scheduleQueueRefresh();
-        } else if (st.status === "succeeded") {
+        } else if (st.status === 'succeeded') {
           renderPublishStatus(
-            `La refinería terminó sin registrar URL de PR (proceso ${runId}). Revisa el resumen del intento de publicación.`,
+            `La refinería terminó sin registrar URL de PR (proceso ${runId}). Revisa el resumen del intento de publicación.`
           );
-        } else if (st.status === "interrupted") {
+        } else if (st.status === 'interrupted') {
           renderPublishStatus(
-            `Publicación interrumpida (el servidor se reinició, proceso ${runId}).`,
+            `Publicación interrumpida (el servidor se reinició, proceso ${runId}).`
           );
         } else {
           const reason = st.failure_class
-            ? `${st.failure_class} — ${st.error ?? "sin detalle"}`
-            : (st.error ?? "error desconocido");
+            ? `${st.failure_class} — ${st.error ?? 'sin detalle'}`
+            : (st.error ?? 'error desconocido');
           renderPublishStatus(`No publicado (proceso ${runId}): ${esc(reason)}`);
         }
       } catch (e) {
-        if (e instanceof Error && e.name === "AuthError") {
+        if (e instanceof Error && e.name === 'AuthError') {
           window.clearInterval(publishPollTimer);
           stopProgress();
           setPublishInFlight(false);
@@ -1015,7 +1081,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
           if (progress?.runId === runId) showProgress(runId, progress.st, retrying);
           else
             renderPublishStatus(
-              `Procesando… (proceso ${runId}) — API fuera de alcance, reintentando (${retrying})`,
+              `Procesando… (proceso ${runId}) — API fuera de alcance, reintentando (${retrying})`
             );
           return;
         }
@@ -1028,11 +1094,11 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 
   async function doPublish(opts: { articleId?: number; articleUrl?: string }) {
     if (publishInFlight) {
-      showToast("Ya hay una publicación en curso.", "err");
+      showToast('Ya hay una publicación en curso.', 'err');
       return;
     }
     setPublishInFlight(true);
-    renderPublishStatus("Iniciando proceso…");
+    renderPublishStatus('Iniciando proceso…');
     try {
       const started: AdminPublishStarted = await startPublish({
         articleId: opts.articleId,
@@ -1041,7 +1107,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
       pollPublish(started.run_id);
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         setPublishInFlight(false);
         clearToken();
         showAuthGate();
@@ -1051,7 +1117,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminPublishStarted>;
         if (existing.run_id) {
           renderPublishStatus(
-            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`,
+            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`
           );
           pollPublish(existing.run_id);
           return;
@@ -1062,7 +1128,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }
   }
 
-  publishUrlForm?.addEventListener("submit", (event) => {
+  publishUrlForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     const url = publishUrlInput?.value.trim();
     if (!url) return;
@@ -1072,11 +1138,11 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   async function doPublishBatch() {
     const ids = batchIds();
     if (publishInFlight) {
-      showToast("Ya hay una publicación en curso.", "err");
+      showToast('Ya hay una publicación en curso.', 'err');
       return;
     }
     if (ids.length === 0) {
-      showToast("Marca primero de 1 a 5 filas publicables.", "err");
+      showToast('Marca primero de 1 a 5 filas publicables.', 'err');
       return;
     }
     setPublishInFlight(true);
@@ -1086,7 +1152,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
       pollPublish(started.run_id);
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         setPublishInFlight(false);
         clearToken();
         showAuthGate();
@@ -1096,7 +1162,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         const existing = e.body as Partial<AdminPublishStarted>;
         if (existing.run_id) {
           renderPublishStatus(
-            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`,
+            `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`
           );
           pollPublish(existing.run_id);
           return;
@@ -1107,7 +1173,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }
   }
 
-  batchBtn?.addEventListener("click", () => void doPublishBatch());
+  batchBtn?.addEventListener('click', () => void doPublishBatch());
 
   renderFilters();
   void loadQueue();
