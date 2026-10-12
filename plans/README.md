@@ -334,7 +334,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 127 | [Public pagination tests, deterministic clocks, honest doubles](127-test-quality.md) | P2 | M | None | TODO |
 | 128 | [Backend hygiene: fetch ownership, env threading, errors, dead code](128-backend-hygiene.md) | P3 | S | None | TODO |
 | 129 | [Backend DX and docs: enforced gates, admin tooling, stale prose](129-backend-dx-docs.md) | P3 | M | None (coordinate with 081) | TODO |
 | 130 | [Backend dependency hygiene: dead deps, manifest, serving pin](130-backend-deps.md) | P2 | S | None | TODO |
@@ -412,6 +411,17 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   left `config.toml` + `data/exports/latest_articles.json` polluted (reverted;
   not reproduced by a single fast test nor in a bare worktree) — if this
   recurs in local dev, it earns its own plan. Merged and pushed.
+- 127 (test quality) DONE and archived — pagination premise corrected: public
+  cursor coverage ALREADY existed in `tests/test_serving_api.py` (6 tests);
+  added 2 genuine gaps (single-page terminal, exact-boundary walk); all 5
+  sleep sites converted to thread-join/fake-clock handshakes; wall-clock
+  fixtures frozen (5 sites); validation-loop + quality-contract converted to
+  real SQLite (only LLM boundary doubled); audit mock-heavy 13→12; tests-only
+  (6 files); `make lint/type/test-integration` green (3559+161 passed).
+  NEW FINDING for a future plan: `tests/unit/test_system_orchestration.py`
+  is a corpse (unreachable assertions after `return`, sole test is `pass`)
+  — the audit's #2 non-refinery mock-heavy entry; needs authoring, not
+  conversion. Merged and pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
