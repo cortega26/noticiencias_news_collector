@@ -1230,7 +1230,11 @@ class ArticleRepository:
                 )
 
             return list(
-                query.order_by(desc(Article.final_score), Article.collected_date.desc())
+                query.order_by(
+                    desc(Article.final_score),
+                    Article.collected_date.desc(),
+                    Article.id.desc(),
+                )
                 .limit(limit)
                 .all()
             )
@@ -1247,7 +1251,11 @@ class ArticleRepository:
                 .filter(Article.category == category)
                 .filter(Article.collected_date >= cutoff_date)
                 .filter(Article.processing_status == "completed")
-                .order_by(desc(Article.final_score), Article.collected_date.desc())
+                .order_by(
+                    desc(Article.final_score),
+                    Article.collected_date.desc(),
+                    Article.id.desc(),
+                )
                 .all()
             )
             return list(results)
