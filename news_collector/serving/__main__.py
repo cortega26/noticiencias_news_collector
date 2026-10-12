@@ -5,6 +5,10 @@ Usage:
     python -m news_collector.serving
 
 Env:
+    SERVING_HOST    Interface to bind (default: 127.0.0.1 loopback). Set to
+                    0.0.0.0 explicitly for LAN dev. An empty value fails
+                    closed. The container image bypasses this module
+                    (uvicorn --host 0.0.0.0 in Dockerfile.serving CMD).
     SERVING_PORT    TCP port to bind (default: 8000). Honored strictly: an
                     invalid value fails closed, and a busy port surfaces
                     uvicorn's bind error. Port *selection* (next-free fallback)
@@ -46,9 +50,25 @@ RELOAD_EXCLUDES = [str(_REPO_ROOT / name) for name in ("temp", "data", "logs")]
 
 
 DEFAULT_PORT = 8000
+DEFAULT_HOST = "127.0.0.1"
 
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
+def _resolve_host() -> str:
+    """Resolve the bind interface from SERVING_HOST, failing closed on empty.
+
+    Defaults to loopback so a bare `python -m news_collector.serving` never
+    exposes the dev server (with its development fail-open auth) to the LAN.
+    Operators needing LAN access set SERVING_HOST=0.0.0.0 explicitly.
+    """
+    raw = os.environ.get("SERVING_HOST", DEFAULT_HOST).strip()
+    if not raw:
+        raise SystemExit(
+            "news_collector.serving: invalid SERVING_HOST='' (must be a non-empty interface address)"
+        )
+    return raw
 
 
 def _resolve_port() -> int:
@@ -92,7 +112,9 @@ def main() -> None:
 
     uvicorn.run(
         "news_collector.serving.__main__:app",
-        host="0.0.0.0",  # noqa: S104 # nosec B104 — local dev server only
+        # Loopback by default (plan 123); explicit SERVING_HOST=0.0.0.0
+        # opts into LAN exposure. noqa needed only when 0.0.0.0 is literal.
+        host=_resolve_host(),  # noqa: S104
         port=_resolve_port(),
         reload=_resolve_reload(),
         reload_excludes=RELOAD_EXCLUDES,
