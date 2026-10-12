@@ -189,6 +189,27 @@ def build_collector_payload(
     }
 
 
+def with_source_id(record: Mapping[str, Any], source_id: str) -> Dict[str, Any]:
+    """Stamp ``source_id`` onto a record without mutating the input (LAW-B2).
+
+    Equivalent to ``{"source_id": source_id, **dict(record)}``: a
+    ``source_id`` already present in ``record`` wins, preserving the
+    drift-report normalization order (files keyed by source_id carry their
+    own value when present). No validation, no policy.
+    """
+    return {"source_id": source_id, **dict(record)}
+
+
+def project_source(row: Any) -> Dict[str, Any]:
+    """Project the serving source block from a row/object (LAW-B2).
+
+    Reads ``source_id``/``source_name`` attributes (explicit-projection rows
+    or ORM articles) and returns ``{"id": ..., "name": ...}`` byte-identical
+    to the inline projection. Read-only; no validation, no policy.
+    """
+    return {"id": row.source_id, "name": row.source_name}
+
+
 def adapt_export_article_to_collector_payload(
     article: Mapping[str, Any],
     *,

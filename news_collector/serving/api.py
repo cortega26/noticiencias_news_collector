@@ -109,6 +109,7 @@ from news_collector.contracts.admin import (
     AdminWebhookReceiptEnvelope,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
+from news_collector.contracts.adapters import project_source
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
@@ -393,7 +394,7 @@ def _build_article_payload(row: RowType) -> Dict[str, Any]:
         "title": row.title,
         "summary": row.summary,
         "url": row.url,
-        "source": {"id": row.source_id, "name": row.source_name},
+        "source": project_source(row),
         "category": row.category,
         "topics": topics,
         "published_at": row.published_date,
@@ -470,7 +471,7 @@ def _build_admin_list_item(
         title=row.title,
         summary=row.summary,
         url=row.url,
-        source={"id": row.source_id, "name": row.source_name},
+        source=project_source(row),
         category=row.category,
         topics=topics,
         published_at=row.published_date,
@@ -1107,8 +1108,7 @@ def create_app(  # noqa: C901
                     id=item.id,
                     title=item.title,
                     source=RelatedSourceResponse(
-                        id=item.source_id,
-                        name=item.source_name,
+                        **project_source(item),
                     ),
                     url=item.url,
                     score=item.final_score,

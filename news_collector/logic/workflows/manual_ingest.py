@@ -17,6 +17,7 @@ from news_collector.config.sources import ALL_SOURCES, save_sources
 from news_collector.contracts.adapters import (
     adapt_article_to_export,
     build_collector_payload,
+    with_source_id,
 )
 from news_collector.contracts.collector import CollectorArticleModel
 from news_collector.contracts.export import ExportArticleModel, ExportContractV2
@@ -404,16 +405,21 @@ class ManualUrlIngestService:
             fetch_attempts=fetch_attempts,
         )
         if payload is None:
-            return {
-                "status": "error",
-                "message": (build_error or {}).get(
-                    "message", "No se pudo construir un artículo válido desde la URL."
-                ),
-                "error_code": (build_error or {}).get("error_code", "source_unusable"),
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": (build_error or {}).get(
+                        "message",
+                        "No se pudo construir un artículo válido desde la URL.",
+                    ),
+                    "error_code": (build_error or {}).get(
+                        "error_code", "source_unusable"
+                    ),
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         try:
             model = CollectorArticleModel.model_validate(payload)
@@ -421,13 +427,15 @@ class ManualUrlIngestService:
             logger.warning(
                 "Manual URL payload validation failed for {}: {}", canonical_url, exc
             )
-            return {
-                "status": "error",
-                "message": f"Payload inválido: {exc}",
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": f"Payload inválido: {exc}",
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         saved_article = self.db.save_article(model)
         if saved_article is None:
@@ -442,13 +450,15 @@ class ManualUrlIngestService:
                     article_exists=True,
                     fetch_attempts=self._public_attempts(fetch_attempts),
                 )
-            return {
-                "status": "error",
-                "message": "El artículo no pudo guardarse porque ya existe un duplicado equivalente.",
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": "El artículo no pudo guardarse porque ya existe un duplicado equivalente.",
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         export_model = adapt_article_to_export(saved_article)
         export_path = self._write_single_article_export(export_model)
