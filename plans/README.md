@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 123 | [Harden serving and fetch edges](123-serving-edge-hardening.md) | P1 | M | None (read 099/021 first) | TODO |
 | 124 | [Publication query scans, ordering, batch setup tax](124-publication-query-perf.md) | P2 | M | None (read 109/045 first) | TODO |
 | 125 | [Bound enrichment fan-out per article](125-enrichment-fanout.md) | P2 | M | 116 (pacing must be DONE) | TODO |
 | 126 | [Fix order-dependent test pollution](126-flaky-order-dependence.md) | P1 | M | None | TODO |
@@ -378,6 +377,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   `make lint/type/test/boundaries` + quality-gate green (3600 passed).
   O_EXCL primitive tested but   writer-wiring deferred (noted in code).
   Merged locally, unpushed.
+- 123 (serving + fetch edges) DONE and archived — loopback default, fail-closed
+  unknown env, config/prompts allowlists + caps, article_url 422 gate, workflow
+  least-privilege, HTML 10MB cap, entity-guard skipped with probe proof;
+  `make lint/type/test/boundaries` + `make quality-ci` green (3662 passed).
+  `make quality` (bare bandit leg) stays red on the 11 pre-existing LOWs in
+  untouched files — standing ledger item, own plan needed. Merged locally,
+  unpushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
