@@ -1,0 +1,104 @@
+{
+  "seed": 20260922,
+  "items": {
+    "1": {
+      "db_id": "159",
+      "labels": {
+        "A": "bench-A-159",
+        "B": "bench-C-159"
+      },
+      "stratum": "ciencia",
+      "hard": true
+    },
+    "2": {
+      "db_id": "144",
+      "labels": {
+        "B": "bench-A-144",
+        "A": "bench-C-144"
+      },
+      "stratum": "tecnologia",
+      "hard": true
+    },
+    "3": {
+      "db_id": "1121",
+      "labels": {
+        "B": "bench-A-1121",
+        "A": "bench-C-1121"
+      },
+      "stratum": "ciencia",
+      "hard": true
+    },
+    "4": {
+      "db_id": "2315",
+      "labels": {
+        "B": "bench-A-2315",
+        "A": "bench-C-2315"
+      },
+      "stratum": "salud",
+      "hard": true
+    },
+    "5": {
+      "db_id": "1030",
+      "labels": {
+        "B": "bench-A-1030",
+        "A": "bench-C-1030"
+      },
+      "stratum": "ciencia",
+      "hard": false
+    },
+    "6": {
+      "db_id": "2432",
+      "labels": {
+        "B": "bench-A-2432",
+        "A": "bench-C-2432"
+      },
+      "stratum": "astrofisica",
+      "hard": false
+    },
+    "7": {
+      "db_id": "1771",
+      "labels": {
+        "A": "bench-A-1771",
+        "B": "bench-C-1771-r2"
+      },
+      "stratum": "salud",
+      "hard": false
+    },
+    "8": {
+      "db_id": "25",
+      "labels": {
+        "B": "bench-A-25",
+        "A": "bench-C-25"
+      },
+      "stratum": "tecnologia",
+      "hard": false
+    },
+    "9": {
+      "db_id": "2422",
+      "labels": {
+        "A": "bench-A-2422-r2",
+        "B": "bench-C-2422-r3"
+      },
+      "stratum": "ciencia",
+      "hard": false
+    },
+    "10": {
+      "db_id": "1848",
+      "labels": {
+        "A": "bench-A-1848",
+        "B": "bench-C-1848"
+      },
+      "stratum": "astrofisica",
+      "hard": false
+    },
+    "11": {
+      "db_id": "1868",
+      "labels": {
+        "A": "bench-A-1868",
+        "B": "bench-C-1868"
+      },
+      "stratum": "tecnologia",
+      "hard": false
+    }
+  }
+}
