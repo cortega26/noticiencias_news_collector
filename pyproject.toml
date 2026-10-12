@@ -116,6 +116,7 @@ target-version = ["py313"]
 profile = "black"
 line_length = 88
 src_paths = ["news_collector", "tests", "scripts", "apps", "tools"]
+skip_gitignore = true
 
 [tool.mypy]
 python_version = "3.13"
