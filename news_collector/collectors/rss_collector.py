@@ -13,6 +13,7 @@ manejar errores graciosamente, y siempre dejar los servidores mejor de como los
 encontramos (o al menos no peor).
 """
 
+import concurrent.futures
 import hashlib
 import os
 import time
@@ -50,6 +51,26 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 configure_canonicalization_cache(
     int(get_runtime_config().collection_config.get("canonicalization_cache_size", 0))
 )
+
+# Bounded per-article enrichment fan-out (plan 125). The pool bounds total
+# concurrent enrichments; per-host politeness is still enforced inside
+# EnrichmentStrategyRouter.route_enrichment via the injected HostPacer
+# (plan 116) — the fan-out routes through pacing, never around it. Keep this
+# cap coupled with HostPacer's per-host max_concurrency (default 1): raising
+# either requires re-running the pacing test.
+#
+# Thread-safety audit (plan 125 step 2, no router redesign):
+# - HostPacer: thread-safe (per-host locks + semaphore; waits never hold the
+#   registry lock). Shared via injection; fan-out stays inside its caps.
+# - enrichment_metrics: thread-safe (every record_*/flush/get holds an RLock;
+#   sqlite opened with check_same_thread=False). Counts verified identical
+#   under fan-out by test_metrics_recorders_thread_safe_under_fanout.
+# - HttpEnricher._blocked_urls/_warned_block_hosts: set add/check races are
+#   benign (duplicate fetch or log line at worst; no corruption under GIL).
+# - HeadlessBudgetManager/ProxyBudgetManager counters: += races can undercount
+#   by ~1 under contention; budget is a soft fail-open cost guard, so no lock
+#   added (minimal-fix rule). No router.py change required.
+_ENRICHMENT_FANOUT_WORKERS = 4
 
 
 class RSSCollector(BaseCollector):
@@ -892,15 +913,47 @@ class RSSCollector(BaseCollector):
         # or rely on the ImageExtractor to fetch if provided a URL (but avoiding double fetch if possible).
         # Optimization: We'll fetch the content ONCE here, pass to both extractors.
 
+        # Plan 125: bounded fan-out of the synchronous router call. Phase 1
+        # dispatches route_enrichment (which paces each fetch via HostPacer
+        # internally) into a bounded thread pool; phase 2 applies the
+        # per-candidate fallback/metadata/image logic serially in input
+        # order, so downstream identity is deterministic.
         for cand in selected_candidates:
+            cand.setdefault(
+                "content_mode", source_config.get("content_mode", "full_text")
+            )
+
+        if selected_candidates:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=_ENRICHMENT_FANOUT_WORKERS
+            ) as _pool:
+                _futures = [
+                    _pool.submit(
+                        self.router.route_enrichment,
+                        source_id,
+                        source_config,
+                        _cand,
+                    )
+                    for _cand in selected_candidates
+                ]
+                # return_exceptions-style isolation: a raise in one article
+                # must not cancel the rest; the failure is replayed per item
+                # below through the same process_failed path as serial.
+                enrichment_results: List[Any] = []
+                for _fut in _futures:
+                    try:
+                        enrichment_results.append(_fut.result())
+                    except BaseException as _exc:  # noqa: BLE001
+                        enrichment_results.append(_exc)
+        else:
+            enrichment_results = []
+
+        for cand, enrichment_result in zip(
+            selected_candidates, enrichment_results, strict=False
+        ):
             try:
-                cand.setdefault(
-                    "content_mode", source_config.get("content_mode", "full_text")
-                )
-                # --- ENRICHMENT STRATEGY ROUTER ---
-                enrichment_result = self.router.route_enrichment(
-                    source_id, source_config, cand
-                )
+                if isinstance(enrichment_result, BaseException):
+                    raise enrichment_result
 
                 cand["content"] = enrichment_result.get("content", "")
                 html_content = enrichment_result.get("raw_content") or ""
