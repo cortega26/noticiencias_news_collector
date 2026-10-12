@@ -10,10 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from news_collector.collectors.html_collector import (
-    HTML_MAX_BODY_BYTES,
-    HtmlCollector,
-)
+from news_collector.collectors.html_collector import HTML_MAX_BODY_BYTES, HtmlCollector
 
 
 @pytest.fixture

@@ -9,10 +9,7 @@ from pathlib import Path
 import pytest
 
 from scripts import llm_routing_replay
-from scripts.llm_routing_replay import (
-    _case_input,
-    _load_completed_cross_critic_keys,
-)
+from scripts.llm_routing_replay import _case_input, _load_completed_cross_critic_keys
 
 REPLAY = Path(__file__).resolve().parents[2] / "scripts" / "llm_routing_replay.py"
 

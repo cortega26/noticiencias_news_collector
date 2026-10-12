@@ -65,8 +65,9 @@ from sqlalchemy.engine import Row as RowType
 from sqlalchemy.orm import aliased
 
 from news_collector.config import settings as config_settings
-from news_collector.config.settings import get_runtime_config
 from news_collector.config.runtime import is_explicit_development
+from news_collector.config.settings import get_runtime_config
+from news_collector.contracts.adapters import project_source
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
@@ -111,7 +112,6 @@ from news_collector.contracts.admin import (
     AdminWebhookReceiptEnvelope,
 )
 from news_collector.contracts.image_brief import ImageBriefModel
-from news_collector.contracts.adapters import project_source
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
