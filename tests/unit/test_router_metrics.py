@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 
 
@@ -9,7 +10,7 @@ class TestRouterMetrics(unittest.TestCase):
     @patch("news_collector.enrichment.router.HttpEnricher")
     def test_http_strategy_records_metrics(self, MockHttp, mock_metrics):
         # Setup
-        router = EnrichmentStrategyRouter()
+        router = EnrichmentStrategyRouter(host_pacer=HostPacer.disabled())
         mock_http_instance = MockHttp.return_value
         mock_http_instance.enrich.return_value = {"success": True, "content": "A" * 600}
 
@@ -37,7 +38,7 @@ class TestRouterMetrics(unittest.TestCase):
         self, MockHttp, MockHeadless, mock_metrics
     ):
         # Setup
-        router = EnrichmentStrategyRouter()
+        router = EnrichmentStrategyRouter(host_pacer=HostPacer.disabled())
 
         # HTTP fails
         MockHttp.return_value.enrich.return_value = {"success": False}

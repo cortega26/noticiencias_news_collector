@@ -6,6 +6,7 @@ from news_collector.enrichment.headless_enricher import (
     HeadlessBudgetManager,
     HeadlessEnricher,
 )
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 
 
@@ -63,7 +64,9 @@ class TestHeadlessActivation:
 
         with patch.dict("os.environ", {"ENABLE_HEADLESS": "true"}):
             # Init Router with factory
-            router = EnrichmentStrategyRouter(logger_factory=factory)
+            router = EnrichmentStrategyRouter(
+                logger_factory=factory, host_pacer=HostPacer.disabled()
+            )
 
             # Verification:
             # 1. Router has logger
@@ -91,7 +94,9 @@ class TestHeadlessActivation:
         logger, factory = mock_logger
 
         with patch.dict("os.environ", {"ENABLE_HEADLESS": "true"}):
-            router = EnrichmentStrategyRouter(logger_factory=factory)
+            router = EnrichmentStrategyRouter(
+                logger_factory=factory, host_pacer=HostPacer.disabled()
+            )
             router.http = MagicMock()
             router.headless = MagicMock()
 

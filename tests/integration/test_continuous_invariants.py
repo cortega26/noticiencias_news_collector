@@ -3,6 +3,7 @@ import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 from news_collector.enrichment.strategy_lock_manager import StrategyLockManager
 from news_collector.infrastructure.run_context import RunContextManager
@@ -86,7 +87,9 @@ class TestContinuousInvariants(unittest.TestCase):
         """Invariant: Strategy Lock > Optimizer Hint."""
 
         # Setup Router (it doesn't accept args, uses patched globals)
-        router = EnrichmentStrategyRouter(logger_factory=MagicMock())
+        router = EnrichmentStrategyRouter(
+            logger_factory=MagicMock(), host_pacer=HostPacer.disabled()
+        )
 
         # Mock Lock Manager: Returns a lock
         mock_lock_manager.get_lock.return_value = {"strategy": "headless_fallback"}
@@ -131,7 +134,9 @@ class TestContinuousInvariants(unittest.TestCase):
     ):
         """Invariant: Safety Flags > Strategy Lock."""
 
-        router = EnrichmentStrategyRouter(logger_factory=MagicMock())
+        router = EnrichmentStrategyRouter(
+            logger_factory=MagicMock(), host_pacer=HostPacer.disabled()
+        )
 
         # Lock says Headless
         mock_lock_manager.get_lock.return_value = {"strategy": "headless_fallback"}
