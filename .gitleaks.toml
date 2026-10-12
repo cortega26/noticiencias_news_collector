@@ -35,6 +35,11 @@ paths = [
   '''^fly-tunnel\.toml$''',
   '''^plans/001-externalize-committed-secrets\.md$''',
   '''^plans/033-make-config-refresh-live\.md$''',
+  # Eighth-pass plan 123 quotes the admin TOKEN_KEY constant name from
+  # apps/admin/src/lib/api.ts (same KEY-NAME-NOT-CREDENTIAL rationale as above);
+  # listed at both its committed path and its plans/archive/ location.
+  '''^plans/123-serving-edge-hardening\.md$''',
+  '''^plans/archive/123-serving-edge-hardening\.md$''',
 ]
 regexes = [
   '''dummy(_|-)secret''',
