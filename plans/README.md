@@ -334,7 +334,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 128 | [Backend hygiene: fetch ownership, env threading, errors, dead code](128-backend-hygiene.md) | P3 | S | None | TODO |
 | 129 | [Backend DX and docs: enforced gates, admin tooling, stale prose](129-backend-dx-docs.md) | P3 | M | None (coordinate with 081) | TODO |
 | 130 | [Backend dependency hygiene: dead deps, manifest, serving pin](130-backend-deps.md) | P2 | S | None | TODO |
 
@@ -422,6 +421,17 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   is a corpse (unreachable assertions after `return`, sole test is `pass`)
   — the audit's #2 non-refinery mock-heavy entry; needs authoring, not
   conversion. Merged and pushed.
+- 128 (backend hygiene) DONE (5/6 items) and archived — `fetch_full_article`
+  moved verbatim to `collectors/` (100% rename; 2 test patch targets
+  updated); `_quality_audit_states` narrowed to `SQLAlchemyError` +
+  `(states, unavailable)` tuple + `meta.audit_states_unavailable` flag;
+  cognitive timestamp → UTC; `refinery_helper` deletion DISPROVEN (importers
+  in legacy Streamlit app + 2 test files — kept); logger stays in `utils/`
+  with a decision comment (80 importer files). Env-threading item CLOSED
+  AS NOT-WORTH: the save/restore blocks are already `try/finally`
+  exception-safe (leak claim disproven); full param threading needs 6
+  out-of-scope files — churn without a real bug. Gates green (3559+162).
+  Merged and pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
