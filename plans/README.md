@@ -334,7 +334,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 125 | [Bound enrichment fan-out per article](125-enrichment-fanout.md) | P2 | M | 116 (pacing must be DONE) | TODO |
 | 126 | [Fix order-dependent test pollution](126-flaky-order-dependence.md) | P1 | M | None | TODO |
 | 127 | [Public pagination tests, deterministic clocks, honest doubles](127-test-quality.md) | P2 | M | None | TODO |
 | 128 | [Backend hygiene: fetch ownership, env threading, errors, dead code](128-backend-hygiene.md) | P3 | S | None | TODO |
@@ -397,6 +396,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   passed). FOLLOW-UP: push `limit` through `get_top_articles` category
   path (`reporting.py`, out of scope here — rerank-window semantics need
   product review). Merged locally, unpushed.
+- 125 (enrichment fan-out) DONE and archived — two-phase bounded
+  ThreadPoolExecutor (4 workers) dispatch of `route_enrichment` inside 116's
+  HostPacer, serial order-preserving fallback/metadata phase, thread-safety
+  audit documented (no router change needed); equivalence/isolation/pacing/
+  metrics-parity tests (5); profiled 1.093s → 0.459s (2.38×) on 5×0.2s
+  candidates; `make lint/type/boundaries/perf` green (3559 passed).
+  Merged and pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
