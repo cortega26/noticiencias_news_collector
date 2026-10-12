@@ -436,7 +436,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   9.0.2) while pre-commit pins 5.13.2; the two canonicalized
   `failure_kinds.py` in mutually exclusive ways (executor proved the
   fix-loop, stopped correctly). Pinned `isort==5.13.2` in bootstrap; both
-  gates now agree. Also: admin-install → npm ci; apps/admin gained
+  gates now agree. MERGE-TIME follow-up (reviewer found, executor fixed):
+  the isort leg scanned dev debris dirs in the main checkout
+  (`.venv-refinery` 5122 files, `.test_venv`, `temp/`, `mutants/`) that
+  black/ruff skip via .gitignore — added `skip_gitignore = true` to
+  `[tool.isort]` (verified both directions; main-checkout `make lint` exit
+  0). Also: admin-install → npm ci; apps/admin gained
   eslint+prettier lint story + engines; pre-commit admin-lint stanza + the
   mypy hook entry fixed to `.venv/bin/python` (system python lacked mypy —
   the push-blocker from plan 128); request-ID middleware + tests; CLAUDE.md
