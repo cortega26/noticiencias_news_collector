@@ -1,10 +1,14 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from noticiencias.config_manager import load_config
 
 from news_collector.collectors.rss_collector import RSSCollector
+
+# Frozen reference instant: the contract checks under test are about content
+# length, never recency, so wall-clock timestamps add nothing but drift.
+_FIXED_NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 @patch("news_collector.collectors.rss_collector.enrichment_pipeline")
@@ -12,10 +16,11 @@ class TestQualityContract:
 
     @pytest.fixture
     def collector(self):
-        db_manager = MagicMock()
-        # Mock storage calls to avoid DB errors
-        db_manager.save_article.return_value = MagicMock()
-        return RSSCollector(db_manager, config=load_config())
+        # Real collector deps: the real (test-mode) DatabaseManager comes from
+        # BaseCollector.__init__ and the real logger from get_logger(). The
+        # previous mock object was passed as the `logger_factory` positional
+        # argument — it doubled the wrong seam, not storage.
+        return RSSCollector(config=load_config())
 
     @pytest.fixture
     def source_config(self):
@@ -53,7 +58,7 @@ class TestQualityContract:
             "title": "Valid Title for Short Article",
             "summary": "This is a very short summary, less than 500 chars.",
             "content": "",
-            "published_date": datetime.now(timezone.utc),
+            "published_date": _FIXED_NOW,
             "source_metadata": {},
         }
 
@@ -81,7 +86,7 @@ class TestQualityContract:
             "title": "Title is now long enough for validation",
             "summary": "Summary is also long enough",
             "content": short_text,
-            "published_date": datetime.now(timezone.utc),
+            "published_date": _FIXED_NOW,
             "source_metadata": {},
         }
 
@@ -105,7 +110,7 @@ class TestQualityContract:
             "title": "Title is now long enough for validation",
             "summary": "Summary is also long enough",
             "content": long_text,
-            "published_date": datetime.now(timezone.utc),
+            "published_date": _FIXED_NOW,
             "source_metadata": {},
         }
 
@@ -131,7 +136,7 @@ class TestQualityContract:
             "title": "Title is now long enough for validation",
             "summary": "Short summary only.",
             "content": None,
-            "published_date": datetime.now(timezone.utc),
+            "published_date": _FIXED_NOW,
             "source_metadata": {},
             "content_mode": "summary_only",
         }

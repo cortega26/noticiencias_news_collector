@@ -1,81 +1,57 @@
-import os
-import sys
-from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
-# Ensure path is set (might be redundant in some envs)
-sys.path.append(os.getcwd())
-
+from news_collector.storage.database import DatabaseManager
+from news_collector.storage.models import Article
 from news_collector.system import NewsCollectorSystem
+from news_collector.utils.logger import get_logger
+
+_FIXED_NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
-class MockArticle:
-    def __init__(self, id):
-        self.id = id
-        self.processing_status = "pending"
+def test_validation_loop_terminates_and_updates_status(tmp_path):
+    """The coordinator must drain the real pending queue and persist the
+    terminal transition into real SQLite — no storage doubles.
 
-    def model_dump(self):
-        return {"id": self.id, "title": "Test Article"}
-
-
-def test_validation_loop_terminates_and_updates_status():
+    Only the validator is doubled: it is the LLM boundary and must not call
+    a model. Everything around it (queue, adapter, bulk status update,
+    logger) is the production implementation.
+    """
     system = NewsCollectorSystem()
-    system.db_manager = MagicMock()
+    db_manager = DatabaseManager({"type": "sqlite", "path": tmp_path / "loop.db"})
+    system.db_manager = db_manager
+
+    with db_manager.get_session() as session:
+        article = Article(
+            title="Pending article for validation",
+            url="https://example.com/validation-loop",
+            summary="Pending article summary",
+            source_id="test_source",
+            source_name="Test Source",
+            processing_status="pending",
+            published_date=_FIXED_NOW,
+            collected_date=_FIXED_NOW,
+        )
+        session.add(article)
+        session.flush()
+        article_id = article.id
+        assert article_id is not None
+
     system.validator = MagicMock()
-    # Mock logger factory returns a logger that has methods
-    mock_logger = MagicMock()
-    system.logger = MagicMock()
-    system.logger.create_module_logger.return_value = mock_logger
+    system.validator.validate_batch.return_value = {
+        "valid": [{"id": article_id}],
+        "invalid": [],
+    }
+    system.logger = get_logger()
 
-    # Create a persistent article object
-    article1 = MockArticle(1)
-    pending_store = [article1]
+    try:
+        results = system._execute_validation(collection_results={}, dry_run=False)
 
-    def get_pending_side_effect(limit=None, status="pending"):
-        # Only return if status matches the article's current status
-        return [a for a in pending_store if a.processing_status == status]
-
-    system.db_manager.get_pending_articles.side_effect = get_pending_side_effect
-
-    def update_bulk_side_effect(mappings):
-        for mapping in mappings:
-            for article in pending_store:
-                if article.id == mapping["id"]:
-                    article.processing_status = mapping["processing_status"]
-
-    system.db_manager.update_validation_status_bulk.side_effect = (
-        update_bulk_side_effect
-    )
-
-    # Mock DB Session
-    session_mock = MagicMock()
-    system.db_manager.get_session.return_value.__enter__.return_value = session_mock
-
-    # When session.query(Article).filter_by(id=1).first() is called, return our object
-    session_mock.query.return_value.filter_by.return_value.first.return_value = article1
-
-    # Validator returns valid result
-    system.validator.validate_batch.return_value = {"valid": [{"id": 1}], "invalid": []}
-
-    # Setup contracts adapter patch because _execute_validation imports it
-    with patch(
-        "news_collector.contracts.adapters.adapt_to_validation_payload"
-    ) as mock_adapt:
-        mock_payload = MagicMock()
-        mock_payload.articles = [article1]
-        mock_adapt.return_value = mock_payload
-
-        # Execute
-        system._execute_validation(collection_results={}, dry_run=False)
-
-    # Assertions
-    # 1. Status should be updated to 'validated'
-    assert (
-        article1.processing_status == "validated"
-    ), "Status was not updated to validated"
-
-    # 2. Loop should have terminated (called get_pending twice: once got item, second time got empty)
-    # Actually validation loop checks 'if not pending_articles: break'.
-    # So:
-    # Iter 1: get_pending -> [art1]. Validate. Update art1 status to validated.
-    # Iter 2: get_pending -> []. Break.
-    assert system.db_manager.get_pending_articles.call_count == 2
+        assert results["validated_count"] == 1
+        with db_manager.get_session() as session:
+            persisted = session.query(Article).filter_by(id=article_id).one()
+            assert (
+                persisted.processing_status == "validated"
+            ), "Status was not updated to validated"
+    finally:
+        db_manager.close()

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -216,6 +215,44 @@ def api_client(db_manager: DatabaseManager, sources_yaml_path: Path) -> TestClie
 
 def _admin_headers(token: str = "dev-admin-token") -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _capture_workflow_threads(monkeypatch, module) -> list:
+    """Route `module`'s thread creation through a recording subclass.
+
+    Async-workflow tests can then join the dispatched worker thread instead of
+    polling `/status` with ``time.sleep``. Recording happens in ``start()``, so
+    the reference exists by the time the HTTP call that dispatches it returns.
+    """
+    import threading
+
+    started_threads: list = []
+
+    class _RecordingThread(threading.Thread):
+        def start(self):
+            started_threads.append(self)
+            return super().start()
+
+    class _ThreadingShim:
+        Thread = _RecordingThread
+
+        def __getattr__(self, name):
+            return getattr(threading, name)
+
+    monkeypatch.setattr(module, "threading", _ThreadingShim())
+    return started_threads
+
+
+def _join_worker_thread(started_threads: list, name: str, timeout: float = 10.0):
+    """Join the named worker thread; fail loudly if it never started or hung."""
+    worker = next((t for t in started_threads if t.name == name), None)
+    assert worker is not None, (
+        f"worker thread {name!r} was never started; "
+        f"recorded: {[t.name for t in started_threads]}"
+    )
+    worker.join(timeout)
+    assert not worker.is_alive(), f"worker thread {name!r} hung past {timeout}s"
+    return worker
 
 
 # ---------------------------------------------------------------------------
@@ -867,7 +904,9 @@ def test_admin_collect_starts_and_status_lifecycle(
 ) -> None:
     import threading
 
-    from news_collector.serving import api as serving_api
+    from news_collector.logic.workflows import collection_run_workflow
+
+    worker_threads = _capture_workflow_threads(monkeypatch, collection_run_workflow)
 
     started = threading.Event()
     release = threading.Event()
@@ -915,14 +954,11 @@ def test_admin_collect_starts_and_status_lifecycle(
         assert status["run_id"] == body["run_id"]
 
         release.set()
-        # The thread finishes async; poll until done.
-        for _ in range(50):
-            status = api_client.get(
-                "/v1/admin/collect/status", headers=_admin_headers()
-            ).json()
-            if status["status"] == "succeeded":
-                break
-            time.sleep(0.1)
+        _join_worker_thread(worker_threads, f"collect-{body['run_id']}")
+
+        status = api_client.get(
+            "/v1/admin/collect/status", headers=_admin_headers()
+        ).json()
         assert status["status"] == "succeeded"
         assert status["summary"].get("sources_processed") == 3
 
@@ -1121,6 +1157,10 @@ def test_admin_publish_lifecycle_and_db_survives(
     follow-up admin request still works (Phase 4a regression guard)."""
     import threading as _threading
 
+    from news_collector.logic.workflows import publication_run_workflow
+
+    worker_threads = _capture_workflow_threads(monkeypatch, publication_run_workflow)
+
     release = _threading.Event()
     monkeypatch.chdir(tmp_path)  # workflow + fake both resolve the same rel path
     attempts = tmp_path / "data" / "runtime" / "publication_attempts"
@@ -1163,15 +1203,13 @@ def test_admin_publish_lifecycle_and_db_survives(
         assert running["status"] in ("queued", "running")
 
         release.set()
-        for _ in range(50):
-            st = api_client.get(
-                "/v1/admin/publish/status",
-                params={"run_id": run_id},
-                headers=_admin_headers(),
-            ).json()
-            if st["status"] == "succeeded":
-                break
-            time.sleep(0.1)
+        _join_worker_thread(worker_threads, f"publish-{run_id}")
+
+        st = api_client.get(
+            "/v1/admin/publish/status",
+            params={"run_id": run_id},
+            headers=_admin_headers(),
+        ).json()
         assert st["status"] == "succeeded"
         assert st["pr_url"] == "https://github.com/org/noticiencias/pull/9"
 
@@ -1183,6 +1221,10 @@ def test_admin_publish_concurrent_yields_one_202_one_409(
     api_client: TestClient, monkeypatch
 ) -> None:
     import threading as _threading
+
+    from news_collector.logic.workflows import publication_run_workflow
+
+    worker_threads = _capture_workflow_threads(monkeypatch, publication_run_workflow)
 
     release = _threading.Event()
     monkeypatch.setattr(
@@ -1211,15 +1253,7 @@ def test_admin_publish_concurrent_yields_one_202_one_409(
         # let the dispatched run finish before the fixture DB closes
         release.set()
         started = first if first.status_code == 202 else second
-        for _ in range(50):
-            st = api_client.get(
-                "/v1/admin/publish/status",
-                params={"run_id": started.json()["run_id"]},
-                headers=_admin_headers(),
-            ).json()
-            if st["status"] not in ("queued", "running"):
-                break
-            time.sleep(0.1)
+        _join_worker_thread(worker_threads, f"publish-{started.json()['run_id']}")
 
 
 def test_admin_publish_status_unknown_run_id_returns_404(
@@ -2831,6 +2865,10 @@ def test_admin_publish_batch_lifecycle_reports_per_item(
 ) -> None:
     """A batch run closes with an explicit per-item outcome for every id
     on the shared publish/status endpoint."""
+    from news_collector.logic.workflows import publication_run_workflow
+
+    worker_threads = _capture_workflow_threads(monkeypatch, publication_run_workflow)
+
     monkeypatch.chdir(tmp_path)
     attempts = tmp_path / "data" / "runtime" / "publication_attempts"
     attempts.mkdir(parents=True)
@@ -2867,15 +2905,13 @@ def test_admin_publish_batch_lifecycle_reports_per_item(
         assert body["accepted_ids"] == [77, 78]
         run_id = body["run_id"]
 
-        for _ in range(100):
-            st = api_client.get(
-                "/v1/admin/publish/status",
-                params={"run_id": run_id},
-                headers=_admin_headers(),
-            ).json()
-            if st["status"] == "succeeded":
-                break
-            time.sleep(0.1)
+        _join_worker_thread(worker_threads, f"publish-batch-{run_id}")
+
+        st = api_client.get(
+            "/v1/admin/publish/status",
+            params={"run_id": run_id},
+            headers=_admin_headers(),
+        ).json()
         assert st["status"] == "succeeded"
         items = st["summary"]["items"]
         assert [(i["article_id"], i["status"]) for i in items] == [
