@@ -27,6 +27,9 @@ paths = [
   '''^audit/03_config_matrix\.md$''',
   # Placeholder/fixture values in test and documentation files.
   '''^tests/integration/test_publication_callback_contract\.py$''',
+  # Bounds-test placeholders (e.g. a fake "token" value asserting
+  # non-persistence); no real credentials in this file.
+  '''^tests/unit/serving/test_write_surface_bounds\.py$''',
   # GUI source: 'refinery_admin_token' is a sessionStorage KEY NAME, not a
   # credential value (matched by generic-api-key's 16+ char rule).
   '''^apps/admin/src/lib/api\.ts$''',
