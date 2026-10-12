@@ -22,7 +22,8 @@ Failure modes:
 """
 
 import copy
-from typing import Any, Dict, List, Mapping, cast
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Mapping, Sequence, cast
 
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import NoInspectionAvailable
@@ -126,6 +127,66 @@ def adapt_article_to_export(article: Article) -> ExportArticleModel:
         category=category,
         components=score_components,
     )
+
+
+def build_collector_payload(
+    *,
+    canonical_url: str,
+    title: str | None,
+    summary: str | None,
+    content: str | None,
+    source_id: str,
+    source_config: Mapping[str, Any] | None = None,
+    published_date: datetime | None,
+    authors: Sequence[str] | None = None,
+    language: str = "en",
+    doi: str | None = None,
+    journal: str | None = None,
+    is_preprint: bool = False,
+    word_count: int = 0,
+    reading_time_minutes: int = 1,
+    content_mode: str | None = None,
+    image_url: str | None = None,
+    source_metadata: Mapping[str, Any] | None = None,
+    processing_timestamp: datetime | None = None,
+) -> Dict[str, Any]:
+    """Own the manual-ingest CollectorArticleModel input shape (LAW-B2).
+
+    Pure shape construction from typed inputs — no fetch, no editorial
+    judgment, no scoring, no persistence, no validation (the caller still
+    validates via ``CollectorArticleModel.model_validate``). Policy values
+    (credibility/tier/word-gates) must NOT be read here; the caller resolves
+    counts and source naming before calling.
+    """
+    config = dict(source_config or {})
+    resolved_source_name = str(config.get("name") or source_id)
+    resolved_category = str(config.get("category") or "multidisciplinary")
+    resolved_content_mode = content_mode or ("full_text" if content else "summary_only")
+    return {
+        "url": canonical_url,
+        "original_url": canonical_url,
+        "title": title,
+        "summary": summary or "",
+        "content": content,
+        "source_id": source_id,
+        "source_name": resolved_source_name,
+        "category": resolved_category,
+        "published_date": published_date,
+        "authors": list(authors or []),
+        "language": language,
+        "doi": doi,
+        "journal": journal,
+        "is_preprint": is_preprint,
+        "word_count": word_count,
+        "reading_time_minutes": reading_time_minutes,
+        "content_mode": resolved_content_mode,
+        "article_metadata": {
+            "source_metadata": dict(source_metadata or {}),
+            "original_url": canonical_url,
+            "image_url": image_url,
+            "processing_timestamp": processing_timestamp or datetime.now(timezone.utc),
+        },
+    }
 
 
 def adapt_export_article_to_collector_payload(

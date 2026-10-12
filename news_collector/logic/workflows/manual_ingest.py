@@ -14,7 +14,10 @@ from noticiencias.config_schema import CollectionConfig
 
 from news_collector.config.settings import get_runtime_config
 from news_collector.config.sources import ALL_SOURCES, save_sources
-from news_collector.contracts.adapters import adapt_article_to_export
+from news_collector.contracts.adapters import (
+    adapt_article_to_export,
+    build_collector_payload,
+)
 from news_collector.contracts.collector import CollectorArticleModel
 from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
@@ -656,31 +659,25 @@ class ManualUrlIngestService:
             }
         }
 
-        payload = {
-            "url": canonical_url,
-            "original_url": canonical_url,
-            "title": merged["title"],
-            "summary": summary or "",
-            "content": content,
-            "source_id": source_id,
-            "source_name": source_config.get("name") or source_id,
-            "category": source_config.get("category") or "multidisciplinary",
-            "published_date": merged["published_date"],
-            "authors": merged["authors"] or [],
-            "language": "en",
-            "doi": merged["doi"],
-            "journal": merged["journal"],
-            "is_preprint": False,
-            "word_count": word_count,
-            "reading_time_minutes": reading_time_minutes,
-            "content_mode": "full_text" if content else "summary_only",
-            "article_metadata": {
-                "source_metadata": source_metadata,
-                "original_url": canonical_url,
-                "image_url": merged["image_url"],
-                "processing_timestamp": datetime.now(timezone.utc),
-            },
-        }
+        payload = build_collector_payload(
+            canonical_url=canonical_url,
+            title=merged["title"],
+            summary=summary,
+            content=content,
+            source_id=source_id,
+            source_config=source_config,
+            published_date=merged["published_date"],
+            authors=merged["authors"] or [],
+            language="en",
+            doi=merged["doi"],
+            journal=merged["journal"],
+            is_preprint=False,
+            word_count=word_count,
+            reading_time_minutes=reading_time_minutes,
+            content_mode="full_text" if content else "summary_only",
+            image_url=merged["image_url"],
+            source_metadata=source_metadata,
+        )
         return payload, None
 
     def _preferred_method(self, source_config: Mapping[str, Any]) -> str:
