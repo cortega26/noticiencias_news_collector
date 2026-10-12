@@ -65,6 +65,7 @@ from sqlalchemy.orm import aliased
 
 from news_collector.config import settings as config_settings
 from news_collector.config.settings import get_runtime_config
+from news_collector.config.runtime import is_explicit_development
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
@@ -686,7 +687,7 @@ def verify_webhook_token(
     webhook_api_key = os.environ.get("WEBHOOK_API_KEY", "")
     if not webhook_api_key:
         runtime = get_runtime_config()
-        if runtime.environment != "development":
+        if not is_explicit_development(runtime.environment):
             logger.error(
                 "WEBHOOK_API_KEY is not set outside the 'development' "
                 "environment (environment={}) — refusing unauthenticated "
@@ -739,7 +740,7 @@ def verify_admin_token(
     admin_api_key = os.environ.get("ADMIN_API_KEY", "")
     if not admin_api_key:
         runtime = get_runtime_config()
-        if runtime.environment != "development":
+        if not is_explicit_development(runtime.environment):
             logger.error(
                 "ADMIN_API_KEY is not set outside the 'development' "
                 "environment (environment={}) — refusing unauthenticated "

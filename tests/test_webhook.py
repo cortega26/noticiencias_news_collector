@@ -127,6 +127,29 @@ def test_webhook_fails_closed_outside_development_without_key(
         assert response.status_code == 503
 
 
+@pytest.mark.parametrize("tier", ["unset", "", "prod", "Development", " development "])
+def test_webhook_unset_or_unknown_tier_fails_closed_without_key(
+    api_client: TestClient, tier: str
+) -> None:
+    """Plan 123: only the exact "development" tier fail-opens; unset/unknown 503."""
+    from unittest.mock import MagicMock
+
+    fake_runtime = MagicMock()
+    fake_runtime.environment = tier
+    with (
+        patch.dict(os.environ, clear=True),
+        patch(
+            "news_collector.serving.api.get_runtime_config", return_value=fake_runtime
+        ),
+    ):
+        payload = _make_validation_payload("pass")
+        response = api_client.post(
+            "/api/v1/webhook/frontend",
+            json=payload,
+        )
+        assert response.status_code == 503
+
+
 def test_webhook_fail_open_in_development_logs_warning(
     api_client: TestClient,
 ) -> None:
