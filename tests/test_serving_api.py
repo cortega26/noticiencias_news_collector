@@ -13,13 +13,17 @@ from news_collector.storage.models import Article, ScoreLog
 
 pytestmark = pytest.mark.e2e
 
+# Frozen reference instant for every date this module seeds or filters on, so
+# the suite cannot drift into time-bomb behavior as the wall clock moves.
+FIXED_NOW = datetime(2026, 3, 1, 12, 0, tzinfo=timezone.utc)
+
 
 @pytest.fixture()
 def db_manager(tmp_path) -> DatabaseManager:
     db_path = tmp_path / "api.db"
     manager = DatabaseManager({"type": "sqlite", "path": db_path})
     with manager.get_session() as session:
-        base_time = datetime.now(timezone.utc)
+        base_time = FIXED_NOW
         articles: List[Dict] = [
             {
                 "title": "CRISPR gene therapy milestone",
@@ -142,7 +146,7 @@ def test_articles_filtering_and_why_ranked(api_client: TestClient):
     params = {
         "source": "nature",
         "topic": "health",
-        "date_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        "date_from": (FIXED_NOW - timedelta(days=1)).isoformat(),
     }
     response = api_client.get("/v1/articles", params=params)
     assert response.status_code == 200
@@ -356,6 +360,42 @@ def test_cursor_traversal_completes_without_gaps_or_duplicates(api_client: TestC
             break
 
     assert len(seen) == 3, f"Expected 3 unique articles, got {len(seen)}"
+
+
+def test_single_page_dataset_is_terminal_on_first_page(api_client: TestClient):
+    """page_size >= dataset size: one page, no cursor, has_more False."""
+    resp = api_client.get("/v1/articles", params={"page_size": 10})
+    assert resp.status_code == 200
+    pagination = resp.json()["pagination"]
+    assert pagination["returned"] == 3
+    assert pagination["has_more"] is False
+    assert pagination["next_cursor"] is None
+
+
+def test_cursor_walk_ending_on_exact_page_boundary_terminates(api_client: TestClient):
+    """Dataset size divisible by page_size: the final page is full, and the
+    walk must terminate there — no phantom empty trailing page."""
+    seen: List[int] = []
+    cursor = None
+    while True:
+        params = {"page_size": 1}
+        if cursor:
+            params["cursor"] = cursor
+        resp = api_client.get("/v1/articles", params=params)
+        assert resp.status_code == 200
+        body = resp.json()
+        pagination = body["pagination"]
+        assert pagination["returned"] == 1, (
+            "walk produced an empty page before has_more went False: " f"{body}"
+        )
+        seen.extend(item["id"] for item in body["data"])
+        if not pagination["has_more"]:
+            assert pagination["next_cursor"] is None
+            break
+        cursor = pagination["next_cursor"]
+        assert cursor
+
+    assert len(seen) == len(set(seen)) == 3
 
 
 def test_malformed_cursor_returns_400(api_client: TestClient):

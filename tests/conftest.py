@@ -15,6 +15,10 @@ import pytest
 
 from news_collector.storage import database as database_module
 
+# Frozen instant for fixture payload timestamps, so shared fixtures cannot
+# drift into time-bomb behavior as the wall clock moves.
+_FIXED_PAYLOAD_INSTANT = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
+
 
 @pytest.fixture(autouse=True)
 def _close_global_db_manager():
@@ -42,7 +46,7 @@ def mock_article_payload():
         "source_id": "test_source",
         "source_name": "Test Source",
         "category": "science",
-        "published_date": datetime.now(timezone.utc),
+        "published_date": _FIXED_PAYLOAD_INSTANT,
         "published_tz_offset_minutes": 0,
         "published_tz_name": "UTC",
         "authors": ["Test Author"],
@@ -51,7 +55,7 @@ def mock_article_payload():
         "reading_time_minutes": 5,
         "article_metadata": {
             "credibility_score": 0.9,
-            "processing_timestamp": datetime.now(timezone.utc).isoformat(),
+            "processing_timestamp": _FIXED_PAYLOAD_INSTANT.isoformat(),
             "original_url": "https://example.com/test-article",
         },
     }

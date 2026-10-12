@@ -1,5 +1,4 @@
 import dataclasses
-import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -61,10 +60,34 @@ async def test_crawl_interval_enforcement_run():
 
 @pytest.mark.asyncio
 async def test_collect_from_source_async_waits_for_real_result_after_soft_timeout():
+    import asyncio
+    import threading
+    from types import SimpleNamespace
+
+    from news_collector.collectors import base_collector as base_collector_module
+
+    started = threading.Event()
+    release = threading.Event()
+
+    class _ManualClock:
+        """Deterministic monotonic source: the test decides when 0.05s passes."""
+
+        def __init__(self, start: float = 1000.0) -> None:
+            self._now = start
+
+        def monotonic(self) -> float:
+            return self._now
+
+        def advance(self, seconds: float) -> None:
+            self._now += seconds
+
+    clock = _ManualClock()
+
     class SlowCollector(BaseCollector):
         def collect_from_source(self, source_id, source_config):
             del source_id, source_config
-            time.sleep(0.05)
+            started.set()
+            release.wait(timeout=10)
             return {
                 "success": True,
                 "articles_found": 2,
@@ -89,10 +112,23 @@ async def test_collect_from_source_async_waits_for_real_result_after_soft_timeou
             "news_collector.collectors.base_collector.get_runtime_config",
             return_value=snapshot,
         ),
+        patch.object(
+            base_collector_module,
+            "time",
+            SimpleNamespace(monotonic=clock.monotonic),
+        ),
     ):
-        result = await collector.collect_from_source_async(
-            "slow_source", {"url": "http://example.com"}
+        collect_task = asyncio.ensure_future(
+            collector.collect_from_source_async(
+                "slow_source", {"url": "http://example.com"}
+            )
         )
+        try:
+            assert await asyncio.to_thread(started.wait, 10), "collector never started"
+            clock.advance(0.05)
+        finally:
+            release.set()
+        result = await collect_task
 
     assert result["success"] is True
     assert result["articles_found"] == 2
