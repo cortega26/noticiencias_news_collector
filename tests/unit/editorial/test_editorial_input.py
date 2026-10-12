@@ -170,7 +170,7 @@ class TestEditorialStage:
         assert EditorialStage.TECHNICAL_CRITIC_OK.value == "stage2_5_critic_ok"
         assert (
             EditorialStage.EDITORIAL_CRITIC_OK.value
-            == "stage2_6_editorial_critic_source_aware_v2_ok"
+            == "stage2_6_editorial_critic_value_add_v3_ok"
         )
         assert EditorialStage.ENRICHMENT.value == "stage4_enrichment"
 
