@@ -1240,13 +1240,21 @@ class ArticleRepository:
             )
 
     def get_articles_by_category(
-        self, category: str, days_back: int = 7
+        self, category: str, days_back: int = 7, limit: int | None = None
     ) -> List[Article]:
-        """Return recent articles in a category."""
+        """Return recent articles in a category.
+
+        Plan 124 Step 3: ``limit`` bounds this read (was: unbounded
+        hydration of every matching row). Callers that only rerank the
+        top-N should pass ``limit`` (e.g. ``limit * oversample``) instead
+        of loading the full set — the keyset-paginated rescore/pending
+        variants remain the pattern for full walks. ``None`` preserves
+        the legacy unbounded behavior for existing callers.
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
 
         with self._session() as session:
-            results = (
+            query = (
                 session.query(Article)
                 .filter(Article.category == category)
                 .filter(Article.collected_date >= cutoff_date)
@@ -1256,9 +1264,10 @@ class ArticleRepository:
                     Article.collected_date.desc(),
                     Article.id.desc(),
                 )
-                .all()
             )
-            return list(results)
+            if limit is not None:
+                query = query.limit(limit)
+            return list(query.all())
 
     def get_pending_articles(
         self, limit: Optional[int] = None, status: str = PENDING_STATUS
@@ -1280,7 +1289,15 @@ class ArticleRepository:
     def get_completed_articles_for_rescoring(
         self, days_back: int = 14
     ) -> List[Article]:
-        """Return completed but unpublished articles collected within the last N days."""
+        """Return completed but unpublished articles collected within the last N days.
+
+        .. deprecated:: plan-124
+            Unbounded legacy sweep — hydrates every matching ORM row.
+            No production callers remain (scoring uses
+            :meth:`get_completed_articles_for_rescoring_page`); retained
+            for existing tests only. New code must use the ``_page``
+            keyset variant.
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         with self._session() as session:
             completed_articles = (
