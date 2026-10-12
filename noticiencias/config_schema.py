@@ -728,6 +728,22 @@ class EnrichmentConfig(StrictModel):
     default_model: str = Field(default="pattern_v1")
     analysis_cache_size: PositiveInt = Field(default=512)
     result_cache_size: PositiveInt = Field(default=256)
+    host_min_interval_seconds: float = Field(
+        default=1.5,
+        ge=0,
+        description=(
+            "Minimum seconds between consecutive article-page fetches to "
+            "the same host (per-host politeness interval, plan 116). "
+            "0 disables interval pacing."
+        ),
+    )
+    host_max_concurrency: NonNegativeInt = Field(
+        default=1,
+        description=(
+            "Max concurrent article-page fetches per host (plan 116). "
+            "1 = strictly sequential per host; 0 = uncapped."
+        ),
+    )
     models: Dict[str, ModelConfig] = Field(default_factory=dict)
 
 

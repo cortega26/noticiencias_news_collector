@@ -31,6 +31,11 @@ import time
 from typing import Any, Dict
 
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
+from news_collector.enrichment.host_pacer import (
+    DEFAULT_MAX_CONCURRENCY,
+    DEFAULT_MIN_INTERVAL_SECONDS,
+    HostPacer,
+)
 from news_collector.enrichment.http_enricher import HttpEnricher
 from news_collector.enrichment.scholarly import ScholarlyMetadataEnricher
 from news_collector.enrichment.scrapling_enricher import (
@@ -46,12 +51,41 @@ from news_collector.utils.logger import get_logger
 logger = get_logger().create_module_logger(__name__)
 
 
+def _default_host_pacer() -> HostPacer:
+    """Build the router's pacer from ``[enrichment]`` knobs (plan 116).
+
+    Fail-open: any config problem yields polite defaults rather than
+    breaking enrichment.
+    """
+    try:
+        from news_collector.config.settings import get_runtime_config
+
+        cfg = get_runtime_config().enrichment_config
+        return HostPacer(
+            min_interval_seconds=float(
+                cfg.get(
+                    "host_min_interval_seconds", DEFAULT_MIN_INTERVAL_SECONDS
+                )
+            ),
+            max_concurrency=int(
+                cfg.get("host_max_concurrency", DEFAULT_MAX_CONCURRENCY)
+            ),
+        )
+    except Exception:
+        return HostPacer()
+
+
 class EnrichmentStrategyRouter:
     """
     Decides and executes the appropriate enrichment strategy for a given source and article.
+
+    Article-page fetches (http, headless_fallback, scrapling_http,
+    scrapling_stealth) are per-host paced via an injected ``HostPacer``
+    (plan 116); scholarly metadata lookups and discovery_only sources do
+    not fetch article pages and bypass the pacer.
     """
 
-    def __init__(self, logger_factory=None):
+    def __init__(self, logger_factory=None, *, host_pacer: HostPacer | None = None):
         self.logger_factory = logger_factory
         self.logger = (
             logger_factory.create_module_logger("enrichment.router")
@@ -59,6 +93,7 @@ class EnrichmentStrategyRouter:
             else get_logger().create_module_logger(__name__)
         )
 
+        self.host_pacer = host_pacer if host_pacer is not None else _default_host_pacer()
         self.scholarly = ScholarlyMetadataEnricher()
         self.http = HttpEnricher()
         self.headless = HeadlessEnricher(logger_factory=logger_factory)
@@ -289,7 +324,8 @@ class EnrichmentStrategyRouter:
                 }
             )
             enrichment_metrics.record_attempt(source_id, "headless")
-            headless_res = self.headless.enrich(url, source_config)
+            with self.host_pacer.pace(url):
+                headless_res = self.headless.enrich(url, source_config)
 
             # Record cost (seconds) regardless of success
             duration = headless_res.get("duration", 0.0)
@@ -386,7 +422,8 @@ class EnrichmentStrategyRouter:
         if strategy == "scrapling_http":
             enrichment_metrics.record_attempt(source_id, "scrapling_http")
             start = time.time()
-            res = self.scrapling_http.enrich(url, source_config)
+            with self.host_pacer.pace(url):
+                res = self.scrapling_http.enrich(url, source_config)
             duration = res.get("duration", time.time() - start)
 
             if res["success"]:
@@ -426,7 +463,8 @@ class EnrichmentStrategyRouter:
         if strategy == "scrapling_stealth":
             enrichment_metrics.record_attempt(source_id, "scrapling_stealth")
             start = time.time()
-            scrapling_res = self.scrapling.enrich(url, source_config)
+            with self.host_pacer.pace(url):
+                scrapling_res = self.scrapling.enrich(url, source_config)
             duration = scrapling_res.get("duration", time.time() - start)
             enrichment_metrics.record_cost(source_id, headless_seconds=duration)
 
@@ -506,9 +544,10 @@ class EnrichmentStrategyRouter:
 
     def _execute_http(self, url: str, source_id: str | None = None) -> Dict[str, Any]:
         """Helper to run HTTP enrichment and validate length."""
-        start = time.time()
-        res = self.http.enrich(url)
-        duration = time.time() - start
+        with self.host_pacer.pace(url):
+            start = time.time()
+            res = self.http.enrich(url)
+            duration = time.time() - start
 
         if res["success"]:
             content = res["content"]

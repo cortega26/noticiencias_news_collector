@@ -171,6 +171,11 @@ penalty_keywords = [
 default_model = "pattern_v1"
 analysis_cache_size = 512
 result_cache_size = 256
+# Per-host pacing for article-page fetches (plan 116): minimum seconds
+# between consecutive fetches to the same host, and max concurrent fetches
+# per host (1 = strictly sequential per host; 0 disables that limit).
+host_min_interval_seconds = 1.5
+host_max_concurrency = 1
 
 [enrichment.models.pattern_v1]
 version = "2025.02-pattern-v1"
