@@ -334,7 +334,7 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 130 | [Backend dependency hygiene: dead deps, manifest, serving pin](130-backend-deps.md) | P2 | S | None | TODO |
+_(No remaining plans — the table is kept as the ledger schema.)_
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 
@@ -452,6 +452,20 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   for plan 081: `AGENTS.md:23` and `CONTRIBUTING.md:25` still describe lint
   without isort. `make inventory-check` pre-existing drift (weekly
   autorefresh heals main). Merged and pushed.
+- 130 (backend dependency hygiene) DONE and archived — LAST EIGHTH-PASS PLAN.
+  `toml` (base+refinery extra) + `schedule` dropped (source-unimported,
+  proven by strict regex + attribute census; `toml` survives only as
+  transitive pins of streamlit/pip-audit); 3 locks regen'd via
+  sync_lockfiles.py (removals only); `requirements.txt` +
+  `apps/refinery/requirements.txt` DELETED (census clean; check_env.py hint
+  → `make bootstrap-refinery`; inventory reader → pyproject deps, key
+  renamed); Dockerfile.serving now digest-pinned (`python:3.13-slim@sha256:70729b46…`,
+  re-verified 2 sources) + `--require-hashes` FULL lock install; REAL
+  container build + smoke (healthz 200, admin/webhook fail-closed 503).
+  `make lint/type/test` + `make quality-ci` green (3562 passed); bare
+  `make quality` red only on the 11 known pre-existing bandit Lows.
+  Inventory baseline drift expected — weekly autorefresh heals. Merged and
+  pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
