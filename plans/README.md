@@ -334,7 +334,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 129 | [Backend DX and docs: enforced gates, admin tooling, stale prose](129-backend-dx-docs.md) | P3 | M | None (coordinate with 081) | TODO |
 | 130 | [Backend dependency hygiene: dead deps, manifest, serving pin](130-backend-deps.md) | P2 | S | None | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
@@ -432,6 +431,22 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   exception-safe (leak claim disproven); full param threading needs 6
   out-of-scope files — churn without a real bug. Gates green (3559+162).
   Merged and pushed.
+- 129 (backend DX + docs) DONE and archived — isort added to `make lint`
+  with a REAL root-cause fix: bootstrap installed isort unpinned (venv had
+  9.0.2) while pre-commit pins 5.13.2; the two canonicalized
+  `failure_kinds.py` in mutually exclusive ways (executor proved the
+  fix-loop, stopped correctly). Pinned `isort==5.13.2` in bootstrap; both
+  gates now agree. Also: admin-install → npm ci; apps/admin gained
+  eslint+prettier lint story + engines; pre-commit admin-lint stanza + the
+  mypy hook entry fixed to `.venv/bin/python` (system python lacked mypy —
+  the push-blocker from plan 128); request-ID middleware + tests; CLAUDE.md
+  lines corrected; security.md/INDEX.md prose fixed; two superseded specs
+  archived to `archive/superseded-specs/` (successor reference updated);
+  root .editorconfig + .nvmrc. NOTE: main-checkout venv needs the pin
+  applied (`make bootstrap` after this merge). Two newly-stale docs left
+  for plan 081: `AGENTS.md:23` and `CONTRIBUTING.md:25` still describe lint
+  without isort. `make inventory-check` pre-existing drift (weekly
+  autorefresh heals main). Merged and pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
