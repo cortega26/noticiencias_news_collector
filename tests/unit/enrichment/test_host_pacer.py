@@ -248,9 +248,7 @@ class TestRouterPacing(unittest.TestCase):
 
     def test_disabled_pacer_preserves_unpaced_behavior(self):
         clock = FakeClock()
-        router = self._router(
-            clock, min_interval_seconds=0, max_concurrency=0
-        )
+        router = self._router(clock, min_interval_seconds=0, max_concurrency=0)
         router.http.enrich.return_value = {
             "success": True,
             "content": "A" * 600,

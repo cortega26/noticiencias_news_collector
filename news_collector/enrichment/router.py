@@ -63,9 +63,7 @@ def _default_host_pacer() -> HostPacer:
         cfg = get_runtime_config().enrichment_config
         return HostPacer(
             min_interval_seconds=float(
-                cfg.get(
-                    "host_min_interval_seconds", DEFAULT_MIN_INTERVAL_SECONDS
-                )
+                cfg.get("host_min_interval_seconds", DEFAULT_MIN_INTERVAL_SECONDS)
             ),
             max_concurrency=int(
                 cfg.get("host_max_concurrency", DEFAULT_MAX_CONCURRENCY)
@@ -93,7 +91,9 @@ class EnrichmentStrategyRouter:
             else get_logger().create_module_logger(__name__)
         )
 
-        self.host_pacer = host_pacer if host_pacer is not None else _default_host_pacer()
+        self.host_pacer = (
+            host_pacer if host_pacer is not None else _default_host_pacer()
+        )
         self.scholarly = ScholarlyMetadataEnricher()
         self.http = HttpEnricher()
         self.headless = HeadlessEnricher(logger_factory=logger_factory)
