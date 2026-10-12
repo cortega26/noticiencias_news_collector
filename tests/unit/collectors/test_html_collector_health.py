@@ -175,7 +175,9 @@ def test_process_article_html_validates_and_normalizes(collector):
     assert processed["source_id"] == "source"
     assert processed["word_count"] == 3
     assert processed["category"] == "world"
-    assert isinstance(processed["published_date"], datetime)
+    # Plan 120: undated articles propagate None (downstream per-item quarantine),
+    # never a wall-clock stamp — deterministic identity (LAW-B5).
+    assert processed["published_date"] is None
 
 
 class _FakeClient:
