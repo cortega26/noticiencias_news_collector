@@ -62,6 +62,7 @@ from fastapi import (
 from noticiencias.config_manager import load_config
 from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import aliased
 
 from news_collector.config import settings as config_settings
@@ -581,12 +582,15 @@ def _quality_stages_from_summary(
     return items
 
 
-def _quality_audit_states(session: Any, article_ids: List[int]) -> Dict[int, str]:
+def _quality_audit_states(
+    session: Any, article_ids: List[int]
+) -> tuple[Dict[int, str], bool]:
     """Batch-read latest auditor verdicts (`article_metadata.audit.state`)
-    for quality rows. Never raises — audit visibility must not break the
-    review page."""
+    for quality rows. Returns ``(states, unavailable)``: a DB failure never
+    breaks the review page, but it must surface as unavailable rather than
+    render as "no audit ran"."""
     if not article_ids:
-        return {}
+        return {}, False
     states: Dict[int, str] = {}
     try:
         rows = (
@@ -594,15 +598,16 @@ def _quality_audit_states(session: Any, article_ids: List[int]) -> Dict[int, str
             .filter(Article.id.in_(article_ids))
             .all()
         )
-    except Exception:
-        return {}
+    except SQLAlchemyError:
+        logger.warning("Failed to read audit states for quality rows", exc_info=True)
+        return {}, True
     for article_id, metadata in rows:
         if not isinstance(metadata, dict):
             continue
         audit = metadata.get("audit")
         if isinstance(audit, dict) and isinstance(audit.get("state"), str):
             states[int(article_id)] = str(audit["state"])
-    return states
+    return states, False
 
 
 def _build_quality_run_item(row: Any) -> AdminQualityRunItem:
@@ -1933,7 +1938,9 @@ def create_app(  # noqa: C901
                 if item.article_id is not None:
                     with contextlib.suppress(ValueError, TypeError):
                         numeric_ids.append(int(item.article_id))
-            audit_by_article = _quality_audit_states(session, numeric_ids)
+            audit_by_article, audit_states_unavailable = _quality_audit_states(
+                session, numeric_ids
+            )
         for item in items:
             if item.article_id is not None:
                 with contextlib.suppress(ValueError, TypeError):
@@ -1944,6 +1951,11 @@ def create_app(  # noqa: C901
             for item in items
             if item.readability is not None and item.readability.suitability is not None
         ]
+        meta: Dict[str, Any] = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if audit_states_unavailable:
+            meta["audit_states_unavailable"] = True
         return AdminQualityRecentEnvelope(
             runs=items,
             aggregate=AdminQualityAggregate(
@@ -1955,7 +1967,7 @@ def create_app(  # noqa: C901
                 ),
                 avg_suitability=round(sum(suits) / len(suits), 3) if suits else None,
             ),
-            meta={"generated_at": datetime.now(timezone.utc).isoformat()},
+            meta=meta,
         )
 
     @app.get(
