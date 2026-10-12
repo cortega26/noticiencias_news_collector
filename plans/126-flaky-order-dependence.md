@@ -20,6 +20,16 @@
 - **Depends on**: none
 - **Category**: tests
 - **Planned at**: commit `04016ca`, 2026-10-11
+- **Refreshed**: 2026-10-12 — REDUCED SCOPE. Pre-execution verification found
+  the plan's premise stale: `todo-flaky-tests.md` is fully checked and all
+  three bugs (get_config snapshot, metrics-store closed-connection reads,
+  _CONFIG_STATE overwrite) were fixed in `7d82a18` (2026-08-13) BEFORE the
+  audit — the audit read `spec-flaky-tests.md` without its `todo-*.md`.
+  Verified fixed live (settings.py:419-422 returns real Config; `_ensure_open`
+  at metrics-store read paths :707/:725/:740). Only residual: the
+  `--randomly-dont-reorganize` Makefile workaround (added 2026-08-12, one day
+  before the fix). Reviewer proved e2e randomization-safe: seeds 9/13/31 →
+  13/13 passed each, ~9-12 min/run. Remaining scope = flag removal + comment.
 - **Issue**: omit
 
 ## Why this matters

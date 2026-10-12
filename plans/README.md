@@ -334,7 +334,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 126 | [Fix order-dependent test pollution](126-flaky-order-dependence.md) | P1 | M | None | TODO |
 | 127 | [Public pagination tests, deterministic clocks, honest doubles](127-test-quality.md) | P2 | M | None | TODO |
 | 128 | [Backend hygiene: fetch ownership, env threading, errors, dead code](128-backend-hygiene.md) | P3 | S | None | TODO |
 | 129 | [Backend DX and docs: enforced gates, admin tooling, stale prose](129-backend-dx-docs.md) | P3 | M | None (coordinate with 081) | TODO |
@@ -403,6 +402,16 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   metrics-parity tests (5); profiled 1.093s → 0.459s (2.38×) on 5×0.2s
   candidates; `make lint/type/boundaries/perf` green (3559 passed).
   Merged and pushed.
+- 126 (flaky order-dependence) DONE (REDUCED SCOPE) and archived — the
+  original premise was stale: all three global-state bugs were already fixed
+  in `7d82a18` (2026-08-13, verified live); the audit had read
+  `spec-flaky-tests.md` without its fully-checked `todo-*.md`. Residual
+  executed: stale `--randomly-dont-reorganize` workaround removed from
+  `test-e2e` after proving order-safety (seeds 9/13/31 → 13/13 each).
+  Watch item recorded: running the full e2e suite in a POPULATED checkout
+  left `config.toml` + `data/exports/latest_articles.json` polluted (reverted;
+  not reproduced by a single fast test nor in a bare worktree) — if this
+  recurs in local dev, it earns its own plan. Merged and pushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
