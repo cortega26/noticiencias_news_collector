@@ -28,10 +28,17 @@ revisión busca ampliaciones no respaldadas,
 experiencias personales atribuidas a la voz equivocada y paráfrasis cercana
 sin utilidad adicional clara; no exige entrevistas ni contexto inventado.
 La muestra puede ser parcial y no constituye una verificación independiente
-ni una prueba de plagio. El crítico conserva sus siete puntajes y su ciclo
-limitado de reparación; agotado este, el resultado sigue siendo consultivo y
-no bloquea por sí solo la publicación. El checkpoint versionado obliga a
-revisar de nuevo los artículos que solo tenían aprobación del crítico previo.
+ni una prueba de plagio. El crítico conserva sus siete puntajes y añade un
+veredicto separado de valor para el lector: `substantive` (síntesis útil),
+`close_paraphrase` (paráfrasis cercana demostrable con muestra suficiente) o
+`insufficient_source` (fuente insuficiente para juzgar). No se penaliza la
+mera coincidencia temática ni se fuerza investigación o contexto inventado.
+Un `close_paraphrase` obliga a solicitar reescritura y, si persiste después
+del ciclo de reparación, `RefineryEngine._refine_article` detiene la creación
+del PR con `E_EDITORIAL_VALUE_ADD`. El resto de rechazos de calidad y los
+errores de infraestructura siguen siendo consultivos. El checkpoint v3
+obliga a revisar de nuevo los artículos que solo tenían aprobación del crítico
+anterior.
 Una aprobación de emergencia por falta de prompt o error de infraestructura
 sigue permitiendo publicar, pero no se guarda como revisión superada; un
 reanálisis posterior puede volver a intentarlo. Una aprobación del crítico
