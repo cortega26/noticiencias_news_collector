@@ -113,14 +113,9 @@ def _collect_make_targets(makefile: Path) -> List[Mapping[str, str]]:
     return targets
 
 
-def _parse_requirements(path: Path) -> List[str]:
-    packages: List[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        packages.append(line.rstrip())
-    return packages
+def _project_dependencies(pyproject: Path) -> List[str]:
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    return list(data.get("project", {}).get("dependencies", []))
 
 
 def _optional_security(pyproject: Path) -> List[str]:
@@ -190,15 +185,14 @@ def _open_questions(missing_file: Path) -> List[str]:
 
 def build_inventory(root: Path, options: InventoryOptions) -> Mapping[str, object]:
     makefile = root / "Makefile"
-    requirements_txt = root / "requirements.txt"
     pyproject = root / "pyproject.toml"
     missing_md = root / "missing.md"
 
     tracked = _tracked_paths(root)
     top_level = _list_top_level(root, tracked)
     make_targets = _collect_make_targets(makefile) if makefile.exists() else []
-    requirements = (
-        _parse_requirements(requirements_txt) if requirements_txt.exists() else []
+    project_dependencies = (
+        _project_dependencies(pyproject) if pyproject.exists() else []
     )
     security_optional = _optional_security(pyproject) if pyproject.exists() else []
     markdown_files = _markdown_files(root, tracked)
@@ -227,7 +221,7 @@ def build_inventory(root: Path, options: InventoryOptions) -> Mapping[str, objec
             (
                 "dependencies",
                 {
-                    "requirements_txt": requirements,
+                    "pyproject_dependencies": project_dependencies,
                     "optional_security": security_optional,
                 },
             ),
