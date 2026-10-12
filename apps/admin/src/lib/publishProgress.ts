@@ -15,12 +15,12 @@ export interface PublishPhase {
 
 /** Refinery order (refinery_engine.process_single_article). */
 export const PUBLISH_PHASES: readonly PublishPhase[] = [
-  { key: "prep", label: "Preparando repositorio", marker: "identity_resolved" },
-  { key: "image", label: "Imagen", marker: "image_resolution" },
-  { key: "editor", label: "Editor IA", marker: "editor_refinement" },
-  { key: "audit", label: "Auditoría editorial", marker: "frontmatter_guard" },
-  { key: "validate", label: "Validación del sitio", marker: "frontend_publication_validation" },
-  { key: "pr", label: "Commit y PR", marker: "pr_created" },
+  { key: 'prep', label: 'Preparando repositorio', marker: 'identity_resolved' },
+  { key: 'image', label: 'Imagen', marker: 'image_resolution' },
+  { key: 'editor', label: 'Editor IA', marker: 'editor_refinement' },
+  { key: 'audit', label: 'Auditoría editorial', marker: 'frontmatter_guard' },
+  { key: 'validate', label: 'Validación del sitio', marker: 'frontend_publication_validation' },
+  { key: 'pr', label: 'Commit y PR', marker: 'pr_created' },
 ];
 
 /** Index (0-based) of the phase in progress: one past the furthest marker reached. */
@@ -45,20 +45,21 @@ export function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const sec = String(s % 60).padStart(2, "0");
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+  const sec = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 }
 
 /** Human estimate text from elapsed vs the median of recent runs. */
 export function describeEta(
   elapsedSeconds: number,
   typicalSeconds: number | null | undefined,
-  itemCount = 1,
+  itemCount = 1
 ): string {
-  if (!typicalSeconds || typicalSeconds <= 0) return "sin estimado aún";
+  if (!typicalSeconds || typicalSeconds <= 0) return 'sin estimado aún';
   const expected = typicalSeconds * Math.max(1, itemCount);
   const remaining = expected - elapsedSeconds;
-  if (remaining > 0) return `~${formatDuration(remaining)} restantes (habitual ${formatDuration(expected)})`;
+  if (remaining > 0)
+    return `~${formatDuration(remaining)} restantes (habitual ${formatDuration(expected)})`;
   return `superando lo habitual (${formatDuration(expected)})`;
 }
 

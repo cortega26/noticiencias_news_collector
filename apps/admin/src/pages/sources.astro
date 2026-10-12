@@ -1,6 +1,6 @@
 ---
-import AuthGate from "../components/AuthGate.astro";
-import AdminLayout from "../layouts/AdminLayout.astro";
+import AuthGate from '../components/AuthGate.astro';
+import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Fuentes" current="/sources">
@@ -24,23 +24,43 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label class="block">
           <span class="data-label block mb-1">ID (snake_case)</span>
-          <input id="f-id" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+          <input
+            id="f-id"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          />
         </label>
         <label class="block">
           <span class="data-label block mb-1">NOMBRE *</span>
-          <input id="f-name" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+          <input
+            id="f-name"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          />
         </label>
         <label class="block">
           <span class="data-label block mb-1">URL *</span>
-          <input id="f-url" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+          <input
+            id="f-url"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          />
         </label>
         <label class="block">
           <span class="data-label block mb-1">CREDIBILIDAD (0-1)</span>
-          <input id="f-cred" type="number" step="0.05" min="0" max="1" value="0.8" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+          <input
+            id="f-cred"
+            type="number"
+            step="0.05"
+            min="0"
+            max="1"
+            value="0.8"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          />
         </label>
         <label class="block">
           <span class="data-label block mb-1">CATEGORÍA</span>
-          <select id="f-cat" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
+          <select
+            id="f-cat"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          >
             <option>technology</option><option selected>science</option><option>medicine</option>
             <option>space</option><option>biology</option><option>multidisciplinary</option>
             <option>popular_science</option><option>artificial_intelligence</option>
@@ -48,15 +68,25 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         </label>
         <label class="block">
           <span class="data-label block mb-1">FRECUENCIA</span>
-          <select id="f-freq" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
-            <option selected>daily</option><option>weekly</option><option>hourly</option><option>multiple_daily</option>
+          <select
+            id="f-freq"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          >
+            <option selected>daily</option><option>weekly</option><option>hourly</option><option
+              >multiple_daily</option
+            >
           </select>
         </label>
         <label class="block">
           <span class="data-label block mb-1">GRUPO</span>
-          <select id="f-group" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">
+          <select
+            id="f-group"
+            class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none"
+          >
             <option>ELITE_JOURNALS</option><option>SCIENCE_MEDIA</option>
-            <option>INSTITUTIONAL_SOURCES</option><option>AI_LABS</option><option selected>CUSTOM</option>
+            <option>INSTITUTIONAL_SOURCES</option><option>AI_LABS</option><option selected
+              >CUSTOM</option
+            >
           </select>
         </label>
       </div>
@@ -80,11 +110,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         </thead>
         <tbody id="rows"></tbody>
       </table>
-      <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">
-        Sin fuentes.
-      </div>
+      <div id="empty" class="hidden py-16 text-center text-sm text-ink-400">Sin fuentes.</div>
     </div>
-    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div
+      id="toast"
+      role="status"
+      class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"
+    >
+    </div>
   </AuthGate>
 </AdminLayout>
 
@@ -97,87 +130,89 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     showAuthGate,
     toggleSource,
     upsertSource,
-  } from "../lib/api";
-  import type { AdminSourceListItem } from "../lib/types";
+  } from '../lib/api';
+  import type { AdminSourceListItem } from '../lib/types';
 
-  const rowsEl = document.getElementById("rows");
-  const emptyEl = document.getElementById("empty");
-  const summaryEl = document.getElementById("summary");
-  const toastEl = document.getElementById("toast");
-  const editorEl = document.getElementById("editor");
-  const editorTitleEl = document.getElementById("editor-title");
-  const editorErrorEl = document.getElementById("editor-error");
+  const rowsEl = document.getElementById('rows');
+  const emptyEl = document.getElementById('empty');
+  const summaryEl = document.getElementById('summary');
+  const toastEl = document.getElementById('toast');
+  const editorEl = document.getElementById('editor');
+  const editorTitleEl = document.getElementById('editor-title');
+  const editorErrorEl = document.getElementById('editor-error');
 
   function esc(s: unknown): string {
-    if (s == null) return "";
-    const div = document.createElement("div");
+    if (s == null) return '';
+    const div = document.createElement('div');
     div.textContent = String(s);
     return div.innerHTML;
   }
 
-  function showToast(message: string, kind: "ok" | "err" = "ok") {
+  function showToast(message: string, kind: 'ok' | 'err' = 'ok') {
     if (!toastEl) return;
     toastEl.textContent = message;
     toastEl.className =
       `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
-      (kind === "ok"
-        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
-        : "border-rose-500/50 bg-ink-900 text-rose-400");
-    toastEl.classList.remove("hidden");
-    window.setTimeout(() => toastEl?.classList.add("hidden"), 2600);
+      (kind === 'ok'
+        ? 'border-verdigris-500/50 bg-ink-900 text-verdigris-400'
+        : 'border-rose-500/50 bg-ink-900 text-rose-400');
+    toastEl.classList.remove('hidden');
+    window.setTimeout(() => toastEl?.classList.add('hidden'), 2600);
   }
 
   function circuitLabel(circuit: Record<string, unknown> | null): string {
-    if (!circuit) return "sin fila";
-    const status = String(circuit.status ?? "ACTIVE");
+    if (!circuit) return 'sin fila';
+    const status = String(circuit.status ?? 'ACTIVE');
     const failures = Number(circuit.consecutive_failures ?? 0);
-    if (status === "COOLDOWN") {
+    if (status === 'COOLDOWN') {
       return `COOLDOWN (${failures} fallos)`;
     }
-    return `${status}${failures > 0 ? ` (${failures} fallos)` : ""}`;
+    return `${status}${failures > 0 ? ` (${failures} fallos)` : ''}`;
   }
 
   let sources: AdminSourceListItem[] = [];
 
   function openEditor(source?: AdminSourceListItem) {
     if (!editorEl) return;
-    editorEl.classList.remove("hidden");
-    const id = document.getElementById("f-id") as HTMLInputElement;
-    const name = document.getElementById("f-name") as HTMLInputElement;
-    const url = document.getElementById("f-url") as HTMLInputElement;
-    const cred = document.getElementById("f-cred") as HTMLInputElement;
-    const cat = document.getElementById("f-cat") as HTMLSelectElement;
-    const freq = document.getElementById("f-freq") as HTMLSelectElement;
-    const group = document.getElementById("f-group") as HTMLSelectElement;
-    if (editorTitleEl) editorTitleEl.textContent = source ? `EDITAR FUENTE · ${source.source_id}` : "AÑADIR FUENTE";
-    if (editorErrorEl) editorErrorEl.classList.add("hidden");
-    id.value = source?.source_id ?? "";
+    editorEl.classList.remove('hidden');
+    const id = document.getElementById('f-id') as HTMLInputElement;
+    const name = document.getElementById('f-name') as HTMLInputElement;
+    const url = document.getElementById('f-url') as HTMLInputElement;
+    const cred = document.getElementById('f-cred') as HTMLInputElement;
+    const cat = document.getElementById('f-cat') as HTMLSelectElement;
+    const freq = document.getElementById('f-freq') as HTMLSelectElement;
+    const group = document.getElementById('f-group') as HTMLSelectElement;
+    if (editorTitleEl)
+      editorTitleEl.textContent = source ? `EDITAR FUENTE · ${source.source_id}` : 'AÑADIR FUENTE';
+    if (editorErrorEl) editorErrorEl.classList.add('hidden');
+    id.value = source?.source_id ?? '';
     id.disabled = !!source;
-    name.value = source?.name ?? "";
-    url.value = source?.url ?? "";
-    cred.value = source?.circuit?.credibility_score != null ? String(source.circuit.credibility_score) : "0.8";
-    cat.value = source?.category ?? "science";
-    freq.value = "daily";
-    group.value = "CUSTOM";
-    (document.getElementById("f-id") as HTMLInputElement).focus();
+    name.value = source?.name ?? '';
+    url.value = source?.url ?? '';
+    cred.value =
+      source?.circuit?.credibility_score != null ? String(source.circuit.credibility_score) : '0.8';
+    cat.value = source?.category ?? 'science';
+    freq.value = 'daily';
+    group.value = 'CUSTOM';
+    (document.getElementById('f-id') as HTMLInputElement).focus();
   }
 
   function closeEditor() {
-    editorEl?.classList.add("hidden");
+    editorEl?.classList.add('hidden');
   }
 
   async function saveEditor() {
-    const id = (document.getElementById("f-id") as HTMLInputElement).value.trim();
-    const name = (document.getElementById("f-name") as HTMLInputElement).value.trim();
-    const url = (document.getElementById("f-url") as HTMLInputElement).value.trim();
-    const cred = Number((document.getElementById("f-cred") as HTMLInputElement).value);
-    const cat = (document.getElementById("f-cat") as HTMLSelectElement).value;
-    const freq = (document.getElementById("f-freq") as HTMLSelectElement).value;
-    const group = (document.getElementById("f-group") as HTMLSelectElement).value;
+    const id = (document.getElementById('f-id') as HTMLInputElement).value.trim();
+    const name = (document.getElementById('f-name') as HTMLInputElement).value.trim();
+    const url = (document.getElementById('f-url') as HTMLInputElement).value.trim();
+    const cred = Number((document.getElementById('f-cred') as HTMLInputElement).value);
+    const cat = (document.getElementById('f-cat') as HTMLSelectElement).value;
+    const freq = (document.getElementById('f-freq') as HTMLSelectElement).value;
+    const group = (document.getElementById('f-group') as HTMLSelectElement).value;
     if (!id || !name || !url) {
       if (editorErrorEl) {
-        editorErrorEl.textContent = "ID, nombre y URL obligatorios.";
-        editorErrorEl.classList.remove("hidden");
+        editorErrorEl.textContent = 'ID, nombre y URL obligatorios.';
+        editorErrorEl.classList.remove('hidden');
       }
       return;
     }
@@ -195,14 +230,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       closeEditor();
       await load();
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
       if (editorErrorEl) {
-        editorErrorEl.textContent = "No se pudo guardar: " + (e as Error).message;
-        editorErrorEl.classList.remove("hidden");
+        editorErrorEl.textContent = 'No se pudo guardar: ' + (e as Error).message;
+        editorErrorEl.classList.remove('hidden');
       }
     }
   }
@@ -211,11 +246,9 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const { sources: list } = await listSources();
       sources = list;
-      if (emptyEl) emptyEl.classList.toggle("hidden", sources.length > 0);
+      if (emptyEl) emptyEl.classList.toggle('hidden', sources.length > 0);
       const active = sources.filter((s) => s.is_active).length;
-      const cooldown = sources.filter(
-        (s) => (s.circuit?.status as string) === "COOLDOWN",
-      ).length;
+      const cooldown = sources.filter((s) => (s.circuit?.status as string) === 'COOLDOWN').length;
       if (summaryEl) {
         summaryEl.innerHTML = `
           <div class="card px-4 py-2.5 font-mono text-xs text-ink-200">total <span class="text-amber-400">${sources.length}</span></div>
@@ -226,47 +259,48 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       if (!rowsEl) return;
       rowsEl.innerHTML = sources
         .map((s) => {
-          const inCooldown = (s.circuit?.status as string) === "COOLDOWN";
+          const inCooldown = (s.circuit?.status as string) === 'COOLDOWN';
           return `
           <tr class="border-b border-ink-800/70 transition-colors hover:bg-ink-800/40">
             <td class="px-5 py-3">
               <div class="text-sm font-medium text-ink-100">${esc(s.name ?? s.source_id)}</div>
               <div class="font-mono text-[11px] text-ink-400">${esc(s.source_id)}</div>
             </td>
-            <td class="px-5 py-3 font-mono text-[11px] text-ink-300">${esc(s.content_mode ?? "—")}</td>
+            <td class="px-5 py-3 font-mono text-[11px] text-ink-300">${esc(s.content_mode ?? '—')}</td>
             <td class="px-5 py-3">
-              <span class="font-mono text-[11px] ${inCooldown ? "text-rose-400" : "text-verdigris-400"}">${esc(circuitLabel(s.circuit))}</span>
+              <span class="font-mono text-[11px] ${inCooldown ? 'text-rose-400' : 'text-verdigris-400'}">${esc(circuitLabel(s.circuit))}</span>
             </td>
             <td class="px-5 py-3">
-              <span class="font-mono text-[11px] ${s.is_active ? "text-verdigris-400" : "text-ink-400"}">${s.is_active ? "Sí" : "No"}</span>
+              <span class="font-mono text-[11px] ${s.is_active ? 'text-verdigris-400' : 'text-ink-400'}">${s.is_active ? 'Sí' : 'No'}</span>
             </td>
             <td class="px-5 py-3">
               <div class="flex justify-end gap-2">
                 <button class="btn-ghost !px-2.5 !py-1 text-xs" data-edit="${esc(s.source_id)}" type="button">Editar</button>
-                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-toggle="${esc(s.source_id)}" data-active="${s.is_active ? "1" : "0"}" type="button">
-                  ${s.is_active ? "Desactivar" : "Activar"}
+                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-toggle="${esc(s.source_id)}" data-active="${s.is_active ? '1' : '0'}" type="button">
+                  ${s.is_active ? 'Desactivar' : 'Activar'}
                 </button>
-                ${inCooldown ? `<button class="btn-ghost !px-2.5 !py-1 text-xs" data-reset="${esc(s.source_id)}" type="button">Reiniciar circuito</button>` : ""}
+                ${inCooldown ? `<button class="btn-ghost !px-2.5 !py-1 text-xs" data-reset="${esc(s.source_id)}" type="button">Reiniciar circuito</button>` : ''}
                 <button class="btn-danger !px-2.5 !py-1 text-xs" data-delete="${esc(s.source_id)}" type="button">Eliminar</button>
               </div>
             </td>
           </tr>`;
         })
-        .join("");
+        .join('');
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("No se pudieron cargar las fuentes: " + (e as Error).message, "err");
+      showToast('No se pudieron cargar las fuentes: ' + (e as Error).message, 'err');
     }
   }
 
-  rowsEl?.addEventListener("click", async (event) => {
-    const target = (event.target as HTMLElement).closest("button");
+  rowsEl?.addEventListener('click', async (event) => {
+    const target = (event.target as HTMLElement).closest('button');
     if (!target) return;
-    const sourceId = target.dataset.edit ?? target.dataset.toggle ?? target.dataset.reset ?? target.dataset.delete;
+    const sourceId =
+      target.dataset.edit ?? target.dataset.toggle ?? target.dataset.reset ?? target.dataset.delete;
     if (!sourceId) return;
     if (target.dataset.edit) {
       const src = sources.find((s) => s.source_id === sourceId);
@@ -275,11 +309,13 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }
     try {
       if (target.dataset.toggle) {
-        const active = target.dataset.active === "1" ? false : true;
+        const active = target.dataset.active === '1' ? false : true;
         const result = await toggleSource(sourceId, active);
         showToast(result.detail);
       } else if (target.dataset.delete) {
-        if (!window.confirm(`¿Eliminar la fuente "${sourceId}"? Se quita de sources.yaml y de la BD.`)) {
+        if (
+          !window.confirm(`¿Eliminar la fuente "${sourceId}"? Se quita de sources.yaml y de la BD.`)
+        ) {
           return;
         }
         const result = await deleteSource(sourceId);
@@ -290,19 +326,19 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       }
       await load();
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("Falló la acción: " + (e as Error).message, "err");
+      showToast('Falló la acción: ' + (e as Error).message, 'err');
     }
   });
 
-  document.getElementById("add-source")?.addEventListener("click", () => openEditor());
-  document.getElementById("editor-close")?.addEventListener("click", closeEditor);
-  document.getElementById("editor-save")?.addEventListener("click", () => void saveEditor());
-  document.getElementById("refresh")?.addEventListener("click", () => void load());
+  document.getElementById('add-source')?.addEventListener('click', () => openEditor());
+  document.getElementById('editor-close')?.addEventListener('click', closeEditor);
+  document.getElementById('editor-save')?.addEventListener('click', () => void saveEditor());
+  document.getElementById('refresh')?.addEventListener('click', () => void load());
   void load();
-  window.addEventListener("auth:ready", () => void load());
+  window.addEventListener('auth:ready', () => void load());
 </script>

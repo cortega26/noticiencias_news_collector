@@ -4,7 +4,8 @@
 
 `ArticleImageHandler._resolve_downloaded` (path 2: HTTP image downloaded)
 returns `resolved=False` when the source alt is missing/boilerplate and no
-usable human alt-brief exists (`spec-alt-text-brief-flow.md`). The whole
+usable human alt-brief exists
+(`archive/superseded-specs/spec-alt-text-brief-flow.md`). The whole
 Refinery run fails with "Hero alt text required for article 2671…" even
 though the article and its image are fine.
 

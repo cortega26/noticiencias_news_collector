@@ -12,9 +12,9 @@
 ```bash
 make bootstrap        # first-time setup
 make test             # unit suite   |   make test-all  # full suite
-make lint             # ruff + black + isort
+make lint             # black --check + ruff + isort
 make lint-fix         # auto-format
-make type             # mypy strict
+make type             # mypy 3-file allowlist + unit coverage ratchet
 make quality          # lint + type + bandit + pip-audit + semgrep
 make prepush          # test-all + quality-gate
 

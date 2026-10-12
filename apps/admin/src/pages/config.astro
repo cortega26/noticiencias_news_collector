@@ -1,6 +1,6 @@
 ---
-import AuthGate from "../components/AuthGate.astro";
-import AdminLayout from "../layouts/AdminLayout.astro";
+import AuthGate from '../components/AuthGate.astro';
+import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Configuración" current="/config">
@@ -14,57 +14,55 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     </header>
 
     <div id="config" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <div class="py-16 text-center font-mono text-sm text-ink-400 lg:col-span-2">
-        Cargando…
-      </div>
+      <div class="py-16 text-center font-mono text-sm text-ink-400 lg:col-span-2">Cargando…</div>
     </div>
-    <div id="toast" role="status" class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"></div>
+    <div
+      id="toast"
+      role="status"
+      class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-lg border border-ink-600 bg-ink-900 px-4 py-3 text-sm shadow-xl"
+    >
+    </div>
   </AuthGate>
 </AdminLayout>
 
 <script>
-  import { clearToken, getConfig, saveConfig, showAuthGate } from "../lib/api";
+  import { clearToken, getConfig, saveConfig, showAuthGate } from '../lib/api';
 
-  const root = document.getElementById("config");
-  const toastEl = document.getElementById("toast");
-  const saveBtn = document.getElementById("save");
+  const root = document.getElementById('config');
+  const toastEl = document.getElementById('toast');
+  const saveBtn = document.getElementById('save');
 
   function esc(s: unknown): string {
-    if (s == null) return "";
-    const div = document.createElement("div");
+    if (s == null) return '';
+    const div = document.createElement('div');
     div.textContent = String(s);
     return div.innerHTML;
   }
 
-  function showToast(message: string, kind: "ok" | "err" = "ok") {
+  function showToast(message: string, kind: 'ok' | 'err' = 'ok') {
     if (!toastEl) return;
     toastEl.textContent = message;
     toastEl.className =
       `fixed bottom-6 right-6 z-50 max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl ` +
-      (kind === "ok"
-        ? "border-verdigris-500/50 bg-ink-900 text-verdigris-400"
-        : "border-rose-500/50 bg-ink-900 text-rose-400");
-    toastEl.classList.remove("hidden");
-    window.setTimeout(() => toastEl?.classList.add("hidden"), 3200);
+      (kind === 'ok'
+        ? 'border-verdigris-500/50 bg-ink-900 text-verdigris-400'
+        : 'border-rose-500/50 bg-ink-900 text-rose-400');
+    toastEl.classList.remove('hidden');
+    window.setTimeout(() => toastEl?.classList.add('hidden'), 3200);
   }
 
   function isLeaf(v: unknown): boolean {
-    return v === null || typeof v !== "object";
+    return v === null || typeof v !== 'object';
   }
 
-  function editorField(
-    section: string,
-    path: string,
-    label: string,
-    value: unknown,
-  ): string {
+  function editorField(section: string, path: string, label: string, value: unknown): string {
     const keyPath = `${section}.${path}`;
     const type =
-      typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "string";
+      typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string';
     return `
       <label class="mb-3 block">
         <span class="mb-1.5 block font-mono text-[11px] text-ink-400">${esc(label)}</span>
-        <input data-path="${esc(keyPath)}" value="${esc(value ?? "")}" data-type="${type}"
+        <input data-path="${esc(keyPath)}" value="${esc(value ?? '')}" data-type="${type}"
           class="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-xs text-ink-100 outline-none transition-colors focus:border-amber-500" />
       </label>`;
   }
@@ -72,7 +70,7 @@ import AdminLayout from "../layouts/AdminLayout.astro";
   function editorSection(
     section: string,
     label: string,
-    entries: Array<[string, unknown]>,
+    entries: Array<[string, unknown]>
   ): string {
     if (!entries.length) {
       return `<div class="card p-5"><div class="data-label mb-3">${esc(label)}</div><p class="text-sm text-ink-400">—</p></div>`;
@@ -87,10 +85,14 @@ import AdminLayout from "../layouts/AdminLayout.astro";
         return `
           <div class="mb-4 rounded-lg border border-ink-800 bg-ink-900/40 p-3">
             <div class="mb-2 font-mono text-[11px] uppercase tracking-wider text-amber-400/90">${esc(k)}</div>
-            ${editorSection(section, k, nested.map(([nk, nv]) => [`${k}.${nk}`, nv] as [string, unknown]))}
+            ${editorSection(
+              section,
+              k,
+              nested.map(([nk, nv]) => [`${k}.${nk}`, nv] as [string, unknown])
+            )}
           </div>`;
       })
-      .join("");
+      .join('');
     return `
       <div class="card p-5" data-section="${esc(section)}">
         <div class="data-label mb-3">${esc(label)}</div>
@@ -108,19 +110,20 @@ import AdminLayout from "../layouts/AdminLayout.astro";
       const github = Object.entries(cfg.github as Record<string, unknown>);
       const ollama = Object.entries(cfg.ollama as Record<string, unknown>);
       root.innerHTML =
-        editorSection("app", "ENTORNO", [
-          ["environment", cfg.environment],
-          ["debug", cfg.debug],
-          ["timezone", cfg.timezone],
+        editorSection('app', 'ENTORNO', [
+          ['environment', cfg.environment],
+          ['debug', cfg.debug],
+          ['timezone', cfg.timezone],
         ]) +
-        editorSection("github", "GITHUB", github) +
-        editorSection("ollama", "MODELOS OLLAMA", ollama) +
+        editorSection('github', 'GITHUB', github) +
+        editorSection('ollama', 'MODELOS OLLAMA', ollama) +
         editorSection(
-          "scoring",
-          "PUNTUACIÓN",
-          Object.entries((cfg.scoring as Record<string, unknown>) ?? {}),
-        );    } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+          'scoring',
+          'PUNTUACIÓN',
+          Object.entries((cfg.scoring as Record<string, unknown>) ?? {})
+        );
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
@@ -131,31 +134,29 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     }
   }
 
-  saveBtn?.addEventListener("click", async () => {
+  saveBtn?.addEventListener('click', async () => {
     // Collect edited fields by dotted path (e.g. scoring.weights.recency),
     // then rebuild the nested structure and merge over the loaded config.
     const patch: Record<string, unknown> = {};
-    document
-      .querySelectorAll<HTMLInputElement>("#config input[data-path]")
-      .forEach((input) => {
-        const path = input.dataset.path ?? "";
-        if (!path) return;
-        const type = input.dataset.type;
-        let value: unknown = input.value;
-        if (type === "number") value = Number(input.value);
-        if (type === "boolean") value = input.value === "true";
-        // path = "scoring.weights.recency" -> { scoring: { weights: { recency } } }
-        const segments = path.split(".");
-        let cursor = patch;
-        for (let i = 0; i < segments.length - 1; i++) {
-          const seg = segments[i];
-          if (typeof cursor[seg] !== "object" || cursor[seg] === null) {
-            cursor[seg] = {};
-          }
-          cursor = cursor[seg] as Record<string, unknown>;
+    document.querySelectorAll<HTMLInputElement>('#config input[data-path]').forEach((input) => {
+      const path = input.dataset.path ?? '';
+      if (!path) return;
+      const type = input.dataset.type;
+      let value: unknown = input.value;
+      if (type === 'number') value = Number(input.value);
+      if (type === 'boolean') value = input.value === 'true';
+      // path = "scoring.weights.recency" -> { scoring: { weights: { recency } } }
+      const segments = path.split('.');
+      let cursor = patch;
+      for (let i = 0; i < segments.length - 1; i++) {
+        const seg = segments[i];
+        if (typeof cursor[seg] !== 'object' || cursor[seg] === null) {
+          cursor[seg] = {};
         }
-        cursor[segments[segments.length - 1]] = value;
-      });
+        cursor = cursor[seg] as Record<string, unknown>;
+      }
+      cursor[segments[segments.length - 1]] = value;
+    });
 
     const submit = {
       ...fullConfig,
@@ -170,18 +171,18 @@ import AdminLayout from "../layouts/AdminLayout.astro";
     try {
       const saved = await saveConfig(submit);
       showToast(
-        `Configuración guardada (v${(saved.meta as Record<string, unknown>)?.version ?? "?"})`,
+        `Configuración guardada (v${(saved.meta as Record<string, unknown>)?.version ?? '?'})`
       );
     } catch (e) {
-      if (e instanceof Error && e.name === "AuthError") {
+      if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
         return;
       }
-      showToast("No se pudo guardar: " + (e as Error).message, "err");
+      showToast('No se pudo guardar: ' + (e as Error).message, 'err');
     }
   });
 
   void load();
-  window.addEventListener("auth:ready", () => void load());
+  window.addEventListener('auth:ready', () => void load());
 </script>

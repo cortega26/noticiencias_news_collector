@@ -78,7 +78,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PYTHON_BIN) -m pip install --upgrade pip
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements.lock
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements-security.lock
-	@$(PYTHON_BIN) -m pip install ruff mypy black isort pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
+	@$(PYTHON_BIN) -m pip install ruff mypy black "isort==5.13.2" pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
 	@$(PYTHON_BIN) -c "import pytest, mypy, ruff, black, isort; print('[bootstrap] Key packages verified')" || { echo "[bootstrap] Package verification failed"; exit 1; }
 	@touch $(BOOTSTRAP_STAMP)
 
@@ -121,7 +121,7 @@ serve: ## Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `mak
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(SERVING_PORT),$(or $(API_PORT),8000))" $(PYTHON_BIN) -m news_collector.serving
 
 admin-install: ## Install the new Refinery admin GUI (Astro app in apps/admin/)
-	@cd apps/admin && npm install
+	@cd apps/admin && npm ci
 
 admin-dev: ## Run ONLY the admin GUI (default :4321, proxying /v1/* at the API port). Overrides: `make admin-dev API_PORT=8001 GUI_PORT=4330`. You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`.
 	@bash -c 'if ! (exec 3<>/dev/tcp/127.0.0.1/$(or $(API_PORT),8000)) 2>/dev/null; then \
@@ -167,6 +167,7 @@ debug: bootstrap ## Run the collector in debug mode (verbose)
 lint: bootstrap ## Run code quality checks (check-only)
 	@$(PYTHON_BIN) tools/check_makefile_tabs.py Makefile
 	@$(BLACK) --check .
+	@$(PYTHON_BIN) -m isort --settings-path=pyproject.toml --check-only --diff .
 	@$(RUFF) check .
 	@$(MAKE) check-deprecated
 

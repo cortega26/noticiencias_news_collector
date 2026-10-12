@@ -1,0 +1,7 @@
+dist/
+.astro/
+node_modules/
+coverage/
+public/
+src/lib/generated/
+openapi.json
