@@ -362,9 +362,20 @@ class ArticleRepository:
         updated = 0
         transitioned: list[tuple[int, str]] = []
         with self._session() as session:
+            # Plan 124 Step 1: SQL-side refinery_id predicate so only named
+            # attempts load (was: load ALL 'publishing' rows, filter in
+            # Python). Portable JSON path via SQLAlchemy subscript +
+            # as_string() (json_extract on SQLite, ->> on PostgreSQL).
+            # The Python `wanted` check below stays as the semantic guard
+            # (NULL/missing paths never match; idempotency unchanged).
             candidates = (
                 session.query(Article)
                 .filter(Article.processing_status == "publishing")
+                .filter(
+                    Article.article_metadata["publication"]["refinery_id"]
+                    .as_string()
+                    .in_(list(wanted))
+                )
                 .all()
             )
             for article in candidates:
@@ -428,9 +439,16 @@ class ArticleRepository:
         updated = 0
         transitioned: list[tuple[int, str]] = []
         with self._session() as session:
+            # Plan 124 Step 1: same SQL-side refinery_id predicate as
+            # reject_publication_attempts — only named attempts load.
             candidates = (
                 session.query(Article)
                 .filter(Article.processing_status == "publishing")
+                .filter(
+                    Article.article_metadata["publication"]["refinery_id"]
+                    .as_string()
+                    .in_(list(wanted))
+                )
                 .all()
             )
             for article in candidates:
@@ -1212,27 +1230,44 @@ class ArticleRepository:
                 )
 
             return list(
-                query.order_by(desc(Article.final_score), Article.collected_date.desc())
+                query.order_by(
+                    desc(Article.final_score),
+                    Article.collected_date.desc(),
+                    Article.id.desc(),
+                )
                 .limit(limit)
                 .all()
             )
 
     def get_articles_by_category(
-        self, category: str, days_back: int = 7
+        self, category: str, days_back: int = 7, limit: int | None = None
     ) -> List[Article]:
-        """Return recent articles in a category."""
+        """Return recent articles in a category.
+
+        Plan 124 Step 3: ``limit`` bounds this read (was: unbounded
+        hydration of every matching row). Callers that only rerank the
+        top-N should pass ``limit`` (e.g. ``limit * oversample``) instead
+        of loading the full set — the keyset-paginated rescore/pending
+        variants remain the pattern for full walks. ``None`` preserves
+        the legacy unbounded behavior for existing callers.
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
 
         with self._session() as session:
-            results = (
+            query = (
                 session.query(Article)
                 .filter(Article.category == category)
                 .filter(Article.collected_date >= cutoff_date)
                 .filter(Article.processing_status == "completed")
-                .order_by(desc(Article.final_score), Article.collected_date.desc())
-                .all()
+                .order_by(
+                    desc(Article.final_score),
+                    Article.collected_date.desc(),
+                    Article.id.desc(),
+                )
             )
-            return list(results)
+            if limit is not None:
+                query = query.limit(limit)
+            return list(query.all())
 
     def get_pending_articles(
         self, limit: Optional[int] = None, status: str = PENDING_STATUS
@@ -1254,7 +1289,15 @@ class ArticleRepository:
     def get_completed_articles_for_rescoring(
         self, days_back: int = 14
     ) -> List[Article]:
-        """Return completed but unpublished articles collected within the last N days."""
+        """Return completed but unpublished articles collected within the last N days.
+
+        .. deprecated:: plan-124
+            Unbounded legacy sweep — hydrates every matching ORM row.
+            No production callers remain (scoring uses
+            :meth:`get_completed_articles_for_rescoring_page`); retained
+            for existing tests only. New code must use the ``_page``
+            keyset variant.
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         with self._session() as session:
             completed_articles = (
