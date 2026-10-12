@@ -19,8 +19,8 @@ does not prove it is required for merge.
 
 The gate applies scanner-specific severity handling. pip-audit exceptions in
 `PIP_AUDIT_ALLOWLIST` require reasons and expiry dates and are checked for
-expiration. `security-dev` evaluates through that same allowlist — it has no
-separate CLI ignore. Mypy is limited to `MYPY_TARGETS` in `Makefile`, not
+expiration. `security-dev` evaluates through that same allowlist; no CLI-level
+exception exists. Mypy is limited to `MYPY_TARGETS` in `Makefile`, not
 strict checking of all code.
 
 Placeholder audits and inventory workflows are separate automation; see their
