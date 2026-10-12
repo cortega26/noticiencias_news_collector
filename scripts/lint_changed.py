@@ -6,8 +6,12 @@ Runs ruff only on those files.
 """
 
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404 - deliberate: shells out to git with fixed argv (no shell)
 import sys
+
+# Resolve git to an absolute path so the process spawn cannot be hijacked via PATH.
+GIT_BIN = shutil.which("git") or "git"
 
 
 def get_changed_files():
@@ -15,7 +19,7 @@ def get_changed_files():
     try:
         # Try comparing against origin/main first
         result = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=d", "origin/main...HEAD"],
+            [GIT_BIN, "diff", "--name-only", "--diff-filter=d", "origin/main...HEAD"],
             capture_output=True,
             text=True,
             check=True,
@@ -32,7 +36,7 @@ def get_changed_files():
             # Staged changes
             staged = (
                 subprocess.run(
-                    ["git", "diff", "--name-only", "--cached", "--diff-filter=d"],
+                    [GIT_BIN, "diff", "--name-only", "--cached", "--diff-filter=d"],
                     capture_output=True,
                     text=True,
                     check=True,
@@ -44,7 +48,7 @@ def get_changed_files():
             # Unstaged changes
             unstaged = (
                 subprocess.run(
-                    ["git", "diff", "--name-only", "--diff-filter=d"],
+                    [GIT_BIN, "diff", "--name-only", "--diff-filter=d"],
                     capture_output=True,
                     text=True,
                     check=True,
@@ -56,7 +60,7 @@ def get_changed_files():
             # Untracked files (but not ignored)
             untracked = (
                 subprocess.run(
-                    ["git", "ls-files", "--others", "--exclude-standard"],
+                    [GIT_BIN, "ls-files", "--others", "--exclude-standard"],
                     capture_output=True,
                     text=True,
                     check=True,

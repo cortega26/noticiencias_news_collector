@@ -12,7 +12,7 @@ Configuration:
 
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404 - deliberate: runs the collector script via sys.executable (fixed argv, no shell)
 import sys
 import time
 

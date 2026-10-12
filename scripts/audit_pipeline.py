@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
+import subprocess  # nosec B404 - deliberate: runs pytest/audit scripts from fixed argv (no shell)
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
