@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 124 | [Publication query scans, ordering, batch setup tax](124-publication-query-perf.md) | P2 | M | None (read 109/045 first) | TODO |
 | 125 | [Bound enrichment fan-out per article](125-enrichment-fanout.md) | P2 | M | 116 (pacing must be DONE) | TODO |
 | 126 | [Fix order-dependent test pollution](126-flaky-order-dependence.md) | P1 | M | None | TODO |
 | 127 | [Public pagination tests, deterministic clocks, honest doubles](127-test-quality.md) | P2 | M | None | TODO |
@@ -384,6 +383,15 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   `make quality` (bare bandit leg) stays red on the 11 pre-existing LOWs in
   untouched files — standing ledger item, own plan needed. Merged locally,
   unpushed.
+- 124 (publication query perf) DONE and archived — SQL-side refinery_id
+  predicate on both transitions (probe: 2 rows, not 10), id tiebreak
+  matching the API order, rescore sweep deprecated (zero production
+  callers; coordinator already on `_page`), category reads get opt-in
+  `limit`; batch-hoist SKIPPED with profile proof (2.9% cold / 0.5% warm
+  <10%); `make lint/type/test/boundaries/contracts/perf` green (3673
+  passed). FOLLOW-UP: push `limit` through `get_top_articles` category
+  path (`reporting.py`, out of scope here — rerank-window semantics need
+  product review). Merged locally, unpushed.
 - 122 (adapter choke point) DONE and archived — `build_collector_payload` +
   `with_source_id`/`project_source` in contracts/, workflow/serving call
   sites rewired (parity-tested pre/post, projections byte-identical);
