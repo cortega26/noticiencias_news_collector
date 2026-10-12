@@ -1091,6 +1091,29 @@ def test_admin_publish_requires_exactly_one_of_id_or_url(
     assert both.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "ftp://example.com/article",  # disallowed scheme, no DNS needed
+        "notaurl",  # unresolvable host, fail-closed DNS
+        "https://notaurl.invalid/article",  # RFC-2606 invalid TLD, NXDOMAIN
+    ],
+)
+def test_admin_publish_rejects_bad_article_url_synchronously(
+    api_client: TestClient, bad_url: str
+) -> None:
+    """Plan 123 step 4: start() dispatches to a background thread (deferred),
+    so the route pre-validates format + URL safety — a bad article_url is a
+    synchronous 422 with NO run enqueued (no 202, no 409 side effects)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish",
+            json={"article_url": bad_url},
+            headers=_admin_headers(),
+        )
+    assert response.status_code == 422, response.text
+
+
 def test_admin_publish_lifecycle_and_db_survives(
     api_client: TestClient, monkeypatch, tmp_path
 ) -> None:

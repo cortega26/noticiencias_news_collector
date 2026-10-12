@@ -43,6 +43,7 @@ from typing import (
     Tuple,
     cast,
 )
+from urllib.parse import urlparse
 
 from dateutil import parser as date_parser
 from fastapi import (
@@ -698,6 +699,29 @@ def _validate_prompts_payload(prompts: Dict[str, Any]) -> None:
                 f"limit {_ADMIN_PROMPTS_MAX_BYTES})"
             ),
         )
+
+
+def _validate_publish_article_url(raw_url: str) -> str:
+    """Pre-enqueue gate for POST /v1/admin/publish article_url (plan 123).
+
+    Step 4 proved `start()` dispatches to a background thread: without this
+    gate a malformed/blocked URL returns 202 and fails async. This mirrors
+    `manual_ingest.ingest()`'s format + safety checks so a bad URL is a
+    synchronous 422 before any run is enqueued. Raises HTTPException(422).
+    """
+    from news_collector.utils.security import validate_url_safety
+    from news_collector.utils.url_canonicalizer import canonicalize_url
+
+    canonical = canonicalize_url(raw_url.strip()) or ""
+    if not canonical or not urlparse(canonical).hostname:
+        raise HTTPException(status_code=422, detail="Invalid article_url.")
+    try:
+        validate_url_safety(canonical)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Blocked article_url: {exc}"
+        ) from exc
+    return canonical
 
 
 def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1739,6 +1763,8 @@ def create_app(  # noqa: C901
         `article_url`, then open a PR against the frontend repo. Exactly one
         of `article_id` / `article_url` is required. A second call while one
         run is active yields 409 with the active run's id."""
+        if payload.article_url is not None:
+            _validate_publish_article_url(payload.article_url)
         result = publication_run_workflow.start(
             article_id=payload.article_id,
             article_url=payload.article_url,
