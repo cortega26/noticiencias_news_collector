@@ -39,7 +39,7 @@ repos:
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: python -m mypy
+        entry: .venv/bin/python -m mypy
         language: system
         args: [--config-file=pyproject.toml]
         files: ^(scripts/generate_api_docs\.py|news_collector/utils/(logger|url_canonicalizer)\.py)$
