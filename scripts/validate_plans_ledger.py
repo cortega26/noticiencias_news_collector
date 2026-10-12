@@ -15,9 +15,13 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404 - deliberate: shells out to git with fixed argv (no shell)
 import sys
 from pathlib import Path
+
+# Resolve git to an absolute path so the process spawn cannot be hijacked via PATH.
+GIT_BIN = shutil.which("git") or "git"
 
 LEDGER = "plans/README.md"
 VALID_STATUSES = {"TODO", "IN_PROGRESS", "PARTIAL", "DONE", "BLOCKED", "REJECTED"}
@@ -32,7 +36,7 @@ def git_ok(root: Path, *args: str) -> bool:
     """True when the git subcommand succeeds in root."""
     try:
         subprocess.run(
-            ["git", "-C", str(root), *args],
+            [GIT_BIN, "-C", str(root), *args],
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

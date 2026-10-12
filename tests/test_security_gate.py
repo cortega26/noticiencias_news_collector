@@ -177,13 +177,16 @@ def test_pip_audit_allowlist_entries_are_not_expired() -> None:
     # 2026-08-31 were removed (their upgrades already shipped in
     # requirements.lock), so they must no longer be allowlisted. NLTK/textblob
     # were unused and were removed from the dependencies (2026-09-21), which also
-    # retired GHSA-8mgp-746c-j5xp. The protobuf entry is the only active suppression.
+    # retired GHSA-8mgp-746c-j5xp. The protobuf entry (GHSA-7gcm-g887-7qv7) was
+    # removed on 2026-10-12 when the security-lock sync upgraded protobuf to
+    # 6.33.6 (semgrep 1.180.0 chain); the allowlist is now empty.
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
+    assert active == {}
     assert "GHSA-5239-wwwm-4pmq" not in active
     assert "GHSA-mf9w-mj56-hr94" not in active
     assert "GHSA-gc5v-m9x4-r6x2" not in active
     assert "GHSA-8mgp-746c-j5xp" not in active  # nltk removed, nothing to suppress
-    assert "GHSA-7gcm-g887-7qv7" in active
+    assert "GHSA-7gcm-g887-7qv7" not in active  # protobuf upgraded, nothing to suppress
 
 
 def test_pip_audit_allowlist_expiry_guard(monkeypatch: pytest.MonkeyPatch) -> None:

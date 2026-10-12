@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
+import subprocess  # nosec B404 - deliberate: shells out to git with fixed argv (no shell, bounded timeout)
 import sys
 from pathlib import Path
 

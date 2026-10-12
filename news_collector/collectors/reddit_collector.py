@@ -29,7 +29,7 @@ from .base_collector import BaseCollector
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
 
-_TOKEN_ENDPOINT = "https://www.reddit.com/api/v1/access_token"  # noqa: S105
+_TOKEN_ENDPOINT = "https://www.reddit.com/api/v1/access_token"  # noqa: S105 # nosec B105 - false positive: public OAuth token endpoint URL, not a password
 _API_BASE = "https://oauth.reddit.com"
 _PERMALINK_BASE = "https://www.reddit.com"
 _TOKEN_REFRESH_BUFFER_SECONDS = 60
