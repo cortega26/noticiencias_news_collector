@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-11T11:18:44.408880+00:00",
-  "python_version": "3.13.12",
+  "generated_at": "2026-10-12T12:39:41.725345+00:00",
+  "python_version": "3.13.16",
   "top_level_inventory": {
     ".agent/": [
       "rules"
@@ -340,6 +340,7 @@
     "spec-collection-recovery-and-scoring.md": null,
     "spec-curation-desk-revamp.md": null,
     "spec-editorial-grounding.md": null,
+    "spec-editorial-quality-lifts.md": null,
     "spec-fetch-warning-remediation.md": null,
     "spec-flaky-tests.md": null,
     "spec-fly-webhook-hosting.md": null,
@@ -479,6 +480,7 @@
     "todo-alt-text-nonblocking.md": null,
     "todo-collection-recovery-and-scoring.md": null,
     "todo-editorial-grounding.md": null,
+    "todo-editorial-quality-lifts.md": null,
     "todo-fetch-warning-remediation.md": null,
     "todo-flaky-tests.md": null,
     "todo-fly-webhook-hosting.md": null,
@@ -1418,6 +1420,7 @@
     "spec-collection-recovery-and-scoring.md",
     "spec-curation-desk-revamp.md",
     "spec-editorial-grounding.md",
+    "spec-editorial-quality-lifts.md",
     "spec-fetch-warning-remediation.md",
     "spec-flaky-tests.md",
     "spec-fly-webhook-hosting.md",
@@ -1461,6 +1464,7 @@
     "todo-alt-text-nonblocking.md",
     "todo-collection-recovery-and-scoring.md",
     "todo-editorial-grounding.md",
+    "todo-editorial-quality-lifts.md",
     "todo-fetch-warning-remediation.md",
     "todo-flaky-tests.md",
     "todo-fly-webhook-hosting.md",
