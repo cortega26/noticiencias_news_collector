@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 
 
@@ -9,7 +10,9 @@ from news_collector.enrichment.router import EnrichmentStrategyRouter
 @patch("news_collector.enrichment.router.strategy_optimizer", MagicMock())
 class TestEnrichmentStrategyRouter(unittest.TestCase):
     def setUp(self):
-        self.router = EnrichmentStrategyRouter()
+        # Routing behavior tests use an unpaced router; pacing itself is
+        # covered by test_host_pacer.py with a fake clock (plan 116).
+        self.router = EnrichmentStrategyRouter(host_pacer=HostPacer.disabled())
         self.router.logger = MagicMock()
         self.router.scholarly = MagicMock()
         self.router.http = MagicMock()

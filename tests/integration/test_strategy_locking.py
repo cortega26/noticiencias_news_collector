@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 
@@ -24,7 +25,7 @@ class TestStrategyLocking(unittest.TestCase):
             enrichment_metrics.cursor.execute("DELETE FROM enrichment_metrics")
             enrichment_metrics.conn.commit()
 
-        self.router = EnrichmentStrategyRouter()
+        self.router = EnrichmentStrategyRouter(host_pacer=HostPacer.disabled())
 
     def test_lock_overrides_hint_and_config(self):
         source_id = "test_locked_source"

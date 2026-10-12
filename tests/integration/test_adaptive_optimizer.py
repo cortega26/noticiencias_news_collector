@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 
@@ -26,7 +27,7 @@ class TestAdaptiveOptimizerIntegration(unittest.TestCase):
             enrichment_metrics.cursor.execute("DELETE FROM enrichment_metrics")
             enrichment_metrics.conn.commit()
 
-        self.router = EnrichmentStrategyRouter()
+        self.router = EnrichmentStrategyRouter(host_pacer=HostPacer.disabled())
 
     def test_adaptive_hint_application(self):
         source_id = "source_test_adaptive"
