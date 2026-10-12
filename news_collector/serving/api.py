@@ -30,6 +30,7 @@ import hmac
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import (
@@ -64,6 +65,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import aliased
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from news_collector.config import settings as config_settings
 from news_collector.config.runtime import is_explicit_development
@@ -1015,6 +1017,29 @@ def _raise_for_source_catalog_result(result: Any) -> None:
     raise HTTPException(status_code=500, detail=result.detail)
 
 
+class _RequestIDMiddleware(BaseHTTPMiddleware):
+    """Accept-or-mint ``X-Request-ID`` and bind it to the log context.
+
+    The ID is stored on ``request.state`` and bound to the loguru context for
+    the request lifetime, so every log record emitted while handling the
+    request carries ``request_id``. Purely observational: it never gates
+    behavior. The CORS allowlist is unchanged, so cross-origin browser
+    callers cannot send or read the header yet.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        request_id = (request.headers.get("X-Request-ID") or "").strip()
+        if not request_id or len(request_id) > 128:
+            request_id = uuid.uuid4().hex
+        request.state.request_id = request_id
+        with logger.contextualize(request_id=request_id):
+            response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
 def create_app(  # noqa: C901
     database_manager: Optional[DatabaseManager] = None,
     *,
@@ -1083,6 +1108,9 @@ def create_app(  # noqa: C901
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
     )
+
+    # Correlation ID for every request (accept-or-mint, see the middleware).
+    app.add_middleware(_RequestIDMiddleware)
 
     def get_params(
         source: Optional[List[str]] = Query(None, alias="source"),
