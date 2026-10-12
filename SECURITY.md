@@ -22,11 +22,15 @@ enforces the same exception set.
 
 ## Implemented allowlist and retired exceptions
 
-As checked on 2026-09-21, `scripts/security_gate.py` contains one exception, for
-`GHSA-7gcm-g887-7qv7` (protobuf, dev tooling only) expiring **2026-10-31**. The
-script owns its precise rationale and validates expiry. This document records
-configured policy; it does not independently verify current upstream fix
-availability.
+As checked on 2026-10-12, the `PIP_AUDIT_ALLOWLIST` in
+`scripts/security_gate.py` is **empty**. The last exception, for
+`GHSA-7gcm-g887-7qv7` (protobuf, dev tooling only, was expiring 2026-10-31),
+was removed when the security-lock sync upgraded semgrep 1.121.0 -> 1.180.0,
+which pulls opentelemetry-proto 1.37.0 / protobuf 6.33.6 (fixed);
+`pip-audit -r requirements-security.lock` reports no known vulnerabilities. The
+script still requires `reason` + `expires_on` for any future entry and validates
+expiry. This document records configured policy; it does not independently
+verify current upstream fix availability.
 
 The NLTK exception `GHSA-8mgp-746c-j5xp` (no upstream fix; last affected 3.10.3)
 was **retired on 2026-09-21 by removing the dependency**: `nltk` and `textblob`
@@ -37,12 +41,13 @@ renewal every month. Their exclusive transitive dependencies (`regex`, `tqdm`,
 
 The former `make security-dev` inline flag `--ignore-vuln GHSA-7gcm-g887-7qv7`
 (protobuf), whose documented authorization expired **2026-03-01**, was retired
-on 2026-09-16: the refinery lock already resolves protobuf 6.33.5 (fixed), and
-the still-pinned security-lock protobuf 4.25.9 is now an enforced, expiring
-`PIP_AUDIT_ALLOWLIST` entry (expires **2026-10-31**, dev-tooling-only DoS risk)
-instead of an unexpiring Makefile flag. The prior `make quality` inline flag
-`--ignore-vuln CVE-2026-0994` — the same advisory under an alias ID, firing on
-no lockfile — was deleted outright. The historical investigation is
+on 2026-09-16: the refinery lock already resolved protobuf 6.33.5 (fixed), and
+the then-still-pinned security-lock protobuf 4.25.9 was tracked as an enforced,
+expiring `PIP_AUDIT_ALLOWLIST` entry until **2026-10-12**, when the
+security-lock sync upgraded it to protobuf 6.33.6 (fixed) and the entry —
+along with the whole allowlist — was removed. The prior `make quality` inline
+flag `--ignore-vuln CVE-2026-0994` — the same advisory under an alias ID,
+firing on no lockfile — was deleted outright. The historical investigation is
 `docs/security_removal_plan.md`.
 
 The former NLTK exception `GHSA-7p94-766c-hgjp` expired **2026-04-15** and is

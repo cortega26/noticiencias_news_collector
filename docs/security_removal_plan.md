@@ -3,15 +3,16 @@
 **Target Vulnerability**: `GHSA-7gcm-g887-7qv7` (protobuf; same advisory as
 `PYSEC-2026-1805` / `CVE-2026-0994` — confirmed via pip-audit alias list on
 2026-09-16)
-**Status (2026-09-16)**: inline Makefile flags removed; residual security-lock
-exposure tracked as an enforced `PIP_AUDIT_ALLOWLIST` entry expiring
-2026-10-31. Refinery lock already fixed (protobuf 6.33.5).
+**Status (2026-10-12)**: RESOLVED — the `PIP_AUDIT_ALLOWLIST` entry was
+removed. The security-lock sync upgraded semgrep 1.121.0 -> 1.180.0, which
+pulls opentelemetry-proto 1.37.0 and protobuf 6.33.6 (fixed).
+`pip-audit -r requirements-security.lock` reports no known vulnerabilities.
 
 ## Dependency Chain
 
 The conflicting constraints come from:
 
-1. `semgrep` (Dev Tool) -> pins `protobuf`
+1. `semgrep` (Dev Tool) -> `opentelemetry-proto` (<1.27 pinned `protobuf<5`)
 2. `streamlit` (Refinery Tool) -> pins `protobuf`
 
 ## Removal Checklist
@@ -23,7 +24,7 @@ The conflicting constraints come from:
   - [x] Remove `--ignore-vuln GHSA-7gcm-g887-7qv7` from `Makefile` (`security-dev` target). (2026-09-16: removed; both `security-dev` locks now evaluated through `scripts/security_gate.py`.)
   - [x] Remove exception entry from `SECURITY.md`. (2026-09-16: drift paragraph replaced with the retired/renewed record.)
   - [ ] Verify `make security-dev` passes cleanly. (2026-09-16: passes via the enforced allowlist entry for the security lock; refinery lock is clean. Remaining work is the upstream upgrade below.)
-- [ ] Upgrade security-lock protobuf to 5.29.6+/6.33.5+ via the sync flow once semgrep unpins the range, then delete the `GHSA-7gcm-g887-7qv7` allowlist entry (expires 2026-10-31; the gate fails closed on expiry).
+- [x] Upgrade security-lock protobuf to 5.29.6+/6.33.5+ via the sync flow once semgrep unpins the range, then delete the `GHSA-7gcm-g887-7qv7` allowlist entry. (2026-10-12: semgrep 1.180.0 requires `opentelemetry-*~=1.37.0`, whose `opentelemetry-proto==1.37.0` requires `protobuf<7.0,>=5.0`. Ran the sync flow (`scripts/sync_lockfiles.py` with the semgrep/OTel/blocker `--upgrade-package` set) → `semgrep==1.180.0`, `opentelemetry-proto==1.37.0`, `protobuf==6.33.6`. `pip-audit -r requirements-security.lock` → no known vulnerabilities. Entry removed from `scripts/security_gate.py`; `PIP_AUDIT_ALLOWLIST` is now empty.)
 
 ## Mitigation
 
