@@ -15,12 +15,13 @@ does not prove it is required for merge.
 | `make security` | pip-audit and Bandit JSON interpreted by `scripts/security_gate.py`; gitleaks only if installed locally |
 | `make quality-ci` | Context validation, Ruff, scoped mypy plus coverage tests, Bandit and pip-audit gates; Semgrep `--config auto` is non-blocking |
 | `.github/workflows/quality.yml` | Installs gitleaks, runs quality checks and the separate secret scan; uploads reports |
-| `make security-dev` | Audits security/refinery locks with a hardcoded protobuf advisory ignore; see expired-policy discrepancy in `SECURITY.md` |
+| `make security-dev` | Audits security/refinery locks through the shared `scripts/security_gate.py` policy (`PIP_AUDIT_ALLOWLIST`, reason + expiry enforced), like every pip-audit leg |
 
 The gate applies scanner-specific severity handling. pip-audit exceptions in
 `PIP_AUDIT_ALLOWLIST` require reasons and expiry dates and are checked for
-expiration. That enforcement does not cover `security-dev`'s separate CLI ignore.
-Mypy is limited to `MYPY_TARGETS` in `Makefile`, not strict checking of all code.
+expiration. `security-dev` evaluates through that same allowlist — it has no
+separate CLI ignore. Mypy is limited to `MYPY_TARGETS` in `Makefile`, not
+strict checking of all code.
 
 Placeholder audits and inventory workflows are separate automation; see their
 YAML and [ci.md](ci.md) for triggers. Dependabot configuration lives in

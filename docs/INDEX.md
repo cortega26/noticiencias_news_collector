@@ -48,7 +48,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | Release checklist | [`release-checklist.md`](release-checklist.md) |
 | Release notes | [`release_notes.md`](release_notes.md) |
 | Security policy | [`security.md`](security.md) |
-| Historical security exception removal plan (expired; see SECURITY.md) | [`security_removal_plan.md`](security_removal_plan.md) |
+| Security exception removal plan (active until 2026-10-31) | [`security_removal_plan.md`](security_removal_plan.md) |
 | Testing strategy and test taxonomy | [`testing.md`](testing.md) |
 | Audit-to-issue tool usage | [`tools_audit_issues.md`](tools_audit_issues.md) |
 
