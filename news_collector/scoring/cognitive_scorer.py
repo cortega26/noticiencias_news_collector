@@ -43,7 +43,7 @@ class CognitiveScorer(BasicScorer):
         config: Any | None = None,
     ):
         print(
-            f"{datetime.now().strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)"
+            f"{datetime.now(timezone.utc).strftime('%H:%M:%S')} | DEBUG: CognitiveScorer INITIALIZED (Hybrid Mode)"
         )
 
         # 1. Weights Setup
