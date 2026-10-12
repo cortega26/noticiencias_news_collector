@@ -14,7 +14,11 @@ from noticiencias.config_schema import CollectionConfig
 
 from news_collector.config.settings import get_runtime_config
 from news_collector.config.sources import ALL_SOURCES, save_sources
-from news_collector.contracts.adapters import adapt_article_to_export
+from news_collector.contracts.adapters import (
+    adapt_article_to_export,
+    build_collector_payload,
+    with_source_id,
+)
 from news_collector.contracts.collector import CollectorArticleModel
 from news_collector.contracts.export import ExportArticleModel, ExportContractV2
 from news_collector.enrichment.headless_enricher import HeadlessEnricher
@@ -401,16 +405,21 @@ class ManualUrlIngestService:
             fetch_attempts=fetch_attempts,
         )
         if payload is None:
-            return {
-                "status": "error",
-                "message": (build_error or {}).get(
-                    "message", "No se pudo construir un artículo válido desde la URL."
-                ),
-                "error_code": (build_error or {}).get("error_code", "source_unusable"),
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": (build_error or {}).get(
+                        "message",
+                        "No se pudo construir un artículo válido desde la URL.",
+                    ),
+                    "error_code": (build_error or {}).get(
+                        "error_code", "source_unusable"
+                    ),
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         try:
             model = CollectorArticleModel.model_validate(payload)
@@ -418,13 +427,15 @@ class ManualUrlIngestService:
             logger.warning(
                 "Manual URL payload validation failed for {}: {}", canonical_url, exc
             )
-            return {
-                "status": "error",
-                "message": f"Payload inválido: {exc}",
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": f"Payload inválido: {exc}",
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         saved_article = self.db.save_article(model)
         if saved_article is None:
@@ -439,13 +450,15 @@ class ManualUrlIngestService:
                     article_exists=True,
                     fetch_attempts=self._public_attempts(fetch_attempts),
                 )
-            return {
-                "status": "error",
-                "message": "El artículo no pudo guardarse porque ya existe un duplicado equivalente.",
-                "source_id": source_id,
-                "source_created": source_created,
-                "fetch_attempts": self._public_attempts(fetch_attempts),
-            }
+            return with_source_id(
+                {
+                    "status": "error",
+                    "message": "El artículo no pudo guardarse porque ya existe un duplicado equivalente.",
+                    "source_created": source_created,
+                    "fetch_attempts": self._public_attempts(fetch_attempts),
+                },
+                source_id,
+            )
 
         export_model = adapt_article_to_export(saved_article)
         export_path = self._write_single_article_export(export_model)
@@ -656,31 +669,25 @@ class ManualUrlIngestService:
             }
         }
 
-        payload = {
-            "url": canonical_url,
-            "original_url": canonical_url,
-            "title": merged["title"],
-            "summary": summary or "",
-            "content": content,
-            "source_id": source_id,
-            "source_name": source_config.get("name") or source_id,
-            "category": source_config.get("category") or "multidisciplinary",
-            "published_date": merged["published_date"],
-            "authors": merged["authors"] or [],
-            "language": "en",
-            "doi": merged["doi"],
-            "journal": merged["journal"],
-            "is_preprint": False,
-            "word_count": word_count,
-            "reading_time_minutes": reading_time_minutes,
-            "content_mode": "full_text" if content else "summary_only",
-            "article_metadata": {
-                "source_metadata": source_metadata,
-                "original_url": canonical_url,
-                "image_url": merged["image_url"],
-                "processing_timestamp": datetime.now(timezone.utc),
-            },
-        }
+        payload = build_collector_payload(
+            canonical_url=canonical_url,
+            title=merged["title"],
+            summary=summary,
+            content=content,
+            source_id=source_id,
+            source_config=source_config,
+            published_date=merged["published_date"],
+            authors=merged["authors"] or [],
+            language="en",
+            doi=merged["doi"],
+            journal=merged["journal"],
+            is_preprint=False,
+            word_count=word_count,
+            reading_time_minutes=reading_time_minutes,
+            content_mode="full_text" if content else "summary_only",
+            image_url=merged["image_url"],
+            source_metadata=source_metadata,
+        )
         return payload, None
 
     def _preferred_method(self, source_config: Mapping[str, Any]) -> str:

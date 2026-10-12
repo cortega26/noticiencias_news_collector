@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+
 from news_collector.contracts.source_health import SourceHealthRecord
 from news_collector.logic.workflows.live_source_drift import (
+    _load_health_records,
     build_live_source_drift_report,
+    load_source_health_file,
     render_live_source_drift_markdown,
 )
 
@@ -101,3 +105,76 @@ def test_render_live_source_drift_markdown_is_stable() -> None:
     assert markdown.startswith("# Live Source Drift Report")
     assert "## Strategy Mismatch" in markdown
     assert "`reddit_science`" in markdown
+
+
+def test_load_health_records_stamps_source_id_and_skips_non_mappings() -> None:
+    raw_valid = _record("phys_org").model_dump()
+    raw_valid.pop("source_id")  # file key must stamp it via the helper
+
+    records = _load_health_records(
+        {"phys_org": raw_valid, "junk": "not-a-mapping", "empty": 42}
+    )
+
+    assert set(records) == {"phys_org"}
+    assert records["phys_org"].source_id == "phys_org"
+
+
+def test_load_source_health_file_handles_missing_and_invalid(tmp_path) -> None:
+    assert load_source_health_file(None) == {}
+    assert load_source_health_file(tmp_path / "absent.json") == {}
+
+    not_mapping = tmp_path / "list.json"
+    not_mapping.write_text(json.dumps(["nope"]), encoding="utf-8")
+    assert load_source_health_file(not_mapping) == {}
+
+
+def test_load_source_health_file_loads_valid_payload(tmp_path) -> None:
+    raw = _record("phys_org").model_dump()
+    path = tmp_path / "health.json"
+    path.write_text(json.dumps({"phys_org": raw}), encoding="utf-8")
+
+    records = load_source_health_file(path)
+
+    assert set(records) == {"phys_org"}
+    assert records["phys_org"].source_id == "phys_org"
+
+
+def test_build_report_flags_plain_http_upgrade_and_headless_budget() -> None:
+    current = {
+        "plain_source": _record(
+            "plain_source",
+            enrichment_strategy="http",
+            failure_taxonomy="js_render_required",
+        ),
+        "stalled_source": _record(
+            "stalled_source",
+            enrichment_strategy="http",
+            content_mode="summary_only",
+            headless_seconds_used=5.0,
+            articles_saved=0,
+        ),
+    }
+
+    report = build_live_source_drift_report(
+        current_records=current,
+        baseline_records={},
+        monitored_sources=["plain_source", "stalled_source"],
+    )
+
+    recommendations = {
+        entry["source_id"]: entry["recommendation"]
+        for entry in report["strategy_mismatch"]
+    }
+    assert recommendations["plain_source"] == "upgrade_from_plain_http"
+    assert recommendations["stalled_source"] == "remove_headless_budget"
+
+
+def test_build_report_skips_unmonitored_absent_sources() -> None:
+    report = build_live_source_drift_report(
+        current_records={},
+        baseline_records={},
+        monitored_sources=["ghost_source"],
+    )
+
+    assert report["summary"]["sources_evaluated"] == 1
+    assert report["newly_broken"] == []

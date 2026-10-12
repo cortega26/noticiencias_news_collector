@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from news_collector.config.sources import ALL_SOURCES
+from news_collector.contracts.adapters import with_source_id
 from news_collector.contracts.source_health import SourceHealthRecord
 
 CRITICAL_SOURCE_COHORT = [
@@ -33,7 +34,7 @@ def _load_health_records(
     for source_id, raw in (payload or {}).items():
         if not isinstance(raw, Mapping):
             continue
-        normalized = {"source_id": source_id, **dict(raw)}
+        normalized = with_source_id(raw, source_id)
         records[source_id] = SourceHealthRecord.model_validate(normalized)
     return records
 
