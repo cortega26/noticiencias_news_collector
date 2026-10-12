@@ -198,7 +198,7 @@ def test_config_payload_drops_secrets() -> None:
     normalized = serving_api._normalize_config_payload(
         {
             "github": {
-                "token": "SHOULD-NOT-PERSIST",
+                "token": "DROPPED",
                 "target_repo_url": "https://github.com/o/r.git",
             }
         }
