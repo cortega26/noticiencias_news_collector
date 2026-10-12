@@ -681,6 +681,37 @@ class RefineryEngine:
                 run.persist_attempt(False)
                 return None
             raise ve
+
+        # A source-aware critic may prove close paragraph-level replication even
+        # after its bounded repair cycle. Unlike stylistic scores, that specific
+        # outcome must not reach a publication PR without editorial revision.
+        # Missing source, cached legacy verdicts and infra errors do not block.
+        verdict = getattr(self.editor, "last_critic_verdict", None)
+        if (
+            isinstance(verdict, dict)
+            and verdict.get("approved") is False
+            and verdict.get("value_add_assessment") == "close_paraphrase"
+        ):
+            message = (
+                "Editorial review required: close paraphrase without "
+                "identifiable added value."
+            )
+            self._last_blocked_error = {
+                "error": message,
+                "message": message,
+                "error_code": "E_EDITORIAL_VALUE_ADD",
+            }
+            run.record_stage(
+                "editor_refinement",
+                False,
+                error_code="E_EDITORIAL_VALUE_ADD",
+                error=message,
+                value_add_evidence=verdict.get("value_add_evidence"),
+            )
+            run.persist_attempt(False)
+            logger.warning(message)
+            return None
+
         run.record_stage("editor_refinement", True)
         return self._record_advisory_stages(article, refined_content, run)
 

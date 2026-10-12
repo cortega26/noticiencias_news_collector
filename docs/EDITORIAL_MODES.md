@@ -35,7 +35,7 @@ semantics are separate from the pre-PR critic and fact-check stages.
 
 ## Pre-PR hard gates (independent of auditor blocking)
 
-Two pre-PR gates block publication regardless of `[editorial_auditor].blocking`:
+Three pre-PR gates block publication regardless of `[editorial_auditor].blocking`:
 
 1. **Verifier-disputed claims (all categories):** any fact-check claim the
    independent Stage-7 verifier returns as `disputed` raises
@@ -50,6 +50,12 @@ Two pre-PR gates block publication regardless of `[editorial_auditor].blocking`:
    advisory for the PR reviewer. Scope vocabulary is owned once by
    `news_collector/editorial/health_scope.py` (shared with the auditor's
    sampling triggers).
+3. **Confirmed close paraphrase (source-aware, v3):** when the editorial
+   critic explicitly finds `close_paraphrase` with sufficient source context,
+   tries its bounded repair cycle and still rejects the draft, the refinery
+   holds publication with `E_EDITORIAL_VALUE_ADD`. Missing/partial source
+   (`insufficient_source`) and provider failure do not trigger this hold.
+   This is an editorial review trigger, not a legal plagiarism finding.
 
 Change settings through the supported config path and restart consumers that
 load them at startup. Review the affected policy/workflow tests when changing

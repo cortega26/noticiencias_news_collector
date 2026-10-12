@@ -24,5 +24,5 @@ class EditorialStage(StrEnum):
     TRANSLATION = "stage1_translation"
     EDITORIAL = "stage2_editorial"
     TECHNICAL_CRITIC_OK = "stage2_5_critic_ok"
-    EDITORIAL_CRITIC_OK = "stage2_6_editorial_critic_source_aware_v2_ok"
+    EDITORIAL_CRITIC_OK = "stage2_6_editorial_critic_value_add_v3_ok"
     ENRICHMENT = "stage4_enrichment"
