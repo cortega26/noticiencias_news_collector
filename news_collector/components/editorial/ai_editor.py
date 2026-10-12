@@ -1385,6 +1385,8 @@ class EditorAgent:
 
         Returns a typed verdict. Fail-open results remain publishable but are
         not persisted as reviewed checkpoints, so a later run can retry them.
+        A confirmed close paraphrase surviving repair is held by the
+        publication engine; generic low style scores remain advisory.
 
         Fails open: if the prompt is unavailable, the model returns
         unparseable output, or the call raises, the article is approved so
