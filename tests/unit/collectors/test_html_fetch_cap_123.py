@@ -71,9 +71,7 @@ async def test_actual_body_over_limit_fails(collector):
 async def test_body_under_limit_still_fetched(collector):
     """The cap must not break the normal small-page path."""
     html = "<html><body><article><p>hello world</p></article></body></html>"
-    resp = httpx.Response(
-        200, headers={"Content-Length": str(len(html))}, text=html
-    )
+    resp = httpx.Response(200, headers={"Content-Length": str(len(html))}, text=html)
     with patch("httpx.AsyncClient", return_value=_client_mock(resp)):
         content, status = await collector._fetch_html_conditional(
             "https://example.com/news",

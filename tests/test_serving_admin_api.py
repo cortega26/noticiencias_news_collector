@@ -1834,7 +1834,9 @@ def test_admin_config_save_ignores_privileged_sections(
     saved = cfg_file.read_text(encoding="utf-8")
     assert "evil.example" not in saved
     assert 'driver = "sqlite"' in saved  # privileged section untouched
-    assert "https://github.com/cortega26/noticiencias.git" in saved  # allowlisted key saved
+    assert (
+        "https://github.com/cortega26/noticiencias.git" in saved
+    )  # allowlisted key saved
 
 
 def test_admin_prompts_rejects_non_dict_body(api_client: TestClient) -> None:

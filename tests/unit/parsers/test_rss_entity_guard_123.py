@@ -20,10 +20,10 @@ def _billion_laughs() -> str:
     xml = '<?xml version="1.0"?><!DOCTYPE rss [<!ENTITY a "1234567890">'
     prev = "a"
     for i in range(1, 10):
-        xml += "<!ENTITY e%d \"%s\">" % (i, "".join("&%s;" % prev for _ in range(10)))
+        xml += '<!ENTITY e%d "%s">' % (i, "".join("&%s;" % prev for _ in range(10)))
         prev = "e%d" % i
     xml += (
-        "]><rss version=\"2.0\"><channel><title>T</title>"
+        ']><rss version="2.0"><channel><title>T</title>'
         "<link>http://example.com/</link><description>d</description>"
         "<item><title>&e9;</title><link>http://example.com/1</link>"
         "<description>d</description></item></channel></rss>"

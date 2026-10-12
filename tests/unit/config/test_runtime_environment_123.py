@@ -21,7 +21,17 @@ def test_explicit_development_only():
 
 
 @pytest.mark.parametrize(
-    "tier", ["unset", "", "prod", "Development", " development ", "production", "staging", "test"]
+    "tier",
+    [
+        "unset",
+        "",
+        "prod",
+        "Development",
+        " development ",
+        "production",
+        "staging",
+        "test",
+    ],
 )
 def test_non_development_tiers_fail_closed(tier):
     assert is_explicit_development(tier) is False

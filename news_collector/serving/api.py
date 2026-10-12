@@ -724,6 +724,62 @@ def _validate_publish_article_url(raw_url: str) -> str:
     return canonical
 
 
+def _check_config_payload_size(payload: Dict[str, Any]) -> None:
+    """Reject oversize admin config payloads before any merge (413)."""
+    serialized_len = len(json.dumps(payload, default=str))
+    if serialized_len > _ADMIN_CONFIG_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Config payload too large ({serialized_len} bytes, "
+                f"limit {_ADMIN_CONFIG_MAX_BYTES})"
+            ),
+        )
+
+
+def _normalize_config_section(
+    key: str,
+    value: Any,
+    *,
+    known_sections: set,
+    normalized: Dict[str, Any],
+    dropped_sections: list,
+    dropped_keys: list,
+) -> None:
+    """Fold one top-level payload entry into `normalized` (plan 123).
+
+    Snapshot aliases move under app.*; read-only extras are dropped;
+    allowlisted sections merge (unknown keys within them are dropped);
+    known-but-privileged sections are dropped; foreign keys raise 422.
+    """
+    if key in ("sources", "meta"):
+        return
+    if key in ("environment", "debug", "timezone"):
+        app_section = dict(normalized.get("app", {}))
+        app_section[key] = value
+        normalized["app"] = app_section
+        return
+    allowed_keys = _ADMIN_CONFIG_ALLOWLIST.get(key)
+    if allowed_keys is None:
+        if key in known_sections:
+            dropped_sections.append(key)
+            return
+        raise HTTPException(
+            status_code=422, detail=f"Config rejected: unknown section '{key}'"
+        )
+    if not isinstance(value, dict):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Config rejected: section '{key}' must be an object",
+        )
+    kept = {k: v for k, v in value.items() if k in allowed_keys}
+    dropped_keys.extend(f"{key}.{k}" for k in value if k not in allowed_keys)
+    if kept:
+        merged_section = dict(normalized.get(key, {}))
+        merged_section.update(kept)
+        normalized[key] = merged_section
+
+
 def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize a config-save payload into the full Config shape.
 
@@ -743,15 +799,7 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     from noticiencias.config_manager import Config as _Config
 
-    serialized_len = len(json.dumps(payload, default=str))
-    if serialized_len > _ADMIN_CONFIG_MAX_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=(
-                f"Config payload too large ({serialized_len} bytes, "
-                f"limit {_ADMIN_CONFIG_MAX_BYTES})"
-            ),
-        )
+    _check_config_payload_size(payload)
 
     for section in ("github", "nvidia", "gemini"):
         if isinstance(payload.get(section), dict):
@@ -763,32 +811,14 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     dropped_keys: list[str] = []
     normalized: Dict[str, Any] = {}
     for key, value in payload.items():
-        if key in ("sources", "meta"):
-            continue
-        if key in ("environment", "debug", "timezone"):
-            app_section = dict(normalized.get("app", {}))
-            app_section[key] = value
-            normalized["app"] = app_section
-            continue
-        allowed_keys = _ADMIN_CONFIG_ALLOWLIST.get(key)
-        if allowed_keys is None:
-            if key in known_sections:
-                dropped_sections.append(key)
-                continue
-            raise HTTPException(
-                status_code=422, detail=f"Config rejected: unknown section '{key}'"
-            )
-        if not isinstance(value, dict):
-            raise HTTPException(
-                status_code=422,
-                detail=f"Config rejected: section '{key}' must be an object",
-            )
-        kept = {k: v for k, v in value.items() if k in allowed_keys}
-        dropped_keys.extend(f"{key}.{k}" for k in value if k not in allowed_keys)
-        if kept:
-            merged_section = dict(normalized.get(key, {}))
-            merged_section.update(kept)
-            normalized[key] = merged_section
+        _normalize_config_section(
+            key,
+            value,
+            known_sections=known_sections,
+            normalized=normalized,
+            dropped_sections=dropped_sections,
+            dropped_keys=dropped_keys,
+        )
 
     if dropped_sections or dropped_keys:
         logger.warning(
