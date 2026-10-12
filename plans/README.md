@@ -329,7 +329,6 @@ every plan below carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 122 | [Restore the adapter choke point](122-adapter-chokepoint.md) | P2 | M | None (read 100 first) | TODO |
 | 123 | [Harden serving and fetch edges](123-serving-edge-hardening.md) | P1 | M | None (read 099/021 first) | TODO |
 | 124 | [Publication query scans, ordering, batch setup tax](124-publication-query-perf.md) | P2 | M | None (read 109/045 first) | TODO |
 | 125 | [Bound enrichment fan-out per article](125-enrichment-fanout.md) | P2 | M | 116 (pacing must be DONE) | TODO |
@@ -377,7 +376,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   outcomes explicit (backfill bool, collision/outage typed errors, no bare
   assert), DB-reservation serializes retry-vs-retry (concurrency-tested);
   `make lint/type/test/boundaries` + quality-gate green (3600 passed).
-  O_EXCL primitive tested but writer-wiring deferred (noted in code).
+  O_EXCL primitive tested but   writer-wiring deferred (noted in code).
+  Merged locally, unpushed.
+- 122 (adapter choke point) DONE and archived — `build_collector_payload` +
+  `with_source_id`/`project_source` in contracts/, workflow/serving call
+  sites rewired (parity-tested pre/post, projections byte-identical);
+  `make lint/type/test/contracts/boundaries` green (3614 passed).
   Merged locally, unpushed.
 
 ### Eighth-pass findings considered and rejected (do not re-audit)
