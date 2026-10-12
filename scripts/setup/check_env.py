@@ -6,7 +6,6 @@ REQUIRED_PACKAGES = [
     "pandas",
     "git",  # GitPython
     "yaml",  # PyYAML
-    "toml",
     "requests",  # Standard
     "dotenv",  # python-dotenv
 ]
