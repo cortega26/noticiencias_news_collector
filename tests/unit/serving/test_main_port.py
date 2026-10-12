@@ -17,8 +17,51 @@ import news_collector.serving.__main__ as serving_main
 
 @pytest.fixture(autouse=True)
 def _clean_serving_env(monkeypatch):
+    monkeypatch.delenv("SERVING_HOST", raising=False)
     monkeypatch.delenv("SERVING_PORT", raising=False)
     monkeypatch.delenv("SERVING_RELOAD", raising=False)
+
+
+def test_resolve_host_defaults_to_loopback():
+    assert serving_main._resolve_host() == "127.0.0.1"
+
+
+def test_resolve_host_honors_explicit_override(monkeypatch):
+    monkeypatch.setenv("SERVING_HOST", "0.0.0.0")
+    assert serving_main._resolve_host() == "0.0.0.0"
+
+
+def test_resolve_host_strips_whitespace(monkeypatch):
+    monkeypatch.setenv("SERVING_HOST", "  0.0.0.0  ")
+    assert serving_main._resolve_host() == "0.0.0.0"
+
+
+@pytest.mark.parametrize("raw", ["", "   "])
+def test_resolve_host_rejects_empty(raw, monkeypatch):
+    monkeypatch.setenv("SERVING_HOST", raw)
+    with pytest.raises(SystemExit, match="invalid SERVING_HOST"):
+        serving_main._resolve_host()
+
+
+def test_main_passes_default_loopback_host_to_uvicorn(monkeypatch):
+    """`main()` must bind loopback unless SERVING_HOST overrides it."""
+    import uvicorn
+
+    with patch.object(uvicorn, "run") as run_mock:
+        serving_main.main()
+    _, kwargs = run_mock.call_args
+    assert kwargs["host"] == "127.0.0.1"
+
+
+def test_main_passes_host_override_to_uvicorn(monkeypatch):
+    """`SERVING_HOST=0.0.0.0` must restore LAN exposure explicitly."""
+    import uvicorn
+
+    monkeypatch.setenv("SERVING_HOST", "0.0.0.0")
+    with patch.object(uvicorn, "run") as run_mock:
+        serving_main.main()
+    _, kwargs = run_mock.call_args
+    assert kwargs["host"] == "0.0.0.0"
 
 
 def test_resolve_port_defaults_to_8000():

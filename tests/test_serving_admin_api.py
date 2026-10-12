@@ -258,6 +258,23 @@ def test_admin_fails_closed_outside_development_without_key(
         assert response.status_code == 503
 
 
+@pytest.mark.parametrize("tier", ["unset", "", "prod", "Development", " development "])
+def test_admin_unset_or_unknown_tier_fails_closed_without_key(
+    api_client: TestClient, tier: str
+) -> None:
+    """Plan 123: only the exact "development" tier fail-opens; unset/unknown 503."""
+    fake_runtime = MagicMock()
+    fake_runtime.environment = tier
+    with (
+        patch.dict(os.environ, clear=True),
+        patch(
+            "news_collector.serving.api.get_runtime_config", return_value=fake_runtime
+        ),
+    ):
+        response = api_client.get("/v1/admin/analytics", headers=_admin_headers())
+        assert response.status_code == 503
+
+
 def test_admin_dev_mode_allows_without_key(api_client: TestClient) -> None:
     """Explicit development tier: unset key is the documented fail-open."""
     with patch.dict(os.environ, clear=True):
@@ -1074,6 +1091,29 @@ def test_admin_publish_requires_exactly_one_of_id_or_url(
     assert both.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "ftp://example.com/article",  # disallowed scheme, no DNS needed
+        "notaurl",  # unresolvable host, fail-closed DNS
+        "https://notaurl.invalid/article",  # RFC-2606 invalid TLD, NXDOMAIN
+    ],
+)
+def test_admin_publish_rejects_bad_article_url_synchronously(
+    api_client: TestClient, bad_url: str
+) -> None:
+    """Plan 123 step 4: start() dispatches to a background thread (deferred),
+    so the route pre-validates format + URL safety — a bad article_url is a
+    synchronous 422 with NO run enqueued (no 202, no 409 side effects)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish",
+            json={"article_url": bad_url},
+            headers=_admin_headers(),
+        )
+    assert response.status_code == 422, response.text
+
+
 def test_admin_publish_lifecycle_and_db_survives(
     api_client: TestClient, monkeypatch, tmp_path
 ) -> None:
@@ -1709,6 +1749,127 @@ def test_admin_config_partial_patch_merges(
     assert "[paths]" in saved
     assert "[scoring]" in saved
     assert "[database]" in saved
+
+
+def test_admin_config_rejects_foreign_section(api_client: TestClient) -> None:
+    """Plan 123: unknown top-level sections are rejected loudly (422)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config",
+            json={"app": {"environment": "development"}, "evil_section": {"x": 1}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422, response.text
+
+
+def test_admin_config_rejects_non_dict_section(api_client: TestClient) -> None:
+    """Plan 123: allowlisted sections must be objects, not scalars."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config",
+            json={"app": "development"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422, response.text
+
+
+def test_admin_config_rejects_oversize_payload(api_client: TestClient) -> None:
+    """Plan 123: per-request size cap (413) before any merge/validation."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config",
+            json={"app": {"environment": "development", "pad": "x" * 200_000}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 413, response.text
+
+
+def test_admin_config_save_ignores_privileged_sections(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 123: known-but-privileged sections (database/paths/...) and
+    non-allowlisted keys (ollama.api_url) are dropped, never merged —
+    while allowlisted keys in the same request still save."""
+    from noticiencias.config_manager import load_config as _load
+
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        Path("config.toml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    from news_collector.serving import api as serving_api
+
+    monkeypatch.setattr(serving_api, "load_config", lambda: _load(cfg_file))
+
+    from noticiencias.config_manager import save_config as _save_config
+
+    real_save = _save_config
+    real_refresh = __import__(
+        "news_collector.config.settings", fromlist=["refresh_runtime_config"]
+    ).refresh_runtime_config
+
+    def _save_to_tmp(validated, path=None):
+        return real_save(validated, cfg_file)
+
+    monkeypatch.setattr("noticiencias.config_manager.save_config", _save_to_tmp)
+    monkeypatch.setattr(
+        "news_collector.config.settings.refresh_runtime_config",
+        lambda cfg=None: real_refresh(_load()),
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/config",
+            json={
+                "github": {
+                    "target_repo_url": "https://github.com/cortega26/noticiencias.git"
+                },
+                "database": {"driver": "postgresql", "host": "evil.example"},
+                "ollama": {"api_url": "http://evil.example:11434"},
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200, response.text
+
+    saved = cfg_file.read_text(encoding="utf-8")
+    assert "evil.example" not in saved
+    assert 'driver = "sqlite"' in saved  # privileged section untouched
+    assert (
+        "https://github.com/cortega26/noticiencias.git" in saved
+    )  # allowlisted key saved
+
+
+def test_admin_prompts_rejects_non_dict_body(api_client: TestClient) -> None:
+    """Plan 123: every prompt body must be an object."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/prompts",
+            json={"prompts": {"editor": "just a string"}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422, response.text
+
+
+def test_admin_prompts_rejects_oversize_payload(api_client: TestClient) -> None:
+    """Plan 123: prompts byte cap (413) before touching disk."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/prompts",
+            json={"prompts": {"editor": {"system": "x" * 600_000}}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 413, response.text
+
+
+def test_admin_prompts_rejects_too_many_entries(api_client: TestClient) -> None:
+    """Plan 123: prompts entry-count cap (422)."""
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/prompts",
+            json={"prompts": {f"p{i}": {"system": "s"} for i in range(101)}},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422, response.text
 
 
 def test_admin_collect_status_uses_true_recency_not_lexical_order(

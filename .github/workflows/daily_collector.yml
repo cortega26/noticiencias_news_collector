@@ -13,8 +13,10 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  issues: write
+  # Plan 123 (least privilege): no step commits, pushes, or opens issues
+  # (the job name is a legacy misnomer — plan 071/073 forbids committing
+  # the CI export). Checkout/setup-python/cache need read only.
+  contents: read
 
 jobs:
   collect-and-commit:

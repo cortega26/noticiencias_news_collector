@@ -19,6 +19,11 @@ from news_collector.utils.security import validate_url_safety
 if TYPE_CHECKING:
     from news_collector.utils.logger import NewsCollectorLogger
 
+# Plan 123: byte cap mirroring the RSS 10MB policy (rss_collector rejects
+# feeds >10MB). HTML had no cap — a hostile page meant unbounded RAM +
+# BeautifulSoup parse time.
+HTML_MAX_BODY_BYTES = 10 * 1024 * 1024
+
 
 class HtmlCollector(BaseCollector):
     """
@@ -346,6 +351,40 @@ class HtmlCollector(BaseCollector):
         except Exception:
             return None
 
+    def _body_over_limit(self, response: httpx.Response, source_id: str) -> bool:
+        """Plan 123: Content-Length pre-check + buffered body cap (10MB).
+
+        Over-limit bodies are fetch failures: the caller already maps
+        `(None, status)` to an error stat, so returning True here fails fast
+        without decoding or parsing. Logs the rejection for observability.
+        """
+        declared = response.headers.get("Content-Length")
+        if declared is not None:
+            with contextlib.suppress(ValueError):
+                if int(declared) > HTML_MAX_BODY_BYTES:
+                    self._emit_log(
+                        "warning",
+                        "collector.html.too_large",
+                        source_id=source_id,
+                        details={
+                            "content_length": declared,
+                            "limit_bytes": HTML_MAX_BODY_BYTES,
+                        },
+                    )
+                    return True
+        if len(response.content) > HTML_MAX_BODY_BYTES:
+            self._emit_log(
+                "warning",
+                "collector.html.too_large",
+                source_id=source_id,
+                details={
+                    "body_bytes": len(response.content),
+                    "limit_bytes": HTML_MAX_BODY_BYTES,
+                },
+            )
+            return True
+        return False
+
     async def _fetch_html_conditional(  # noqa: C901
         self, url: str, source_id: str, source_config: Dict[str, Any]
     ) -> Tuple[Optional[str], Optional[int]]:
@@ -438,6 +477,8 @@ class HtmlCollector(BaseCollector):
                             return None, response.status_code
 
                         # Success 200
+                        if self._body_over_limit(response, source_id):
+                            return None, 413
                         content = response.text
                         content_hash = hashlib.sha256(response.content).hexdigest()
 

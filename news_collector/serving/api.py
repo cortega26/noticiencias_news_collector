@@ -43,6 +43,7 @@ from typing import (
     Tuple,
     cast,
 )
+from urllib.parse import urlparse
 
 from dateutil import parser as date_parser
 from fastapi import (
@@ -65,6 +66,7 @@ from sqlalchemy.orm import aliased
 
 from news_collector.config import settings as config_settings
 from news_collector.config.settings import get_runtime_config
+from news_collector.config.runtime import is_explicit_development
 from news_collector.contracts.admin import (
     AdminAnalyticsEnvelope,
     AdminArticleDetail,
@@ -637,31 +639,195 @@ def _build_quality_run_item(row: Any) -> AdminQualityRunItem:
     )
 
 
+# Plan 123 — operator-editable config surface (mirrors the GET
+# /v1/admin/config snapshot). Everything else in Config (database URLs,
+# filesystem paths, extra LLM endpoints, secrets, ...) is never merged from
+# an admin POST; see _normalize_config_payload.
+_ADMIN_CONFIG_ALLOWLIST: Dict[str, frozenset] = {
+    "app": frozenset({"environment", "debug", "timezone"}),
+    "github": frozenset({"user_name", "source_repo_url", "target_repo_url"}),
+    "ollama": frozenset(
+        {
+            "model",
+            "translator_model",
+            "editor_model",
+            "headlines_model",
+            "enrichment_model",
+        }
+    ),
+    "scoring": frozenset({"weights"}),
+}
+# Full on-disk config serializes to ~11KB; 128KB leaves ample headroom for
+# legitimate patches while bounding abuse (plan 123).
+_ADMIN_CONFIG_MAX_BYTES = 128 * 1024
+# prompts.yaml serializes to ~45KB; 512KB bounds abuse with headroom.
+_ADMIN_PROMPTS_MAX_BYTES = 512 * 1024
+_ADMIN_PROMPTS_MAX_KEYS = 100
+
+
+def _validate_prompts_payload(prompts: Dict[str, Any]) -> None:
+    """Enforce the plan-123 bounds on an admin prompts save (422/413).
+
+    Keys must be non-empty names (capped count); every value must be a
+    prompt-body object; the serialized total must fit the byte cap.
+    """
+    if len(prompts) > _ADMIN_PROMPTS_MAX_KEYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Prompts rejected: too many entries ({len(prompts)}, "
+                f"limit {_ADMIN_PROMPTS_MAX_KEYS})"
+            ),
+        )
+    for name, body in prompts.items():
+        if not isinstance(name, str) or not name.strip() or len(name) > 64:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Prompts rejected: invalid prompt name {name!r}",
+            )
+        if not isinstance(body, dict):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Prompts rejected: prompt '{name}' must be an object",
+            )
+    serialized_len = len(json.dumps(prompts, default=str))
+    if serialized_len > _ADMIN_PROMPTS_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Prompts payload too large ({serialized_len} bytes, "
+                f"limit {_ADMIN_PROMPTS_MAX_BYTES})"
+            ),
+        )
+
+
+def _validate_publish_article_url(raw_url: str) -> str:
+    """Pre-enqueue gate for POST /v1/admin/publish article_url (plan 123).
+
+    Step 4 proved `start()` dispatches to a background thread: without this
+    gate a malformed/blocked URL returns 202 and fails async. This mirrors
+    `manual_ingest.ingest()`'s format + safety checks so a bad URL is a
+    synchronous 422 before any run is enqueued. Raises HTTPException(422).
+    """
+    from news_collector.utils.security import validate_url_safety
+    from news_collector.utils.url_canonicalizer import canonicalize_url
+
+    canonical = canonicalize_url(raw_url.strip()) or ""
+    if not canonical or not urlparse(canonical).hostname:
+        raise HTTPException(status_code=422, detail="Invalid article_url.")
+    try:
+        validate_url_safety(canonical)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Blocked article_url: {exc}"
+        ) from exc
+    return canonical
+
+
+def _check_config_payload_size(payload: Dict[str, Any]) -> None:
+    """Reject oversize admin config payloads before any merge (413)."""
+    serialized_len = len(json.dumps(payload, default=str))
+    if serialized_len > _ADMIN_CONFIG_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Config payload too large ({serialized_len} bytes, "
+                f"limit {_ADMIN_CONFIG_MAX_BYTES})"
+            ),
+        )
+
+
+def _normalize_config_section(
+    key: str,
+    value: Any,
+    *,
+    known_sections: set,
+    normalized: Dict[str, Any],
+    dropped_sections: list,
+    dropped_keys: list,
+) -> None:
+    """Fold one top-level payload entry into `normalized` (plan 123).
+
+    Snapshot aliases move under app.*; read-only extras are dropped;
+    allowlisted sections merge (unknown keys within them are dropped);
+    known-but-privileged sections are dropped; foreign keys raise 422.
+    """
+    if key in ("sources", "meta"):
+        return
+    if key in ("environment", "debug", "timezone"):
+        app_section = dict(normalized.get("app", {}))
+        app_section[key] = value
+        normalized["app"] = app_section
+        return
+    allowed_keys = _ADMIN_CONFIG_ALLOWLIST.get(key)
+    if allowed_keys is None:
+        if key in known_sections:
+            dropped_sections.append(key)
+            return
+        raise HTTPException(
+            status_code=422, detail=f"Config rejected: unknown section '{key}'"
+        )
+    if not isinstance(value, dict):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Config rejected: section '{key}' must be an object",
+        )
+    kept = {k: v for k, v in value.items() if k in allowed_keys}
+    dropped_keys.extend(f"{key}.{k}" for k in value if k not in allowed_keys)
+    if kept:
+        merged_section = dict(normalized.get(key, {}))
+        merged_section.update(kept)
+        normalized[key] = merged_section
+
+
 def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize a config-save payload into the full Config shape.
 
-    Accepts both a PARTIAL patch (any section dicts) and the sanitized
-    snapshot returned by GET /v1/admin/config: top-level
+    Accepts both a PARTIAL patch (any ALLOWLISTED section dicts) and the
+    sanitized snapshot returned by GET /v1/admin/config: top-level
     environment/debug/timezone move under app.*, `sources`/`meta` (read-only
     extras) are dropped, and empty-string optional model names become None
     (the form renders None optionals as ""). Secrets (github.token,
     nvidia/gemini api_key) are never accepted.
+
+    Plan 123 — bounded write surface: only the operator-editable allowlist
+    below is merged. Known Config sections outside the allowlist (database,
+    paths, llm_endpoints, ...) are DROPPED with a warning (never merged),
+    so a full-config POST round-trips without persisting privileged changes.
+    Truly foreign top-level keys, non-dict section values, and oversize
+    payloads are rejected loudly (422/413).
     """
+    from noticiencias.config_manager import Config as _Config
+
+    _check_config_payload_size(payload)
+
     for section in ("github", "nvidia", "gemini"):
         if isinstance(payload.get(section), dict):
             for key in ("token", "api_key"):
                 payload[section].pop(key, None)
 
+    known_sections = set(_Config.model_fields)
+    dropped_sections: list[str] = []
+    dropped_keys: list[str] = []
     normalized: Dict[str, Any] = {}
     for key, value in payload.items():
-        if key in ("sources", "meta"):
-            continue
-        if key in ("environment", "debug", "timezone"):
-            app_section = dict(normalized.get("app", {}))
-            app_section[key] = value
-            normalized["app"] = app_section
-            continue
-        normalized[key] = value
+        _normalize_config_section(
+            key,
+            value,
+            known_sections=known_sections,
+            normalized=normalized,
+            dropped_sections=dropped_sections,
+            dropped_keys=dropped_keys,
+        )
+
+    if dropped_sections or dropped_keys:
+        logger.warning(
+            "Admin config save ignored non-operator-editable entries "
+            "(sections: {}; keys: {}) — allowlist: {}",
+            sorted(set(dropped_sections)),
+            sorted(set(dropped_keys)),
+            sorted(_ADMIN_CONFIG_ALLOWLIST),
+        )
 
     for section in ("ollama", "gemini", "nvidia"):
         if isinstance(normalized.get(section), dict):
@@ -686,7 +852,7 @@ def verify_webhook_token(
     webhook_api_key = os.environ.get("WEBHOOK_API_KEY", "")
     if not webhook_api_key:
         runtime = get_runtime_config()
-        if runtime.environment != "development":
+        if not is_explicit_development(runtime.environment):
             logger.error(
                 "WEBHOOK_API_KEY is not set outside the 'development' "
                 "environment (environment={}) — refusing unauthenticated "
@@ -739,7 +905,7 @@ def verify_admin_token(
     admin_api_key = os.environ.get("ADMIN_API_KEY", "")
     if not admin_api_key:
         runtime = get_runtime_config()
-        if runtime.environment != "development":
+        if not is_explicit_development(runtime.environment):
             logger.error(
                 "ADMIN_API_KEY is not set outside the 'development' "
                 "environment (environment={}) — refusing unauthenticated "
@@ -1627,6 +1793,8 @@ def create_app(  # noqa: C901
         `article_url`, then open a PR against the frontend repo. Exactly one
         of `article_id` / `article_url` is required. A second call while one
         run is active yields 409 with the active run's id."""
+        if payload.article_url is not None:
+            _validate_publish_article_url(payload.article_url)
         result = publication_run_workflow.start(
             article_id=payload.article_id,
             article_url=payload.article_url,
@@ -2025,6 +2193,10 @@ def create_app(  # noqa: C901
         import tempfile
 
         import yaml
+
+        # Plan 123: bound the write surface (size cap + dict-shape check)
+        # before touching disk.
+        _validate_prompts_payload(payload.prompts)
 
         prompts_path = Path("config/prompts.yaml")
         prompts_path.parent.mkdir(parents=True, exist_ok=True)
