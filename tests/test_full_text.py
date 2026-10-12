@@ -1,17 +1,17 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from news_collector.utils.full_text import fetch_full_article
+from news_collector.collectors.full_text import fetch_full_article
 
 
-@patch("news_collector.utils.full_text.validate_url_safety")
+@patch("news_collector.collectors.full_text.validate_url_safety")
 class TestFullText(unittest.TestCase):
 
     def setUp(self):
         self.mock_response = MagicMock()
         self.mock_response.raise_for_status = MagicMock()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     def test_fetch_full_article_success(self, mock_get, mock_validate_url):
         self.mock_response.content = (
             b"<html><body><article><p>Article content</p></article></body></html>"
@@ -22,7 +22,7 @@ class TestFullText(unittest.TestCase):
         self.assertEqual(text, "Article content")
         mock_get.assert_called_once()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     def test_cleanup_tags(self, mock_get, mock_validate_url):
         html = b"""
         <html>
@@ -43,7 +43,7 @@ class TestFullText(unittest.TestCase):
         text = fetch_full_article("http://example.com")
         self.assertEqual(text, "Good Content")
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     def test_fallback_structure(self, mock_get, mock_validate_url):
         # Fallback to main
         self.mock_response.content = (
@@ -57,7 +57,7 @@ class TestFullText(unittest.TestCase):
         mock_get.return_value = self.mock_response
         self.assertEqual(fetch_full_article("http://example.com"), "Body Content")
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     def test_fetch_error(self, mock_get, mock_validate_url):
         mock_get.side_effect = Exception("Network fail")
         text = fetch_full_article("http://example.com")

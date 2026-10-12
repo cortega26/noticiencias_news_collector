@@ -8,7 +8,7 @@ and that safe URLs pass validation (with mocked request and DNS).
 import unittest
 from unittest.mock import MagicMock, patch
 
-from news_collector.utils.full_text import fetch_full_article
+from news_collector.collectors.full_text import fetch_full_article
 
 
 class TestFullTextSSRFProtection(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
 
     # ── Blocking tests: request must NEVER be called ──
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("169.254.169.254", 0))],
@@ -34,7 +34,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
         self.assertEqual(result, "")
         mock_get.assert_not_called()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("127.0.0.1", 0))],
@@ -45,7 +45,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
         self.assertEqual(result, "")
         mock_get.assert_not_called()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("127.0.0.1", 0))],
@@ -56,7 +56,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
         self.assertEqual(result, "")
         mock_get.assert_not_called()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("10.0.0.1", 0))],
@@ -67,7 +67,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
         self.assertEqual(result, "")
         mock_get.assert_not_called()
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     def test_blocks_non_http_scheme(self, mock_get):
         """Non-HTTP schemes (file://) must be blocked."""
         result = fetch_full_article("file:///etc/passwd")
@@ -76,7 +76,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
 
     # ── Fail-closed: returns empty string on rejection ──
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("169.254.169.254", 0))],
@@ -88,7 +88,7 @@ class TestFullTextSSRFProtection(unittest.TestCase):
 
     # ── Safe URL: validation passes, request is mocked ──
 
-    @patch("news_collector.utils.full_text.requests.get")
+    @patch("news_collector.collectors.full_text.requests.get")
     @patch(
         "news_collector.utils.security.socket.getaddrinfo",
         return_value=[(None, None, None, None, ("93.184.216.34", 0))],

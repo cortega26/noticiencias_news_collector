@@ -2791,15 +2791,49 @@ def test_quality_build_item_tolerates_partial_rows() -> None:
 
 
 def test_quality_audit_states_empty_and_broken_session() -> None:
+    from sqlalchemy.exc import SQLAlchemyError
+
     from news_collector.serving import api as serving_api
 
-    assert serving_api._quality_audit_states(MagicMock(), []) == {}
+    assert serving_api._quality_audit_states(MagicMock(), []) == ({}, False)
 
     class _BrokenSession:
         def query(self, *args):
-            raise RuntimeError("db down")
+            raise SQLAlchemyError("db down")
 
-    assert serving_api._quality_audit_states(_BrokenSession(), [1, 2]) == {}
+    assert serving_api._quality_audit_states(_BrokenSession(), [1, 2]) == ({}, True)
+
+
+def test_admin_quality_recent_flags_audit_states_unavailable(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """Plan 128: a failed audit-state read keeps the page rendering and
+    surfaces the outage as `meta.audit_states_unavailable` (never blank
+    states, never a 500)."""
+    from news_collector.serving import api as serving_api
+
+    now = datetime.now(timezone.utc)
+    with db_manager.get_session() as session:
+        session.add(
+            WorkflowRun(
+                run_type="publication",
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+            )
+        )
+        session.commit()
+
+    with (
+        patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}),
+        patch.object(serving_api, "_quality_audit_states", return_value=({}, True)),
+    ):
+        response = api_client.get("/v1/admin/quality/recent", headers=_admin_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["runs"]) == 1
+    assert body["meta"]["audit_states_unavailable"] is True
 
 
 def test_admin_quality_recent_aggregate_without_readability(

@@ -1,6 +1,9 @@
 # src/utils/logger.py
 # Sistema de logging avanzado para News Collector
 # ==============================================
+# Plan 128: stays in utils by decision (import-surface churn; observability/
+# relocation deferred). Importer census at decision time: 80 files — relocating
+# would touch every one of them for a judgment call, not a LAW violation.
 
 """
 Este módulo configura un sistema de logging robusto y elegante para nuestro
