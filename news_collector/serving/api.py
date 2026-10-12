@@ -638,21 +638,105 @@ def _build_quality_run_item(row: Any) -> AdminQualityRunItem:
     )
 
 
+# Plan 123 — operator-editable config surface (mirrors the GET
+# /v1/admin/config snapshot). Everything else in Config (database URLs,
+# filesystem paths, extra LLM endpoints, secrets, ...) is never merged from
+# an admin POST; see _normalize_config_payload.
+_ADMIN_CONFIG_ALLOWLIST: Dict[str, frozenset] = {
+    "app": frozenset({"environment", "debug", "timezone"}),
+    "github": frozenset({"user_name", "source_repo_url", "target_repo_url"}),
+    "ollama": frozenset(
+        {
+            "model",
+            "translator_model",
+            "editor_model",
+            "headlines_model",
+            "enrichment_model",
+        }
+    ),
+    "scoring": frozenset({"weights"}),
+}
+# Full on-disk config serializes to ~11KB; 128KB leaves ample headroom for
+# legitimate patches while bounding abuse (plan 123).
+_ADMIN_CONFIG_MAX_BYTES = 128 * 1024
+# prompts.yaml serializes to ~45KB; 512KB bounds abuse with headroom.
+_ADMIN_PROMPTS_MAX_BYTES = 512 * 1024
+_ADMIN_PROMPTS_MAX_KEYS = 100
+
+
+def _validate_prompts_payload(prompts: Dict[str, Any]) -> None:
+    """Enforce the plan-123 bounds on an admin prompts save (422/413).
+
+    Keys must be non-empty names (capped count); every value must be a
+    prompt-body object; the serialized total must fit the byte cap.
+    """
+    if len(prompts) > _ADMIN_PROMPTS_MAX_KEYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Prompts rejected: too many entries ({len(prompts)}, "
+                f"limit {_ADMIN_PROMPTS_MAX_KEYS})"
+            ),
+        )
+    for name, body in prompts.items():
+        if not isinstance(name, str) or not name.strip() or len(name) > 64:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Prompts rejected: invalid prompt name {name!r}",
+            )
+        if not isinstance(body, dict):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Prompts rejected: prompt '{name}' must be an object",
+            )
+    serialized_len = len(json.dumps(prompts, default=str))
+    if serialized_len > _ADMIN_PROMPTS_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Prompts payload too large ({serialized_len} bytes, "
+                f"limit {_ADMIN_PROMPTS_MAX_BYTES})"
+            ),
+        )
+
+
 def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize a config-save payload into the full Config shape.
 
-    Accepts both a PARTIAL patch (any section dicts) and the sanitized
-    snapshot returned by GET /v1/admin/config: top-level
+    Accepts both a PARTIAL patch (any ALLOWLISTED section dicts) and the
+    sanitized snapshot returned by GET /v1/admin/config: top-level
     environment/debug/timezone move under app.*, `sources`/`meta` (read-only
     extras) are dropped, and empty-string optional model names become None
     (the form renders None optionals as ""). Secrets (github.token,
     nvidia/gemini api_key) are never accepted.
+
+    Plan 123 — bounded write surface: only the operator-editable allowlist
+    below is merged. Known Config sections outside the allowlist (database,
+    paths, llm_endpoints, ...) are DROPPED with a warning (never merged),
+    so a full-config POST round-trips without persisting privileged changes.
+    Truly foreign top-level keys, non-dict section values, and oversize
+    payloads are rejected loudly (422/413).
     """
+    from noticiencias.config_manager import Config as _Config
+
+    serialized_len = len(json.dumps(payload, default=str))
+    if serialized_len > _ADMIN_CONFIG_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Config payload too large ({serialized_len} bytes, "
+                f"limit {_ADMIN_CONFIG_MAX_BYTES})"
+            ),
+        )
+
     for section in ("github", "nvidia", "gemini"):
         if isinstance(payload.get(section), dict):
             for key in ("token", "api_key"):
                 payload[section].pop(key, None)
 
+    known_sections = set(_Config.model_fields)
+    dropped_sections: list[str] = []
+    dropped_keys: list[str] = []
     normalized: Dict[str, Any] = {}
     for key, value in payload.items():
         if key in ("sources", "meta"):
@@ -662,7 +746,34 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             app_section[key] = value
             normalized["app"] = app_section
             continue
-        normalized[key] = value
+        allowed_keys = _ADMIN_CONFIG_ALLOWLIST.get(key)
+        if allowed_keys is None:
+            if key in known_sections:
+                dropped_sections.append(key)
+                continue
+            raise HTTPException(
+                status_code=422, detail=f"Config rejected: unknown section '{key}'"
+            )
+        if not isinstance(value, dict):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Config rejected: section '{key}' must be an object",
+            )
+        kept = {k: v for k, v in value.items() if k in allowed_keys}
+        dropped_keys.extend(f"{key}.{k}" for k in value if k not in allowed_keys)
+        if kept:
+            merged_section = dict(normalized.get(key, {}))
+            merged_section.update(kept)
+            normalized[key] = merged_section
+
+    if dropped_sections or dropped_keys:
+        logger.warning(
+            "Admin config save ignored non-operator-editable entries "
+            "(sections: {}; keys: {}) — allowlist: {}",
+            sorted(set(dropped_sections)),
+            sorted(set(dropped_keys)),
+            sorted(_ADMIN_CONFIG_ALLOWLIST),
+        )
 
     for section in ("ollama", "gemini", "nvidia"):
         if isinstance(normalized.get(section), dict):
@@ -2026,6 +2137,10 @@ def create_app(  # noqa: C901
         import tempfile
 
         import yaml
+
+        # Plan 123: bound the write surface (size cap + dict-shape check)
+        # before touching disk.
+        _validate_prompts_payload(payload.prompts)
 
         prompts_path = Path("config/prompts.yaml")
         prompts_path.parent.mkdir(parents=True, exist_ok=True)
