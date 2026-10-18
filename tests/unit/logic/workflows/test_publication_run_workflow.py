@@ -111,8 +111,18 @@ def test_a_collection_run_does_not_block_a_publication_run(db_manager, workflow)
 
 
 def _write_attempt(dir_path, article_id, **fields):
+    """Seed one attempt artifact. `generated_at` defaults to now — callers
+    seed it after the run row exists, so it counts as that run's fresh
+    evidence (plan 131 gates the merge on freshness); pass
+    `generated_at=...` explicitly to simulate a stale/previous attempt."""
     dir_path.mkdir(parents=True, exist_ok=True)
-    payload = {"article_id": str(article_id), "success": True, "stages": [], **fields}
+    payload = {
+        "article_id": str(article_id),
+        "success": True,
+        "stages": [],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        **fields,
+    }
     (dir_path / f"{article_id}.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
