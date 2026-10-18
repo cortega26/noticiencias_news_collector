@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import urlparse
 
 from news_collector.editorial.hero_alt import is_boilerplate_alt
 from news_collector.logic.parsers.image_extractor import is_site_logo_url
@@ -26,6 +27,12 @@ from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("ArticleImageHandler")
+
+# Hosts whose images may be downloaded and published as the hero image.
+# Empty on purpose: a source outlet's lead image is the work of that outlet or
+# its photographer, and the pipeline records no reuse licence for it. Add a host
+# only together with a licence entry in the frontend docs/image-rights-register.md.
+REMOTE_IMAGE_ALLOWLIST: frozenset[str] = frozenset()
 
 CT_TO_EXT: Dict[str, str] = {
     "image/jpeg": ".jpg",
@@ -66,8 +73,18 @@ class ArticleImageHandler:
     Instantiate once per RefineryEngine.
     """
 
-    def __init__(self, image_briefs: ImageBriefStore) -> None:
+    def __init__(
+        self,
+        image_briefs: ImageBriefStore,
+        *,
+        remote_image_hosts: frozenset[str] | None = None,
+    ) -> None:
         self._briefs = image_briefs
+        self._remote_image_hosts = (
+            REMOTE_IMAGE_ALLOWLIST
+            if remote_image_hosts is None
+            else frozenset(host.lower() for host in remote_image_hosts)
+        )
 
     # ------------------------------------------------------------------
     # Public interface
@@ -88,7 +105,8 @@ class ArticleImageHandler:
 
         Priority:
         1. Staged editorial brief (status=editorial_image_ready / resolved)
-        2. HTTP URL → download
+        2. HTTP URL → download, only for allowlisted hosts; any other source
+           image is not reused and the article goes to the editorial image queue
         3. Local (non-http) image path → pass through unchanged
         4. Missing / placeholder → queue brief
 
@@ -143,6 +161,29 @@ class ArticleImageHandler:
             return ImageResolution(resolved=False, queued_brief=True)
 
         if raw_image_url and raw_image_url.startswith("http"):
+            if not self._remote_image_allowed(raw_image_url):
+                logger.warning(
+                    "Source image {} is not reused (host not allowlisted); "
+                    "routing article {} to the editorial image queue.",
+                    raw_image_url,
+                    article_id,
+                )
+                self._queue_brief(
+                    article,
+                    article_id,
+                    image_slug,
+                    "third_party_image_blocked",
+                    existing_brief,
+                )
+                return ImageResolution(
+                    resolved=False,
+                    queued_brief=True,
+                    message=(
+                        "The source image is not reused without a licence: "
+                        "upload an original or licensed hero image in the "
+                        "Images desk and publish again."
+                    ),
+                )
             _dl = download_fn if download_fn is not None else self.download
             local_ref = _dl(raw_image_url, image_slug, target_dir)
             if local_ref:
@@ -184,6 +225,19 @@ class ArticleImageHandler:
         )
         self._queue_brief(article, article_id, image_slug, reason, existing_brief)
         return ImageResolution(resolved=False, queued_brief=True)
+
+    def _remote_image_allowed(self, url: str) -> bool:
+        """True when the URL's host (or a parent domain) is allowlisted.
+
+        Compares the lowercased hostname without a leading ``www.``; the dot
+        in the suffix check keeps ``evilexample.com`` and
+        ``example.com.evil.net`` from matching ``example.com``.
+        """
+        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        return any(
+            host == allowed or host.endswith("." + allowed)
+            for allowed in self._remote_image_hosts
+        )
 
     def download(self, url: str, slug: str, target_dir: Path) -> str | None:
         """
