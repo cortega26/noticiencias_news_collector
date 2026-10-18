@@ -191,6 +191,7 @@ class RefineryEngine:
         editor_agent: EditorAgent,
         config: Any,
         contract_validator=None,
+        remote_image_hosts: frozenset[str] | None = None,
     ):
         self.db = db_manager
         self.config = config
@@ -289,7 +290,9 @@ class RefineryEngine:
         self.identity_resolver = PublicationIdentityResolver(
             db=self.db, manifest=self.writer
         )
-        self.image_handler = ArticleImageHandler(image_briefs=self.image_briefs)
+        self.image_handler = ArticleImageHandler(
+            image_briefs=self.image_briefs, remote_image_hosts=remote_image_hosts
+        )
         self.pr_orchestrator = PROrchestrator(
             git=self.git, db=self.db, config=self.config
         )

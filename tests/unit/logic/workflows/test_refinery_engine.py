@@ -54,6 +54,28 @@ class TestRefineryEngine(unittest.TestCase):
         self.auditor_patch.stop()
         self.git_patch.stop()
 
+    def test_remote_image_hosts_are_forwarded_to_the_image_handler(self):
+        """The engine exposes the image allowlist as an explicit seam (used by
+        the e2e harness); omitting it keeps the module default."""
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        engine = RefineryEngine(
+            self.mock_db,
+            self.mock_git,
+            self.mock_editor,
+            self.mock_config,
+            remote_image_hosts=frozenset({"images.example.org"}),
+        )
+
+        self.assertTrue(
+            engine.image_handler._remote_image_allowed(
+                "https://cdn.images.example.org/a.jpg"
+            )
+        )
+        self.assertFalse(
+            engine.image_handler._remote_image_allowed("https://example.net/a.jpg")
+        )
+
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_records_readability_stage(self, mock_dt_refinery):
         """Plan 065: a successful run persists a `readability` stage with the

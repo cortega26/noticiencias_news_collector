@@ -41,6 +41,12 @@ frontend repo, cause B).
     `third_party_image_blocked`, return `ImageResolution(resolved=False,
     queued_brief=True, message=...)`. The message reaches the operator through
     `RefineryEngine._last_blocked_error`.
+- `news_collector/logic/workflows/refinery_engine.py`:
+  `RefineryEngine(..., remote_image_hosts=None)` forwards the allowlist to the
+  handler (explicit seam; production code leaves it `None`).
+  `news_collector/logic/workflows/pipeline_e2e.py` passes
+  `frozenset({"example.test"})` because its scenarios publish a fake remote
+  hero image through a stubbed downloader.
 - `news_collector/contracts/image_brief.py`: add `third_party_image_blocked`
   to the `ImageBriefReason` literal (same precedent as `missing_alt_text`:
   the API exposes `reason` as a plain string, so no OpenAPI change).
