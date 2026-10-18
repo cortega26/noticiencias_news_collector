@@ -1,5 +1,11 @@
 # Roadmap — Plans 085–114 (Fifth–Seventh Passes)
 
+> **Ninth pass (2026-10-18):** plans 131–150, the vetted output of a full deep
+> audit, live in `plans/README.md`'s ninth-pass section. Start there for current
+> work; the waves below are the fifth-seventh pass record (all DONE).
+> Sequencing rules for 131–150 (the Makefile/CI serial resource, the publication
+> file constraint, 143 → 144/145) are in the ledger section.
+
 **Audit base (fifth/sixth pass):** back-end repo `noticiencias_news_collector` @ `e77a039` (2026-09-16).
 **Audit base (seventh pass, growth track):** back-end repo @ `9fa77b6` (2026-09-16), verified against both repos (parallel audits of pipeline, frontend engagement, and distribution state).
 **Scope:** plans 085–106 (done, archived) plus plans 107–114 (growth track: measure → throughput → trust/looks → monetization foundations). Prior passes live in `plans/README.md` (ledger) and `plans/archive/`.

@@ -1,0 +1,203 @@
+# Plan 143: Restore the dev-lock security gate and put it in CI
+
+> **Executor instructions**: Follow this plan step by step. Run every verification
+> command and confirm the expected result before moving to the next step. If
+> anything in the "STOP conditions" section occurs, stop and report — do not
+> improvise. When done, update the status row for this plan in `plans/README.md`.
+>
+> **Drift check (run first)**:
+> `git diff --stat 1ff6926..HEAD -- requirements-security.lock requirements.lock requirements-refinery.lock scripts/sync_lockfiles.py Makefile .github/workflows/quality.yml SECURITY.md docs/security.md scripts/security_gate.py`
+> If any in-scope file changed since this plan was written, compare the
+> "Current state" excerpts against the live code before proceeding; on a
+> mismatch, treat it as a STOP condition.
+
+## Status
+
+- **Priority**: P1
+- **Effort**: S
+- **Risk**: LOW
+- **Depends on**: none, but **sequence against plans 138, 139, 142, 144, 145** for
+  the shared CI files (and see the interaction with plan 144, which touches the
+  same lock/venv area — run 144 after this one)
+- **Category**: security / dependencies
+- **Planned at**: commit `1ff6926`, 2026-10-18
+
+## Why this matters
+
+`make security-dev` is red today. `pip-audit -r requirements-security.lock`
+reports `mcp 1.29.0` → `GHSA-84m7-p3x7-pcfv` (fix 1.30.0/2.2.0), the allowlist in
+`scripts/security_gate.py:33-40` is intentionally empty, and the gate treats a
+missing severity as fail-closed. The ledger's "security-dev fully green
+(2026-10-12)" is stale, so the next executor who follows it hits an unexplained
+exit 1 — and the natural reaction (add an allowlist entry) would re-introduce the
+expiry debt that plan 096 just retired. On top of that, `security-dev` is in **no**
+CI path (`make verify-ci` and every workflow omit it), so a dev/refinery-lock
+advisory is invisible until someone runs it by hand. Exposure is limited
+(`mcp` is semgrep's own dependency in the dev/security environment and is absent
+from the runtime and refinery locks — verified), so this is a hygiene and
+truthfulness fix, not an incident.
+
+## Current state
+
+- `requirements-security.lock:1195-1198`:
+
+```
+mcp==1.29.0 \
+    --hash=sha256:52d0… \
+    --hash=sha256:f5a0… \
+    # via semgrep
+```
+
+- `scripts/security_gate.py:33-40` — `PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {}`
+  with the comment "2026-10-12: empty … Verified: `pip-audit -r
+  requirements-security.lock` -> no known vulnerabilities."
+- `scripts/security_gate.py` — severity mapping (`UNKNOWN` → rank 3 = HIGH),
+  `pip_audit_findings()` skips allowlisted ids/aliases, main exits 1 when
+  findings survive the threshold.
+- `Makefile:343-346` — `security-dev` audits `requirements-security.lock` and
+  `requirements-refinery.lock`, writing `reports/security/status-dev.json`.
+- `Makefile:249` — `verify-ci` does **not** include `security-dev`.
+- `SECURITY.md:18,25-33` and `docs/security.md:18` — the policy text to keep in
+  sync.
+- `scripts/sync_lockfiles.py` — the sanctioned regeneration path
+  (`python scripts/sync_lockfiles.py --help` for the exact flags before using it).
+
+## Commands you will need
+
+| Purpose                | Command                                                                 | Provenance | Expected on success                    |
+|------------------------|-------------------------------------------------------------------------|------------|----------------------------------------|
+| Install/baseline       | `make bootstrap`                                                        | declared   | exit 0                                 |
+| Current failure proof  | `.venv/bin/pip-audit -r requirements-security.lock --format json \| head -c 400` | executed (advisor ran it: 1 finding) | shows the mcp finding |
+| Dev/security gate      | `make security-dev`                                                     | declared   | exits 1 today, 0 after the change      |
+| Runtime gate           | `make security`                                                         | declared   | exit 0                                 |
+| Quality gate           | `make quality-ci`                                                       | declared   | exit 0                                 |
+| Ledger                 | `make plans-ledger-check`                                               | declared   | `validate_plans_ledger: OK`            |
+
+Provenance: the `executed` row is the advisor's read-only `pip-audit` run against
+the committed lock (no files written). Everything else is `declared`.
+
+## Scope
+
+**In scope**:
+
+- `requirements-security.lock` — regenerate via `scripts/sync_lockfiles.py`
+- `requirements.lock`, `requirements-refinery.lock` — only if the tool regenerates
+  them as part of the same run (accept removals-only diffs; if unrelated churn
+  appears, STOP)
+- `SECURITY.md`, `docs/security.md` — record the new pin/verdict
+- `.github/workflows/quality.yml` — add the `security-dev` leg
+- `Makefile` — only if a `security-dev` change is needed to run in CI
+
+**Out of scope** (do NOT touch):
+
+- `scripts/security_gate.py`'s allowlist (leave it empty) and its severity logic.
+- `Makefile:78-81`'s bootstrap install order (plan 144 owns the venv/lock
+  relationship) — do not try to fix the override problem here.
+- Any other lockfile content beyond what the tool regenerates.
+
+## Git workflow
+
+- Branch: `advisor/143-dev-lock-security-gate`
+- Conventional commit, e.g. `fix(security): bump mcp in the dev lock and gate it in CI (plan 143)`.
+- Do NOT push or open a PR unless the operator instructed it.
+
+## Steps
+
+### Step 0: Establish a green baseline
+
+Run `make bootstrap`, `make lint`, `make type`, `make security`, then
+`make security-dev` and record the failure verbatim.
+
+**Verify**: the first four exit 0; `security-dev` fails with the mcp finding (if
+it fails for a *different* reason, STOP — the environment differs from the audit).
+
+### Step 1: Re-verify the finding yourself
+
+1. Run `.venv/bin/pip-audit -r requirements-security.lock --format json` and
+   confirm the only findings are the mcp advisory (and that
+   `pip-audit -r requirements.lock` and `-r requirements-refinery.lock` are
+   clean). Record the ids.
+2. Read the advisory's metadata (severity, affected versions, fix versions) from
+   the pip-audit output. Do not paste advisory bodies into the repo.
+
+**Verify**: the recorded finding list matches the expectation above.
+
+### Step 2: Move the pin through the sanctioned path
+
+3. Read `scripts/sync_lockfiles.py --help` and use its documented upgrade path to
+   raise `mcp` to a fixed version (≥ 1.30.0) **inside the security lock only**.
+   Rules:
+   - never hand-edit hashes;
+   - if the tool rewrites the other locks, verify the diff is removals-only
+     (plan 130 established that expectation) — otherwise STOP;
+   - if semgrep's constraint blocks the bump, STOP and report with the resolver
+     message instead of pinning an incompatible version or adding an allowlist
+     entry on your own authority.
+4. Confirm the runtime locks did not gain `mcp`.
+
+**Verify**: `make security-dev` exits 0; `grep -n "^mcp==" requirements*.lock`
+shows the new version only in `requirements-security.lock`;
+`git diff --stat requirements*.lock` shows the expected, minimal churn.
+
+### Step 3: Keep the record true
+
+5. Update `SECURITY.md` (the dev-lock verdict section) and `docs/security.md:18`
+   region: state the new pinned version, the date, and that the allowlist remains
+   empty. Keep the existing structure; do not rewrite policy.
+6. Update `plans/README.md`'s stale "security-dev fully green (2026-10-12)" claim
+   — the row/paragraph that carries it — so the ledger stops asserting a state
+   that the advisory broke.
+
+**Verify**: `make docs-check` exits 0; `grep -rn "security-dev" SECURITY.md docs/security.md plans/README.md` shows consistent text.
+
+### Step 4: Make the gate observable
+
+7. Wire `make security-dev` into CI where the security toolchain already exists:
+   add a step to `.github/workflows/quality.yml` after the existing quality
+   steps (`run: make security-dev`). It is a pip-audit run over two lockfiles —
+   no installs beyond what the job already has.
+8. Alternatively, add it to `verify-ci`'s composition — but check the runtime
+   cost first and state the choice in the ledger row. Prefer `quality.yml`
+   (already the security home) unless you find a strong reason otherwise.
+9. Update `docs/ci.md` if the workflow list changes.
+
+**Verify**: `grep -n "security-dev" .github/workflows/quality.yml Makefile docs/ci.md` → the wiring is visible; YAML parses.
+
+## Test plan
+
+- No new unit tests: the deliverable is the lock bump + wiring. Verification is
+  the two `make security*` targets plus the recorded `pip-audit` output.
+- If `scripts/security_gate.py` has tests, run them
+  (`.venv/bin/pytest tests/test_security_gate.py -q --no-cov`) and keep them green.
+
+**Verify**: `make security && make security-dev && make quality-ci` → exit 0.
+
+## Done criteria
+
+All must hold:
+
+- [ ] `make security-dev` exits 0; `make security` and `make quality-ci` still exit 0
+- [ ] `pip-audit` over all three locks reports no findings (output recorded)
+- [ ] The allowlist in `scripts/security_gate.py` is still empty (diff proves it)
+- [ ] `security-dev` runs in CI; `docs/ci.md`/`SECURITY.md`/`docs/security.md` agree
+- [ ] The stale ledger claim is corrected
+- [ ] `git diff --name-only main...HEAD` lists only in-scope files
+- [ ] `plans/README.md` row 143 updated; `make plans-ledger-check` → OK
+
+## STOP conditions
+
+- `security-dev` fails for anything other than the mcp advisory → report; the
+  environment differs from the audit.
+- The upgrade path would change the runtime locks beyond removals, or would
+  upgrade semgrep itself (a bigger decision) → STOP and report the resolver output.
+- `make quality-ci` goes red after the change → report with the diff; do not
+  weaken the gate.
+
+## Maintenance notes
+
+- The empty allowlist is a deliberate stance: any future residual entry must
+  carry a reason and an expiry date (the gate enforces this).
+- Reviewer should scrutinise: that the lock diff is minimal and produced by the
+  sanctioned script (not hand-edited), and that CI now runs the dev-lock audit.
+- **Deferred:** auditing the sibling frontend repo's npm closure from this repo's
+  CI (plan 145 owns the admin app's own gate).
