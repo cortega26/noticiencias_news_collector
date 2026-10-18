@@ -21,6 +21,28 @@ _FIXED_PAYLOAD_INSTANT = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture(autouse=True)
+def _allow_example_com_source_images():
+    """Publication tests mock the downloader and use https://example.com images.
+
+    The shipped allowlist is empty (source images are not reused without a
+    licence); the policy itself is covered in
+    tests/decompose_refinery/test_image_handler.py with explicit handlers.
+
+    Restores the attribute by hand instead of requesting ``monkeypatch``: an
+    autouse fixture that depends on ``monkeypatch`` changes the teardown order
+    of every test that patches module state itself.
+    """
+    from news_collector.logic.workflows import image_handler
+
+    original = image_handler.REMOTE_IMAGE_ALLOWLIST
+    image_handler.REMOTE_IMAGE_ALLOWLIST = frozenset({"example.com"})
+    try:
+        yield
+    finally:
+        image_handler.REMOTE_IMAGE_ALLOWLIST = original
+
+
+@pytest.fixture(autouse=True)
 def _close_global_db_manager():
     yield
     manager = getattr(database_module, "_db_manager", None)
