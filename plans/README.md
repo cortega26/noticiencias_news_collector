@@ -6,7 +6,10 @@ Third pass (2026-08-07): backend correctness/regression sweep (see Open/Rejected
 Fourth pass (2026-08-22): coordinated backend/frontend reliability and
 architecture hardening (plan 060).
 
-**Last verified:** `03f4ea8` (2026-09-26) — plan 060 row extended with Phases
+**Last verified:** `1ff6926` (2026-10-18) — ninth-pass full deep audit
+recorded (30 vetted findings bundled into plans 131–150); earlier
+reconciliation notes below are historical. Details of the pass follow
+`03f4ea8` (2026-09-26) — plan 060 row extended with Phases
 5a-5e (webhook receipts, attempt events + reconciler, dashboard evidence API +
 frontend wiring, callback sender hardening; Phase 5 now fully closed) and
 refreshed remaining-phase statuses; plan 081 row refreshed; seventh-pass plan
@@ -491,3 +494,76 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   vision hero alt, offline replay, GA4 loop, recursos brief, enrichment
   labeling): mapped to existing rows/specs (048, 080 Phase 3, 084,
   frontend 002/005/006/009); no new plans.
+
+## Ninth pass (2026-10-18, full deep audit)
+
+Full nine-category deep audit (correctness, security, performance, tests,
+tech-debt, dependencies, DX, docs, direction) via nine parallel read-only
+subagents, with the advisor re-opening every retained finding before planning
+(cited locations re-read; `pip-audit -r requirements-security.lock` and
+`npm audit --package-lock-only` re-run). Scope: this repository (frontend repo
+internals were out of scope; the cross-repo contract mirror was checked).
+Thirty findings were retained and bundled into plans 131–150; direction options
+stay unplanned and are listed at the end of this section. The backend tree was
+dirty at plan time (`config.toml` and `data/exports/latest_articles.json`
+modified; `reports/evaluation/routing-glm53/` and `todo-webhook-inbox-deploy.md`
+untracked) — every plan carries a drift check against its `Planned at` commit.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 131 | [Publish-run summary truth](131-publish-run-summary-truth.md) | P1 | S | — | TODO |
+| 132 | [Webhook inbox poison-row containment](132-webhook-inbox-poison-row.md) | P1 | M | — | TODO |
+| 133 | [Publication environment reuse](133-publication-env-reuse.md) | P1 | M | sequence with 131/134 | TODO |
+| 134 | [Serving image import surface](134-serving-image-import-surface.md) | P1 | M | — | TODO |
+| 135 | [Boundary gate reality](135-boundary-gate-reality.md) | P1 | M | shared Makefile | TODO |
+| 136 | [Policy integrity tests](136-policy-integrity-tests.md) | P1 | S | — | TODO |
+| 137 | [Coverage profile for e2e suites](137-coverage-profile-full.md) | P1 | M | — | TODO |
+| 138 | [Gate honesty (e2e/security/admin lint)](138-gate-honesty.md) | P1 | S | shared Makefile/CI | TODO |
+| 139 | [Weak-test ratchet](139-weak-test-ratchet.md) | P2 | S-M | shared Makefile/CI | TODO |
+| 140 | [Mutation coverage widening](140-mutation-coverage-widening.md) | P2 | M | — | TODO |
+| 141 | [Enrichment URL safety](141-enrichment-url-safety.md) | P1 | M | — | TODO |
+| 142 | [Security hygiene (artifact, tokens, path, payload)](142-security-hygiene.md) | P1 | S-M | shared CI files | TODO |
+| 143 | [Dev-lock security gate](143-dev-lock-security-gate.md) | P1 | S | before 144/145 | TODO |
+| 144 | [Toolchain and lock truth](144-toolchain-and-lock-truth.md) | P2 | S-M | 143; shared Makefile/CI | TODO |
+| 145 | [Admin npm and dependency hygiene](145-admin-npm-and-dep-hygiene.md) | P2 | M | 143; shared CI files | TODO |
+| 146 | [Root task queue + inventory baseline](146-root-task-queue.md) | P2 | M | coordinates with 081 | TODO |
+| 147 | [Doc truth pass](147-doc-truth-pass.md) | P2 | S-M | coordinates with 081 | TODO |
+| 148 | [Read-path wins](148-read-path-wins.md) | P2 | S | — | TODO |
+| 149 | [Small correctness fixes](149-small-correctness.md) | P2 | S-M | — | TODO |
+| 150 | [DX small items](150-dx-small-items.md) | P3 | S-M | shared Makefile/CI | TODO |
+
+### Ninth-pass sequencing rules
+
+- **The Makefile/CI surface is a serial resource.** Plans 135, 137, 138, 139,
+  142, 143, 144, 145 and 150 all touch `Makefile` and/or `.github/workflows/`;
+  run them one at a time, each merged before the next starts.
+- **Publication files** (`publication_pipeline.py`,
+  `publication_run_workflow.py`, `publication_attempts.py`, `target_repo_*`):
+  plans 131 and 133 must not run concurrently.
+- 143 before 144 and 145 (same lock/venv area).
+- 137 unblocks any future `serving/api.py` split — do not start that split first.
+- 146 and 147 coordinate with plan 081 (docs reconciliation owner); read
+  `plans/081/todo.md` before moving or rewriting docs.
+
+### Ninth-pass findings considered and rejected (do not re-audit)
+
+- `serving/api.py` 2,640-line split: precondition re-assessed — the behavioural
+  suite exists, but the coverage ratchet cannot see it (e2e-marked suites are
+  never measured). Planned as 137; the split itself stays unplanned until 137
+  lands.
+- Micro-perf items measured and dropped: `load_export_candidate_scores()`
+  re-parse (0.73 ms against the real 588 KB file), triage similarity grouping
+  (sub-millisecond), `/healthz` COUNT queries (health probes want fresh values),
+  `HostPacer`/fan-out settings (deliberate, measured in plans 116/125).
+- Prior verdicts upheld: `make type` double-suite cost and `MYPY_TARGETS`
+  widening; `scripts/`+`tools/` mypy exclusion; `admin_panel.py` god module;
+  `psycopg`/PostgreSQL scope (plan 046 REJECTED); DNS-rebinding TOCTOU; SQL score
+  histogram; `perf_thresholds.py` (documented historical).
+- Small nits noted, not planned: `.editorconfig` `indent_size = 2` for Python,
+  `print()` residue in `enrichment/router.py`, `--legacy-peer-deps` symmetry,
+  consolidation of `scripts/migrations/*` (plan 150 only adds a warning banner).
+- Direction options (LLM token/cost metering, repairing and scheduling the
+  source-drift detectors, model-selection rank ingest, an LLM-chain health
+  surface, gate abstention as a first-class number): maintainer decisions with
+  their evidence recorded in the pass report; they map to no existing row and are
+  not duplicated by any plan above.
