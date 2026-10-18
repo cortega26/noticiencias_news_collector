@@ -327,7 +327,10 @@ class PublicationRunWorkflow:
                 stage_listener=self._stage_listener(run_id),
             )
             summary = self._collect_publication_summary(
-                result, article_id=article_id, article_url=article_url
+                result,
+                run_id=run_id,
+                article_id=article_id,
+                article_url=article_url,
             )
             if result.get("status") == "success" and result.get("processed_count", 0):
                 self.complete(run_id, summary=summary)
@@ -401,6 +404,7 @@ class PublicationRunWorkflow:
                 }
                 item_summary = self._collect_publication_summary(
                     item_result,
+                    run_id=run_id,
                     article_id=item_id if isinstance(item_id, int) else None,
                     article_url=None,
                 )
@@ -453,6 +457,7 @@ class PublicationRunWorkflow:
         self,
         result: dict[str, Any],
         *,
+        run_id: int,
         article_id: int | None,
         article_url: str | None,
     ) -> dict[str, Any]:
@@ -460,6 +465,17 @@ class PublicationRunWorkflow:
         `PublicationAttemptSummary` (has `pr_url`, `failure_class`,
         `final_slug`, `branch_name`, `stages`) so the GUI can show the PR
         link or the editorial-rejection reason.
+
+        The artifact is keyed per article, not per run, so evidence is
+        merged ONLY when it provably belongs to this run: `generated_at`
+        must parse and be strictly later than the run's `started_at` (see
+        `_attempt_belongs_to_run`). A no-op run, a crash before any stage
+        persisted, or a failed batch item must not inherit the previous
+        attempt's `pr_url` / `success: true` (plan 131). The attempt writer
+        inside the pipeline does not know the run id, so freshness is the
+        authorship signal; every canonical artifact carries `generated_at`.
+        Unverifiable artifacts (missing/malformed timestamp) are never
+        trusted.
         """
         summary: dict[str, Any] = {
             "status": result.get("status"),
@@ -482,6 +498,15 @@ class PublicationRunWorkflow:
             else str(result.get("article_id") or "").strip()
         )
         attempt = self._read_attempt_for_id(resolved_id) if resolved_id else None
+        if attempt is not None and not self._attempt_belongs_to_run(run_id, attempt):
+            logger.info(
+                "Run {}: ignoring attempt evidence for article {} written by a "
+                "previous run (generated_at={!r}).",
+                run_id,
+                resolved_id,
+                attempt.get("generated_at"),
+            )
+            attempt = None
         if attempt:
             for key in (
                 "pr_url",
@@ -498,10 +523,35 @@ class PublicationRunWorkflow:
         safe = _json_safe(summary)
         return safe if isinstance(safe, dict) else {}
 
+    def _attempt_belongs_to_run(self, run_id: int, attempt: dict[str, Any]) -> bool:
+        """True only when the persisted attempt provably comes from THIS run.
+
+        The artifact is keyed per article, not per run, so read-back proves
+        authorship by freshness: the attempt's `generated_at` must parse and
+        be strictly later than the run row's `started_at`. Missing or
+        malformed timestamps (legacy/hand-written files cannot prove
+        authorship) count as not this run's evidence — never trusted.
+        """
+        started_at = self._run_started_at(run_id)
+        generated_at = _parse_iso_instant(attempt.get("generated_at"))
+        if started_at is None or generated_at is None:
+            return False
+        return generated_at > started_at
+
+    def _run_started_at(self, run_id: int) -> datetime | None:
+        """The run row's `started_at` as an aware UTC datetime (SQLite hands
+        back naive datetimes, see `_as_utc`); None when the row is gone."""
+        with self._db.get_session() as session:
+            row = session.get(WorkflowRun, run_id)
+        started_at = row.started_at if row is not None else None
+        return _as_utc(started_at) if started_at is not None else None
+
     def _read_attempt_for_id(self, resolved_id: str) -> dict[str, Any] | None:
         """Read `publication_attempts/{artifact_name(resolved_id)}.json` — the
         summary `PublicationAttempts` persists. Exact match only; a missing
-        file means this run wrote no attempt.
+        file means this run wrote no attempt. Callers must gate the result
+        on run authorship (see `_attempt_belongs_to_run`): the file is keyed
+        per article, not per run.
         """
         return read_publication_attempt(self._attempts_dir, resolved_id)
 
@@ -801,6 +851,19 @@ class PublicationRunWorkflow:
 def _as_utc(value: datetime) -> datetime:
     """SQLite hands back naive datetimes; treat them as UTC."""
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _parse_iso_instant(value: Any) -> datetime | None:
+    """Parse an ISO-8601 timestamp into an aware UTC datetime; None when the
+    value is absent, not a string, or malformed (unverifiable evidence must
+    never be trusted)."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return _as_utc(parsed)
 
 
 def _run_duration_seconds(
