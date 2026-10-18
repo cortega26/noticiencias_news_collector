@@ -66,6 +66,7 @@ jobs:
             .editorconfig
             workers/
             docs/
+            plans/
             .github/workflows/
           sparse-checkout-cone-mode: false
 
