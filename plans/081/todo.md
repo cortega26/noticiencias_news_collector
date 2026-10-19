@@ -14,8 +14,8 @@
       read and verified; history-labeled `perf/bench.md`,
       `docs/strategic_features.md`, `docs/security_removal_plan.md` and the
       taxonomy README backfill note; no product-decision claims rewritten.
-- [ ] Review edits; run required checks; record coverage and limitations
-      — checks run and recorded; sub-agent spec-vs-implementation review
-      requested per docs/AGENTS.md §0.1(d), outcome recorded in results.md.
-- [ ] Finalize audit evidence and ledger status — results.md has evidence;
-      plan status left IN_PROGRESS pending the long tail above.
+- [x] Review edits; run required checks; record coverage and limitations
+      — checks run and recorded (docs-check 15, context-validate, inventory,
+      ledger); spec-vs-implementation review outcome in results.md.
+- [x] Finalize audit evidence and ledger status — results.md carries the full
+      evidence; closed DONE 2026-10-19 after plan 165 finished the leaf-doc sweep.
