@@ -47,11 +47,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCK = REPO_ROOT / "requirements.lock"
 
 
-# Dated 2026-10-18 (plan 144). Each entry is a *known* collision: the
-# security lock is installed over the runtime lock into the same venv at
-# bootstrap, so the last install wins. Values are what the security lock
-# leaves installed. Shrink this map when the physical `.venv-security`
-# split lands; never add an entry for a new mismatch.
+# Empty since plan 156 (2026-10-19). The security lock now carries the same
+# click/pyee/smmap pins as the runtime lock, and types-requests is not a
+# runtime pin, so no deliberate divergence remains. The mechanism stays so a
+# future collision fails loudly; never add an entry for a new mismatch.
 @dataclass(frozen=True)
 class KnownOverride:
     """A deliberate, documented divergence between lock and venv."""
@@ -60,21 +59,7 @@ class KnownOverride:
     reason: str
 
 
-KNOWN_BOOTSTRAP_OVERRIDES: Dict[str, KnownOverride] = {
-    "click": KnownOverride(
-        "8.4.2", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "pyee": KnownOverride(
-        "13.0.1", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "smmap": KnownOverride(
-        "5.0.2", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "types-requests": KnownOverride(
-        "2.32.4.20260107",
-        "security lock overrides it at bootstrap; see plan 144 deferral",
-    ),
-}
+KNOWN_BOOTSTRAP_OVERRIDES: Dict[str, KnownOverride] = {}
 
 # `name==version`, optionally with extras: `psycopg[binary]==3.3.4`.
 _PIN_RE = re.compile(
