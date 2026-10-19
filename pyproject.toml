@@ -259,7 +259,7 @@ also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "conf
 "news_collector/logic/workflows/publication_identity.py" = 77
 "news_collector/observability/llm_run_report.py" = 85
 "news_collector/utils/url_canonicalizer.py" = 82
-"news_collector/validation/rules.py" = 56
+"news_collector/validation/rules.py" = 93
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]
