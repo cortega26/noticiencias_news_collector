@@ -152,22 +152,11 @@ for one compatibility release and dual-write through repository methods.
 
 ### `workflow_runs`
 
-| Field | Required behavior |
-|---|---|
-| `id` | opaque stable ID returned by the API |
-| `kind` | typed value; initially `collection` and `publication_reconciliation` |
-| `idempotency_key` | nullable external/request identity; unique with kind when present |
-| `status` | `queued`, `running`, `succeeded`, `failed`, `interrupted`, `cancelled` |
-| `active_key` | nullable key, set to `collection` only while queued/running; unique SQLite partial index enforces single-flight |
-| `requested_payload` / `summary` | versioned JSON contracts, not arbitrary hidden state |
-| `error_code` / `error_detail` | stable machine code plus bounded operator detail |
-| timestamps | created, started, heartbeat, finished, updated |
-| `version` | optimistic transition counter |
-
-Rules: insert before dispatch; compare-and-set transitions; a runner acquires a
-lease/heartbeat; startup recovery marks expired active rows `interrupted`;
-retention removes terminal rows only (default 90 days, configurable), never
-queued/running rows.
+As shipped, this table uses `run_type`, `run_metadata`, `idempotency_key`,
+`heartbeat_at`, `status` and per-`run_type` single-flight indexes; `kind`,
+`active_key`, `requested_payload` and `version` were the original proposal and
+are not in the schema. See "Update: as shipped" in
+[`docs/adr/0006-durable-workflow-lifecycle-state.md`](../../docs/adr/0006-durable-workflow-lifecycle-state.md).
 
 ### `workflow_stage_attempts`
 

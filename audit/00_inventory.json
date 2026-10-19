@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T17:36:16.454758+00:00",
+  "generated_at": "2026-10-19T17:47:06.709707+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -128,7 +128,6 @@
       "SOURCE_OF_TRUTH.md",
       "SPRINT_B_REPORT.md",
       "adr",
-      "api",
       "api_examples.md",
       "archive",
       "audits",
@@ -259,6 +258,7 @@
       "157-admin-503-error-code.md",
       "158-ci-toolchain-truth.md",
       "159-429-clock-determinism.md",
+      "160-gitleaks-830-gate.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1345,6 +1345,7 @@
     "plans/157-admin-503-error-code.md",
     "plans/158-ci-toolchain-truth.md",
     "plans/159-429-clock-determinism.md",
+    "plans/160-gitleaks-830-gate.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

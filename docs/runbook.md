@@ -24,6 +24,49 @@ not establish a live Grafana paging policy.
    another healthcheck. Preserve the original thresholds in incident evidence;
    increasing a threshold does not fix an incident.
 
+## Collector failure incidents
+
+`.github/workflows/collector-incident-watcher.yml` reacts to every completed
+`Daily News Collection` run on the default branch. It is the scheduled
+collector's automated failure signal; `daily_collector.yml` itself no longer
+opens a dated issue per failure.
+
+What the operator sees:
+
+- A `failure` or `timed_out` run opens one stable issue titled
+  `Collector incident: Daily News Collection <conclusion> (<UTC date>)`, reopens
+  the most recent closed issue carrying the watcher marker, or updates the
+  existing open incident.
+- The issue body records the run URL, branch, fingerprint
+  (`<conclusion>/<failed job names>`) and observation time. The watcher updates
+  that issue at most once per 24 h per identical fingerprint; a repeated
+  identical failure inside that window is intentionally silent.
+- A later `success` comments the recovery run and closes the incident. A
+  `cancelled` run only opens or updates an incident when no successful run is
+  recorded or the last success is older than 30 h; a recent cancellation is
+  silent. Other conclusions are a no-op.
+
+How to acknowledge:
+
+1. Open the run link in the issue and capture the failing job's log.
+2. Comment on the incident with the triage and owner. The watcher closes the
+   issue on the next successful default-branch run; closing it by hand does not
+   prevent it from reopening on the next failure.
+3. Do not retitle the issue or edit the `<!-- watcher-fingerprint: ... -->`
+   marker. The watcher finds its issue through the `Collector incident` title
+   search and refuses to touch an issue whose body lacks its marker.
+
+Fail-closed branches (the watcher stops instead of guessing):
+
+- More than one open issue matches `Collector incident in:title` — the watcher
+  fails and asks the owner to triage the duplicates.
+- The single matching issue has no fingerprint marker — treated as a possible
+  human-titled collision; the watcher fails without editing it.
+- Historical dated failure issues are never touched.
+
+The watcher runs with `issues: write`, `actions: read` and `contents: read`,
+serialized by a `collector-incident-watcher` concurrency group.
+
 ## Stuck collection or publication runs
 
 `workflow_runs` stores execution state. Inspect the run ID, run type, status,

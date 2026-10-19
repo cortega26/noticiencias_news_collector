@@ -1,7 +1,8 @@
 # ADR-0006: Durable Workflow Lifecycle State
 
 **Date**: 2026-08-22
-**Status**: Proposed
+**Status**: Proposed — `workflow_runs` shipped with different column names; see
+"Update: as shipped (2026-10)" at the end of this document.
 **Deciders**: Engineering team
 
 ---
@@ -142,3 +143,34 @@ it, so a rollback of the new tables does not strand any consumer.
 | Keep the JSON-blob approach on `Article.article_metadata` | Rejected — unqueryable, already measured as a reliability gap (plan 060 evidence baseline) |
 | Move to PostgreSQL for operational state | Rejected — already settled and out of scope; plan 046, operator decision 2026-08-11, SQLite-only |
 | External state store (Redis, Kafka, etc.) | Rejected — explicitly out of scope per master plan; no new infrastructure |
+
+---
+
+## Update: as shipped (2026-10)
+
+Verified against `news_collector/storage/models.py` at commit `196df75e`
+(2026-10-19). All five tables in this ADR exist (`workflow_runs`,
+`workflow_stage_attempts`, `editorial_decisions`, `publication_attempts`,
+`publication_events`), but `workflow_runs` did not ship with the field table in
+"Decision".
+
+Actual `workflow_runs` columns (`models.py:568-607`):
+
+| Column | As shipped |
+|---|---|
+| `id`, `status`, timestamps | as proposed (`status` is `queued`, `running`, `succeeded`, `failed`, `cancelled`, `interrupted`) |
+| `run_type` | replaces `kind` |
+| `run_metadata` | JSON metadata column; the proposed `requested_payload` / `summary` columns do not exist |
+| `idempotency_key` | nullable; a partial unique index prevents the same key from being active twice within one `run_type` (`models.py:641-654`) |
+| `heartbeat_at` | lease heartbeat |
+| `error_code` / `error_detail` | as proposed |
+
+Single-flight is enforced by partial unique indexes on `run_type` for
+`collection` and `publication` over `queued`/`running` rows
+(`models.py:620-640`), not by an `active_key` column. The live `run_type` values
+are `collection`, `publication`, `publication_reconciliation` and
+`source_catalog_reconciliation`.
+
+`kind`, `active_key`, `requested_payload`, `summary` and `version` are the
+original proposal and are **not** in the shipped schema. `docs/SOURCE_OF_TRUTH.md`
+rules that code wins on field names, so this section is the correction.
