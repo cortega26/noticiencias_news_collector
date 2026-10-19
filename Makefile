@@ -1,7 +1,8 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery bootstrap-security docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
+VENV_SECURITY ?= .venv-security
 ifeq ($(OS),Windows_NT)
 BIN_DIR := Scripts
 PYTHON ?= python
@@ -22,11 +23,14 @@ PRE_COMMIT := $(PYTHON_BIN) -m pre_commit
 PDOC := $(PYTHON_BIN) -m pdoc
 PIP_AUDIT := $(PYTHON_BIN) -m pip_audit
 BANDIT := $(PYTHON_BIN) -m bandit
-SEMGREP := $(PYTHON_BIN) -m semgrep
+SEMGREP := $(VENV_SECURITY)/$(BIN_DIR)/semgrep
 
 # Refinery Environment
 PIP_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/pip
 PYTHON_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/python
+
+# Security tool Environment (semgrep is a pinned tool, not an audited dependency)
+PYTHON_SECURITY := $(VENV_SECURITY)/$(BIN_DIR)/python
 
 REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
@@ -52,6 +56,7 @@ GITLEAKS_REPORT := $(SECURITY_DIR)/gitleaks.json
 SECURITY_STATUS := $(SECURITY_DIR)/status.json
 BOOTSTRAP_STAMP := $(VENV)/.bootstrap-complete
 BOOTSTRAP_REFINERY_STAMP := $(VENV_REFINERY)/.bootstrap-complete
+BOOTSTRAP_SECURITY_STAMP := $(VENV_SECURITY)/.bootstrap-complete
 
 CONFIG_FILE ?= $(CURDIR)/config.toml
 KEY ?=
@@ -91,8 +96,7 @@ $(BOOTSTRAP_STAMP): requirements.lock
 		pre-commit \
 		types-requests \
 		"types-PyYAML==6.0.12.20250915" \
-		"types-python-dateutil==2.9.0.20260124" \
-		semgrep
+		"types-python-dateutil==2.9.0.20260124"
 	@$(PYTHON_BIN) -c "import pytest, mypy, ruff, black, isort; print('[bootstrap] Key packages verified')" || { echo "[bootstrap] Package verification failed"; exit 1; }
 	@touch $(BOOTSTRAP_STAMP)
 
@@ -109,6 +113,14 @@ $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 	@$(PYTHON_REFINERY) -m pip install pytest
 	@touch $(BOOTSTRAP_REFINERY_STAMP)
 
+$(BOOTSTRAP_SECURITY_STAMP): requirements-semgrep.lock
+	@echo "[bootstrap-security] Creating isolated tool environment in $(VENV_SECURITY)"
+	@test -d $(VENV_SECURITY) || $(PYTHON) -m venv $(VENV_SECURITY)
+	@$(PYTHON_SECURITY) -m ensurepip --upgrade 2>/dev/null || true
+	@$(PYTHON_SECURITY) -m pip install --upgrade pip
+	@$(PYTHON_SECURITY) -m pip install --no-deps --require-hashes -r requirements-semgrep.lock
+	@touch $(BOOTSTRAP_SECURITY_STAMP)
+
 bootstrap: $(BOOTSTRAP_STAMP) ## Provision local environment with dependencies
 	@$(PYTHON_BIN) -c "import pytest_timeout" >/dev/null 2>&1 || $(PYTHON_BIN) -m pip install "pytest-timeout>=2.3.0"
 	@$(PYTHON_BIN) -c "import pytest_randomly" >/dev/null 2>&1 || $(PYTHON_BIN) -m pip install "pytest-randomly>=3.15.0"
@@ -118,6 +130,9 @@ run-local: bootstrap ## Run the collector locally
 	@$(PYTHON) scripts/run_collector.py
 
 bootstrap-refinery: $(BOOTSTRAP_REFINERY_STAMP) ## Provision refinery environment
+
+bootstrap-security: $(BOOTSTRAP_SECURITY_STAMP) ## Provision isolated semgrep tool environment
+	@echo "Security tool environment ready at $(VENV_SECURITY)"
 
 migrate: bootstrap ## Run database migrations (up to head)
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" $(PYTHON_BIN) scripts/migrate.py up
@@ -195,7 +210,7 @@ lint-fix: bootstrap ## Auto-format using Black/isort and fix Ruff findings
 	@$(BLACK) .
 	@$(RUFF) check . --fix
 
-quality: bootstrap ## Run all quality checks (lint, type, security, audit)
+quality: bootstrap $(BOOTSTRAP_SECURITY_STAMP) ## Run all quality checks (lint, type, security, audit)
 	@echo "[quality] Running Ruff (Lint + Security)..."
 	@$(RUFF) check .
 	@echo "[quality] Running Mypy (Types)..."
@@ -216,7 +231,7 @@ quality-fix: bootstrap ## Run auto-fixers then quality checks
 	@$(MAKE) lint-fix
 	@$(MAKE) quality
 
-quality-ci: bootstrap context-validate ## Run strict quality checks for CI (no fix, fail on error)
+quality-ci: bootstrap context-validate $(BOOTSTRAP_SECURITY_STAMP) ## Run strict quality checks for CI (no fix, fail on error)
 	@echo "[quality-ci] Running Ruff..."
 	@$(RUFF) check . --output-format=github
 	@echo "[quality-ci] Running Mypy..."
@@ -354,7 +369,7 @@ perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 
 audit: security ## Run supply-chain and security audits (alias for `make security`)
 
-security: bootstrap ## Run security and dependency scans
+security: bootstrap $(BOOTSTRAP_SECURITY_STAMP) ## Run security and dependency scans
 	@mkdir -p $(SECURITY_DIR)
 	@echo "[security] Running pip-audit"
 	@# Same exception source as every other pip-audit leg: PIP_AUDIT_ALLOWLIST in scripts/security_gate.py.

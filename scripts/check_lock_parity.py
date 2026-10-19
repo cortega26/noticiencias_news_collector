@@ -4,21 +4,21 @@ check_lock_parity.py — fail when the venv does not match requirements.lock.
 
 `requirements.lock` is the runtime truth (Dockerfile.serving installs only
 that lock). `make bootstrap` then installs `requirements-security.lock`
-into the same venv, so a handful of packages are deliberately overridden
-by the second install. This gate compares every runtime pin with the
-version actually installed in the running interpreter's environment and:
+into the same venv. Since plan 156 the security lock is constrained with
+`-c requirements.lock`, so it is expected to agree with the runtime pins.
+This gate compares every runtime pin with the version actually installed
+in the running interpreter's environment and:
 
-  - passes when every pin matches, except for the dated
-    `KNOWN_BOOTSTRAP_OVERRIDES` map below, which records exactly the known
-    runtime/security collisions and the version the security lock leaves
-    installed;
-  - fails on any other mismatch, on a missing package, and on a stale
-    exception (an entry whose collision no longer exists — delete it);
+  - passes when every pin matches; the `KNOWN_BOOTSTRAP_OVERRIDES` map is
+    empty and exists only as a fail-loud mechanism for a future deliberate
+    collision;
+  - fails on a mismatch, a missing package, or a stale exception (an entry
+    whose collision no longer exists — delete it);
   - does not police packages that are not in `requirements.lock` (dev gate
     tools and the security lock's own dependencies).
 
-The physical one-venv-per-lock split is deferred (plan 144, Execution
-record): until then this check keeps the divergence loud and enumerable.
+The semgrep tool env split landed in plan 156; runtime/security divergence
+is now a gate failure, not an enumerable exception.
 
 Healing a red result: after a lock change run `make bootstrap` (delete the
 `.venv/.bootstrap-complete` stamp first — bootstrap is stamp-gated) so the
@@ -47,11 +47,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCK = REPO_ROOT / "requirements.lock"
 
 
-# Dated 2026-10-18 (plan 144). Each entry is a *known* collision: the
-# security lock is installed over the runtime lock into the same venv at
-# bootstrap, so the last install wins. Values are what the security lock
-# leaves installed. Shrink this map when the physical `.venv-security`
-# split lands; never add an entry for a new mismatch.
+# Empty since plan 156 (2026-10-19). The security lock now carries the same
+# click/pyee/smmap pins as the runtime lock, and types-requests is not a
+# runtime pin, so no deliberate divergence remains. The mechanism stays so a
+# future collision fails loudly; never add an entry for a new mismatch.
 @dataclass(frozen=True)
 class KnownOverride:
     """A deliberate, documented divergence between lock and venv."""
@@ -60,21 +59,7 @@ class KnownOverride:
     reason: str
 
 
-KNOWN_BOOTSTRAP_OVERRIDES: Dict[str, KnownOverride] = {
-    "click": KnownOverride(
-        "8.4.2", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "pyee": KnownOverride(
-        "13.0.1", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "smmap": KnownOverride(
-        "5.0.2", "security lock overrides it at bootstrap; see plan 144 deferral"
-    ),
-    "types-requests": KnownOverride(
-        "2.32.4.20260107",
-        "security lock overrides it at bootstrap; see plan 144 deferral",
-    ),
-}
+KNOWN_BOOTSTRAP_OVERRIDES: Dict[str, KnownOverride] = {}
 
 # `name==version`, optionally with extras: `psycopg[binary]==3.3.4`.
 _PIN_RE = re.compile(
@@ -211,10 +196,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"[lock-parity] checked {len(rows)} pins against the running "
         f"environment; {len(overrides)} known bootstrap override(s)"
     )
-    print(
-        "[lock-parity] override keys (dated 2026-10-18): "
-        + ", ".join(sorted(KNOWN_BOOTSTRAP_OVERRIDES))
-    )
+    if KNOWN_BOOTSTRAP_OVERRIDES:
+        print(
+            "[lock-parity] override keys: "
+            + ", ".join(sorted(KNOWN_BOOTSTRAP_OVERRIDES))
+        )
 
     if failures:
         print("\n[lock-parity] FAIL - the venv does not match the runtime lock:")

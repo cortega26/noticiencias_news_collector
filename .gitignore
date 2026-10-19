@@ -100,6 +100,7 @@ ENV/
 env.bak/
 .venv/
 .venv-refinery/
+.venv-security/
 
 # Spyder project settings
 .spyderproject

@@ -51,9 +51,9 @@ These jobs are the current automation reality. Documentation should not claim a 
 
 `.github/workflows/quality.yml` (job `quality-gate`):
 
-- `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses `--config auto` and is non-blocking
+- `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep runs from `.venv-security` with `--config auto` and is non-blocking
 - `make quality-gate` — snapshot-first quality gate (no LLM)
-- `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy; one bounded allowlist exception (`GHSA-84m7-p3x7-pcfv`, `mcp` via semgrep's exact pin, dev tooling only) expires 2026-11-30, durable fix tracked by plan 144
+- `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy. The security lock is semgrep-free and the allowlist is empty (plan 156 retired the `GHSA-84m7-p3x7-pcfv` exception); semgrep now lives in its own hash-pinned tool lock installed only into `.venv-security`
 - gitleaks secret scan (binary downloaded in CI; locally `make security` runs it when installed and fails with an explicit message when it is missing — set `SKIP_SECRET_SCAN=1` to skip that leg deliberately). The CI pin lives in `GITLEAKS_VERSION` in `.github/workflows/quality.yml`; use the same version locally.
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 - Plan 160 fixes the gitleaks 8.30 run: `.gitleaks-baseline.json` is refreshed with the pinned CI binary and the test-fixture path is allowlisted.
@@ -64,6 +64,7 @@ Closest local equivalents:
 
 ```bash
 make bootstrap
+make bootstrap-security  # isolated semgrep tool env (.venv-security)
 make lint
 make type
 make config-validate
@@ -79,7 +80,7 @@ make build
 make perf
 make plans-ledger-check  # plans/README.md ledger drift (statuses, DONE-in-root, commit refs)
 make toolchain-check  # venv gate tools match the .pre-commit-config.yaml pins
-make lock-parity-check  # venv matches requirements.lock (known bootstrap overrides excepted)
+make lock-parity-check  # venv matches requirements.lock (no exceptions)
 ```
 
 The aggregate backend gate is:
@@ -91,11 +92,12 @@ make verify-ci
 `make toolchain-check` reads `.pre-commit-config.yaml` (the single source of
 truth for gate-tool versions) and fails when ruff, black, isort, bandit, pdoc or
 mypy drift from it. `make lock-parity-check` compares the venv with
-`requirements.lock` and fails on any new mismatch; the four documented
-runtime/security lock collisions (click, pyee, smmap, types-requests) are
-excepted in `scripts/check_lock_parity.py` until the `.venv-security` split
-lands. Both are part of `make verify-ci`, and both run in the `lint` job of
-`.github/workflows/ci.yml` — not only on a developer's machine.
+`requirements.lock` and fails on any mismatch; the runtime/security lock
+collisions (click, pyee, smmap, types-requests) were retired by constraining the
+security lock with `-c requirements.lock` and emptying the exception map (plan
+156), so the map now exists only as a fail-loud mechanism. Both are part of
+`make verify-ci`, and both run in the `lint` job of `.github/workflows/ci.yml` —
+not only on a developer's machine.
 
 ### Venv cache key contract
 
@@ -114,6 +116,12 @@ versions the pins reject. Trade-off: any `Makefile` edit rebuilds the venv cache
 (~1 minute) — that is the intended, safe direction. When adding a workflow that
 uses the action, copy that literal unchanged; if the pins ever move to a
 dedicated file, update every `cache-key` in the same change.
+
+The semgrep tool environment is cached separately in `.github/workflows/quality.yml`
+(path `.venv-security`, key `venv-security-<os>-hashFiles('requirements-semgrep.lock')`).
+Its lock is standalone (no `-c requirements.lock`), so that one file fully
+defines the environment; a restored cache preserves the bootstrap stamp and
+`make bootstrap-security` becomes a no-op.
 
 ## Other Active Workflows
 

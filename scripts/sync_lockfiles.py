@@ -53,16 +53,34 @@ LOCK_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "--no-header",
             "--generate-hashes",
             "--allow-unsafe",
-            # Note: No -c requirements.lock here because semgrep requires
-            # click~=8.1.8 which conflicts with scrapling[fetchers]'s click>=8.3.0
-            # pinned in the main lockfile. These are separate environments so
-            # the constraint is not needed.
+            "-c",
+            "requirements.lock",
             "--extra",
             "security",
             "--extra",
             "test",
             "--output-file",
             "requirements-security.lock",
+            "pyproject.toml",
+        ),
+    ),
+    (
+        "requirements-semgrep.lock",
+        (
+            "-m",
+            "piptools",
+            "compile",
+            "--no-header",
+            "--generate-hashes",
+            "--allow-unsafe",
+            # Note: No -c requirements.lock here on purpose. Semgrep is a
+            # standalone tool installed only into .venv-security; its graph
+            # (including the mcp pin) is deliberately isolated from the audited
+            # runtime and security locks.
+            "--extra",
+            "sast",
+            "--output-file",
+            "requirements-semgrep.lock",
             "pyproject.toml",
         ),
     ),
@@ -241,6 +259,7 @@ def ensure_lockfiles_clean() -> None:
                 "requirements.lock",
                 "requirements-refinery.lock",
                 "requirements-security.lock",
+                "requirements-semgrep.lock",
             ),
             description="Verifying lockfiles are up to date",
         )
@@ -254,6 +273,7 @@ def ensure_lockfiles_clean() -> None:
                 "requirements.lock",
                 "requirements-refinery.lock",
                 "requirements-security.lock",
+                "requirements-semgrep.lock",
             ),
             cwd=ROOT_DIR,
             check=False,

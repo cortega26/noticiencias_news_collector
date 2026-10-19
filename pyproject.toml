@@ -43,6 +43,11 @@ refinery = [
 security = [
     "bandit>=1.7.9",
     "pip-audit>=2.9.0",
+]
+# Semgrep is a pinned tool (like gitleaks), not an audited dependency: it pins
+# mcp==1.29.0 exactly, which carries GHSA-84m7-p3x7-pcfv. It lives in its own
+# hash-pinned lock installed only into .venv-security (plan 156).
+sast = [
     "semgrep>=1.60.0",
 ]
 test = [
