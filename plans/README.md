@@ -521,7 +521,7 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 | 138 | [Gate honesty (e2e/security/admin lint)](138-gate-honesty.md) | P1 | S | shared Makefile/CI | TODO |
 | 139 | [Weak-test ratchet](139-weak-test-ratchet.md) | P2 | S-M | shared Makefile/CI | TODO |
 | 140 | [Mutation coverage widening](140-mutation-coverage-widening.md) | P2 | M | — | TODO |
-| 141 | [Enrichment URL safety](141-enrichment-url-safety.md) | P1 | M | — | TODO |
+| 141 | [Enrichment URL safety](141-enrichment-url-safety.md) | P1 | M | — | TODO — refreshed 2026-10-19 after a correct STOP: the guard breaks 16 existing router tests that use the literal `http://x` (unresolvable host → fail-closed by design), so the plan now scopes fixture-level stubbing in `tests/unit/enrichment/test_router.py` (verified one-decorator remedy) and requires the directory to stop depending on live DNS. Re-executable as-is. |
 | 142 | [Security hygiene (artifact, tokens, path, payload)](142-security-hygiene.md) | P1 | S-M | shared CI files | TODO |
 | 143 | [Dev-lock security gate](143-dev-lock-security-gate.md) | P1 | S | before 144/145 | TODO |
 | 144 | [Toolchain and lock truth](144-toolchain-and-lock-truth.md) | P2 | S-M | 143; shared Makefile/CI | TODO |

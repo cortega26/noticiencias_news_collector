@@ -6,7 +6,7 @@
 > improvise. When done, update the status row for this plan in `plans/README.md`.
 >
 > **Drift check (run first)**:
-> `git diff --stat 1ff6926..HEAD -- news_collector/enrichment/ news_collector/infrastructure/requests_client.py news_collector/utils/security.py tests/unit/enrichment/`
+> `git diff --stat 7754536c..HEAD -- news_collector/enrichment/ news_collector/infrastructure/requests_client.py news_collector/utils/security.py tests/unit/enrichment/`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -18,7 +18,24 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: security
-- **Planned at**: commit `1ff6926`, 2026-10-18
+- **Planned at**: commit `7754536c`, 2026-10-19 (refreshed after a correct first-execution STOP — see below)
+
+### Refresh note (2026-10-19)
+
+The first execution attempt implemented Step 1 and STOPped exactly as the plan's
+STOP condition asked: adding the guard breaks 16 of the 67 existing tests in
+`tests/unit/enrichment/test_router.py`, because they build candidates with the
+literal URL `http://x` and the guard fails closed on an unresolvable host
+(`socket.getaddrinfo("x")` → `gaierror` → `ValueError`). That is a *fixture*
+consequence, not a behaviour problem — the guard is doing its job — and the tests
+need the network boundary stubbed (AGENTS §4.1 allows mocks at boundaries; DNS is
+one). The first executor verified the remedy: one class-level
+`@patch("news_collector.enrichment.router.validate_url_safety", MagicMock())` on
+`TestEnrichmentStrategyRouter`, beside its existing three class-level patches,
+returns the directory to 67 passed. It did not apply it (it was told to stop) and
+it also flagged a second-order effect: those 51 currently-passing tests only pass
+because real DNS resolves `example.com`, so the guard would give the unit suite a
+live-network dependency. Both points are now in scope below; nothing else changed.
 
 ## Why this matters
 
@@ -89,6 +106,9 @@ the rest are `declared`.
   post-navigation re-check (see Step 2)
 - `tests/unit/enrichment/` — new tests (create `__init__.py`-free test modules
   matching the existing directory's style)
+- `tests/unit/enrichment/test_router.py` — **fixture-level stubbing only**: add
+  the class-level guard patch (and stub `socket.getaddrinfo` where a test relies
+  on real DNS). Do not change any assertion, expected value, or test name there.
 
 **Out of scope** (do NOT touch):
 
@@ -144,9 +164,18 @@ checkout. Red baseline → STOP and report.
    scrapling_http, scrapling_stealth, http) by reading the dispatch flow — if any
    strategy branch is reached before your call, move the call earlier and say so.
 
+3. Stub the boundary in the existing test class (the remedy the first attempt
+   verified): add `@patch("news_collector.enrichment.router.validate_url_safety", MagicMock())`
+   to `TestEnrichmentStrategyRouter` in `tests/unit/enrichment/test_router.py`,
+   beside its existing three class-level patches, injecting the parameter into
+   the methods that need it — or patch `socket.getaddrinfo` where a test depends
+   on real DNS. Fixture-level stubbing only: no assertion, expected value, or test
+   name in that file may change, and no test may be deleted or renamed.
+
 **Verify**: `grep -n "validate_url_safety" news_collector/enrichment/router.py` →
-one call site; `.venv/bin/pytest tests/unit/enrichment -q --no-cov` → all pass
-(existing tests must not need changes; if one does, STOP and report which).
+one call site; `.venv/bin/pytest tests/unit/enrichment -q --no-cov` → all pass;
+`grep -n "validate_url_safety\|getaddrinfo" tests/unit/enrichment/*.py` → the
+stub is visible.
 
 ### Step 2: Re-check after browser navigation
 
@@ -159,7 +188,11 @@ one call site; `.venv/bin/pytest tests/unit/enrichment -q --no-cov` → all pass
    already did) and never bypass CSP or add flags.
 
 **Verify**: `.venv/bin/pytest tests/unit/enrichment -q --no-cov` → all pass; a
-test that a non-http scheme (e.g. `file:`) is rejected in the router.
+test that a non-http scheme (e.g. `file:`) is rejected in the router; and the
+directory is **hermetic** — prove it by running it with DNS unavailable
+(`unshare -rn .venv/bin/pytest tests/unit/enrichment -q --no-cov` on Linux, or
+document why that is unavailable and show the stubs instead). No test in that
+directory may resolve a real hostname.
 
 ### Step 3: Prove the production reachability claim
 
@@ -180,8 +213,10 @@ guard and the router are the subject):
 - **Metadata endpoint**: `http://169.254.169.254/latest/meta-data/` → same.
 - **Non-http scheme**: `file:///etc/passwd` → same.
 - **Private range**: `http://192.168.1.1/` → same.
-- **Happy path**: a normal public https URL → existing behaviour unchanged
-  (fetcher called once, success shape as before).
+- **Happy path**: a normal public https URL with `socket.getaddrinfo` patched
+  (precedent: `tests/unit/utils/test_security.py`) → existing behaviour
+  unchanged (fetcher called once, success shape as before). The happy path must
+  not depend on real DNS, and neither may the router tests it sits beside.
 - **Each strategy**: parametrise over `enrichment_strategy` ∈ {http,
   scrapling_http, scrapling_stealth, headless} so a future strategy cannot slip
   past the guard.
@@ -198,6 +233,8 @@ All must hold:
 - [ ] `make lint`, `make type`, `make test`, `make test-boundaries` exit 0
 - [ ] `grep -rn "validate_url_safety" news_collector/enrichment/` finds the guard
 - [ ] New tests cover loopback / link-local / non-http scheme / private range, per strategy, and fail on the pre-change code (prove once)
+- [ ] `tests/unit/enrichment/` is hermetic (no live DNS): the stub is visible in the diff and the offline run is recorded
+- [ ] No assertion, expected value, or test name changed in `tests/unit/enrichment/test_router.py` (diff shows fixture stubbing only)
 - [ ] No change to `sources.yaml`, `requests_client.py`, or `utils/security.py`
 - [ ] `git diff --name-only main...HEAD` lists only in-scope files
 - [ ] `plans/README.md` row 141 updated; `make plans-ledger-check` → OK
@@ -212,8 +249,10 @@ All must hold:
   loosen the guard.
 - A production source turns out to rely on a non-http scheme → STOP and report
   (that source needs its own decision, not a bypass).
-- Existing enrichment tests need modification to pass → report why before editing
-  them.
+- You need to change an *assertion*, an expected value, or a test name in
+  `tests/unit/enrichment/test_router.py` (or delete a test) to make the guard
+  pass → STOP and report; fixture-level stubbing is in scope, rewriting
+  expectations is not.
 
 ## Maintenance notes
 
