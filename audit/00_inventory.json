@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T14:57:04.615951+00:00",
+  "generated_at": "2026-10-19T16:18:20.109398+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -253,6 +253,7 @@
       "152-runtime-config-isolation.md",
       "153-publish-batch-thread-lifecycle.md",
       "154-stage4-critic-canary.md",
+      "155-critic-average-derivation.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -291,12 +292,15 @@
       "bump_version.py",
       "check_doc_drift.py",
       "check_doc_review.py",
+      "check_lock_parity.py",
       "check_migration_revision.py",
+      "check_toolchain.py",
       "coverage_ratcheter.sh",
       "debug",
       "debug_proxy.py",
       "debugging",
       "dev",
+      "editorial_critic_canary.py",
       "enrichment_candidate.py",
       "evaluate_enrichment_registry.py",
       "export_admin_openapi.py",
@@ -337,6 +341,7 @@
       "score_delta.py",
       "security_gate.py",
       "setup",
+      "smoke_serving_image.sh",
       "sync_lockfiles.py",
       "test_suite_audit.py",
       "train_production.sh",
@@ -679,6 +684,14 @@
     {
       "target": "prepush",
       "description": "Run all checks required before pushing (Full Test Suite + Quality Gate)"
+    },
+    {
+      "target": "toolchain-check",
+      "description": "Fail when venv gate tools drift from the .pre-commit-config.yaml pins"
+    },
+    {
+      "target": "lock-parity-check",
+      "description": "Fail when the venv diverges from requirements.lock"
     },
     {
       "target": "verify-ci",
@@ -1314,6 +1327,7 @@
     "plans/152-runtime-config-isolation.md",
     "plans/153-publish-batch-thread-lifecycle.md",
     "plans/154-stage4-critic-canary.md",
+    "plans/155-critic-average-derivation.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
