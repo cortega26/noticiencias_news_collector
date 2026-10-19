@@ -215,3 +215,27 @@ All must hold:
 - **Deferred:** the physical `.venv-security` split, recorded in
   `## Execution record`. Unblocked by a decision about CI cache cost; the parity
   check keeps drift visible meanwhile.
+
+## Execution record
+
+### Deferred: the physical `.venv-security` split
+
+`make bootstrap` installs `requirements-security.lock` over `requirements.lock`
+into the same venv, so four runtime pins are shadowed (click, pyee, smmap,
+types-requests; see `scripts/check_lock_parity.py`). A physical split would touch:
+
+- `Makefile` — a `VENV_SECURITY` variable, `PIP_AUDIT`/`BANDIT`/`SEMGREP`,
+  `bootstrap` plus a new `bootstrap-security` stamp, `security`, `security-dev`, `quality*`.
+- `.github/actions/setup-python-env/action.yml` — the `.venv` cache path/key
+  (`hashFiles('requirements.lock','requirements-security.lock')`) and install step.
+- `.github/workflows/{quality,ci}.yml` — cache restore order and jobs expecting
+  security tools in `.venv`; `docs/ci.md` — the second environment and its parity gate.
+
+Benefit: the runtime venv matches `requirements.lock` exactly (what
+`Dockerfile.serving` installs), the four-entry exception map disappears, and
+`make lock-parity-check` can become a strict equality check.
+
+Deferred because: second-venv CI cache/provisioning churn vs. a divergence that
+`make lock-parity-check` now makes loud and enumerable. The durable
+`mcp`/semgrep decoupling (semgrep's exact pin holds `mcp` in the security lock)
+still needs its own plan.

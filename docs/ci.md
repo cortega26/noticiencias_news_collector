@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist check:search-budget test:audit test:e2e check:contract-sync` |
 | Whole workspace (requires clean Git worktrees) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; frontend builds may generate artifacts or upload derivatives depending on mode/credentials |
 
@@ -75,6 +75,8 @@ make quality-gate
 make build
 make perf
 make plans-ledger-check  # plans/README.md ledger drift (statuses, DONE-in-root, commit refs)
+make toolchain-check  # venv gate tools match the .pre-commit-config.yaml pins
+make lock-parity-check  # venv matches requirements.lock (known bootstrap overrides excepted)
 ```
 
 The aggregate backend gate is:
@@ -82,6 +84,14 @@ The aggregate backend gate is:
 ```bash
 make verify-ci
 ```
+
+`make toolchain-check` reads `.pre-commit-config.yaml` (the single source of
+truth for gate-tool versions) and fails when ruff, black, isort, bandit, pdoc or
+mypy drift from it. `make lock-parity-check` compares the venv with
+`requirements.lock` and fails on any new mismatch; the four documented
+runtime/security lock collisions (click, pyee, smmap, types-requests) are
+excepted in `scripts/check_lock_parity.py` until the `.venv-security` split
+lands. Both are part of `make verify-ci`.
 
 ## Other Active Workflows
 

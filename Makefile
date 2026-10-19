@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review toolchain-check lock-parity-check
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -79,7 +79,20 @@ $(BOOTSTRAP_STAMP): requirements.lock
 	@$(PYTHON_BIN) -m pip install --upgrade pip
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements.lock
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements-security.lock
-	@$(PYTHON_BIN) -m pip install ruff mypy black "isort==5.13.2" pre-commit pdoc types-requests "types-PyYAML==6.0.12.20250915" "types-python-dateutil==2.9.0.20260124" semgrep
+	@# Gate tools are pinned to the pre-commit revisions; the single source of
+	@# truth is .pre-commit-config.yaml and `make toolchain-check` fails on drift.
+	@$(PYTHON_BIN) -m pip install \
+		"ruff==0.14.14" \
+		"black==26.1.0" \
+		"isort==5.13.2" \
+		"bandit==1.7.9" \
+		"pdoc==15.0.4" \
+		"mypy==2.4.0" \
+		pre-commit \
+		types-requests \
+		"types-PyYAML==6.0.12.20250915" \
+		"types-python-dateutil==2.9.0.20260124" \
+		semgrep
 	@$(PYTHON_BIN) -c "import pytest, mypy, ruff, black, isort; print('[bootstrap] Key packages verified')" || { echo "[bootstrap] Package verification failed"; exit 1; }
 	@touch $(BOOTSTRAP_STAMP)
 
@@ -250,7 +263,13 @@ quality-gate-refresh: bootstrap ## Regenerate snapshots using local LLM (Overwri
 
 prepush: test-all quality-gate ## Run all checks required before pushing (Full Test Suite + Quality Gate)
 
-verify-ci: lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+toolchain-check: bootstrap ## Fail when venv gate tools drift from the .pre-commit-config.yaml pins
+	@$(PYTHON_BIN) scripts/check_toolchain.py
+
+lock-parity-check: bootstrap ## Fail when the venv diverges from requirements.lock
+	@$(PYTHON_BIN) scripts/check_lock_parity.py
+
+verify-ci: lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
