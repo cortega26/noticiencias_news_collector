@@ -56,10 +56,13 @@ from noticiencias.config_manager import (
 )
 from pydantic import ValidationError
 
+from news_collector.config import settings as config_settings
+from news_collector.infrastructure.llm.factory import get_provider
+from news_collector.logic.workflows.image_briefs import ImageBriefStore
+from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
+
 # from src.database import DatabaseManager as RefineryDatabaseManager # Removed legacy
-from apps.refinery.analytics_read_model import build_analytics_read_model
-from apps.refinery.bulk_helper import run_bulk
-from apps.refinery.published_content import (
+from news_collector.logic.workflows.published_content import (
     find_local_target_checkout,
     find_published_article_by_refinery_id,
     get_repo_head_sha,
@@ -68,10 +71,8 @@ from apps.refinery.published_content import (
     resolve_published_refinery_ids,
     truncate_refinery_id,
 )
-from news_collector.config import settings as config_settings
-from news_collector.infrastructure.llm.factory import get_provider
-from news_collector.logic.workflows.image_briefs import ImageBriefStore
-from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
+from news_collector.serving.analytics_read_model import build_analytics_read_model
+from news_collector.serving.bulk_helper import run_bulk
 from news_collector.storage.database import DatabaseManager
 from news_collector.utils.logger import get_logger
 
@@ -948,7 +949,9 @@ def cached_fetch_pages_deploy_health(
     target_repo_url: str, current_repo_sha: str | None, github_token: str
 ) -> Any:
     try:
-        from apps.refinery.published_content import fetch_pages_deploy_health
+        from news_collector.logic.workflows.published_content import (
+            fetch_pages_deploy_health,
+        )
 
         return fetch_pages_deploy_health(
             target_repo_url=target_repo_url,
