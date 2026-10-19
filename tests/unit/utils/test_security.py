@@ -7,9 +7,9 @@ from news_collector.utils.security import validate_url_safety
 
 def test_validate_url_safety_public():
     with patch("socket.getaddrinfo") as mock_dns:
-        # Mock public IP (Google DNS)
+        # Mock public IP (Google DNS); a public address is accepted (returns None).
         mock_dns.return_value = [(2, 1, 6, "", ("8.8.8.8", 0))]
-        validate_url_safety("http://google.com")
+        assert validate_url_safety("http://google.com") is None
 
 
 def test_validate_url_safety_private():

@@ -31,7 +31,7 @@ El contenido fuente proporcionado para este artículo es ilegible y corrupto, im
 
 
 def test_validate_generated_article_markdown_accepts_real_article_body() -> None:
-    validate_generated_article_markdown("""
+    result = validate_generated_article_markdown("""
 ## Un error de empaquetado expone el interior de Claude Code
 
 Anthropic publicó una versión del paquete de Claude Code para npm que incluía un archivo source map. Ese archivo permitió reconstruir casi todo el código TypeScript de la herramienta, algo especialmente sensible porque Claude Code se ha vuelto una de las interfaces más visibles para programar con modelos de IA en la terminal.
@@ -40,6 +40,7 @@ La filtración no expuso datos de clientes ni credenciales, según la propia emp
 
 El episodio muestra un riesgo operativo clásico en software moderno: un error de empaquetado puede convertir metadatos útiles para depurar en una fuga masiva de propiedad intelectual. También deja a potenciales atacantes con más pistas para estudiar la superficie de seguridad del producto y buscar puntos débiles en sus guardrails.
 """)
+    assert result is None
 
 
 def test_normalize_article_body_heading_levels_repairs_first_h3_and_later_skip() -> (
@@ -174,7 +175,7 @@ def test_rejects_embed_tag() -> None:
 
 def test_accepts_code_example_in_fence() -> None:
     """A script tag inside a code fence is a legitimate code example."""
-    validate_generated_article_markdown(f"""
+    result = validate_generated_article_markdown(f"""
 ## Investigación
 
 {ART_BODY_MIN_LENGTH}
@@ -183,6 +184,7 @@ def test_accepts_code_example_in_fence() -> None:
 <script src="analytics.js"></script>
 ```
 """)
+    assert result is None
 
 
 def test_rejects_svg_with_event_handler() -> None:

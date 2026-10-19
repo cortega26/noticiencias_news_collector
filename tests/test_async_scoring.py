@@ -52,11 +52,10 @@ async def test_async_scoring():
     print(f"  • Result keys: {list(result.keys())}")
     print(f"  • Final Score: {result.get('final_score')}")
 
-    if result.get("final_score") is not None and result.get("success") is not False:
-        print("✅ Async scoring successful!")
-    else:
-        print("❌ Async scoring failed or returned unexpected structure.")
-        print(result)
+    assert 0.0 < result["final_score"] <= 1.0
+    assert result["components"]["content_quality"] > 0.0
+    assert "version" in result
+    print("✅ Async scoring successful!")
 
 
 if __name__ == "__main__":

@@ -146,7 +146,9 @@ def test_initialize_sources_handles_invalid_blacklisted_date(seeded_repo):
 
 
 def test_update_feed_metadata_noop_when_all_none(seeded_repo):
+    before = seeded_repo.get_source_feed_metadata("src1")
     seeded_repo.update_source_feed_metadata("src1")  # must not raise
+    assert seeded_repo.get_source_feed_metadata("src1") == before
 
 
 def test_update_feed_metadata_etag(seeded_repo):
@@ -171,6 +173,7 @@ def test_update_feed_metadata_content_hash(seeded_repo):
 
 def test_update_feed_metadata_missing_source_is_noop(repo):
     repo.update_source_feed_metadata("ghost", etag="x")  # must not raise
+    assert repo.get_source_feed_metadata("ghost") == {}
 
 
 # ---------------------------------------------------------------------------

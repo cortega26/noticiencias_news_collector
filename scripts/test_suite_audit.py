@@ -5,6 +5,10 @@ Usage (see ``make test-audit``):
     python scripts/test_suite_audit.py --coverage reports/audit/cov.json \
         [--collected reports/audit/collected.txt] [--tests tests] [--out reports/audit]
 
+Static-only mode (see ``make weak-tests-check``) skips coverage entirely and
+runs in seconds:
+    python scripts/test_suite_audit.py --static-only [--baseline PATH]
+
 ``cov.json`` must come from pytest with ``--cov=... --cov-context=test
 --cov-report=json:...``; ``collected.txt`` from ``pytest --collect-only -q``.
 Read-only over the repo; writes ``test_audit.md`` and ``test_audit.json``.
@@ -16,6 +20,7 @@ import argparse
 import ast
 import json
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Set
@@ -307,6 +312,111 @@ def render_markdown(
     return "\n".join(lines) + "\n"
 
 
+def render_static_markdown(quality: TestQuality, *, top: int = 20) -> str:
+    """Weak-test section only; no coverage numbers are available in static mode."""
+    lines = [
+        "# Auditoría estática de la suite de tests",
+        "",
+        f"- Tests: {quality.total_tests}; sin aserción: "
+        f"{len(quality.no_assertion)}; archivos con muchos mocks: "
+        f"{len(quality.mock_heavy)}",
+        "",
+        "## Tests sin aserción (revisar)",
+    ]
+    lines += [f"- {t}" for t in quality.no_assertion[:top]] or ["- ninguno"]
+    lines += ["", "## Archivos con más mocks por test (revisar)"]
+    lines += [
+        f"- {d['file']}: {d['mock_ops']} ops / {d['tests']} tests"
+        for d in quality.mock_heavy[:top]
+    ] or ["- ninguno"]
+    return "\n".join(lines) + "\n"
+
+
+# ------------------------------------------------------------------ baseline
+
+
+def write_baseline(path: str | Path, quality: TestQuality) -> None:
+    """Persist the sorted assertion-free list as the ratchet baseline."""
+    baseline = Path(path)
+    baseline.parent.mkdir(parents=True, exist_ok=True)
+    baseline.write_text(
+        json.dumps(
+            {"no_assertion": sorted(quality.no_assertion)},
+            indent=1,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _load_baseline(path: Path) -> Counter[str]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    entries = data["no_assertion"]
+    if not isinstance(entries, list) or not all(
+        isinstance(entry, str) for entry in entries
+    ):
+        raise ValueError("'no_assertion' must be a list of strings")
+    return Counter(entries)
+
+
+def check_baseline(path: str | Path, quality: TestQuality) -> int:
+    """Fail when a new assertion-free test appears; allow the list to shrink.
+
+    Missing or malformed baselines fail closed: an unreadable ratchet must never
+    silently pass.
+    """
+    baseline_path = Path(path)
+    if not baseline_path.exists():
+        print(
+            f"[weak-tests] FAIL: baseline {baseline_path} not found; "
+            "run `make weak-tests-baseline` to create it.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        baseline = _load_baseline(baseline_path)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(
+            f"[weak-tests] FAIL: baseline {baseline_path} is unreadable ({exc}); "
+            "regenerate it with `make weak-tests-baseline`.",
+            file=sys.stderr,
+        )
+        return 1
+
+    current = Counter(quality.no_assertion)
+    added = current - baseline
+    removed = baseline - current
+    print(
+        f"[weak-tests] {sum(current.values())} assertion-free tests "
+        f"(baseline {sum(baseline.values())})"
+    )
+    if added:
+        print(
+            f"[weak-tests] FAIL: {sum(added.values())} new assertion-free "
+            f"test(s) not in {baseline_path}:",
+            file=sys.stderr,
+        )
+        for entry in sorted(added.elements()):
+            print(f"  - {entry}", file=sys.stderr)
+        print(
+            "Fix the test (assert the observable outcome) or, deliberately, "
+            "run `make weak-tests-baseline` to accept the new debt.",
+            file=sys.stderr,
+        )
+        return 1
+    if removed:
+        print(
+            f"[weak-tests] OK: {sum(removed.values())} baseline entr(y/ies) "
+            "no longer assertion-free; refresh the baseline when convenient."
+        )
+        for entry in sorted(removed.elements()):
+            print(f"  - {entry}")
+    else:
+        print("[weak-tests] OK: no new assertion-free tests")
+    return 0
+
+
 def _read_collected(path: Path) -> List[str]:
     return [
         line.strip()
@@ -317,57 +427,112 @@ def _read_collected(path: Path) -> List[str]:
 
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--coverage", type=Path, required=True)
+    ap.add_argument("--coverage", type=Path)
     ap.add_argument("--collected", type=Path)
     ap.add_argument("--tests", type=Path, default=Path("tests"))
     ap.add_argument("--out", type=Path, default=Path("reports/audit"))
     ap.add_argument("--threshold", type=float, default=85.0)
+    ap.add_argument(
+        "--static-only",
+        action="store_true",
+        help="run only the AST scan (no coverage JSON, no pytest run)",
+    )
+    ap.add_argument(
+        "--baseline",
+        type=Path,
+        help="fail when the no_assertion list grows beyond this baseline",
+    )
+    ap.add_argument(
+        "--write-baseline",
+        type=Path,
+        help="write the sorted no_assertion list to this path",
+    )
     args = ap.parse_args(argv)
 
-    files = load_coverage(args.coverage)
-    quality = analyze_test_quality(args.tests)
-    no_code: List[str] = []
-    if args.collected and args.collected.exists():
-        no_code = tests_touching_no_code(
-            _read_collected(args.collected), contexts_by_test(args.coverage)
-        )
+    if args.static_only and args.coverage is not None:
+        ap.error("--static-only and --coverage are mutually exclusive")
+    if not args.static_only and args.coverage is None:
+        ap.error("--coverage is required unless --static-only is used")
 
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "test_audit.md").write_text(
-        render_markdown(files, quality, no_code, threshold=args.threshold),
-        encoding="utf-8",
-    )
-    tot = totals(files.values())
-    (args.out / "test_audit.json").write_text(
-        json.dumps(
-            {
-                "line_rate": round(tot.line_rate, 2),
-                "branch_rate": round(tot.branch_rate, 2),
-                "packages": [
-                    {"name": p.name, "line_rate": round(p.line_rate, 1)}
-                    for p in summarize_packages(files)
-                ],
-                "gaps": [
-                    {
-                        "file": g.path,
-                        "line_rate": round(g.line_rate, 1),
-                        "missing": g.missing,
-                    }
-                    for g in critical_gaps(files, threshold=args.threshold)
-                ],
-                "no_assertion": quality.no_assertion,
-                "mock_heavy": quality.mock_heavy,
-                "tests_touching_no_code": no_code,
-            },
-            indent=1,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-    print(
-        f"line {tot.line_rate:.1f}% / branch {tot.branch_rate:.1f}% -> {args.out}/test_audit.md"
-    )
-    return 0
+    if args.static_only:
+        quality = analyze_test_quality(args.tests)
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "test_audit.md").write_text(
+            render_static_markdown(quality), encoding="utf-8"
+        )
+        (args.out / "test_audit.json").write_text(
+            json.dumps(
+                {
+                    "no_assertion": quality.no_assertion,
+                    "mock_heavy": quality.mock_heavy,
+                    "total_tests": quality.total_tests,
+                },
+                indent=1,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        print(
+            f"{quality.total_tests} tests; "
+            f"{len(quality.no_assertion)} without assertion -> "
+            f"{args.out}/test_audit.md"
+        )
+        rc = 0
+    else:
+        files = load_coverage(args.coverage)
+        quality = analyze_test_quality(args.tests)
+        no_code: List[str] = []
+        if args.collected and args.collected.exists():
+            no_code = tests_touching_no_code(
+                _read_collected(args.collected), contexts_by_test(args.coverage)
+            )
+
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "test_audit.md").write_text(
+            render_markdown(files, quality, no_code, threshold=args.threshold),
+            encoding="utf-8",
+        )
+        tot = totals(files.values())
+        (args.out / "test_audit.json").write_text(
+            json.dumps(
+                {
+                    "line_rate": round(tot.line_rate, 2),
+                    "branch_rate": round(tot.branch_rate, 2),
+                    "packages": [
+                        {"name": p.name, "line_rate": round(p.line_rate, 1)}
+                        for p in summarize_packages(files)
+                    ],
+                    "gaps": [
+                        {
+                            "file": g.path,
+                            "line_rate": round(g.line_rate, 1),
+                            "missing": g.missing,
+                        }
+                        for g in critical_gaps(files, threshold=args.threshold)
+                    ],
+                    "no_assertion": quality.no_assertion,
+                    "mock_heavy": quality.mock_heavy,
+                    "tests_touching_no_code": no_code,
+                },
+                indent=1,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        print(
+            f"line {tot.line_rate:.1f}% / branch {tot.branch_rate:.1f}% -> {args.out}/test_audit.md"
+        )
+        rc = 0
+
+    if args.write_baseline:
+        write_baseline(args.write_baseline, quality)
+        print(
+            f"[weak-tests] wrote {len(quality.no_assertion)} entries to "
+            f"{args.write_baseline}"
+        )
+    if args.baseline:
+        rc = check_baseline(args.baseline, quality)
+    return rc
 
 
 if __name__ == "__main__":

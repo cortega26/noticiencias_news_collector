@@ -7,7 +7,7 @@ Scope: workflow and local-parity reference for the current repo
 
 | Scope | Command | Contents |
 |---|---|---|
-| Backend (this repo) | `make verify-ci` | `lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check` |
+| Backend (this repo) | `make verify-ci` | `lint type test weak-tests-check test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check` |
 | Frontend (../noticiencias) | `npm run verify:ci` | `lint validate:content build test:dist check:search-budget test:audit test:e2e check:contract-sync` |
 | Whole workspace (requires clean Git worktrees) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; frontend builds may generate artifacts or upload derivatives depending on mode/credentials |
 
@@ -29,6 +29,7 @@ Current jobs:
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — `make test` unit suite without coverage; integration, E2E, and performance run in separate jobs
+- `weak-tests` — `make weak-tests-check`: seconds-long static AST scan for test functions with no assertion, compared against `audit/weak_tests_baseline.json` (fails when the list grows; shrinking is allowed)
 - `integration` — `make test-integration` (integration directory and root tests marked `e2e`), then `make coverage-full` (unit + integration + `e2e`-marked suites in one instrumented run); uploads `coverage-reports-full`
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
 - `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
@@ -68,6 +69,7 @@ make config-validate
 make config-docs-check
 make inventory-check
 make test
+make weak-tests-check  # assertion-free-test ratchet (static, seconds)
 make test-contracts
 make test-boundaries
 make security
@@ -165,6 +167,19 @@ dedicated file, update every `cache-key` in the same change.
 - Local parity: `make inventory-check` (fails with the refresh remedy when the
   baseline is stale) and `make inventory-refresh` (regenerate + commit);
   `inventory-check` is part of `make verify-ci`.
+
+### Weak-test ratchet (assertion-free tests)
+
+- `make weak-tests-check` — static AST scan of `tests/`
+  (`scripts/test_suite_audit.py --static-only`, no pytest run) compared against
+  `audit/weak_tests_baseline.json`. It fails when a new `test_*` function has no
+  assertion or `raise`, allows entries to shrink, and fails closed when the
+  baseline is missing.
+- `make weak-tests-baseline` — deliberate, reviewer-visible refresh of the
+  baseline. Run it after fixing entries, never to make a red gate green.
+- It runs in the `weak-tests` job of `.github/workflows/ci.yml` and in
+  `make verify-ci`. The slow `make test-audit` remains the full
+  coverage/quality report; the ratchet never runs pytest.
 
 ### Other triggers (consult each YAML; some also run on PRs)
 

@@ -57,9 +57,10 @@ def test_prompts_rejects_oversize_payload(
 
 
 def test_prompts_accepts_valid_payload() -> None:
-    serving_api._validate_prompts_payload(
+    result = serving_api._validate_prompts_payload(
         {"auditor": {"system": "Eres un auditor."}, "editor": {"system": "Edita."}}
     )
+    assert result is None
 
 
 # ---------------------------------------------------------------------------
