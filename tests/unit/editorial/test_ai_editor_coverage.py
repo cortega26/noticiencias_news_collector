@@ -675,6 +675,8 @@ class TestCriticPasses:
                 "shareability_score": 8,
                 "closing_score": 9,
             },
+            "value_add_assessment": None,
+            "value_add_evidence": None,
         }
 
     def test_editorial_critic_stashes_verdict_on_reject(self):

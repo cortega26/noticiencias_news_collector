@@ -7,9 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from news_collector.components.editorial.ai_editor import (
-    _parse_editorial_critic_result,
-)
+from news_collector.components.editorial.ai_editor import _parse_editorial_critic_result
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 
@@ -54,9 +52,12 @@ def test_close_paraphrase_cannot_be_approved():
 
 @pytest.mark.parametrize("assessment", ["substantive", "insufficient_source"])
 def test_substantive_or_unverifiable_comparison_does_not_block(assessment):
-    assert _parse_editorial_critic_result(
-        _scores_verdict(value_add_assessment=assessment)
-    )[0] is True
+    assert (
+        _parse_editorial_critic_result(
+            _scores_verdict(value_add_assessment=assessment)
+        )[0]
+        is True
+    )
 
 
 def test_unknown_value_add_result_is_not_accepted_as_valid_verdict():
@@ -84,9 +85,7 @@ def _engine_and_run(value_add_assessment: str, approved: bool):
         "value_add_evidence": "Coincidencia de orden y frases con la muestra fuente.",
     }
     engine._last_blocked_error = None
-    engine._record_advisory_stages = MagicMock(
-        return_value=("Contenido editorial", "")
-    )
+    engine._record_advisory_stages = MagicMock(return_value=("Contenido editorial", ""))
     return engine, MagicMock()
 
 
@@ -103,7 +102,8 @@ def test_refinery_blocks_close_paraphrase_after_repair_exhaustion():
 def test_refinery_allows_insufficient_source_without_false_positive():
     engine, run = _engine_and_run("insufficient_source", True)
     assert engine._refine_article({}, "42", "2026-10-12", run) == (
-        "Contenido editorial", ""
+        "Contenido editorial",
+        "",
     )
     run.persist_attempt.assert_not_called()
     engine._record_advisory_stages.assert_called_once()

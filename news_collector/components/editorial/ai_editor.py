@@ -263,9 +263,7 @@ def _parse_editorial_critic_result(
         "insufficient_source",
     }:
         raise ValueError("invalid value_add_assessment")
-    _validate_editorial_critic_approval(
-        approved, average, scores, value_add_assessment
-    )
+    _validate_editorial_critic_approval(approved, average, scores, value_add_assessment)
     return approved, recoverable, feedback, average, scores
 
 
