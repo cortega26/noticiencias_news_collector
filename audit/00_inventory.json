@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T20:57:30.922261+00:00",
+  "generated_at": "2026-10-19T21:08:30.506790+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -264,6 +264,8 @@
       "163-dead-code-and-e2e-close.md",
       "164-validation-rules-mutation.md",
       "165-081-leaf-docs.md",
+      "166-local-gate-truth.md",
+      "167-cross-repo-ci.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1369,6 +1371,8 @@
     "plans/163-dead-code-and-e2e-close.md",
     "plans/164-validation-rules-mutation.md",
     "plans/165-081-leaf-docs.md",
+    "plans/166-local-gate-truth.md",
+    "plans/167-cross-repo-ci.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
