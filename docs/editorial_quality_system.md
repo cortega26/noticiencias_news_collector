@@ -33,12 +33,16 @@ veredicto separado de valor para el lector: `substantive` (síntesis útil),
 `close_paraphrase` (paráfrasis cercana demostrable con muestra suficiente) o
 `insufficient_source` (fuente insuficiente para juzgar). No se penaliza la
 mera coincidencia temática ni se fuerza investigación o contexto inventado.
-Un `close_paraphrase` obliga a solicitar reescritura y, si persiste después
-del ciclo de reparación, `RefineryEngine._refine_article` detiene la creación
-del PR con `E_EDITORIAL_VALUE_ADD`. El resto de rechazos de calidad y los
-errores de infraestructura siguen siendo consultivos. El checkpoint v3
-obliga a revisar de nuevo los artículos que solo tenían aprobación del crítico
-anterior.
+Un `close_paraphrase` válido impide la aprobación: cuando el modelo lo marca
+reparable (el caso esperado), obliga a solicitar reescritura y, si el ciclo no
+termina en un veredicto aprobatorio, `RefineryEngine._refine_article` detiene
+la creación del PR con `E_EDITORIAL_VALUE_ADD`. Si el modelo lo marca
+irreparable, no hay reescritura y la retención se aplica igual. Un fallo del
+crítico al devolver un veredicto parseable es fail-open y no retiene; un fallo
+del proveedor al reparar deja en pie el `close_paraphrase` y por eso sí
+retiene. El resto de rechazos de calidad sigue siendo consultivo. El
+checkpoint v3 obliga a revisar de nuevo los artículos que solo tenían
+aprobación del crítico anterior.
 Una aprobación de emergencia por falta de prompt o error de infraestructura
 sigue permitiendo publicar, pero no se guarda como revisión superada; un
 reanálisis posterior puede volver a intentarlo. Una aprobación del crítico
@@ -46,9 +50,11 @@ significa solo que ese modelo devolvió un veredicto válido según el umbral
 configurado; no equivale a revisión humana, comprobación independiente ni
 garantía de exactitud. Una falla técnica es fail-open para que la etapa siga,
 pero no se registra como aprobación ni como checkpoint revisado.
-Si el proveedor falla al reparar un rechazo de Stage 4, se conserva el borrador
-original y la etapa continúa con una advertencia; tampoco se registra una
-revisión superada. El crítico y su reparación siguen siendo asesoría automática.
+Si el proveedor falla al reparar un rechazo de calidad de Stage 4, se conserva
+el borrador original y la etapa continúa con una advertencia; tampoco se
+registra una revisión superada. Esa continuación no aplica a un
+`close_paraphrase`, que retiene como se explicó arriba. El crítico y su
+reparación siguen siendo asesoría automática.
 
 ### 2. Auditor Editorial (Lightweight Auditor)
 

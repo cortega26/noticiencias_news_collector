@@ -51,11 +51,15 @@ Three pre-PR gates block publication regardless of `[editorial_auditor].blocking
    `news_collector/editorial/health_scope.py` (shared with the auditor's
    sampling triggers).
 3. **Confirmed close paraphrase (source-aware, v3):** when the editorial
-   critic explicitly finds `close_paraphrase` with sufficient source context,
-   tries its bounded repair cycle and still rejects the draft, the refinery
-   holds publication with `E_EDITORIAL_VALUE_ADD`. Missing/partial source
-   (`insufficient_source`) and provider failure do not trigger this hold.
-   This is an editorial review trigger, not a legal plagiarism finding.
+   critic returns a valid verdict that explicitly finds `close_paraphrase`
+   with sufficient source context, and the bounded repair cycle does not end
+   in an approving verdict, the refinery holds publication with
+   `E_EDITORIAL_VALUE_ADD`. Missing/partial source (`insufficient_source`)
+   never triggers the hold by itself, and a critic call that crashes or
+   returns an unparseable verdict fails open and does not hold. A
+   repair-provider failure after a `close_paraphrase` verdict leaves that
+   explicit verdict standing, so the hold does apply. This is an editorial
+   review trigger, not a legal plagiarism finding.
 
 Change settings through the supported config path and restart consumers that
 load them at startup. Review the affected policy/workflow tests when changing

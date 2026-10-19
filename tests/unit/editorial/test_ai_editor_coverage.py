@@ -11,6 +11,7 @@ import os
 import tempfile
 from datetime import date as _dt
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,6 +34,7 @@ from news_collector.components.editorial.ai_editor import (
 from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.editorial.uncertainty import GENERIC_UNCERTAINTY_NOTE
+from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 
 def _json_parser():
@@ -1163,6 +1165,46 @@ class TestProcessArticlePaths:
         result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
         assert agent.last_critic_verdict == {"approved": True, "from_cache": True}
+
+    def test_stale_close_paraphrase_does_not_block_the_next_article(self, tmp_path):
+        """PR 373 reviewer hardening: the verdict is per article, not per agent.
+
+        Article A left a `close_paraphrase` verdict on the shared agent. With
+        Stage 4 skipped for article B (kill switch), the reset at the top of
+        `process_article` must clear it: the refinery gate then publishes B
+        instead of holding it with `E_EDITORIAL_VALUE_ADD`.
+        """
+        agent = self._pipeline_agent(tmp_path)
+        article = {
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "url": "https://example.com/source",
+        }
+        agent.last_critic_verdict = {
+            "approved": False,
+            "average": 4.0,
+            "scores": {},
+            "value_add_assessment": "close_paraphrase",
+            "value_add_evidence": "Coincidencia de orden y frases con la fuente A.",
+        }
+
+        engine = object.__new__(RefineryEngine)
+        engine.editor = agent
+        engine.policy = SimpleNamespace(critic_threshold=80, mode="standard")
+        engine._last_blocked_error = None
+        engine._record_advisory_stages = MagicMock(
+            return_value=("Contenido editorial", "")
+        )
+        run = MagicMock()
+
+        with patch.dict(os.environ, {"ENABLE_EDITORIAL_CRITIC": "false"}):
+            refinement = engine._refine_article(article, "unknown", "2026-03-02", run)
+
+        assert refinement is not None
+        assert engine._last_blocked_error is None
+        assert agent.last_critic_verdict is None
+        run.record_stage.assert_called_once_with("editor_refinement", True)
 
     def test_legacy_editorial_critic_checkpoint_does_not_skip_new_gate(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)

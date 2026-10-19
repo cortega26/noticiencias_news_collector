@@ -2253,6 +2253,13 @@ class EditorAgent:
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
         """
+        # Per-article lifecycle invariant: the refinery engine reads this
+        # attribute after process_article returns to enforce the
+        # close-paraphrase hold. Clear any verdict from a previous article
+        # first, even when Stage 4 is skipped (kill switch or missing
+        # prompt), so a stale verdict can never block a different article.
+        self.last_critic_verdict = None
+
         # 1. Extract Info (typed normalized input; plan 060 Phase 7c-1)
         # content_mode drives verification honesty. RSS payloads that fall back
         # from an empty `content` field to `summary` are marked as
