@@ -8,15 +8,27 @@ frontend CI pipelines (Content Guard, GitHub Pages deploy).
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 _MAX_PUBLICATION_IDS = 200
 _MAX_PUBLICATION_ATTEMPT_REFS = 200
 _MAX_DELIVERY_ID_LENGTH = 128
+# Plan 142 payload bounds (state in docs/PIPELINE_CONTRACTS.md): generous
+# headroom over what the frontend actually sends (one diagnostic per check,
+# a handful of errors each), small enough that a shared-key caller cannot grow
+# the append-only webhook_receipts log without bound.
+_MAX_DIAGNOSTICS = 50
+_MAX_DIAGNOSTIC_ERRORS = 5000
+_MAX_DIAGNOSTIC_ERRORS_BYTES = 1024 * 1024
+_MAX_COMMIT_SHA_LENGTH = 128
+_MAX_BRANCH_LENGTH = 255
+_MAX_FRONTEND_REF_LENGTH = 255
+_MAX_RUN_URL_LENGTH = 2048
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -56,6 +68,19 @@ class DiagnosticResult(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    @field_validator("errors")
+    @classmethod
+    def _validate_errors(cls, v: List[Any]) -> List[Any]:
+        if len(v) > _MAX_DIAGNOSTIC_ERRORS:
+            raise ValueError(f"errors must not exceed {_MAX_DIAGNOSTIC_ERRORS} entries")
+        serialized = json.dumps(v, default=str)
+        if len(serialized.encode("utf-8")) > _MAX_DIAGNOSTIC_ERRORS_BYTES:
+            raise ValueError(
+                "errors must not exceed "
+                f"{_MAX_DIAGNOSTIC_ERRORS_BYTES} bytes when serialized"
+            )
+        return v
+
 
 class FrontendWebhookEvent(BaseModel):
     """Base model for all frontend webhook events."""
@@ -90,6 +115,27 @@ class FrontendWebhookEvent(BaseModel):
     )
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("diagnostics")
+    @classmethod
+    def _validate_diagnostics(cls, v: List[DiagnosticResult]) -> List[DiagnosticResult]:
+        if len(v) > _MAX_DIAGNOSTICS:
+            raise ValueError(f"diagnostics must not exceed {_MAX_DIAGNOSTICS} entries")
+        return v
+
+    @field_validator("commit_sha", "branch", "frontend_ref", "run_url")
+    @classmethod
+    def _validate_free_text_lengths(cls, v: str, info: ValidationInfo) -> str:
+        limits = {
+            "commit_sha": _MAX_COMMIT_SHA_LENGTH,
+            "branch": _MAX_BRANCH_LENGTH,
+            "frontend_ref": _MAX_FRONTEND_REF_LENGTH,
+            "run_url": _MAX_RUN_URL_LENGTH,
+        }
+        limit = limits[str(info.field_name)]
+        if len(v) > limit:
+            raise ValueError(f"{info.field_name} must not exceed {limit} characters")
+        return v
 
     @field_validator("publication_ids")
     @classmethod

@@ -12,6 +12,7 @@ Import path after implementation:
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -542,3 +543,113 @@ class TestThirdPartyImagePolicy:
 
         assert result.resolved is True
         assert result.image_url == "~/assets/images/own-illustration.webp"
+
+
+class TestSlugWriteGuard:
+    """Plan 142: the asset writer refuses traversal-shaped slugs.
+
+    The identity resolver's DB branch can return a preferred slug verbatim
+    (LAW-B5 keeps that semantics), so the writer owns the allowlist and the
+    containment check.
+    """
+
+    @pytest.mark.parametrize(
+        "bad_slug",
+        [
+            "../evil",
+            "/tmp/evil",
+            "a/b",
+            "a\\b",
+            ".hidden",
+            "-leading",
+            "",
+        ],
+    )
+    def test_download_rejects_unsafe_slugs_and_writes_nothing(
+        self, handler, target_dir, bad_slug
+    ):
+        response = _make_mock_http_response()
+
+        with _patch_http_client(response):
+            result = handler.download(
+                url="https://example.com/photo.jpg",
+                slug=bad_slug,
+                target_dir=target_dir,
+            )
+
+        assert result is None
+        assets_dir = target_dir / "src/assets/images"
+        assert not assets_dir.exists() or not any(assets_dir.iterdir())
+
+    def test_download_containment_check_blocks_when_allowlist_is_bypassed(
+        self, handler, target_dir, monkeypatch
+    ):
+        """Defense-in-depth: even if a slug cleared the regex (simulated
+        here), the resolved path must stay inside assets_dir."""
+        monkeypatch.setattr(image_handler_module, "_SAFE_SLUG_RE", re.compile(r".*"))
+        response = _make_mock_http_response()
+
+        with _patch_http_client(response):
+            result = handler.download(
+                url="https://example.com/photo.jpg",
+                slug="../evil",
+                target_dir=target_dir,
+            )
+
+        assert result is None
+        assets_dir = target_dir / "src/assets/images"
+        assert not (target_dir / "src" / "evil.jpg").exists()
+        assert not (target_dir / "src" / "assets" / "evil.jpg").exists()
+        assert not assets_dir.exists() or not any(assets_dir.iterdir())
+
+    def test_resolve_falls_back_to_title_slug_when_preferred_is_unsafe(
+        self, handler, target_dir
+    ):
+        download = MagicMock(return_value="~/assets/images/safe.jpg")
+
+        result = handler.resolve(
+            article={
+                "id": "42",
+                "title": "Test Article",
+                "url": "https://example.com/article",
+                "summary": "Summary",
+                "image_url": "https://example.com/photo.jpg",
+                "published_date": datetime(2024, 1, 25),
+            },
+            article_id="42",
+            canonical_date="2024-01-25",
+            preferred_slug="../evil",
+            target_dir=target_dir,
+            download_fn=download,
+        )
+
+        assert result.resolved is True
+        used_slug = download.call_args.args[1]
+        assert used_slug == "2024-01-25-test-article"
+        assert image_handler_module._SAFE_SLUG_RE.match(used_slug)
+
+    def test_resolve_sanitizes_slug_when_title_and_id_are_unusable(
+        self, handler, target_dir
+    ):
+        download = MagicMock(return_value="~/assets/images/safe.jpg")
+
+        result = handler.resolve(
+            article={
+                "id": "..%2Fevil",
+                "title": "",
+                "url": "https://example.com/article",
+                "summary": "Summary",
+                "image_url": "https://example.com/photo.jpg",
+                "published_date": datetime(2024, 1, 25),
+            },
+            article_id="..%2Fevil",
+            canonical_date="2024-01-25",
+            preferred_slug=None,
+            target_dir=target_dir,
+            download_fn=download,
+        )
+
+        assert result.resolved is True
+        used_slug = download.call_args.args[1]
+        assert image_handler_module._SAFE_SLUG_RE.match(used_slug)
+        assert "/" not in used_slug and ".." not in used_slug
