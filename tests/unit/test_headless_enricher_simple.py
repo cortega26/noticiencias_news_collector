@@ -23,6 +23,7 @@ class TestHeadlessEnricherLogic(unittest.TestCase):
         mock_browser = MagicMock()
         mock_context = MagicMock()
         mock_page = MagicMock()
+        mock_page.url = "http://example.com"
 
         mock_playwright.return_value.__enter__.return_value = mock_p
         mock_p.chromium.launch.return_value = mock_browser

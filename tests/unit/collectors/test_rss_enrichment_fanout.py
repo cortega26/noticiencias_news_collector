@@ -248,6 +248,7 @@ def test_pacing_per_host_cap_never_exceeded_under_fanout():
     col._emit_log = MagicMock()
     refresh_runtime_config()
     with (
+        patch("news_collector.enrichment.router.validate_url_safety", MagicMock()),
         patch("news_collector.enrichment.router.enrichment_metrics", MagicMock()),
         patch("news_collector.enrichment.router.strategy_lock_manager", MagicMock()),
         patch("news_collector.enrichment.router.strategy_optimizer", MagicMock()),
