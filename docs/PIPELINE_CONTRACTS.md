@@ -180,6 +180,13 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
   upload (multipart), source delete (sources.yaml + DB)
+- published-content capability (plan 151): those three routes read the
+  frontend checkout through GitPython, so they require a `git` binary plus a
+  frontend checkout (or a clone the serving process can make). Where that
+  capability is absent — the hosted serving image ships neither — they answer
+  `503` with `error_code=published_content_unavailable` and a message naming
+  the missing requirement instead of an import-time `500`. No other admin
+  route depends on git, and the local stack is unchanged.
 - source editor (Phase 4 addendum): add/update sources via
   POST /v1/admin/sources (merge preserves blacklist/etag keys; create
   seeds the old GUI defaults plus the catalog-required

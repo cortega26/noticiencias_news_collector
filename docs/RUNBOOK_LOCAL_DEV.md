@@ -166,5 +166,21 @@ the deployment is currently healthy or that it shares the collector database;
 confirm the tunnel route and secrets in the deployment environment before
 changing them.
 
+### Published content is a local-admin capability
+
+The three published-content routes — `GET /v1/admin/content`,
+`DELETE /v1/admin/content/{refinery_id}` and `POST /v1/admin/content/bulk-reset`
+— read the frontend checkout through GitPython (the mutations commit and push
+to it). They therefore need a `git` binary plus a frontend working tree, and the
+hosted serving image provides neither. Those routes answer **503** there with
+`error_code=published_content_unavailable` and a message naming the missing
+requirement: that is the designed answer for the hosted tier, not an outage.
+`/healthz`, `/v1/admin/analytics` and the rest of the admin surface are
+unaffected. Unpublish and bulk reset from the local stack (`make admin`), where
+git and the sibling `noticiencias` checkout exist; serving them from the hosted
+instance would need the operator decision recorded in plan 151 (mounted volume
+plus a repository token). Smoke the image contract with
+`bash scripts/smoke_serving_image.sh`.
+
 The PostgreSQL/Streamlit `docker-compose.yml` is legacy scaffolding; it is
 not a supported production-parity setup or the current admin stack.
