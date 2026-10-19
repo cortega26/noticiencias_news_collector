@@ -147,6 +147,8 @@ jobs:
         run: make admin-contracts-check
       - name: Admin tests and build
         run: make admin-test && make admin-build
+      - name: Admin lint
+        run: make admin-lint
 
   test:
     name: test
