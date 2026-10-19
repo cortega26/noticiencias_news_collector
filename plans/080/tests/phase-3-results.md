@@ -54,7 +54,6 @@ and reaches the content check. Observed: all contract tests pass.
 
 Baseline config: 6/6 passed, exit 0. Paired config: 12 rows, 7 passed / 5
 failed, exit 100. The five failures are exactly:
-
 | Row | Reason |
 | --- | --- |
 | `candidate:empty_body` | `editorial_placeholder_blocked`: body empty |
@@ -67,6 +66,14 @@ failed, exit 100. The five failures are exactly:
 to prove unexpected exceptions escape `get_assert` and that stored provider
 errors short-circuit before content validation. The test file keeps the expected
 five failing pairs separately from evaluator input.
+
+Matched case set: 6/6 IDs in cases, baseline and candidate. Each
+baseline/candidate pair is identical except for the intended mutation (the
+structural-pass candidate additionally carries a valid H2 and a fenced
+`{{ template_marker }}`). Harness outcome is 7/12 passing rows; this is a fixture
+control result. No model was invoked, so this is not a model-versus-model
+comparison and says nothing about generation quality. Provider-error count in
+the seeded run: 0.
 
 ### E3 — repetition, alignment and provenance
 
