@@ -70,5 +70,28 @@
     ],
     "RuleID": "generic-api-key",
     "Fingerprint": "e5fcec5cfc28f284965ee61beef9cf50893da034:news_collector/serving/dashboard_health.py:generic-api-key:197"
+  },
+  {
+    "Description": "Generic API or secret token",
+    "StartLine": 281,
+    "EndLine": 281,
+    "StartColumn": 49,
+    "EndColumn": 68,
+    "Match": "key=supersecretvalue",
+    "Secret": "key",
+    "File": "tests/scripts/test_editorial_critic_canary.py",
+    "SymlinkFile": "",
+    "Commit": "2e512f7b92407f493006fbfec61f89deb55397f7",
+    "Entropy": 1.5849625,
+    "Author": "Carlos Ortega",
+    "Email": "cortega26@users.noreply.github.com",
+    "Date": "2026-10-19T15:12:24Z",
+    "Message": "Merge branch 'advisor/152-runtime-config-isolation': restore the runtime-config state around every test (plan 152)\n\ncommit a480ca1c75456cb972964ca18851c4e0be185187\nAuthor: Carlos Ortega <cortega26@users.noreply.github.com>\nDate:   Mon Oct 19 12:12:13 2026 -0300\n\nfeat(scripts): bounded Stage-4 critic canary with sanitized evidence (plan 154)",
+    "Tags": [
+      "secret",
+      "generic"
+    ],
+    "RuleID": "generic-api-key",
+    "Fingerprint": "2e512f7b92407f493006fbfec61f89deb55397f7:tests/scripts/test_editorial_critic_canary.py:generic-api-key:281"
   }
 ]
