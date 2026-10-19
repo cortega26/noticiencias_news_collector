@@ -69,7 +69,7 @@ AUDIT_ISSUES_FLAGS ?=
 PYTHON_MAJOR := 3
 PYTHON_MINOR := 13
 
-$(BOOTSTRAP_STAMP): requirements.lock
+$(BOOTSTRAP_STAMP): requirements.lock requirements-security.lock
 	@echo "[bootstrap] Setting up virtual environment in $(VENV)"
 	@if [ -d $(VENV) ]; then \
 		if ! $(VENV)/$(BIN_DIR)/python -c "import sys; v=sys.version_info; sys.exit(0 if (v.major,v.minor)==($(PYTHON_MAJOR),$(PYTHON_MINOR)) else 1)" 2>/dev/null; then \
