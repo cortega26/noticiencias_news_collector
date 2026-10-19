@@ -29,7 +29,7 @@ jobs:
 
       - uses: ./.github/actions/setup-python-env
         with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
 
       - name: Run S1 Verification
         run: |

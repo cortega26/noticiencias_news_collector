@@ -24,7 +24,7 @@ The main workflow is `.github/workflows/ci.yml`.
 
 Current jobs:
 
-- `lint` — `make lint`
+- `lint` — `make lint`, then `make toolchain-check && make lock-parity-check`
 - `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet); uploads `coverage-reports-unit`
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
@@ -91,7 +91,26 @@ mypy drift from it. `make lock-parity-check` compares the venv with
 `requirements.lock` and fails on any new mismatch; the four documented
 runtime/security lock collisions (click, pyee, smmap, types-requests) are
 excepted in `scripts/check_lock_parity.py` until the `.venv-security` split
-lands. Both are part of `make verify-ci`.
+lands. Both are part of `make verify-ci`, and both run in the `lint` job of
+`.github/workflows/ci.yml` — not only on a developer's machine.
+
+### Venv cache key contract
+
+Every workflow that calls `.github/actions/setup-python-env` passes
+
+```yaml
+cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
+```
+
+The action keys the `.venv` cache on that fragment and skips `make bootstrap`
+when the cache restores, so the key must cover every source of a tool pin: the
+lockfiles, the literal gate-tool pins in the `Makefile`, and
+`.pre-commit-config.yaml` (the source `toolchain-check` compares against). A pin
+change must invalidate the cache, otherwise a restored `.venv` presents tool
+versions the pins reject. Trade-off: any `Makefile` edit rebuilds the venv cache
+(~1 minute) — that is the intended, safe direction. When adding a workflow that
+uses the action, copy that literal unchanged; if the pins ever move to a
+dedicated file, update every `cache-key` in the same change.
 
 ## Other Active Workflows
 

@@ -31,7 +31,7 @@ jobs:
 
       - uses: ./.github/actions/setup-python-env
         with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
 
       - name: Run News Collector
         run: .venv/bin/python scripts/run_collector.py --export-json data/exports/latest_articles.json
