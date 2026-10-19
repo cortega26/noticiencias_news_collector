@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """
-Migration: align article indexes with optimized dedupe and ranking pipeline (2025-09-30).
+HISTORICAL ONE-OFF - NOT THE MIGRATION PATH. DO NOT RUN AGAINST PRODUCTION DATA.
+
+This script applies raw DDL (``DROP INDEX`` / ``ALTER TABLE ... ADD COLUMN`` /
+``PRAGMA optimize``) and bypasses Alembic. It resolves the legacy
+``data/news.db`` (or ``NEWS_DB_PATH``), while the application now reads
+``data/news_v3.db`` (``config.toml``). Running it against the configured
+database would mutate it outside the migration chain. Use ``make migrate``
+(``scripts/migrate.py``) for schema changes.
+
+Original purpose: align article indexes with the optimized dedupe and ranking
+pipeline (2025-09-30).
 - Adds simhash_prefix bucket column.
 - Drops redundant indexes.
 - Creates covering/partial indexes for dedupe, category windows, and source stats.
