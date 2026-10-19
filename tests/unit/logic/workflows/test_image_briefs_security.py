@@ -59,6 +59,17 @@ def _stage_kwargs(**overrides):
     return kwargs
 
 
+def test_read_only_store_does_not_create_data_dirs(tmp_path: Path) -> None:
+    """The publish pre-dispatch image gate looks briefs up without writing."""
+    root = tmp_path / "cold-data"
+    store = ImageBriefStore(root, read_only=True)
+
+    assert not root.exists()
+    assert store.find_for_article("123", []) is None
+    assert store.load_brief("some-brief") is None
+    assert not root.exists()
+
+
 @pytest.mark.parametrize("slug", TRAVERSAL_SLUGS)
 def test_brief_path_rejects_traversal_slugs(tmp_path: Path, slug: str) -> None:
     store = _make_store(tmp_path)

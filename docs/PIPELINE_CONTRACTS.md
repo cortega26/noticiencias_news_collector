@@ -149,6 +149,11 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
 - publication trigger/status (`/v1/admin/publish`, `/v1/admin/publish/batch`,
   `GET /v1/admin/publish/status?run_id=`) is durable in `workflow_runs`
   (Plan 060 Phase 4c) and single-flight; an unrecognized run id returns 404.
+  A single-article publish whose image brief is still `needs_editorial_image`
+  returns `409` with `detail.error_code=image_required` (slug, article id,
+  stored prompt) **before** any run row exists; `editorial_image_ready`,
+  resolved and absent briefs proceed, and `article_url` publishes are
+  unchanged. The lookup is read-only.
   While a run is queued/running `AdminPublishStatus` also carries **advisory
   live progress**: the article's recorded Refinery stage names
   (`progress.stages`, fed by the `RefineryEngine.stage_listener` hook),

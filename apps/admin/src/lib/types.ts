@@ -219,6 +219,7 @@ export interface AdminImageBriefItem {
   draft_alt_text: string | null;
   tone: string | null;
   updated_at: string | null;
+  generated_prompt: string | null;
 }
 
 export interface AdminBulkResetResult {

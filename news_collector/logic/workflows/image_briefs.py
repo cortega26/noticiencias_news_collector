@@ -93,14 +93,20 @@ def slugify_text(value: str, fallback: str) -> str:
 
 
 class ImageBriefStore:
-    """Persist and resolve editorial image briefs for the refinery workflow."""
+    """Persist and resolve editorial image briefs for the refinery workflow.
 
-    def __init__(self, data_dir: Path):
+    `read_only=True` skips directory creation so request-time validation
+    (e.g. the publish pre-dispatch image gate) can look briefs up without
+    any filesystem side effect. `load_brief`/`list_briefs` already only read.
+    """
+
+    def __init__(self, data_dir: Path, *, read_only: bool = False):
         self.data_dir = Path(data_dir)
         self.briefs_dir = self.data_dir / "image-briefs"
         self.uploads_dir = self.data_dir / "image-uploads"
-        self.briefs_dir.mkdir(parents=True, exist_ok=True)
-        self.uploads_dir.mkdir(parents=True, exist_ok=True)
+        if not read_only:
+            self.briefs_dir.mkdir(parents=True, exist_ok=True)
+            self.uploads_dir.mkdir(parents=True, exist_ok=True)
         self.prompt_template = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
 
     def brief_path(self, slug: str) -> Path:

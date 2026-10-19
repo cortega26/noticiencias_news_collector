@@ -62,6 +62,7 @@ class ImageResolution:
     image_alt: str | None = None
     queued_brief: bool = False
     message: str | None = None
+    reason: str | None = None
 
 
 def publication_safe_image_alt(value: object, title: object) -> str:
@@ -166,7 +167,11 @@ class ArticleImageHandler:
             self._queue_brief(
                 article, article_id, image_slug, "missing_source_image", existing_brief
             )
-            return ImageResolution(resolved=False, queued_brief=True)
+            return ImageResolution(
+                resolved=False,
+                queued_brief=True,
+                reason="missing_source_image",
+            )
 
         if raw_image_url and raw_image_url.startswith("http"):
             if not self._remote_image_allowed(raw_image_url):
@@ -191,6 +196,7 @@ class ArticleImageHandler:
                         "upload an original or licensed hero image in the "
                         "Images desk and publish again."
                     ),
+                    reason="third_party_image_blocked",
                 )
             _dl = download_fn if download_fn is not None else self.download
             local_ref = _dl(raw_image_url, image_slug, target_dir)
@@ -207,7 +213,11 @@ class ArticleImageHandler:
             self._queue_brief(
                 article, article_id, image_slug, "image_download_failed", existing_brief
             )
-            return ImageResolution(resolved=False, queued_brief=True)
+            return ImageResolution(
+                resolved=False,
+                queued_brief=True,
+                reason="image_download_failed",
+            )
 
         # 3. Local (non-http) path already set — pass through unchanged
         if (
@@ -232,7 +242,7 @@ class ArticleImageHandler:
             else "missing_source_image"
         )
         self._queue_brief(article, article_id, image_slug, reason, existing_brief)
-        return ImageResolution(resolved=False, queued_brief=True)
+        return ImageResolution(resolved=False, queued_brief=True, reason=reason)
 
     def _remote_image_allowed(self, url: str) -> bool:
         """True when the URL's host (or a parent domain) is allowlisted.

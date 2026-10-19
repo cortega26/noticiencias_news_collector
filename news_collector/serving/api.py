@@ -901,6 +901,31 @@ def _validate_publish_article_url(raw_url: str) -> str:
     return canonical
 
 
+def _image_required_detail(article_id: int) -> Optional[Dict[str, Any]]:
+    """Pre-dispatch image gate for POST /v1/admin/publish (plan 168).
+
+    A `needs_editorial_image` brief means the worker's image step is
+    guaranteed to block the article before refine, so starting a run only
+    produces a failed run the operator must diagnose. Return the structured
+    409 detail instead; `editorial_image_ready` and absent briefs proceed.
+
+    The lookup is strictly read-only (`read_only=True`): dispatch validation
+    must never create brief/upload directories or rewrite a brief.
+    """
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(Path("data"), read_only=True)
+    brief = store.find_for_article(str(article_id), [])
+    if brief is None or brief.status != "needs_editorial_image":
+        return None
+    return {
+        "error_code": "image_required",
+        "slug": brief.slug,
+        "article_id": article_id,
+        "prompt": brief.generated_prompt,
+    }
+
+
 def _check_config_payload_size(payload: Dict[str, Any]) -> None:
     """Reject oversize admin config payloads before any merge (413)."""
     serialized_len = len(json.dumps(payload, default=str))
@@ -2043,7 +2068,12 @@ def create_app(  # noqa: C901
         responses={
             409: {
                 "model": AdminPublishStarted,
-                "description": "A publication run is already queued or running.",
+                "description": (
+                    "A publication run is already queued or running "
+                    "(the body carries its run id), or the article's image "
+                    "brief still needs an editorial image "
+                    "(`detail.error_code=image_required`)."
+                ),
             }
         },
     )
@@ -2056,9 +2086,17 @@ def create_app(  # noqa: C901
         `article_id`, must be in the current export) or ingest+refine a
         `article_url`, then open a PR against the frontend repo. Exactly one
         of `article_id` / `article_url` is required. A second call while one
-        run is active yields 409 with the active run's id."""
+        run is active yields 409 with the active run's id; an article whose
+        brief still needs an editorial image yields 409 `image_required`
+        without starting a run."""
         if payload.article_url is not None:
             _validate_publish_article_url(payload.article_url)
+        if payload.article_id is not None and payload.article_url is None:
+            image_required = _image_required_detail(payload.article_id)
+            if image_required is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT, detail=image_required
+                )
         result = publication_run_workflow.start(
             article_id=payload.article_id,
             article_url=payload.article_url,
@@ -2575,6 +2613,7 @@ def create_app(  # noqa: C901
                         if getattr(brief, "updated_at", None)
                         else None
                     ),
+                    generated_prompt=brief.generated_prompt,
                 )
                 for brief in briefs
             ]

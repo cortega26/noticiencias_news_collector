@@ -78,6 +78,60 @@ class TestRefineryEngine(unittest.TestCase):
             engine.image_handler._remote_image_allowed("https://example.net/a.jpg")
         )
 
+    def test_image_resolution_failure_names_missing_source_reason(self):
+        """Plan 168: a message-less unresolved image still names the cause."""
+        from news_collector.logic.workflows.image_handler import ImageResolution
+
+        self.engine.image_handler.resolve = MagicMock(
+            return_value=ImageResolution(
+                resolved=False, queued_brief=True, reason="missing_source_image"
+            )
+        )
+        run = MagicMock()
+        identity = SimpleNamespace(
+            final_slug="2026-01-01-test", is_new=False, canonical_date="2026-01-01"
+        )
+
+        resolved = self.engine._resolve_article_image(
+            {"title": "Test"}, "3724", identity, Path("/tmp"), run
+        )
+
+        self.assertFalse(resolved)
+        error = self.engine._last_blocked_error
+        self.assertIn("missing_source_image", error["message"])
+        self.assertIn("3724", error["message"])
+        self.assertEqual(error["reason"], "missing_source_image")
+        run.persist_attempt.assert_called_once_with(False)
+
+    def test_image_resolution_failure_keeps_handler_message(self):
+        """A handler-supplied message still wins over the reason template."""
+        from news_collector.logic.workflows.image_handler import ImageResolution
+
+        message = "The source image is not reused without a licence."
+        self.engine.image_handler.resolve = MagicMock(
+            return_value=ImageResolution(
+                resolved=False,
+                queued_brief=True,
+                message=message,
+                reason="third_party_image_blocked",
+            )
+        )
+        run = MagicMock()
+        identity = SimpleNamespace(
+            final_slug="2026-01-01-test", is_new=False, canonical_date="2026-01-01"
+        )
+
+        resolved = self.engine._resolve_article_image(
+            {"title": "Test"}, "3724", identity, Path("/tmp"), run
+        )
+
+        self.assertFalse(resolved)
+        self.assertEqual(self.engine._last_blocked_error["message"], message)
+        self.assertEqual(
+            self.engine._last_blocked_error["reason"], "third_party_image_blocked"
+        )
+        run.persist_attempt.assert_called_once_with(False)
+
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_records_readability_stage(self, mock_dt_refinery):
         """Plan 065: a successful run persists a `readability` stage with the

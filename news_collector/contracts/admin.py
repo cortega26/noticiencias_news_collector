@@ -447,6 +447,7 @@ class AdminImageBriefItem(BaseModel):
     draft_alt_text: Optional[str] = None
     tone: Optional[str] = None
     updated_at: Optional[str] = None
+    generated_prompt: Optional[str] = None
 
 
 class AdminImageQueueEnvelope(BaseModel):

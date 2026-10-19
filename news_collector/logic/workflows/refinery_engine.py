@@ -89,6 +89,38 @@ QUOTED_DATE_ONLY_FRONTMATTER_RE = re.compile(
 
 _CONTRACT_REJECTED = object()
 
+# Operator-facing run errors for image resolutions that queued a brief. The
+# resolution's own `message` wins when present; these cover the branches that
+# historically returned no message (logo/missing/download-failed), so the run
+# error names the cause instead of a generic pipeline failure.
+_IMAGE_BLOCKED_MESSAGES = {
+    "missing_source_image": (
+        "No usable source image for article {article_id} "
+        "(missing_source_image): an original or licensed image is required. "
+        "Add it in the Images desk and publish again."
+    ),
+    "third_party_image_blocked": (
+        "The source image for article {article_id} is not reused without a "
+        "licence (third_party_image_blocked): upload an original or licensed "
+        "hero image in the Images desk and publish again."
+    ),
+    "image_download_failed": (
+        "The source image for article {article_id} could not be downloaded "
+        "(image_download_failed): upload an original or licensed hero image "
+        "in the Images desk and publish again."
+    ),
+    "placeholder_image_debt": (
+        "Article {article_id} still uses the placeholder image "
+        "(placeholder_image_debt): upload a real hero image in the Images "
+        "desk and publish again."
+    ),
+}
+
+_IMAGE_BLOCKED_UNKNOWN_MESSAGE = (
+    "Image resolution failed for article {article_id} ({reason}): add an "
+    "original or licensed hero image in the Images desk and publish again."
+)
+
 
 class _PublicationRun:
     """Mutable per-article publication state for one `process_single_article`
@@ -613,6 +645,16 @@ class RefineryEngine:
         )
         return identity
 
+    @staticmethod
+    def _image_blocked_message(reason: str | None, article_id: str) -> str:
+        """Name the unresolved image cause in the run error (plan 168)."""
+        template = _IMAGE_BLOCKED_MESSAGES.get(reason or "")
+        if template is not None:
+            return template.format(article_id=article_id)
+        return _IMAGE_BLOCKED_UNKNOWN_MESSAGE.format(
+            article_id=article_id, reason=reason or "unknown_reason"
+        )
+
     def _resolve_article_image(
         self,
         article: Dict[str, Any],
@@ -633,12 +675,13 @@ class RefineryEngine:
         )
         if not img_resolution.resolved:
             run.record_stage("image_resolution", False)
-            if img_resolution.message:
-                self._last_blocked_error = {
-                    "error": img_resolution.message,
-                    "message": img_resolution.message,
-                }
-                logger.warning(f"Blocked before publish: {img_resolution.message}")
+            message = img_resolution.message or self._image_blocked_message(
+                img_resolution.reason, article_id
+            )
+            self._last_blocked_error = {"error": message, "message": message}
+            if img_resolution.reason:
+                self._last_blocked_error["reason"] = img_resolution.reason
+            logger.warning(f"Blocked before publish: {message}")
             run.persist_attempt(False)
             return False
         run.record_stage("image_resolution", True, image_url=img_resolution.image_url)

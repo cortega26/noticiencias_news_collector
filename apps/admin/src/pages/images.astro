@@ -26,21 +26,16 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     clearToken,
     getImageQueue,
     showAuthGate,
+    startPublish,
     updateImageBrief,
     uploadImageBriefAsset,
   } from '../lib/api';
+  import { escapeHtml as esc, renderImageCard } from '../lib/imageDesk';
 
   const cardsEl = document.getElementById('cards');
   const emptyEl = document.getElementById('empty');
   const summaryEl = document.getElementById('summary');
   const toastEl = document.getElementById('toast');
-
-  function esc(s: unknown): string {
-    if (s == null) return '';
-    const div = document.createElement('div');
-    div.textContent = String(s);
-    return div.innerHTML;
-  }
 
   function showToast(message: string, kind: 'ok' | 'err' = 'ok') {
     if (!toastEl) return;
@@ -64,42 +59,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         `;
       }
       if (!cardsEl) return;
-      cardsEl.innerHTML = briefs
-        .map(
-          (b) => `
-          <div class="card p-4" data-slug="${esc(b.slug)}">
-            <div class="mb-2 flex items-center justify-between">
-              <span class="status-pill status-${b.status === 'editorial_image_ready' ? 'completed' : 'new'}">${b.status === 'editorial_image_ready' ? 'Lista' : esc(b.status)}</span>
-              <span class="font-mono text-[11px] text-ink-400">${esc(b.updated_at ?? '—')}</span>
-            </div>
-            <div class="font-mono text-xs text-amber-400">${esc(b.slug)}</div>
-            <div class="mt-1 text-sm font-medium text-ink-100">${esc(b.topic)}</div>
-            <div class="mt-2 font-mono text-[11px] text-ink-400">artículo ${esc(b.article_id)} · ${esc(b.reason)}</div>
-
-            <div class="mt-3 space-y-2">
-              <label class="block">
-                <span class="data-label block mb-1">TEMA</span>
-                <input data-field="topic" value="${esc(b.topic)}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
-              </label>
-              <label class="block">
-                <span class="data-label block mb-1">ENFOQUE</span>
-                <input data-field="news_angle" value="${esc(b.news_angle ?? '')}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
-              </label>
-              <label class="block">
-                <span class="data-label block mb-1">TEXTO ALT</span>
-                <input data-field="draft_alt_text" value="${esc(b.draft_alt_text ?? '')}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
-              </label>
-              <div class="flex gap-2">
-                <button class="btn-ghost !px-2.5 !py-1 text-xs" data-save="${esc(b.slug)}" type="button">Guardar cambios</button>
-                <label class="btn-ghost !px-2.5 !py-1 text-xs cursor-pointer">
-                  Añadir archivo
-                  <input type="file" accept="image/*" class="hidden" data-upload="${esc(b.slug)}" />
-                </label>
-              </div>
-            </div>
-          </div>`
-        )
-        .join('');
+      cardsEl.innerHTML = briefs.map((b) => renderImageCard(b)).join('');
     } catch (e) {
       if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
@@ -123,9 +83,51 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 
   cardsEl?.addEventListener('click', async (event) => {
     const target = (event.target as HTMLElement).closest('button');
-    if (!target?.dataset.save) return;
-    const slug = target.dataset.save;
+    if (!target) return;
     const card = target.closest<HTMLElement>('[data-slug]');
+
+    if (target.dataset.copy) {
+      const prompt = card?.querySelector<HTMLElement>('pre[data-prompt]')?.textContent ?? '';
+      if (!prompt) {
+        showToast('El brief no tiene prompt guardado', 'err');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(prompt);
+        showToast('Prompt copiado al portapapeles');
+      } catch {
+        showToast('No se pudo copiar; selecciona el texto del prompt manualmente.', 'err');
+      }
+      return;
+    }
+
+    if (target.dataset.publish) {
+      const articleId = Number(target.dataset.publish);
+      if (!Number.isFinite(articleId) || articleId <= 0) {
+        showToast('El brief no tiene un id de artículo válido', 'err');
+        return;
+      }
+      target.toggleAttribute('disabled', true);
+      try {
+        const started = await startPublish({ articleId });
+        showToast(`Publicación iniciada (run ${started.run_id})`);
+        await load();
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AuthError') {
+          clearToken();
+          showAuthGate();
+          return;
+        }
+        const reason = e instanceof Error && e.message ? ` — ${e.message}` : '';
+        showToast(`No se pudo iniciar la publicación${reason}`, 'err');
+      } finally {
+        target.toggleAttribute('disabled', false);
+      }
+      return;
+    }
+
+    if (!target.dataset.save) return;
+    const slug = target.dataset.save;
     if (!card) return;
     try {
       await updateImageBrief(slug, collectFields(card));
