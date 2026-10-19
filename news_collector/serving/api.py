@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -60,7 +61,11 @@ from fastapi import (
     UploadFile,
     status,
 )
-from noticiencias.config_manager import load_config
+from noticiencias.config_manager import (
+    default_config_path,
+    default_env_path,
+    load_config,
+)
 from sqlalchemy import and_, func, or_
 from sqlalchemy.engine import Row as RowType
 from sqlalchemy.exc import SQLAlchemyError
@@ -134,6 +139,88 @@ logger = get_logger().create_module_logger("serving.api")
 # Collector export artifact consumed by the admin source-health endpoint.
 # Overridable in tests via monkeypatch.
 ADMIN_SOURCE_HEALTH_PATH = "data/exports/source_health.json"
+
+# Plan 148: static admin reads (prompts.yaml, sources.yaml, the source-health
+# export) are cached by (path, mtime_ns, size) so page reloads stop re-reading
+# and re-parsing files that only change when an operator saves them. A
+# module-level dict is the whole mechanism — no TTLs, no threads, no new
+# dependency (LAW-B9). Invalidation is by key comparison only. Caveat: if an
+# edit lands within the same mtime tick AND keeps the size identical, the old
+# value persists until the next real change; acceptable for these read-only
+# admin views.
+_STATIC_FILE_CACHE: Dict[Tuple[str, Optional[int], Optional[int]], Any] = {}
+_CONFIG_CACHE: Dict[str, Tuple[Any, Any]] = {}
+
+
+def _file_signature(path: Path) -> Optional[Tuple[int, int]]:
+    """Return ``(mtime_ns, size)`` for *path*, or None when it is absent."""
+    try:
+        stat_result = path.stat()
+    except OSError:
+        return None
+    return (stat_result.st_mtime_ns, stat_result.st_size)
+
+
+def _cached_file_value(path: Path, loader: Callable[[], Any]) -> Any:
+    """Memoize a file-derived value for the admin read path.
+
+    Keyed by ``(str(path), mtime_ns, size)``; ``loader`` runs only on a miss.
+    The cached object is shared between requests and must be treated as
+    read-only by every caller — nothing served from here is handed to a
+    consumer that mutates it. Missing files are keyed with a ``None``
+    signature, so the value is recomputed as soon as the file appears.
+    """
+    signature = _file_signature(path)
+    key = (
+        str(path),
+        signature[0] if signature else None,
+        signature[1] if signature else None,
+    )
+    if key in _STATIC_FILE_CACHE:
+        return _STATIC_FILE_CACHE[key]
+    value = loader()
+    _STATIC_FILE_CACHE[key] = value
+    return value
+
+
+def _config_cache_key() -> Tuple[Any, ...]:
+    """Cache key for ``load_config()`` on the admin read path (plan 148).
+
+    Includes the loader itself so a monkeypatched ``load_config`` (tests) is
+    never served a value cached from a different loader, plus every file the
+    default resolution reads: ``config.toml``, the ``.env`` beside it, and
+    the repo-root ``.env``.
+    """
+    config_path = default_config_path()
+    env_candidate = config_path.parent / ".env"
+    default_env = default_env_path()
+    return (
+        load_config,
+        str(config_path),
+        _file_signature(config_path),
+        str(env_candidate),
+        _file_signature(env_candidate),
+        str(default_env),
+        _file_signature(default_env),
+    )
+
+
+def _load_config_cached() -> Any:
+    """``load_config()`` memoized for ``GET /v1/admin/config``.
+
+    The cached Config is shared mutable state: it exists only to render a
+    fresh ``AdminConfigSnapshot`` and must never be returned to a caller or
+    mutated. Process-environment overrides are deliberately not part of the
+    key — they are fixed for the life of the serving process (changing them
+    requires a restart, same as the save contract's ``restart_required_keys``).
+    """
+    key = _config_cache_key()
+    entry = _CONFIG_CACHE.get("config")
+    if entry is not None and entry[0] == key:
+        return entry[1]
+    config = load_config()
+    _CONFIG_CACHE["config"] = (key, config)
+    return config
 
 
 def _merge_circuit_into_health_record(
@@ -1632,13 +1719,14 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminSourceHealthEnvelope:
-        import json as _json
-
-        if not os.path.exists(ADMIN_SOURCE_HEALTH_PATH):
+        health_path = Path(ADMIN_SOURCE_HEALTH_PATH)
+        if not health_path.exists():
             return AdminSourceHealthEnvelope(sources=[])
         try:
-            with open(ADMIN_SOURCE_HEALTH_PATH, "r", encoding="utf-8") as f:
-                data = _json.load(f)
+            data = _cached_file_value(
+                health_path,
+                lambda: json.loads(health_path.read_text(encoding="utf-8")),
+            )
         except (OSError, ValueError) as exc:
             logger.warning("Failed to read source health export: {}", exc)
             return AdminSourceHealthEnvelope(sources=[])
@@ -1674,7 +1762,7 @@ def create_app(  # noqa: C901
     def admin_config(
         _: None = Depends(verify_admin_token),
     ) -> AdminConfigSnapshot:
-        cfg = load_config()
+        cfg = _load_config_cached()
         github = {
             "user_name": cfg.github.user_name,
             "source_repo_url": cfg.github.source_repo_url,
@@ -2136,8 +2224,13 @@ def create_app(  # noqa: C901
         _: None = Depends(verify_admin_token),
     ) -> AdminSourceListEnvelope:
         # Phase 4b: one fresh catalog read + one batched circuit-state query
-        # (plan 110 already replaced the old per-source loop).
-        catalog = source_catalog_workflow.load()
+        # (plan 110 already replaced the old per-source loop). Plan 148
+        # memoizes that read by sources.yaml mtime+size, so operator saves are
+        # still visible on the next GET.
+        catalog = _cached_file_value(
+            source_catalog_workflow.sources_yaml_path,
+            source_catalog_workflow.load,
+        )
 
         circuits = manager.get_all_circuit_states()
         items: List[AdminSourceListItem] = []
@@ -2275,8 +2368,10 @@ def create_app(  # noqa: C901
         if not prompts_path.exists():
             return AdminPromptsEnvelope(prompts={})
         try:
-            with open(prompts_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
+            data = _cached_file_value(
+                prompts_path,
+                lambda: yaml.safe_load(prompts_path.read_text(encoding="utf-8")) or {},
+            )
         except (OSError, yaml.YAMLError) as exc:
             raise HTTPException(
                 status_code=500, detail=f"Failed to read prompts: {exc}"
