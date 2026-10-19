@@ -145,6 +145,12 @@ jobs:
         # job only adds the drift gate around them (plan 080 Phase 2).
         run: npm ci --legacy-peer-deps
         working-directory: apps/admin
+      - name: Admin dependency advisories
+        # Gate high/critical npm advisories (plan 145). The admin app is the
+        # repo's only npm surface; Dependabot's npm entry only opens bumps, so
+        # this step is what actually blocks a regression.
+        run: npm audit --audit-level=high
+        working-directory: apps/admin
       - name: Admin contract drift check
         run: make admin-contracts-check
       - name: Admin tests and build
