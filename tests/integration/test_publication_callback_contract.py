@@ -11,7 +11,10 @@ Node runs as a local subprocess and its stdout is captured directly.
 
 Skips (does not fail) when Node or the sibling ``../noticiencias`` repo
 checkout isn't available, since this genuinely cannot run without both
-repos present side by side.
+repos present side by side. When ``FRONTEND_REPO_PATH`` is set, however, the
+caller has declared that the checkout must exist: a missing sender then fails
+the module instead of skipping, so a CI job that fails to materialise the
+pinned frontend cannot pass silently (plan 167).
 """
 
 from __future__ import annotations
@@ -42,15 +45,20 @@ BACKEND_NOTIFY_SCRIPT = FRONTEND_REPO / "scripts" / "backend-notify.js"
 
 pytestmark = [
     pytest.mark.e2e,
-    pytest.mark.skipif(
-        shutil.which("node") is None or not BACKEND_NOTIFY_SCRIPT.exists(),
-        reason=(
-            "Requires Node and the sibling ../noticiencias checkout to build a "
-            "real sender envelope — this is a genuine cross-repo test, not "
-            "something a Python-only environment can run."
-        ),
-    ),
 ]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _require_frontend_sender():
+    if shutil.which("node") is None:
+        pytest.skip("node is not installed")
+    if not BACKEND_NOTIFY_SCRIPT.exists():
+        if os.environ.get("FRONTEND_REPO_PATH"):
+            pytest.fail(
+                f"FRONTEND_REPO_PATH is set but {BACKEND_NOTIFY_SCRIPT} is missing",
+                pytrace=False,
+            )
+        pytest.skip("sibling ../noticiencias checkout is not present")
 
 
 def _build_envelope_via_frontend(

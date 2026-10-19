@@ -30,7 +30,7 @@ Current jobs:
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — `make test` unit suite without coverage; integration, E2E, and performance run in separate jobs
 - `weak-tests` — `make weak-tests-check`: seconds-long static AST scan for test functions with no assertion, compared against `audit/weak_tests_baseline.json` (fails when the list grows; shrinking is allowed)
-- `integration` — `make test-integration` (integration directory and root tests marked `e2e`), then `make coverage-full` (unit + integration + `e2e`-marked suites in one instrumented run); uploads `coverage-reports-full`
+- `integration` — checks out the pinned frontend sender (sparse) and Node 24, then `make test-integration` (integration directory and root tests marked `e2e`, including the real cross-repo publication-callback contract), then `make coverage-full` (unit + integration + `e2e`-marked suites in one instrumented run); uploads `coverage-reports-full`
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
 - `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
@@ -46,6 +46,52 @@ it fails on any real test failure and only exits cleanly when zero `e2e` tests a
 collected, writing `reports/e2e/SKIPPED`.
 
 These jobs are the current automation reality. Documentation should not claim a different required-check set than the workflow actually defines.
+
+### Cross-repo publication-callback contract (pinned frontend)
+
+`tests/integration/test_publication_callback_contract.py` imports the **real**
+frontend sender (`../noticiencias/scripts/backend-notify.js`) through a Node
+subprocess, so it only exercises the contract when that checkout is present.
+For a long time CI did not have it, the module skipped, and the job stayed
+green while the frontend had stopped emitting `publication_attempt_refs`
+(frontend PR #311).
+
+The `integration` job now materialises the sender deliberately:
+
+- `actions/checkout` checks out `cortega26/noticiencias` at the pinned commit
+  `7c6ad1242c6cba55e55bed6610006e78a423dd79`, sparse (`scripts/` +
+  `package.json`, cone mode off) into `.ci/frontend`, with `fetch-depth: 1` and
+  `persist-credentials: false`. `.ci/` is gitignored.
+- `actions/setup-node` installs Node 24 (the sender runs on Node built-ins and
+  `scripts/utils/*`; the job runs **no `npm install`** — keep it that way).
+- `make test-integration` runs with `FRONTEND_REPO_PATH=.ci/frontend`.
+
+This step is **required on the `integration` job**: without it the four
+cross-repo test classes silently skip. The skip is fail-closed: when
+`FRONTEND_REPO_PATH` is unset and the sibling checkout is absent the module
+skips (ordinary local runs), but when the variable is set and the sender is
+missing the module fails instead of skipping, so a broken checkout cannot pass.
+
+**Bumping the pin.** When the frontend sender or the callback contract changes,
+update the `ref` to the new merged frontend commit (`main`), then re-run the
+focused tests against a sparse checkout of that commit:
+
+```bash
+rm -rf /tmp/opencode/fe-sparse && mkdir -p /tmp/opencode/fe-sparse
+cd /tmp/opencode/fe-sparse && git init -q
+git remote add origin https://github.com/cortega26/noticiencias.git
+git config core.sparseCheckout true
+git config core.sparseCheckoutCone false
+git sparse-checkout set scripts/ package.json
+git fetch -q --depth 1 origin <new-commit>
+git checkout -q FETCH_HEAD
+cd -  # back to the backend repo
+FRONTEND_REPO_PATH=/tmp/opencode/fe-sparse .venv/bin/pytest \
+  tests/integration/test_publication_callback_contract.py -q --no-cov -p no:randomly
+```
+
+Expect `8 passed`. Bump the pin in the same change that adopts the frontend
+sender change; do not let the workflow track `main`.
 
 ## Quality And Security Workflow
 

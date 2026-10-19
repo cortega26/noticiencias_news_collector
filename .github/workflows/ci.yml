@@ -218,7 +218,25 @@ jobs:
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
+      - name: Checkout frontend sender (pinned)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cortega26/noticiencias
+          ref: 7c6ad1242c6cba55e55bed6610006e78a423dd79
+          path: .ci/frontend
+          sparse-checkout: |
+            scripts/
+            package.json
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node for the cross-repo sender
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
       - name: Run integration and root-level E2E tests
+        env:
+          FRONTEND_REPO_PATH: .ci/frontend
         run: make test-integration
       - name: Run union coverage (full profile)
         # Same selection as the recorded profiles.full baseline: unit +
