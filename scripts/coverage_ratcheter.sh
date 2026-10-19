@@ -192,23 +192,19 @@ snapshot = json.loads(os.environ["SNAPSHOT_JSON"])
 profile = os.environ.get("COVERAGE_PROFILE", "full").strip() or "full"
 recorded_at = datetime.now(timezone.utc).isoformat()
 
-if profile == "full":
-    baseline = {
-        "recorded_at": recorded_at,
-        "total_line": snapshot["total_line"],
-        "total_branch": snapshot.get("total_branch"),
-    }
-else:
-    baseline = (
-        json.loads(baseline_path.read_text("utf-8")) if baseline_path.exists() else {}
-    )
-    profiles = baseline.setdefault("profiles", {})
-    profiles[profile] = {
-        "recorded_at": recorded_at,
-        "total_line": snapshot["total_line"],
-        "total_branch": snapshot.get("total_branch"),
-        "files": snapshot.get("files", {}),
-    }
+# Every profile (including "full") is recorded under profiles.<name>; the
+# legacy top-level totals are preserved so recording one profile never
+# rewrites another (profiles.unit must survive a full-profile recording).
+baseline = (
+    json.loads(baseline_path.read_text("utf-8")) if baseline_path.exists() else {}
+)
+profiles = baseline.setdefault("profiles", {})
+profiles[profile] = {
+    "recorded_at": recorded_at,
+    "total_line": snapshot["total_line"],
+    "total_branch": snapshot.get("total_branch"),
+    "files": snapshot.get("files", {}),
+}
 
 baseline_path.write_text(
     json.dumps(baseline, indent=2, sort_keys=True) + "\n", encoding="utf-8"

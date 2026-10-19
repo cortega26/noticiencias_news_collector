@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T13:20:11.130695+00:00",
+  "generated_at": "2026-10-19T13:58:15.328437+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -703,6 +703,10 @@
     {
       "target": "typecheck",
       "description": "Static mypy check plus unit tests and coverage ratchet"
+    },
+    {
+      "target": "coverage-full",
+      "description": "Run the union suite (unit + integration + e2e-marked) with coverage into coverage-full.xml"
     },
     {
       "target": "test",
