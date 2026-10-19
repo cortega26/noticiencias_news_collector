@@ -11,8 +11,8 @@ Owns:
 
 Does NOT own:
 - Published-content snapshots, git clones, PR/ Pages health
-  (see apps.refinery.published_content — the legacy Streamlit edge, which
-  re-exports these helpers until the panel is retired)
+  (see news_collector/logic/workflows/published_content.py, which re-exports
+  these helpers for the legacy Streamlit panel until it is retired)
 - Manifest read/write for the target repo (see target_repo_writer.py)
 
 Relocated verbatim out of the legacy refinery published-content helper

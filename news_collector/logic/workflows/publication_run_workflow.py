@@ -26,7 +26,7 @@ collector and builds its **own** `DatabaseManager()`
 never closes the process-wide singleton the serving API holds — the Phase 4a
 `system.shutdown()` defect cannot recur through this path. The pipeline is the
 battle-tested flow the Streamlit panel already drives through its thin
-`apps.refinery.main.main` delegate; reusing it keeps the target-repo clone /
+`main.main` delegate; reusing it keeps the target-repo clone /
 editor / auditor / PR logic in one place.
 
 Design mirrors `collection_run_workflow.py` (Plan 060 / Phase 4a) exactly:

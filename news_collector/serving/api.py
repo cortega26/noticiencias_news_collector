@@ -1602,7 +1602,9 @@ def create_app(  # noqa: C901
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
     ) -> AdminAnalyticsEnvelope:
-        from apps.refinery.analytics_read_model import build_analytics_read_model
+        from news_collector.serving.analytics_read_model import (
+            build_analytics_read_model,
+        )
 
         model = build_analytics_read_model(manager)
         return AdminAnalyticsEnvelope(
@@ -2269,7 +2271,9 @@ def create_app(  # noqa: C901
     def admin_published_content(
         _: None = Depends(verify_admin_token),
     ) -> AdminContentEnvelope:
-        from apps.refinery.published_content import resolve_published_content_snapshot
+        from news_collector.logic.workflows.published_content import (
+            resolve_published_content_snapshot,
+        )
 
         cfg = load_config()
         try:
@@ -2439,7 +2443,7 @@ def create_app(  # noqa: C901
         Dispatches to reset_one_article (plan 017 semantics: DB rows are
         deleted only after the git push succeeds).
         """
-        from apps.refinery.published_content import (
+        from news_collector.logic.workflows.published_content import (
             find_published_article_by_refinery_id,
             reset_one_article,
             resolve_published_content_snapshot,
@@ -2486,12 +2490,12 @@ def create_app(  # noqa: C901
         _: None = Depends(verify_admin_token),
     ) -> AdminBulkResetResult:
         """Bulk unpublish (batch_cap 5, continue-on-error, per-item report)."""
-        from apps.refinery.bulk_helper import run_bulk
-        from apps.refinery.published_content import (
+        from news_collector.logic.workflows.published_content import (
             find_published_article_by_refinery_id,
             reset_one_article,
             resolve_published_content_snapshot,
         )
+        from news_collector.serving.bulk_helper import run_bulk
 
         cfg = load_config()
         try:

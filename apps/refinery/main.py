@@ -13,14 +13,6 @@ if str(project_root) not in sys.path:
 
 from noticiencias.config_manager import load_config
 
-from apps.refinery.published_content import (
-    append_deleted_route_smoke_check,
-    find_published_article_by_file_name,
-    find_published_article_by_refinery_id,
-    infer_published_article_route,
-    prune_hero_placeholder_allowlist_for_post,
-    prune_refinery_manifest_for_post,
-)
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.logic.workflows.publication_pipeline import (
     PROCESSED_LOG_FILE,
@@ -34,6 +26,14 @@ from news_collector.logic.workflows.publication_pipeline import (
     _select_export_articles,
     run_collector_script,
     run_publication_pipeline,
+)
+from news_collector.logic.workflows.published_content import (
+    append_deleted_route_smoke_check,
+    find_published_article_by_file_name,
+    find_published_article_by_refinery_id,
+    infer_published_article_route,
+    prune_hero_placeholder_allowlist_for_post,
+    prune_refinery_manifest_for_post,
 )
 from news_collector.utils.logger import get_logger
 
