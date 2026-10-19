@@ -27,6 +27,9 @@ paths = [
   '''^audit/03_config_matrix\.md$''',
   # Placeholder/fixture values in test and documentation files.
   '''^tests/integration/test_publication_callback_contract\.py$''',
+  # Canary payload fixtures: matches are fake key names / placeholder values
+  # used to exercise the redaction parser, not credentials.
+  '''^tests/scripts/test_editorial_critic_canary\.py$''',
   # Bounds-test placeholders (e.g. a fake "token" value asserting
   # non-persistence); no real credentials in this file.
   '''^tests/unit/serving/test_write_surface_bounds\.py$''',
