@@ -479,15 +479,17 @@ class TestCriticPasses:
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
 
-    @pytest.mark.parametrize("invalid_average", ["not-a-float", 10**400])
-    def test_editorial_critic_unparseable_scores_fails_open(self, invalid_average):
+    @pytest.mark.parametrize("unusable_average", ["not-a-float", 10**400])
+    def test_editorial_critic_unusable_model_average_is_ignored(self, unusable_average):
+        """Plan 155: model arithmetic never decides whether the gate runs."""
         agent = _bare_agent()
         payload = _editorial_critic_payload(approved=True)
-        payload["average"] = invalid_average
+        payload["average"] = unusable_average
         agent._send_prompt = MagicMock(return_value=json.dumps(payload))
         verdict = agent._critic_editorial_pass("real body")
         assert verdict.is_valid is True
-        assert verdict.checkpointable is False
+        assert verdict.checkpointable is True
+        assert agent.last_critic_verdict["average"] == 8.0
 
     @pytest.mark.parametrize(
         "payload",
@@ -667,7 +669,7 @@ class TestCriticPasses:
         assert verdict.checkpointable is True
         assert agent.last_critic_verdict == {
             "approved": True,
-            "average": 8.5,
+            "average": 8.43,
             "scores": {
                 "hook_score": 9,
                 "clarity_score": 8,
