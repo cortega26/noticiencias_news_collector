@@ -1,10 +1,11 @@
 # Plan 080 checklist
 
 Phases 0-2 done and merged (stateful workflow tests; generated admin response
-contracts + drift gate). Phase 3 (offline editorial replay pilot) and Phase 4
-(delivery) remain. Mark a phase complete only after its acceptance evidence and
-required review exist. (Header reconciled 2026-09-26 — it previously claimed
-implementation had not started, contradicting the checked phases below.)
+contracts + drift gate). Phase 3 (offline editorial replay pilot) is implemented
+and evidenced; its fresh review is pending. Phase 4 (delivery) remains. Mark a
+phase complete only after its acceptance evidence and required review exist.
+(Header reconciled 2026-09-26 — it previously claimed implementation had not
+started, contradicting the checked phases below.)
 
 ## Planning delivery
 
@@ -49,13 +50,19 @@ implementation had not started, contradicting the checked phases below.)
 
 ## Phase 3 — offline editorial replay pilot
 
-- [ ] Define validated case/output records with provenance; create six controls.
-- [ ] Reuse public Markdown guardrail validator and add narrow case assertions.
-- [ ] Prepare deterministic paired replay config and manifest.
-- [ ] Pin isolated Promptfoo tooling; add optional install/replay entry points.
-- [ ] Prove E1–E5 with passing and expected-failing offline integrations.
-- [ ] Record adoption or justified no-go; remove unused pilot dependencies on no-go.
+- [x] Define validated case/output records with provenance; create six controls.
+- [x] Reuse public Markdown guardrail validator and add narrow case assertions.
+- [x] Prepare deterministic paired replay config and manifest.
+- [x] Pin isolated Promptfoo tooling; add optional install/replay entry points.
+- [x] Prove E1–E5 with passing and expected-failing offline integrations.
+- [x] Record adoption or justified no-go; remove unused pilot dependencies on no-go.
+  Decision: GO, retained as development-only tooling; see
+  `tests/phase-3-results.md`.
 - [ ] Run required gates; record `tests/phase-3-results.md`; resolve fresh review.
+  Gates recorded in `tests/phase-3-results.md`; fresh review pending. `make
+  quality` still fails on pre-existing raw Bandit findings and
+  `make inventory-check` reports generated-baseline drift outside the phase
+  allowlist.
 
 ## Phase 4 — delivery
 
