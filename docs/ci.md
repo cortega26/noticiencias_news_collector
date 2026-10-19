@@ -46,6 +46,7 @@ These jobs are the current automation reality. Documentation should not claim a 
 - `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses `--config auto` and is non-blocking
 - `make quality-gate` — snapshot-first quality gate (no LLM)
 - gitleaks secret scan (binary downloaded in CI, `make security` runs it locally when installed)
+- the uploaded `quality-reports` artifact contains only `reports/security/gitleaks-sanitized.json` and `reports/security/status.json`: the sanitiser (`scripts/sanitize_gitleaks_report.py`) replaces the matched `Secret`/`Match` values with a marker before upload, while the raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 
 ## Local Parity Commands
 
