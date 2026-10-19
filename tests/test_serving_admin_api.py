@@ -1249,6 +1249,28 @@ def test_admin_publish_requires_exactly_one_of_id_or_url(
     assert both.status_code == 422
 
 
+def test_admin_publish_rejects_both_inputs_before_the_image_gate(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """The 422 contract wins: both inputs is invalid regardless of briefs."""
+
+    def _store(*args, **kwargs):
+        raise AssertionError("image gate must not run for an invalid request")
+
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore", _store
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish",
+            json={"article_id": 1, "article_url": "https://example.com/x"},
+            headers=_admin_headers(),
+        )
+
+    assert response.status_code == 422
+
+
 @pytest.mark.parametrize(
     "bad_url",
     [

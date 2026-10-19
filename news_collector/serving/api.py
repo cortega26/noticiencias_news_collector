@@ -2091,7 +2091,7 @@ def create_app(  # noqa: C901
         without starting a run."""
         if payload.article_url is not None:
             _validate_publish_article_url(payload.article_url)
-        if payload.article_id is not None:
+        if payload.article_id is not None and payload.article_url is None:
             image_required = _image_required_detail(payload.article_id)
             if image_required is not None:
                 raise HTTPException(
