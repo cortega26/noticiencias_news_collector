@@ -60,6 +60,7 @@ ACTIVE_DOCS = (
     "docs/RUNBOOK_LOCAL_DEV.md",
     "docs/database_deployment.md",
     "docs/testing.md",
+    "docs/contracts_inventory.md",
 )
 
 # Historical scopes: edits here are evidence, not active documentation.

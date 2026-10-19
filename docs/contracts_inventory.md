@@ -1,53 +1,204 @@
-## Implemented Contracts
+# Typed contract inventory
 
-All boundaries below are typed and enforced.  This inventory reflects the current
-implementation state.  For contract shapes and failure semantics, see
+Generated from `news_collector/contracts/` at commit `196df75e` (2026-10-19).
+Every `*.py` module in that package is listed below. `make docs-check` fails when a
+module is added, removed or renamed without updating this file.
+
+For contract shapes and failure semantics, see
 [`docs/PIPELINE_CONTRACTS.md`](PIPELINE_CONTRACTS.md).
 
-### 1. Collector Output
+## Implemented contracts
 
-- **Contract**: `CollectorArticleModel` (`contracts/collector.py`)
-- **Status**: Enforced.  `MockArticle` conforms to required defaults.
+### 1. Collector output
 
-### 2. Validation Input
+- **Module**: `contracts/collector.py`
+- **Contracts**: `CollectorArticlePayload`, `CollectorArticleModel`
+- **Status**: Enforced. `MockArticle` conforms to required defaults.
+- **Tests**: `tests/test_refinery_contract_enforcement.py`,
+  `tests/unit/contracts/test_contracts.py`
 
-- **Contract**: `ArticleValidationPayload` (`contracts/validation.py`)
-- **Status**: Enforced.  System uses `adapt_to_validation_payload`.
+### 2. Mock article
 
-### 3. Scoring Input/Output
+- **Module**: `contracts/mock_article.py`
+- **Contracts**: `MockArticle` (`CollectorArticleModel` subclass)
+- **Status**: Enforced. Used by tests to build valid collector payloads.
+- **Tests**: `tests/unit/contracts/test_mock_usage.py`
 
-- **Input**: `ScoringInputModel` (`contracts/scoring.py`)
-- **Persistence payload**: `ScoringRequestModel` (`contracts/scoring.py`)
-- **Status**: Enforced.  System uses `adapt_to_scoring_input`.
+### 3. Common metadata
 
-### 4. Export Payload
+- **Module**: `contracts/common.py`
+- **Contracts**: `ArticleMetadata`, `ArticleMetadataModel`
+- **Status**: Enforced. Shared article metadata shape.
+- **Tests**: `tests/unit/contracts/test_common_contract.py`,
+  `tests/contracts/test_article_model.py`
 
-- **Contract**: `ExportContractV2` (`contracts/export.py`)
-- **Status**: Enforced.  System uses `adapt_article_to_export`.  `schema_version: 2` is
+### 4. Validation input
+
+- **Module**: `contracts/validation.py`
+- **Contracts**: `ArticleValidationItem`, `ArticleValidationPayload`
+- **Status**: Enforced. System uses `adapt_to_validation_payload`.
+- **Tests**: `tests/unit/contracts/test_d1_enforcement.py`,
+  `tests/unit/system/test_d1_pipeline_boundaries.py`
+
+### 5. Scoring input/output
+
+- **Module**: `contracts/scoring.py`
+- **Contracts**: `ScoringComponents`, `ScoringComponentsModel`, `ScoringRequest`,
+  `ScoringRequestModel`, `ArticleScoringData`, `ScoringInputModel`
+- **Status**: Enforced. System uses `adapt_to_scoring_input`.
+- **Tests**: `tests/contracts/test_scoring_models.py`,
+  `tests/unit/contracts/test_contracts.py`
+
+### 6. Enrichment
+
+- **Module**: `contracts/enrichment.py`
+- **Contracts**: `ArticleForEnrichment`, `ArticleEnrichment`,
+  `ArticleForEnrichmentModel`, `ArticleEnrichmentModel`
+- **Status**: Enforced. Models forbid unknown fields and require usable text.
+- **Tests**: `tests/unit/contracts/test_enrichment_contract.py`,
+  `tests/unit/contracts/test_boundary_contract_extras_rejected.py`
+
+### 7. Export payload
+
+- **Module**: `contracts/export.py`
+- **Contracts**: `ExportArticleModel`, `ExportContractV2`
+- **Status**: Enforced. System uses `adapt_article_to_export`. `schema_version: 2` is
   the preferred contract; the CLI `--export-json` currently writes V1, tolerated by
   `apps/refinery/main.py` with compatibility handling. New contract work should use V2;
   do not claim that every current producer emits it.
+- **Tests**: `tests/unit/contracts/test_export_contract.py`,
+  `tests/unit/system/test_d1_pipeline_boundaries.py`
 
-### 5. Frontend Publication
+### 8. Frontend publication schema
 
-- **Contract**: `AstroPost` (`contracts/frontend_schema.py`)
-- **Status**: Enforced.  Published MDX frontmatter must satisfy `AstroPost`.  The Python parity test compares field names; the frontend checker invoked
-  by backend CI also checks types, constraints and optionality. See
-  `docs/PIPELINE_CONTRACTS.md` for ownership and intentional divergences.
+- **Module**: `contracts/frontend_schema.py`
+- **Contracts**: `AstroPost`, `HeadlinesVariants`, `FactCheckItem`, `SourceRole`,
+  `EvidenceSubjectType`, `PublicationStatus`, `SourceItem`, `GlossaryItem`,
+  `ImageObject`, `SocialConfig`
+- **Status**: Enforced. Published MDX frontmatter must satisfy `AstroPost`. The Python
+  parity test compares field names; the frontend checker invoked by backend CI also
+  checks types, constraints and optionality. See [`docs/PIPELINE_CONTRACTS.md`](PIPELINE_CONTRACTS.md)
+  for ownership and intentional divergences.
+- **Tests**: `tests/test_contracts_sync.py`,
+  `tests/unit/contracts/test_frontend_schema.py`
 
-### 6. Scoring/Validation Adapters
+### 9. Frontend publication policy
 
-- **Contract**: `news_collector/contracts/adapters.py`
-- **Status**: Enforced.  Adapter-owned mapping for scoring and validation boundaries.
+- **Module**: `contracts/frontend_publication.py`
+- **Contracts**: `FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS` (constant tuple; no models)
+- **Status**: Enforced. Shared by the storage projection and the published-content
+  reader to identify the workflows that constitute a publication.
+- **Tests**: `tests/unit/refinery/test_published_content.py`
 
-### 7. Read API
+### 10. Social publication
 
-- **Contract**: `ArticleListParams`, `ArticlesEnvelope` (`news_collector/serving/api.py`)
-- **Status**: Enforced.  Deterministic cursor pagination and validated query parameters.
+- **Module**: `contracts/social_publication.py`
+- **Contracts**: functions `derive_social_id`, `apply_social_decision`,
+  `stamp_social_frontmatter`; constants `SOCIAL_ID_RE`, `SOCIAL_ID_HASH_PREFIX`
+  (no classes)
+- **Status**: Enforced. Pure front-matter shape conversion; no I/O or editorial
+  decision.
+- **Tests**: `tests/unit/contracts/test_social_publication.py`,
+  `tests/decompose_refinery/test_target_repo_writer.py`
+
+### 11. Image briefs
+
+- **Module**: `contracts/image_brief.py`
+- **Contracts**: `ImageBriefModel`, `IMAGE_BRIEF_STATUS_VALUES`,
+  `IMAGE_BRIEF_REASON_VALUES`, `IMAGE_PROMPT_VERSION`
+- **Status**: Enforced. Typed sidecar for editorial image tasks.
+- **Tests**: `tests/unit/logic/workflows/test_image_briefs_security.py`,
+  `tests/test_serving_admin_api.py`
+
+### 12. Publication validation and attempts
+
+- **Module**: `contracts/publication_validation.py`
+- **Contracts**: `FrontendCheckResult`, `PublicationValidationSummary`,
+  `PublicationAttemptStageResult`, `PublicationAttemptSummary`
+- **Status**: Enforced. Machine-readable summaries for frontend validation and
+  publication attempts.
+- **Tests**: `tests/unit/logic/workflows/test_refinery_engine.py`,
+  `tests/decompose_refinery/test_target_repo_publication.py`
+
+### 13. Webhook callbacks
+
+- **Module**: `contracts/webhook.py`
+- **Contracts**: `PublicationAttemptRef`, `DiagnosticResult`, `FrontendWebhookEvent`,
+  `ValidationResultEvent`, `PublishCompleteEvent`; functions `parse_webhook_payload`,
+  `extract_deploy_url`, `compute_delivery_key`
+- **Status**: Enforced. Validates inbound frontend CI callback payloads and derives
+  the delivery idempotency key.
+- **Tests**: `tests/test_webhook.py`,
+  `tests/unit/contracts/test_webhook_contract.py`,
+  `tests/integration/test_webhook_receipts.py`
+
+### 14. Source health
+
+- **Module**: `contracts/source_health.py`
+- **Contracts**: `SourceHealthRecord`, `SourceOperationalState`,
+  `SourceFailureTaxonomy`
+- **Status**: Enforced. Stable record shape for `data/exports/source_health.json`
+  (runtime artifact, not versioned).
+- **Tests**: `tests/unit/contracts/test_source_health_circuit.py`,
+  `tests/test_source_health_schema.py`
+
+### 15. Admin API
+
+- **Module**: `contracts/admin.py`
+- **Contracts**: 42 classes for `/v1/admin/*`; primary shapes include
+  `AdminArticleListEnvelope`, `AdminArticleDetail`, `AdminSourceHealthEnvelope`,
+  `AdminDashboardHealthEnvelope`, `AdminCollectStarted`, `AdminPublishStarted`,
+  `AdminWebhookReceiptEnvelope`, `AdminImageQueueEnvelope`, `AdminSourceUpsert`
+- **Status**: Enforced. Pydantic models are the source of `apps/admin/openapi.json`;
+  the generated admin types are never edited by hand.
+- **Tests**: `tests/unit/contracts/test_admin_batch_contract.py`,
+  `tests/test_serving_admin_api.py`
+
+### 16. Pipeline E2E
+
+- **Module**: `contracts/pipeline_e2e.py`
+- **Contracts**: `PipelineStageSnapshot`, `PipelineE2ERunSummary`
+- **Status**: Enforced. Typed summary for deterministic end-to-end pipeline runs.
+- **Tests**: exercised through `tests/e2e_pipeline/test_pipeline_e2e.py`
+
+### 17. System configuration overrides
+
+- **Module**: `contracts/system.py`
+- **Contracts**: `SystemConfigOverrideModel`
+- **Status**: Enforced. Strict shape for overrides passed to
+  `NewsCollectorSystem` initialization.
+- **Tests**: exercised through `tests/unit/system/test_bootstrap_coverage.py`
+
+### 18. Scoring/validation adapters
+
+- **Module**: `contracts/adapters.py`
+- **Contracts**: functions including `adapt_article_to_export`,
+  `build_collector_payload`, `adapt_article_to_scoring`, `adapt_to_scoring_input`,
+  `adapt_to_validation_payload` (no classes)
+- **Status**: Enforced. Adapter-owned mapping for scoring, validation, export and
+  collector boundaries.
+- **Tests**: `tests/unit/contracts/test_adapter_source_stamping.py`,
+  `tests/unit/contracts/test_adapter_collector_payload.py`,
+  `tests/unit/contracts/test_boundary_contract_extras_rejected.py`
+
+### 19. Package surface
+
+- **Modules**: `contracts/__init__.py` (re-exports `__all__`), `contracts/_constants.py`
+  (`SCHEMA_VERSION`, `MANIFEST_FILENAME`)
+- **Status**: Enforced. `__init__` exposes the stable package surface; constants are
+  shared by schema-bearing contracts.
+- **Tests**: `tests/test_refinery_manifest.py`
+
+## Related boundary shapes outside `contracts/`
+
+### Read API
+
+- **Contract**: `ArticleListParams`, `ArticlesEnvelope`
+  (`news_collector/serving/api.py`)
+- **Status**: Enforced. Deterministic cursor pagination and validated query parameters.
 
 ## Reference
 
 - `tests/test_contracts_sync.py` — contract serialisation and cross-repo field parity tests
 - `tests/unit/contracts/` — per-contract unit tests
 - `docs/PIPELINE_CONTRACTS.md` — authoritative contract shape and failure semantics
-

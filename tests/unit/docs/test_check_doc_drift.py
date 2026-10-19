@@ -173,6 +173,37 @@ def test_live_repo_docs_pass():
     assert "[check:doc-drift] OK" in combined
 
 
+def test_contract_inventory_flags_missing_module(tmp_path):
+    contracts = tmp_path / "news_collector" / "contracts"
+    contracts.mkdir(parents=True)
+    for name in ("alpha.py", "beta.py"):
+        (contracts / name).write_text("", encoding="utf-8")
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    inventory = docs / "contracts_inventory.md"
+    inventory.write_text("`contracts/alpha.py`\n", encoding="utf-8")
+
+    combined, exit_code = run_check(
+        str(tmp_path),
+        ["docs/contracts_inventory.md"],
+        sibling_root=str(tmp_path / "no-such-sibling"),
+    )
+    assert exit_code == 1, combined
+    assert "contract inventory module(s) missing" in combined
+    assert "contracts/beta.py" in combined
+
+    inventory.write_text(
+        "`contracts/alpha.py`\n`contracts/beta.py`\n", encoding="utf-8"
+    )
+    combined, exit_code = run_check(
+        str(tmp_path),
+        ["docs/contracts_inventory.md"],
+        sibling_root=str(tmp_path / "no-such-sibling"),
+    )
+    assert exit_code == 0, combined
+    assert "[check:doc-drift] OK" in combined
+
+
 def test_lookups_mirror_frontend_semantics():
     """The backend resolver treats the same shapes as the frontend: bare
     filenames resolve against search dirs, member expressions and commands

@@ -20,6 +20,8 @@ Checks (per active doc line, outside code blocks):
     match the `.python-version` / `requires-python` major)
   - cross-repo references (`../noticiencias/...`) when the sibling repo is
     checked out; silently skipped when it is not
+  - `docs/contracts_inventory.md` lists every module under
+    `news_collector/contracts/` (the inventory is the LAW-B1/B2 lookup)
 
 Env overrides (used by the test suite; default to repo behavior):
   - DOC_DRIFT_ROOT: base directory for resolving doc paths
@@ -61,7 +63,13 @@ DEFAULT_DOC_FILES = [
     "docs/RUNBOOK_LOCAL_DEV.md",
     "docs/database_deployment.md",
     "docs/testing.md",
+    "docs/contracts_inventory.md",
 ]
+
+# The contract inventory must name every module in this package so a new
+# contract cannot ship without the LAW-B1/B2 lookup finding it.
+CONTRACTS_DOC = "docs/contracts_inventory.md"
+CONTRACTS_DIR = "news_collector/contracts"
 
 # Repo-root prefixes that resolve from REPO_ROOT, plus top-level files.
 ROOT_PREFIXES = (
@@ -353,6 +361,31 @@ def load_site_host() -> str | None:
     return None
 
 
+def check_contract_inventory(doc_path: Path, doc_rel: str) -> list[dict]:
+    """Every module under news_collector/contracts/ must appear in the inventory."""
+    contracts_dir = REPO_ROOT / CONTRACTS_DIR
+    if doc_rel != CONTRACTS_DOC or not contracts_dir.is_dir():
+        return []
+    text = doc_path.read_text(encoding="utf-8")
+    missing = sorted(
+        f"contracts/{path.name}"
+        for path in contracts_dir.glob("*.py")
+        if f"contracts/{path.name}" not in text
+    )
+    return [
+        {
+            "doc": doc_rel,
+            "type": "missing_contract_module",
+            "ref": ref,
+            "message": (
+                f"every module under {CONTRACTS_DIR}/ must be listed "
+                "(add the module, its contracts and its tests)"
+            ),
+        }
+        for ref in missing
+    ]
+
+
 def check_invariants(
     line: str, doc: str, line_no: int, site_host: str | None
 ) -> list[dict]:
@@ -443,6 +476,8 @@ def main(argv: list[str] | None = None) -> int:
         doc_dir = doc_path.parent
         in_code_block = False
 
+        broken.extend(check_contract_inventory(doc_path, doc_rel))
+
         for i, line in enumerate(lines, start=1):
             if line.strip().startswith("```"):
                 in_code_block = not in_code_block
@@ -522,6 +557,9 @@ def main(argv: list[str] | None = None) -> int:
             "broken_path": [b for b in unique if b["type"] == "broken_path"],
             "make_target": [b for b in unique if b["type"] == "make_target"],
             "npm_script": [b for b in unique if b["type"] == "npm_script"],
+            "contract_inventory": [
+                b for b in unique if b["type"] == "missing_contract_module"
+            ],
             "invariant": [
                 b
                 for b in unique
@@ -539,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
             ("broken_path", "broken path(s)"),
             ("make_target", "unknown make target(s)"),
             ("npm_script", "unknown npm script(s)"),
+            ("contract_inventory", "contract inventory module(s) missing"),
             ("invariant", "stale declared claim(s)"),
         ):
             entries = by_type[kind]
