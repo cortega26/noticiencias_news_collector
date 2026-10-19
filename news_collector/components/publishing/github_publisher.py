@@ -246,6 +246,18 @@ class GitHubPublisher:
         logger.info(f"Cloning {self._strip_credentials(repo_url)} to {target_dir}...")
         return git.Repo.clone_from(auth_url, target_dir, env=env or None)
 
+    def fetch_remote(self, repo: git.Repo) -> None:
+        """Fetch ``origin`` (with prune) using the same auth env as the
+        clone/branch operations.
+
+        Used by the caller that reuses an existing checkout instead of
+        re-cloning it (plan 133): the fetch must authenticate exactly like
+        ``clone_repo`` / ``create_branch`` do. Local checkout commands that
+        follow the fetch need no credentials.
+        """
+        env = self._auth_env()
+        repo.git.fetch("origin", "--prune", env=env or None)
+
     def create_branch(
         self,
         repo: git.Repo,

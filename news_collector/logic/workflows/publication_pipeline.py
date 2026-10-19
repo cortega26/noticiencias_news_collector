@@ -85,6 +85,128 @@ def _safe_clone_source_repo(
         raise
 
 
+TARGET_REPO_DEFAULT_BASE_BRANCH = "main"
+# Untracked top-level paths the reuse path must never delete: `git clean -fdx`
+# would drop the 400+ MB node_modules tree this reuse exists to keep.
+TARGET_REPO_PRESERVED_DIRS = ("node_modules", ".astro", "dist")
+
+
+def _normalized_git_url(url: str) -> str:
+    """Host/path form of a git URL: credentials and a `.git` suffix stripped.
+
+    The publisher clones with an auth URL
+    (`https://x-access-token@github.com/owner/repo`), so the checkout's
+    stored `origin` URL is compared in normalized form.
+    """
+    cleaned = (url or "").strip()
+    if "://" in cleaned:
+        scheme, rest = cleaned.split("://", 1)
+        if "@" in rest:
+            rest = rest.split("@", 1)[1]
+        cleaned = f"{scheme}://{rest}"
+    elif cleaned.startswith("git@") and ":" in cleaned:
+        host, path = cleaned.split(":", 1)
+        cleaned = f"ssh://{host[4:]}/{path}"
+    cleaned = cleaned.rstrip("/")
+    if cleaned.endswith(".git"):
+        cleaned = cleaned[:-4]
+    return cleaned.lower()
+
+
+def _target_checkout_matches_remote(repo: git.Repo, repo_url: str) -> bool:
+    """True when the checkout's origin remote is the expected repository."""
+    try:
+        origin_url = repo.remotes.origin.url
+    except (AttributeError, IndexError):
+        return False
+    return _normalized_git_url(origin_url) == _normalized_git_url(repo_url)
+
+
+def _reset_target_checkout(
+    git_handler: GitHubPublisher, repo: git.Repo, base_branch: str
+) -> None:
+    """Reset a reused checkout to ``origin/<base_branch>``, keeping caches.
+
+    Deterministic pre-state for the next article: HEAD (re)attached to the
+    base branch at the remote tip, tracked files equal to the remote, and
+    untracked leftovers removed — except the dependency/build directories
+    the reuse exists to keep (`git clean -fd`, never `-fdx`, plus explicit
+    excludes for trees that are not always gitignored).
+    """
+    remote_ref = f"origin/{base_branch}"
+    git_handler.fetch_remote(repo)
+    if not any(ref.name == remote_ref for ref in repo.refs):
+        raise RuntimeError(f"Missing remote base ref {remote_ref} after fetch")
+    # Order matters: `reset --hard` first (it discards tracked modifications
+    # WITHOUT touching untracked files), then attach HEAD to the base branch —
+    # `git checkout -f <branch> <start-point>` would delete untracked
+    # directories that are not in the way and drop cached build output.
+    repo.git.reset("--hard", remote_ref)
+    repo.git.checkout("-B", base_branch)
+    clean_args = ["-fd"]
+    for preserved in TARGET_REPO_PRESERVED_DIRS:
+        clean_args += ["-e", preserved]
+    repo.git.clean(*clean_args)
+
+
+def _provision_target_repo(
+    git_handler: GitHubPublisher, repo_url: str, target_dir: Path
+) -> tuple[git.Repo, bool]:
+    """Return a usable target checkout, reusing the existing one when healthy.
+
+    Reuse-first (plan 133): wiping and cloning the frontend checkout for every
+    article re-installs the whole npm toolchain (hundreds of MB) per publish
+    for no reason. A checkout that is a git repo of the expected remote is
+    fetched and reset to ``origin/<base>`` instead; anything else (missing,
+    different remote, not a repo, reset failure) keeps the historical
+    ``rmtree`` + clone path. Returns ``(repo, reused)``.
+    """
+    base_branch = (
+        getattr(git_handler, "base_branch", "") or TARGET_REPO_DEFAULT_BASE_BRANCH
+    )
+    reuse_reason = "no_checkout"
+    if target_dir.exists():
+        candidate: Optional[git.Repo]
+        try:
+            candidate = git.Repo(target_dir)
+        except (git.InvalidGitRepositoryError, git.NoSuchPathError):
+            candidate = None
+        reuse_reason = "not_a_git_checkout"
+        if candidate is not None and _target_checkout_matches_remote(
+            candidate, repo_url
+        ):
+            try:
+                _reset_target_checkout(git_handler, candidate, base_branch)
+            except Exception as exc:
+                reuse_reason = f"reset_failed: {exc}"
+                logger.warning(
+                    f"Target checkout reuse failed ({exc}); re-cloning {target_dir}."
+                )
+            else:
+                logger.info(
+                    {
+                        "event": "publication.target_repo.reused",
+                        "reused": True,
+                        "target_dir": str(target_dir),
+                    }
+                )
+                return candidate, True
+        elif candidate is not None:
+            reuse_reason = "remote_mismatch"
+        shutil.rmtree(target_dir, ignore_errors=True)
+    logger.info(
+        {
+            "event": "publication.target_repo.reused",
+            "reused": False,
+            "target_dir": str(target_dir),
+            "reason": reuse_reason,
+        }
+    )
+    logger.info(f"Cloning Target Repo: {repo_url}")
+    git_handler.clone_repo(repo_url, target_dir)
+    return git.Repo(target_dir), False
+
+
 def _export_identity_matches_db(
     art: Dict[str, Any], process_id: str, db_manager: DatabaseManager
 ) -> bool:
@@ -744,15 +866,12 @@ def run_publication_pipeline(  # noqa: C901
     last_error = None
     processed_count = 0
 
-    # Initialize Target Repo (Clone if needed)
+    # Initialize Target Repo (reuse the healthy checkout, else clone it)
     target_repo_obj = None
     try:
-        if TARGET_DIR.exists():
-            shutil.rmtree(TARGET_DIR, ignore_errors=True)
-
-        logger.info(f"Cloning Target Repo: {config.github.target_repo_url}")
-        git_handler.clone_repo(config.github.target_repo_url, TARGET_DIR)
-        target_repo_obj = git.Repo(TARGET_DIR)
+        target_repo_obj, _ = _provision_target_repo(
+            git_handler, config.github.target_repo_url, TARGET_DIR
+        )
 
         # Configure User
         with target_repo_obj.config_writer() as git_config:

@@ -25,6 +25,9 @@ from uuid import uuid4
 
 from news_collector.contracts.publication_validation import PublicationFailureClass
 from news_collector.logic.workflows.frontend_publication_validation import (
+    FRONTEND_DEPENDENCY_MARKER_DIRNAME,
+    frontend_dependencies_need_install,
+    frontend_dependency_marker_path,
     run_frontend_publication_validation,
     validate_post_frontmatter_fast,
 )
@@ -452,6 +455,18 @@ class TargetRepoPublicationWorkflow:
         )
         return _ValidationResult(ok=False, failure_class=failure_class)
 
+    def _dependency_marker_path(self, request: PublicationRequest) -> Path:
+        """Marker for the checkout's installed dependencies (plan 133).
+
+        Lives beside the attempt artifacts (``data/runtime/frontend_deps``),
+        never inside the checkout: the commit path stages with ``git add -A``
+        and the frontend repository must not gain writer-committable files.
+        """
+        return frontend_dependency_marker_path(
+            request.target_dir,
+            request.attempts_dir.parent / FRONTEND_DEPENDENCY_MARKER_DIRNAME,
+        )
+
     def _run_full_frontend_validation(
         self,
         request: PublicationRequest,
@@ -459,12 +474,17 @@ class TargetRepoPublicationWorkflow:
         summary_path: str,
         record_stage: StageRecorder,
     ) -> _ValidationResult:
+        marker_path = self._dependency_marker_path(request)
+        install_dependencies = frontend_dependencies_need_install(
+            request.target_dir, marker_path
+        )
         validation_summary = run_frontend_publication_validation(
             request.target_dir,
             summary_output_path=Path(summary_path),
             stage_fixture=False,
             post_path=request.target_dir / "src/content/posts" / output_filename,
-            install_dependencies=not (request.target_dir / "node_modules").exists(),
+            install_dependencies=install_dependencies,
+            dependency_marker_path=marker_path,
         )
         record_stage(
             "frontend_publication_validation",

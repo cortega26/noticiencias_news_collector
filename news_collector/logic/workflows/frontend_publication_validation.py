@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess  # nosec B404 - deliberate: runs frontend validation commands (no user input in argv)
 import tempfile
@@ -18,6 +19,9 @@ from news_collector.contracts.publication_validation import (
     PublicationValidationSummary,
 )
 from news_collector.editorial.classifier import EditorialClassifier
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger("FrontendPublicationValidation")
 
 FIXTURE_ARTICLE_ID = "smoke-test-ci-fixture"
 FIXTURE_POST_FILENAME = "_smoke-test.md"
@@ -289,6 +293,204 @@ def _default_command_runner(
     )
 
 
+# --- Dependency fingerprint (plan 133) -------------------------------------
+#
+# Every publish runs this validation gate (lint/validate/build/dist/audit)
+# against the target checkout. ``npm ci`` is the dominant fixed cost of the
+# gate and is only needed when the checkout's dependency manifests changed,
+# so a fingerprint of ``package.json`` + ``package-lock.json`` is compared
+# against a marker written outside the checkout (next to the runtime
+# artifacts): the writer commits with a broad ``git add -A``, so an in-tree
+# marker could be committed to the frontend repository.
+#
+# Install decision (see `frontend_dependencies_need_install`): the tree is
+# (re)installed when it has no ``node_modules``, or when the recorded
+# fingerprint no longer matches the manifests. A tree with ``node_modules``
+# but no marker (an operator-provisioned checkout, the e2e harness's fixture)
+# is used as-is — the pre-plan behaviour — and the current fingerprint is
+# recorded with ``provenance="assumed"`` so that any *later* manifest change
+# still triggers an install.
+
+DEPENDENCY_FINGERPRINT_FILES = ("package.json", "package-lock.json")
+FRONTEND_DEPENDENCY_MARKER_DIRNAME = "frontend_deps"
+DEPENDENCY_MARKER_PROVENANCE_INSTALLED = "installed"
+DEPENDENCY_MARKER_PROVENANCE_ASSUMED = "assumed"
+
+
+def _canonical_manifest_bytes(path: Path) -> bytes:
+    """Formatting-insensitive bytes for one JSON manifest.
+
+    The validation gate formats the whole checkout (`npx prettier --write`),
+    so a byte-level comparison would read a re-indented or
+    newline-normalised ``package.json`` as a dependency change and force an
+    install the dependencies did not need. Canonical JSON (sorted keys, fixed
+    separators) keeps the fingerprint sensitive to dependency changes only.
+    Content that is not valid JSON is compared verbatim, so an unparsable
+    manifest still changes the fingerprint.
+    """
+    if not path.exists():
+        return b"<missing>"
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return b"<unreadable>"
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return raw
+    if not isinstance(payload, (dict, list)):
+        return raw
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def frontend_dependency_fingerprint(frontend_root: Path) -> str | None:
+    """Stable sha256 over the checkout's dependency manifests.
+
+    Hashes the canonical content of ``package.json`` + ``package-lock.json``
+    (see `_canonical_manifest_bytes`). Returns ``None`` when the checkout has
+    no ``package.json`` (nothing to install; callers skip frontend validation
+    entirely for those).
+    """
+    root = Path(frontend_root)
+    if not (root / "package.json").exists():
+        return None
+    digest = hashlib.sha256()
+    for name in DEPENDENCY_FINGERPRINT_FILES:
+        digest.update(name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(_canonical_manifest_bytes(root / name))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def frontend_dependency_marker_path(frontend_root: Path, marker_dir: Path) -> Path:
+    """Marker path for one checkout, keyed by its resolved location."""
+    key = hashlib.sha256(
+        str(Path(frontend_root).resolve()).encode("utf-8")
+    ).hexdigest()[:16]
+    return Path(marker_dir) / f"npm_ci_{key}.json"
+
+
+def read_frontend_dependency_marker(marker_path: Path) -> str | None:
+    """Return the fingerprint recorded in the marker, or ``None`` when the
+    marker is absent, unreadable, or malformed.
+
+    Only ``lock_sha256`` is read: the marker's ``provenance`` /
+    ``schema_version`` fields are diagnostic and never affect the
+    install/skip comparison.
+    """
+    try:
+        payload = json.loads(Path(marker_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    fingerprint = payload.get("lock_sha256")
+    return fingerprint if isinstance(fingerprint, str) else None
+
+
+def write_frontend_dependency_marker(
+    marker_path: Path,
+    fingerprint: str,
+    *,
+    provenance: str = DEPENDENCY_MARKER_PROVENANCE_INSTALLED,
+) -> None:
+    """Record that *fingerprint*'s dependencies are present in the checkout.
+
+    ``provenance`` distinguishes a marker written after a real ``npm ci``
+    (``"installed"``) from one written by observing a tree that already had
+    ``node_modules`` (``"assumed"``).
+    """
+    marker = Path(marker_path)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(
+        json.dumps(
+            {
+                "lock_sha256": fingerprint,
+                "schema_version": 1,
+                "provenance": provenance,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def frontend_dependencies_need_install(frontend_root: Path, marker_path: Path) -> bool:
+    """True when ``npm ci`` must run for this checkout.
+
+    Rules, in order:
+
+    - no ``node_modules`` (a fresh clone) → install;
+    - no ``package.json`` → install (callers skip validation entirely for
+      checkouts without a frontend workspace);
+    - no marker for this checkout → do not install (preserve the pre-plan
+      behaviour for a tree whose dependencies have unrecorded provenance) and
+      record the current fingerprint with ``provenance="assumed"`` so the next
+      manifest change is detected;
+    - marker fingerprint differs from the manifests → install;
+    - marker fingerprint matches → skip the install.
+
+    Why the assumption is safe: it grants nothing the previous
+    ``node_modules.exists()`` rule did not already grant (using dependencies
+    whose provenance was never checked), and it removes that rule's one real
+    blind spot — it converts "some lock change happened at some point" into
+    "any lock change *after this observation* is detected". A change that
+    happened before the first observation is undetectable under either rule,
+    i.e. it is unchanged behaviour, not a regression.
+    """
+    root = Path(frontend_root)
+    if not (root / "node_modules").exists():
+        return True
+    fingerprint = frontend_dependency_fingerprint(root)
+    if fingerprint is None:
+        return True
+    recorded = read_frontend_dependency_marker(marker_path)
+    if recorded is None:
+        logger.warning(
+            {
+                "event": "publication.frontend_dependencies.assumed",
+                "target_dir": str(root),
+                "marker_path": str(Path(marker_path)),
+                "lock_sha256": fingerprint,
+                "message": (
+                    "No recorded dependency install for this checkout; assuming "
+                    "the installed tree matches its manifests. A later manifest "
+                    "change will trigger npm ci."
+                ),
+            }
+        )
+        write_frontend_dependency_marker(
+            marker_path,
+            fingerprint,
+            provenance=DEPENDENCY_MARKER_PROVENANCE_ASSUMED,
+        )
+        return False
+    return recorded != fingerprint
+
+
+def _record_installed_dependencies(
+    check_name: str, success: bool, root: Path, marker_path: Path | None
+) -> None:
+    """Record which manifests a successful ``npm ci`` satisfied (plan 133).
+
+    No-op for any other check, for a failed install, and when the caller did
+    not request a marker. Kept out of the validation loop so that loop's
+    complexity is unchanged.
+    """
+    if not success or marker_path is None or check_name != "npm_ci":
+        return
+    fingerprint = frontend_dependency_fingerprint(root)
+    if fingerprint is not None:
+        write_frontend_dependency_marker(
+            marker_path,
+            fingerprint,
+            provenance=DEPENDENCY_MARKER_PROVENANCE_INSTALLED,
+        )
+
+
 def _classify_failure(
     check_name: str,
     output: str,
@@ -409,7 +611,16 @@ def run_frontend_publication_validation(
     stage_fixture: bool = True,
     post_path: Path | None = None,
     install_dependencies: bool = True,
+    dependency_marker_path: Path | None = None,
 ) -> PublicationValidationSummary:
+    """Run the frontend gate (lint/validate/build/dist/audit) on a checkout.
+
+    The executed check list is unchanged. ``install_dependencies`` only adds
+    or omits the leading ``npm ci``; when it runs and succeeds and
+    *dependency_marker_path* is given, the manifests it installed are
+    fingerprinted into that marker so a later call on the same checkout can
+    skip the install (plan 133).
+    """
     runner = command_runner or _default_command_runner
     root = Path(frontend_root).resolve()
     checks: list[FrontendCheckResult] = []
@@ -505,6 +716,9 @@ def run_frontend_publication_validation(
         for name, command in commands:
             result = _record_check(name, command, root, runner)
             checks.append(result)
+            _record_installed_dependencies(
+                name, result.success, root, dependency_marker_path
+            )
             if not result.success:
                 overall_failure = result.failure_class
                 break
