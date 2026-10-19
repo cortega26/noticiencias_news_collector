@@ -39,7 +39,8 @@ import json
 import os
 import platform
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404 - deliberate: fixed git argv, no shell, bounded timeout
 import sys
 import time
 from dataclasses import dataclass
@@ -265,9 +266,12 @@ def build_evidence(
 
 
 def _git_sha() -> str:
+    git = shutil.which("git")
+    if git is None:
+        return ""
     try:
         result = subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
+            [git, "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,
