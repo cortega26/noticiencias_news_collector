@@ -12,7 +12,13 @@ This file defines reviewable engineering law for the backend. It exists to keep 
 
 Every task MUST follow this workflow.
 
-**Before starting** — create or update these three files in the task root:
+**Before starting** — create or update these three files in the task root: the
+task's plan folder (`plans/<NNN>/spec.md`, `plans/<NNN>/todo.md`,
+`plans/<NNN>/tests/`) for multi-file plans, the plan file itself
+(`plans/<NNN>-<slug>.md`) for single-file plans, or the repository-root pair
+(`spec.md`, `todo.md`, `tests/`) for ad-hoc work that has no plan folder. The
+root `spec.md`/`todo.md` pair describes the current task only; plan status
+always lives in `plans/README.md`.
 
 1. **`spec.md`** — Complete specification with:
    - Goals (what success looks like, acceptance criteria)
@@ -395,7 +401,9 @@ make test-timeshift   # whole suite with the clock +120 days (TIME_SHIFT_DAYS); 
 
 1. **Real-run evidence.** A behavior change (scoring, collection, LLM chain, publication) is not "resolved" until a real run (worktree + DB copy, or `make llm-canary`) shows the effect; put the numbers in the PR description.
 2. **Read reviews before merging.** List and read Codex/Codacy/human comments on the PR *before* running the merge; never merge in the same command that lists them. Address or explicitly answer each P1/P2.
-3. **Spec before behavior.** Update `spec-*.md`/`todo-*.md` in the same PR as the behavior (reviewers check it).
+3. **Spec before behavior.** Update the task's own `spec.md`/`todo.md` (the plan
+   folder or file under `plans/`, or the root pair for ad-hoc work) in the same PR
+   as the behavior (reviewers check it).
 4. **No absolute dates in tests** that are compared against "now"; use relative dates (`now - timedelta(...)`).
 5. **Verify diffs** of docs/config edits done with scripts (regex/slice edits have silently deleted content before).
 
