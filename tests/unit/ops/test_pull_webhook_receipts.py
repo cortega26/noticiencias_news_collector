@@ -16,6 +16,7 @@ import pytest
 
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
+from news_collector.storage.webhook_pull_repository import MAX_DELIVERY_ATTEMPTS
 from scripts.ops import pull_webhook_receipts as script
 
 ARTICLE_URL = "https://example.com/inbox-pull"
@@ -113,6 +114,28 @@ def _page_fetcher(pages):
         return pages.pop(0) if pages else []
 
     return fetch, calls
+
+
+def _stage_failed_receipt(
+    db_manager: DatabaseManager, endpoint_key: str, receipt: dict, *, attempts: int
+) -> int:
+    """Stage one receipt and fail it until it has ``attempts`` attempts."""
+    repo = db_manager.webhook_pull_receipts
+    assert repo.stage_page(endpoint_key, expected_after_id=None, rows=[receipt]) == 1
+    claimed = repo.claim_pending(
+        endpoint_key, limit=1, lease_seconds=60, retry_only=False
+    )
+    assert claimed, "expected a fresh receipt to claim"
+    view = claimed[0]
+    while view.attempts < attempts:
+        assert repo.mark_failed(view.id, view.lease_token or "", "injected failure")
+        claimed = repo.claim_pending(
+            endpoint_key, limit=1, lease_seconds=60, retry_only=True
+        )
+        assert claimed, "expected a below-cap failure to be retryable"
+        view = claimed[0]
+    assert repo.mark_failed(view.id, view.lease_token or "", "injected failure")
+    return view.id
 
 
 class TestResolveEndpoint:
@@ -470,6 +493,111 @@ class TestPullReceipts:
             assert article.processing_status == "publishing"
 
 
+class TestExhaustedReceipts:
+    """One unapplyable receipt must not block the inbox drain forever."""
+
+    ENDPOINT = "https://api.example/v1/admin/webhook/receipts"
+    #: An event type the local contract deliberately rejects (unknown).
+    POISON_PAYLOAD = {"event": "unknown_future_event", "delivery_id": "v1:9:x"}
+
+    def test_poison_receipt_exhausts_and_the_same_pass_applies_later_rows(
+        self, db_manager: DatabaseManager
+    ):
+        endpoint_key = script._endpoint_key(self.ENDPOINT)
+        repo = db_manager.webhook_pull_receipts
+        poison = _receipt(1, self.POISON_PAYLOAD)
+        valid = _receipt(2, _publish_payload([REFINERY_ID]))
+        _stage_failed_receipt(
+            db_manager,
+            endpoint_key,
+            poison,
+            attempts=MAX_DELIVERY_ATTEMPTS - 1,
+        )
+        assert repo.stage_page(endpoint_key, expected_after_id=1, rows=[valid]) == 1
+        article_id = _seed_pr_created(db_manager)
+
+        summary = script.pull_receipts(
+            db_manager,
+            endpoint=self.ENDPOINT,
+            token="token",
+            fetcher=lambda **_kwargs: [],
+        )
+
+        # The regression: the valid delivery behind the poison row used to
+        # stay unapplied run after run, because the drain stopped at the head.
+        assert summary.exhausted == 1
+        assert summary.malformed == 1
+        assert summary.failed == 1
+        assert summary.replayed == 1
+        assert summary.pending == 0
+
+        stored_poison = repo.get_receipt(endpoint_key, 1)
+        assert stored_poison is not None
+        assert stored_poison.status == "failed"
+        assert stored_poison.attempts == MAX_DELIVERY_ATTEMPTS
+        assert stored_poison.payload == poison  # evidence retained, not nulled
+        assert stored_poison.error == "malformed:ValueError"
+
+        with db_manager.get_session() as session:
+            article = session.query(Article).filter_by(id=article_id).first()
+            assert article is not None
+            assert article.processing_status == "completed"
+        [attempt] = db_manager.lifecycle.get_publication_attempts_for_article(
+            article_id
+        )
+        assert attempt.state == "COMPLETED"
+
+    def test_below_the_cap_a_failure_still_blocks_until_exhausted(
+        self, db_manager: DatabaseManager
+    ):
+        endpoint_key = script._endpoint_key(self.ENDPOINT)
+        repo = db_manager.webhook_pull_receipts
+        poison = _receipt(1, self.POISON_PAYLOAD)
+        valid = _receipt(2, _publish_payload([]))
+        _stage_failed_receipt(
+            db_manager,
+            endpoint_key,
+            poison,
+            attempts=MAX_DELIVERY_ATTEMPTS - 2,
+        )
+        assert repo.stage_page(endpoint_key, expected_after_id=1, rows=[valid]) == 1
+
+        first = script.pull_receipts(
+            db_manager,
+            endpoint=self.ENDPOINT,
+            token="token",
+            fetcher=lambda **_kwargs: [],
+        )
+
+        # Retryable head: ordering is preserved, nothing behind it is applied.
+        assert first.exhausted == 0
+        assert first.malformed == 1
+        assert first.failed == 1
+        assert first.replayed == 0
+        assert first.pending == 2
+        untouched = repo.get_receipt(endpoint_key, 2)
+        assert untouched is not None
+        assert untouched.status == "received"
+        assert untouched.attempts == 0
+
+        second = script.pull_receipts(
+            db_manager,
+            endpoint=self.ENDPOINT,
+            token="token",
+            fetcher=lambda **_kwargs: [],
+        )
+
+        # One more attempt exhausts the head; that same pass clears the queue.
+        assert second.exhausted == 1
+        assert second.malformed == 1
+        assert second.failed == 1
+        assert second.replayed == 1
+        assert second.pending == 0
+        applied = repo.get_receipt(endpoint_key, 2)
+        assert applied is not None
+        assert applied.status == "processed"
+
+
 class TestMain:
     def test_missing_endpoint_and_token_exit_nonzero(
         self,
@@ -521,6 +649,39 @@ class TestMain:
         out = capsys.readouterr().out
         assert "[pull-webhooks] fetched=1" in out
         assert "[pull-webhooks] replayed=1" in out
+
+    def test_completed_pass_with_an_exhausted_receipt_exits_zero(
+        self,
+        db_manager: DatabaseManager,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ):
+        endpoint_key = script._endpoint_key(
+            "https://api.example" + script.RECEIPTS_PATH
+        )
+        _stage_failed_receipt(
+            db_manager,
+            endpoint_key,
+            _receipt(1, {"event": "unknown_future_event"}),
+            attempts=MAX_DELIVERY_ATTEMPTS - 1,
+        )
+
+        monkeypatch.setattr(script, "DatabaseManager", lambda: db_manager)
+        monkeypatch.setattr(
+            script,
+            "fetch_page",
+            lambda **_kwargs: [_receipt(2, _publish_payload([]))],
+        )
+        monkeypatch.setenv("ADMIN_API_KEY", "token")
+        monkeypatch.setenv("BACKEND_ADMIN_URL", "https://api.example")
+        monkeypatch.setattr(sys, "argv", ["pull_webhook_receipts.py"])
+
+        # Malformed/exhausted rows are a report: exit 0, not 1. The timer
+        # only sees 1 for unexpected failures and 2 for remaining work.
+        assert script.main() == 0
+        out = capsys.readouterr().out
+        assert "[pull-webhooks] exhausted=1" in out
+        assert "[pull-webhooks] pending=0" in out
 
 
 class TestPageValidation:
@@ -611,5 +772,9 @@ class TestPageValidation:
         monkeypatch.setenv("BACKEND_ADMIN_URL", "https://api.example")
         monkeypatch.setattr(sys, "argv", ["pull_webhook_receipts.py"])
 
-        assert script.main() != 0
-        assert "failed=1" in capsys.readouterr().out
+        # Retryable failure: the row stays pending, so the timer sees exit 2
+        # (exit 1 is reserved for unexpected fetch/auth failures).
+        assert script.main() == 2
+        out = capsys.readouterr().out
+        assert "failed=1" in out
+        assert "[pull-webhooks] pending=1" in out

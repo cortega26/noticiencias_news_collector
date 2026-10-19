@@ -20,6 +20,13 @@ class CursorConflict(RuntimeError):
     """Another puller changed the high-water mark while this page was fetched."""
 
 
+#: A failed receipt leaves the retry queue once it reaches this many delivery
+#: attempts. Exhaustion is derived (``status == "failed"`` plus this cap),
+#: never stored: the CHECK-constrained status set, the raw payload, and the
+#: ``attempts`` evidence all stay exactly as they are.
+MAX_DELIVERY_ATTEMPTS = 5
+
+
 @dataclass(frozen=True)
 class WebhookPullReceiptView:
     id: int
@@ -36,6 +43,24 @@ class WebhookPullReceiptView:
     lease_token: Optional[str]
     received_at: datetime
     processed_at: Optional[datetime]
+
+
+def is_exhausted(row: _WebhookPullReceiptModel | WebhookPullReceiptView) -> bool:
+    """True when a failed receipt has used up its delivery attempts.
+
+    Works on both the ORM row and :class:`WebhookPullReceiptView`; the view
+    snapshots the state at claim time (``status="processing"``), so read a
+    fresh row to judge a settled outcome.
+    """
+    return row.status == "failed" and row.attempts >= MAX_DELIVERY_ATTEMPTS
+
+
+def _not_exhausted_clause():
+    """SQL twin of :func:`is_exhausted` for row selection."""
+    return or_(
+        _WebhookPullReceiptModel.status != "failed",
+        _WebhookPullReceiptModel.attempts < MAX_DELIVERY_ATTEMPTS,
+    )
 
 
 def _to_view(row: _WebhookPullReceiptModel) -> WebhookPullReceiptView:
@@ -162,6 +187,7 @@ class WebhookPullReceiptRepository:
             .filter(
                 _WebhookPullReceiptModel.endpoint_key == endpoint_key,
                 _WebhookPullReceiptModel.status != "processed",
+                _not_exhausted_clause(),
             )
             .order_by(_WebhookPullReceiptModel.remote_id.asc())
             .first()
@@ -175,7 +201,7 @@ class WebhookPullReceiptRepository:
         if row.status == "received":
             return row.attempts > 0 if retry_only else row.attempts == 0
         if retry_only and row.status == "failed":
-            return True
+            return not is_exhausted(row)
         if not retry_only or row.status != "processing":
             return False
         return row.lease_until is None or row.lease_until <= now_epoch
@@ -195,7 +221,10 @@ class WebhookPullReceiptRepository:
             ),
         )
         return or_(
-            _WebhookPullReceiptModel.status == "failed",
+            and_(
+                _WebhookPullReceiptModel.status == "failed",
+                _WebhookPullReceiptModel.attempts < MAX_DELIVERY_ATTEMPTS,
+            ),
             and_(
                 _WebhookPullReceiptModel.status == "received",
                 _WebhookPullReceiptModel.attempts > 0,
@@ -309,12 +338,20 @@ class WebhookPullReceiptRepository:
             return bool(changed == 1)
 
     def count_pending(self, endpoint_key: str) -> int:
+        """Staged rows the drain can still act on.
+
+        Exhausted receipts are terminal derived dead letters: they stay
+        visible with their payload and attempts, but no longer count as
+        pending work (otherwise a single poison row would keep the inbox
+        "busy" forever).
+        """
         with self._session() as session:
             return int(
                 session.query(func.count(_WebhookPullReceiptModel.id))
                 .filter(
                     _WebhookPullReceiptModel.endpoint_key == endpoint_key,
                     _WebhookPullReceiptModel.status != "processed",
+                    _not_exhausted_clause(),
                 )
                 .scalar()
                 or 0
