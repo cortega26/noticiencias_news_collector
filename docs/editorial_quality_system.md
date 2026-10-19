@@ -96,3 +96,33 @@ editoriales; no garantiza por sí solo que el texto generado los cumpla.
 
 - Los prompts del auditor están en `config/prompts.yaml`.
 - La lógica de triggers y muestreo está en `news_collector/components/editorial/auditor.py`.
+
+## Canary operacional del crítico editorial (Stage 4)
+
+`scripts/editorial_critic_canary.py` es una herramienta de evidencia, no una
+puerta. Envía un artículo claramente sintético por el crítico editorial real
+(`EditorAgent._critic_editorial_pass`) y emite un único objeto JSON saneado con
+sha de git, entorno, proveedor/modelo, resultado de transporte, parseo,
+veredicto y latencia. No escribe base de datos, caché ni artefactos, y no
+publica nada.
+
+```bash
+# Local (Ollama, sin costo; opción por defecto)
+.venv/bin/python scripts/editorial_critic_canary.py --provider local
+
+# Nube (cadena configurada de la app; puede costar dinero)
+.venv/bin/python scripts/editorial_critic_canary.py --provider configured --require-keys
+```
+
+Qué prueba: que el proveedor responde y devuelve un veredicto que el parser real
+acepta, y cuál es la decisión del crítico. Qué **no** prueba: la calidad del
+artículo, la publicación, ni que una falla técnica equivalga a una aprobación.
+
+Códigos de salida: `0` PASS, `1` FAIL (veredicto válido que rechaza el
+artículo), `2` UNVERIFIED (fallo de transporte, de parseo o interno) y `3` error
+de configuración (por ejemplo, `--require-keys` sin credenciales). `UNVERIFIED`
+nunca debe leerse como aprobación: el crítico falla abierto para no bloquear por
+infraestructura y el canary distingue explícitamente ese caso. No está conectado
+a CI ni al Makefile (la disponibilidad y el costo del proveedor no son estables
+en CI); ejecutarlo contra la nube es una decisión manual del operador.
+
