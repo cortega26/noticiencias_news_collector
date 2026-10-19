@@ -66,7 +66,11 @@ started, contradicting the checked phases below.)
 
 ## Phase 4 — delivery
 
-- [ ] Review final scope, tests, generated artifacts and CI wiring against spec.
-- [ ] Verify required checks against final relevant code; preserve limitations.
-- [ ] Record V1 and exact completed/pending acceptance IDs in final evidence.
+- [x] Review final scope, tests, generated artifacts and CI wiring against spec.
+- [x] Verify required checks against final relevant code; preserve limitations.
+- [x] Record V1 and exact completed/pending acceptance IDs in final evidence.
+  See `tests/final-results.md`: E1–E5 recorded; W/A cited from prior phase
+  evidence; V1 pending fresh review.
 - [ ] Update ledger/status without marking deferred items or Plan 060 complete.
+  Deliberately left to the reviewer: `plans/README.md` and the plan status/ledger
+  row are outside this executor's write scope.
