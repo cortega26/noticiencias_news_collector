@@ -316,8 +316,13 @@ jobs:
           path: reports/perf
           if-no-files-found: warn
 
-  healthcheck:
-    name: healthcheck
+  # Empty-DB smoke: the checkout has no database file, so DatabaseManager
+  # creates the schema and every check is either ok or warn (latest_ingest is
+  # None -> warn). The backlog/ingest thresholds cannot fail here; this job
+  # only proves the healthcheck command runs. It is deliberately not a
+  # dependency of build-artifacts.
+  healthcheck-smoke:
+    name: healthcheck-smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -326,7 +331,7 @@ jobs:
       - uses: ./.github/actions/setup-python-env
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
-      - name: Run collector healthcheck
+      - name: "Run collector healthcheck (empty DB: verifies the healthcheck can run)"
         run: |
           .venv/bin/python scripts/run_collector.py --healthcheck \
             --healthcheck-max-pending 0 \
@@ -340,7 +345,6 @@ jobs:
       - config
       - coverage
       - perf
-      - healthcheck
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -391,7 +395,7 @@ jobs:
       - config
       - coverage
       - perf
-      - healthcheck
+      - healthcheck-smoke
       - build-artifacts
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always() }}
     continue-on-error: true
