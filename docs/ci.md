@@ -47,6 +47,7 @@ These jobs are the current automation reality. Documentation should not claim a 
 
 - `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses `--config auto` and is non-blocking
 - `make quality-gate` — snapshot-first quality gate (no LLM)
+- `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy; one bounded allowlist exception (`GHSA-84m7-p3x7-pcfv`, `mcp` via semgrep's exact pin, dev tooling only) expires 2026-11-30, durable fix tracked by plan 144
 - gitleaks secret scan (binary downloaded in CI, `make security` runs it locally when installed)
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 

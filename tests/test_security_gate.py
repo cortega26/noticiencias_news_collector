@@ -172,16 +172,14 @@ def test_pip_audit_findings_honors_allowlist(
 
 
 def test_pip_audit_allowlist_entries_are_not_expired() -> None:
-    # Must not raise: every entry present has a future expires_on. The
-    # Pygments / python-dotenv / requests suppressions that expired on
-    # 2026-08-31 were removed (their upgrades already shipped in
-    # requirements.lock), so they must no longer be allowlisted. NLTK/textblob
-    # were unused and were removed from the dependencies (2026-09-21), which also
-    # retired GHSA-8mgp-746c-j5xp. The protobuf entry (GHSA-7gcm-g887-7qv7) was
-    # removed on 2026-10-12 when the security-lock sync upgraded protobuf to
-    # 6.33.6 (semgrep 1.180.0 chain); the allowlist is now empty.
+    # Must not raise: every entry present has a future expires_on. The single
+    # bounded exception is GHSA-84m7-p3x7-pcfv (mcp 1.29.0, dev tooling via
+    # semgrep's exact pin; expires 2026-11-30, see the plan 143 decision). It
+    # is the only entry: the Pygments / python-dotenv / requests, NLTK and
+    # protobuf (GHSA-7gcm-g887-7qv7) suppressions all retired earlier.
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
-    assert active == {}
+    assert set(active) == {"GHSA-84m7-p3x7-pcfv"}
+    assert active["GHSA-84m7-p3x7-pcfv"]
     assert "GHSA-5239-wwwm-4pmq" not in active
     assert "GHSA-mf9w-mj56-hr94" not in active
     assert "GHSA-gc5v-m9x4-r6x2" not in active
