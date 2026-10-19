@@ -7,8 +7,8 @@ inputs:
     default: '3.13'
   cache-key:
     description: >
-      Hash-based cache key fragment from requirements.lock.
-      When empty, virtualenv caching is skipped.
+      Hash-based cache key fragment from the lockfiles and the tool pin
+      sources. When empty, virtualenv caching is skipped.
     required: false
     default: ''
 runs:
@@ -24,6 +24,13 @@ runs:
       uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: .venv
+        # The key must cover every source of a tool pin, not just the lockfiles:
+        # the Makefile holds the literal gate-tool versions and
+        # .pre-commit-config.yaml is the source of truth `make toolchain-check`
+        # compares against. A restored cache skips `make bootstrap`, so a key
+        # that ignored the pins would resurrect exactly the drift they prevent.
+        # Trade-off: any Makefile edit now rebuilds the venv cache (~1 minute);
+        # that cost is the intended, safe direction.
         key: venv-${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.cache-key }}
 
     - name: Bootstrap (idempotent)

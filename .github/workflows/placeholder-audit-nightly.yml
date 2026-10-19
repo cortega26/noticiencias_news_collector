@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-python-env
         with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
       - name: Run full placeholder audit
         id: audit
         run: |

@@ -20,7 +20,7 @@ jobs:
 
       - uses: ./.github/actions/setup-python-env
         with:
-          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock') }}
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
 
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
