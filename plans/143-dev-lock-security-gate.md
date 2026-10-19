@@ -6,7 +6,7 @@
 > improvise. When done, update the status row for this plan in `plans/README.md`.
 >
 > **Drift check (run first)**:
-> `git diff --stat 1ff6926..HEAD -- requirements-security.lock requirements.lock requirements-refinery.lock scripts/sync_lockfiles.py Makefile .github/workflows/quality.yml SECURITY.md docs/security.md scripts/security_gate.py`
+> `git diff --stat 43aa3da9..HEAD -- requirements-security.lock requirements.lock requirements-refinery.lock scripts/sync_lockfiles.py Makefile .github/workflows/quality.yml SECURITY.md docs/security.md scripts/security_gate.py`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -20,7 +20,7 @@
   the shared CI files (and see the interaction with plan 144, which touches the
   same lock/venv area — run 144 after this one)
 - **Category**: security / dependencies
-- **Planned at**: commit `1ff6926`, 2026-10-18
+- **Planned at**: commit `43aa3da9`, 2026-10-19 (re-opened with the decision below)
 
 ### Blocker note (2026-10-19) — the fix is unavailable upstream
 
@@ -54,6 +54,29 @@ Do not re-execute until one option is chosen. (Independent note from the same
 run: locally, `make security` can be red because `gitleaks 8.18.1 detect` scans
 every ref in the shared object store, including sibling unmerged branches; a
 HEAD-scoped scan is clean and CI is unaffected because it checks out one ref.)
+
+### Decision (2026-10-19) — option (c), bounded and dated
+
+The reviewer adopts **option (c)** — one dated `PIP_AUDIT_ALLOWLIST` entry — and
+re-opens the plan with these constraints:
+
+- **Why this option:** the advisory is in `mcp`, semgrep's MCP server. It appears
+  only in `requirements-security.lock` (never in `requirements.lock` or the
+  refinery lock), ships in no image, and is not reachable from production code or
+  untrusted input. Its only fix path is blocked upstream (semgrep pins
+  `mcp==1.29.0` exactly across 1.173.0–1.181.0).
+- **Why not wait:** a permanently red gate teaches everyone to ignore the gate,
+  blocks plans 144/145, and makes every "security is green" claim unverifiable —
+  a worse failure mode than a visible, bounded exception.
+- **Why not decouple semgrep now:** the separate-environment fix is the durable
+  answer, but it is a toolchain restructuring that belongs with plan 144 (which
+  already introduces the parity check and scopes the split). Mixing it in here
+  would turn a small fix into a toolchain change.
+- **Bounded:** one entry for `GHSA-84m7-p3x7-pcfv`, a `reason` naming the semgrep
+  pin and the dev-only scope, and an `expires_on` of **2026-11-30**. The gate
+  must still fail on every other finding, and on this one after the expiry.
+- **Observed:** Step 4 (wire `security-dev` into `quality.yml`) is required, so
+  the exception is exercised by CI instead of a manual command nobody runs.
 
 ## Why this matters
 
@@ -117,7 +140,9 @@ the committed lock (no files written). Everything else is `declared`.
 - `requirements.lock`, `requirements-refinery.lock` — only if the tool regenerates
   them as part of the same run (accept removals-only diffs; if unrelated churn
   appears, STOP)
-- `SECURITY.md`, `docs/security.md` — record the new pin/verdict
+- `scripts/security_gate.py` — **exactly one** dated `PIP_AUDIT_ALLOWLIST` entry
+  (see the decision note); do not add a second entry or change the gate's logic
+- `SECURITY.md`, `docs/security.md` — record the exception, its reason and expiry
 - `.github/workflows/quality.yml` — add the `security-dev` leg
 - `Makefile` — only if a `security-dev` change is needed to run in CI
 
@@ -155,22 +180,28 @@ it fails for a *different* reason, STOP — the environment differs from the aud
 
 **Verify**: the recorded finding list matches the expectation above.
 
-### Step 2: Move the pin through the sanctioned path
+### Step 2: Record the dated exception (the bump is unavailable upstream)
 
-3. Read `scripts/sync_lockfiles.py --help` and use its documented upgrade path to
-   raise `mcp` to a fixed version (≥ 1.30.0) **inside the security lock only**.
-   Rules:
-   - never hand-edit hashes;
-   - if the tool rewrites the other locks, verify the diff is removals-only
-     (plan 130 established that expectation) — otherwise STOP;
-   - if semgrep's constraint blocks the bump, STOP and report with the resolver
-     message instead of pinning an incompatible version or adding an allowlist
-     entry on your own authority.
-4. Confirm the runtime locks did not gain `mcp`.
+3. Do **not** attempt the lock upgrade — the blocker note records that it cannot
+   succeed (`ResolutionImpossible`; semgrep pins `mcp==1.29.0`). Leave
+   `requirements-security.lock` untouched.
+4. In `scripts/security_gate.py`, add **one** entry to `PIP_AUDIT_ALLOWLIST`:
+   - the advisory id the gate matches on (`GHSA-84m7-p3x7-pcfv`, and the alias
+     form if the dict documents one — read `_active_pip_audit_allowlist` first);
+   - `reason`: semgrep 1.180.0 pins `mcp==1.29.0` exactly (no release through
+     1.181.0 lifts it); the package is dev-only, absent from the runtime and
+     refinery locks and from every image; durable fix tracked by plan 144;
+   - `expires_on`: `2026-11-30`.
+   Follow the structure the dict already documents (reason + expiry are
+   mandatory). Do not touch the severity mapping, the finder logic, or any other
+   entry.
+5. Confirm the runtime locks still do not contain `mcp`, and that the entry is
+   the only change in the gate script (`git diff`).
 
-**Verify**: `make security-dev` exits 0; `grep -n "^mcp==" requirements*.lock`
-shows the new version only in `requirements-security.lock`;
-`git diff --stat requirements*.lock` shows the expected, minimal churn.
+**Verify**: `make security-dev` exits 0 and prints "All dev/refinery audits
+passed"; temporarily set the entry's expiry to a past date and confirm the gate
+fails again (prove the expiry is load-bearing), then restore `2026-11-30`;
+`grep -n "^mcp==" requirements*.lock` → only the security lock, unchanged version.
 
 ### Step 3: Keep the record true
 
