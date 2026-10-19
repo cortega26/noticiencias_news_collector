@@ -129,7 +129,11 @@ def _load_required_json(report_path: Path, tool: str) -> Any:
 
 
 def _load_json_lines(report_path: Path) -> list[Dict[str, Any]]:
-    """Load a JSON document or JSON lines payload into a list of records."""
+    """Load a JSON document or JSON lines payload into a list of records.
+
+    A malformed payload raises ``ValueError`` instead of dropping records: a
+    security gate must fail closed when it cannot read every reported entry.
+    """
 
     if not report_path.exists():
         return []
@@ -142,23 +146,42 @@ def _load_json_lines(report_path: Path) -> list[Dict[str, Any]]:
         data = json.loads(text)
     except json.JSONDecodeError:
         records: list[Dict[str, Any]] = []
-        for line in text.splitlines():
+        for index, line in enumerate(text.splitlines(), start=1):
             stripped = line.strip()
             if not stripped:
                 continue
             try:
                 item = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(item, dict):
-                records.append(item)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"gitleaks report line {index} is not valid JSON - "
+                    "refusing to skip it."
+                ) from exc
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"gitleaks report line {index} is not a JSON object - "
+                    "refusing to skip it."
+                )
+            records.append(item)
         return records
 
     if isinstance(data, dict):
         return [data]
     if isinstance(data, list):
-        return [item for item in data if isinstance(item, dict)]
-    return []
+        records = []
+        for index, item in enumerate(data):
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"gitleaks report entry {index} is not a JSON object - "
+                    "refusing to skip it."
+                )
+            records.append(item)
+        return records
+
+    raise ValueError(
+        f"gitleaks report at {report_path} is not a JSON array/object - "
+        "failing closed."
+    )
 
 
 def load_allowlist(config_path: Path) -> tuple[list[str], list[str]]:
@@ -261,24 +284,41 @@ def _secret_is_allowlisted(
     )
 
 
+def _first_text(record: Dict[str, Any], keys: tuple[str, ...]) -> str:
+    """Return the first non-empty value among ``keys`` as stripped text."""
+
+    for key in keys:
+        value = record.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
 def gitleaks_findings(report_path: Path, threshold: str) -> List[Dict[str, Any]]:
     records = _load_json_lines(report_path)
     path_patterns, secret_patterns = _build_secret_allowlist()
     findings: List[Dict[str, Any]] = []
     for record in records:
-        path = str(record.get("file") or record.get("path") or record.get("File") or "")
-        secret = str(
-            record.get("secret")
-            or record.get("line")
-            or record.get("offender")
-            or record.get("match")
-            or ""
+        # gitleaks emits capitalized keys (8.18.x and 8.30.x both do); the
+        # lowercase spellings are kept for older fixtures and callers.
+        path = _first_text(record, ("File", "file", "path"))
+        secret = _first_text(
+            record,
+            ("Secret", "secret", "Match", "match", "Line", "line", "offender"),
         )
-        rule_id = str(
-            record.get("ruleID")
-            or record.get("rule_id")
-            or record.get("description")
-            or ""
+        rule_id = _first_text(
+            record,
+            (
+                "RuleID",
+                "ruleID",
+                "rule_id",
+                "id",
+                "Description",
+                "description",
+            ),
         )
         severity_raw = str(record.get("severity") or SECRET_SEVERITY_DEFAULT).upper()
         severity = (
