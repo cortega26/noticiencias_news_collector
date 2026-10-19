@@ -671,6 +671,8 @@ def run_pipeline_e2e_scenario(  # noqa: C901
     selected_article_id: str | None = None
     expected_article_id = fixture.get("expected", {}).get("selected_article_id")
     first_divergence: str | None = None
+    engine: RefineryEngine | None = None
+    publication_db: DatabaseManager | None = None
 
     try:
         input_artifact = _write_json(bundle_dir / "input" / fixture_file.name, fixture)
@@ -1021,4 +1023,7 @@ def run_pipeline_e2e_scenario(  # noqa: C901
         _write_json(bundle_dir / "run_summary.json", summary.model_dump(mode="json"))
         return summary
     finally:
-        pass
+        if engine is not None:
+            engine.close()
+        if publication_db is not None:
+            publication_db.close()

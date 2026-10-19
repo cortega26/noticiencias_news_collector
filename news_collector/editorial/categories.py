@@ -130,10 +130,6 @@ def normalize_raw_category(value: Any) -> str:
     return ascii_text.strip("_")
 
 
-def is_generic_category(value: Any) -> bool:
-    return normalize_raw_category(value) in GENERIC_CATEGORIES
-
-
 def is_generic_source_category(value: Any) -> bool:
     return normalize_raw_category(value) in GENERIC_SOURCE_CATEGORIES
 
