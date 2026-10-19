@@ -37,8 +37,8 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 ## Repository scripts
 
 Start with [`scripts/README.md`](scripts/README.md) when you need an entrypoint.
-It groups the scripts by purpose and names the ones referenced by the Makefile,
-workflows and docs; everything else is listed as a one-off/historical script.
+It groups the scripts by purpose, names the ones referenced by the Makefile,
+workflows and active docs, and collects the rest under one-off/historical.
 Add new scripts to that index in the same PR.
 
 ## Quality gate checklist

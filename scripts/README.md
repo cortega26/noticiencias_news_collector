@@ -12,9 +12,9 @@ exists (`make help` lists them).
 1. Search this page for the task, not the script name.
 2. Scripts referenced by the Makefile, `.github/workflows/`, or the active docs
    are listed individually with their caller.
-3. Anything under [One-off / historical](#one-off--historical) is not called by
-   a gate or supported workflow. Read its header before running it, and never
-   point it at production data.
+3. Anything in [One-off / historical](#one-off--historical) is not called by a
+   gate or a supported workflow. Some still work as manual tools; read the
+   header before running, and never point one at production data.
 4. Add new scripts to this index in the same PR that adds them.
 
 `scripts/audit.coveragerc` is the coverage configuration used by
@@ -26,8 +26,8 @@ Neither is an entrypoint.
 | Script | Invoked by | What it does |
 |---|---|---|
 | `scripts/run_collector.py` | `make run-local`, `ci.yml` e2e, `daily_collector.yml` | Primary collector CLI: `--dry-run`, `--sources`, `--healthcheck`, `--export-json`, `--fast` |
-| `scripts/run_collector_continuous.py` | Local runbook | Repeated subprocess-based collection |
-| `scripts/run_collector_smoke.py` | Docker image smoke (`NOTICIENCIAS_SMOKE=1`) | Deterministic one-cycle smoke runner; no continuous sleep |
+| `scripts/run_collector_continuous.py` | Local runbook | Repeated subprocess-based collection; uses the smoke runner when `NOTICIENCIAS_SMOKE` is set |
+| `scripts/run_collector_smoke.py` | `run_collector_continuous.py`, smoke tests | Deterministic one-cycle replay smoke runner |
 | `scripts/healthcheck.py` | `run_collector.py --healthcheck`, healthcheck runbook | Database, backlog and latest-ingest checks |
 | `scripts/migrate.py` | `make migrate` | Alembic wrapper; the only supported schema migration entrypoint |
 | `scripts/validate_export.py` | `e2e.yml` | Validates an exported JSON file against the frontend contract |
@@ -35,7 +35,6 @@ Neither is an entrypoint.
 | `scripts/run_live_source_drift.py` | `live-source-drift.yml` | Live critical-cohort sweep with a differential drift report |
 | `scripts/validate_frontend_publication.py` | `publication-smoke.yml` | Backend-driven frontend publication smoke validation |
 | `scripts/generate_fixture_post.py` | `publication-smoke.yml` | Writes a production-path v2 AstroPost MDX fixture |
-| `scripts/mark_published.py` | Manual reconciliation | Marks collector rows published based on site posts |
 | `scripts/ops/pull_webhook_receipts.py` | `make webhooks-pull`, admin stack | Pulls durable frontend callbacks from the hosted serving inbox |
 | `scripts/dev/admin_stack.sh` | `make admin` | Starts the serving API and Astro admin together with one Ctrl+C |
 | `scripts/smoke_serving_image.sh` | Local runbook | Smoke-checks a built serving image |
@@ -66,67 +65,58 @@ Neither is an entrypoint.
 | `scripts/sync_lockfiles.py` | `dependency-lock-check.yml`, `manual-lock-sync.yml` | Regenerates/checks hash-pinned lockfiles with pip-tools |
 | `scripts/update_changelog.py` | `release.yml` | Updates the changelog during tagged releases |
 | `scripts/bump_version.py` | `make bump-version` | Bumps the semantic version in `news_collector/config/VERSION` |
+| `scripts/ops/reconcile_publication_attempts.py` | Publication contract runbook | Reconciles stale `PR_CREATED` publication attempts |
 
 ## Evaluation, canaries and reports
 
-These are manually triggered evaluation or reporting tools; none is a PR gate
-unless a workflow above says otherwise.
+These are manual tooling named by the active docs or a Makefile target.
 
 | Script | What it does |
 |---|---|
 | `scripts/evaluate_enrichment_registry.py` | `make enrichment-eval`: production registry vs. the reviewed corpus (plan 048) |
-| `scripts/enrichment_candidate.py`, `scripts/label_enrichment_corpus.py`, `scripts/validate_enrichment_corpus.py` | Build, label and validate the plan 048 enrichment corpus |
 | `scripts/editorial_critic_canary.py` | Bounded, sanitized Stage-4 editorial critic canary |
 | `scripts/llm_canary.py` | `make llm-canary`: real bounded LLM chain canary |
 | `scripts/llm_health_report.py` | `make llm-report`: persisted provider behaviour report |
-| `scripts/llm_routing_dataset.py`, `scripts/llm_routing_replay.py` | Dataset selection and offline replay for the LLM routing benchmark |
 | `scripts/adversarial_review.py` | `make adversarial-review`: local self-review checklist over a diff |
 | `scripts/grounding_backtest.py` | Read-only grounding-rule backtest over published posts |
+| `scripts/benchmark_serving_api.py` | Deterministic serving API benchmark (see `docs/performance_baselines.md`) |
 | `scripts/score_delta.py` | Golden scoring-fixture delta report (see `CONTRIBUTING.md`) |
-| `scripts/benchmark_scoring.py`, `scripts/benchmark_bulk_persistence.py`, `scripts/benchmark_metrics.py`, `scripts/benchmark_serving_api.py` | Deterministic performance benchmarks (scoring, persistence, metrics, serving API) |
-| `scripts/weekly_quality_report.py`, `scripts/generate_autonomous_report.py`, `scripts/generate_production_report.py` | Weekly/autonomous/production report generators |
-| `scripts/lifecycle_reconciliation_report.py`, `scripts/ops/publish_cost_report.py` | Read-only publication lifecycle and cost/SLO reports |
-
-## Operations and maintenance
-
-Manual operator tooling. Inspect `--help` before use; several write to the
-configured database.
-
-| Script | What it does |
-|---|---|
-| `scripts/audit_sources.py`, `scripts/audit_pipeline.py`, `scripts/audit_published_categories.py` | Source health/blacklist audit, unified audit pipeline, published-category audit |
-| `scripts/backfill_lifecycle_tables.py` | One-shot backfill of legacy publication blobs into lifecycle tables |
-| `scripts/ops/migrate_sources.py` | Normalizes/rewrites `sources.yaml` |
-| `scripts/ops/prune_workflow_runs.py` | Deletes terminal `workflow_runs` rows outside the retention window |
-| `scripts/ops/purge_short_articles.py` | Deletes articles below the configured length floor |
-| `scripts/ops/reconcile_publication_attempts.py` | Reconciles stale `PR_CREATED` publication attempts |
-| `scripts/ops/trigger_scoring.py` | Runs one collection/scoring cycle from the CLI |
-| `scripts/repair_images.py` | Repairs missing/broken article images |
-| `scripts/migrate_metrics_db.py` | Migrates the legacy metrics database |
-| `scripts/reset_canary_sources.py` | Resets canary source state |
-| `scripts/open_pr.py` | Opens a publication PR from the CLI |
-| `scripts/run_secret_scan.py` | Standalone secret-scan helper (tests cover its severity/dir handling) |
-| `scripts/profile_pipeline.py` | Profiles a pipeline run (Scalene-friendly) |
-| `scripts/verify_imports.py` | Import-graph/circular-import check |
-| `scripts/setup/check_env.py` | Checks optional legacy (Streamlit) environment imports |
 
 ## One-off / historical
 
-Nothing here is referenced by a gate or supported workflow. Keep for
-archaeology; do not extend.
+Nothing here is referenced by a Makefile target, workflow or active doc. Keep
+for archaeology; do not extend.
 
 - **`scripts/migrations/20250930_optimize_indexes.py`** — historical raw-DDL
   index migration. It targets the legacy `data/news.db` (or `NEWS_DB_PATH`),
   while the app now uses `data/news_v3.db` (`config.toml`). It is **not** the
   migration path (Alembic, via `make migrate`, is) and must not be run against
   production data.
-- `scripts/debug/` — ad-hoc repros for specific scoring/parser/config bugs
-  (`debug_google_blog`, `debug_json`, `debug_openai`, `inspect_db`,
-  `repro_strip`, `repro_validation`, `verify_cognitive_fix`, `verify_config`,
-  `verify_scoring`).
-- `scripts/debugging/` — Science-feed connectivity probes; see its local
-  `README.md`.
-- `scripts/bench_qwen35_json.py`, `scripts/debug_proxy.py`,
-  `scripts/reproduce_scoring_bug.py`, `scripts/verify_canary_a_vs_b.py`,
-  `scripts/verify_canary_b.py`, `scripts/verify_fix.py`,
-  `scripts/verify_prompt.py` — one-off investigations kept for reference.
+- **Debug probes** — `scripts/debug/` (nine ad-hoc repros for scoring, parser,
+  config and database issues) and `scripts/debugging/` (Science-feed
+  connectivity probes; see its local `README.md`).
+- **Source and data audits** — `scripts/audit_sources.py`,
+  `scripts/audit_pipeline.py`, `scripts/audit_published_categories.py`,
+  `scripts/ops/migrate_sources.py`.
+- **Database/data maintenance** — `scripts/backfill_lifecycle_tables.py`,
+  `scripts/migrate_metrics_db.py`, `scripts/ops/prune_workflow_runs.py`,
+  `scripts/ops/purge_short_articles.py`, `scripts/ops/trigger_scoring.py`,
+  `scripts/repair_images.py`, `scripts/reset_canary_sources.py`.
+- **Report generators** — `scripts/weekly_quality_report.py`,
+  `scripts/generate_autonomous_report.py`,
+  `scripts/generate_production_report.py`,
+  `scripts/lifecycle_reconciliation_report.py`,
+  `scripts/ops/publish_cost_report.py`.
+- **Benchmarks** — `scripts/benchmark_scoring.py`,
+  `scripts/benchmark_bulk_persistence.py`, `scripts/benchmark_metrics.py`.
+- **Evaluation candidates** — `scripts/enrichment_candidate.py`,
+  `scripts/label_enrichment_corpus.py`,
+  `scripts/validate_enrichment_corpus.py`, `scripts/llm_routing_dataset.py`,
+  `scripts/llm_routing_replay.py`.
+- **One-off helpers** — `scripts/mark_published.py`, `scripts/open_pr.py`,
+  `scripts/run_secret_scan.py`, `scripts/profile_pipeline.py`,
+  `scripts/setup/check_env.py`, `scripts/bench_qwen35_json.py`,
+  `scripts/debug_proxy.py`, `scripts/reproduce_scoring_bug.py`,
+  `scripts/verify_canary_a_vs_b.py`, `scripts/verify_canary_b.py`,
+  `scripts/verify_fix.py`, `scripts/verify_imports.py`,
+  `scripts/verify_prompt.py`.
