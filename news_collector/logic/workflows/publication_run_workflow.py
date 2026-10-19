@@ -47,7 +47,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from sqlalchemy import func, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
 from news_collector.logic.workflows.publication_attempts import read_publication_attempt
@@ -64,6 +64,35 @@ RUN_TYPE_PUBLICATION = "publication"
 # heartbeat cadence is a short fixed interval, independent of this.
 DEFAULT_LEASE_TIMEOUT_SECONDS = 3600  # 1 hour
 DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 60
+
+
+#: Every thread dispatched by :meth:`PublicationRunWorkflow.start` /
+#: :meth:`PublicationRunWorkflow.start_batch`, so the owner of the shared
+#: ``DatabaseManager`` (tests, process shutdown) can join them before closing
+#: it. Guarded by ``_dispatched_threads_lock``; a dispatched thread removes
+#: itself when it finishes, and dead entries are pruned on registration so a
+#: long-lived serving process never accumulates them.
+_dispatched_threads: set[threading.Thread] = set()
+_dispatched_threads_lock = threading.Lock()
+
+
+def join_dispatched_publication_threads(timeout: float | None = None) -> None:
+    """Join every dispatched publication thread (single and batch paths).
+
+    This is the only place that waits: ``start()`` / ``start_batch()`` still
+    return immediately. Process/test teardown calls this *before* closing the
+    shared ``DatabaseManager`` so a batch that is still finishing cannot reach
+    ``complete()`` / ``fail()`` against a dead handle (issue #367). Follows the
+    heartbeat's join style (``Thread.join(timeout=...)``).
+    """
+    with _dispatched_threads_lock:
+        pending = [
+            thread
+            for thread in _dispatched_threads
+            if thread is not threading.current_thread()
+        ]
+    for thread in pending:
+        thread.join(timeout)
 
 
 @dataclass(frozen=True)
@@ -209,6 +238,15 @@ class PublicationRunWorkflow:
             detail=f"Batch publication started for {len(ids)} articles.",
         )
 
+    def join_dispatched_threads(self, timeout: float | None = None) -> None:
+        """Join the threads dispatched by this module (see the module helper).
+
+        A convenience wrapper over
+        :func:`join_dispatched_publication_threads`; the registry is
+        process-wide because teardown holds no workflow instance.
+        """
+        join_dispatched_publication_threads(timeout)
+
     def _enqueue(
         self,
         run_metadata: dict[str, Any],
@@ -254,6 +292,32 @@ class PublicationRunWorkflow:
             assert row.id is not None
             return int(row.id), 0
 
+    def _spawn(self, *, target: Any, args: tuple[Any, ...], name: str) -> None:
+        """Start one daemon worker and keep it joinable until it finishes.
+
+        Dispatch stays non-blocking: only the thread's *registration* happens
+        here. The reference lets
+        :func:`join_dispatched_publication_threads` drain the worker before
+        its owner closes the shared ``DatabaseManager``. The wrapper removes
+        the thread from the registry in ``finally`` (a no-op if it finished
+        before registration), and registration prunes any dead leftovers.
+        """
+
+        def run() -> None:
+            try:
+                target(*args)
+            finally:
+                with _dispatched_threads_lock:
+                    _dispatched_threads.discard(thread)
+
+        thread = threading.Thread(target=run, daemon=True, name=name)
+        thread.start()
+        with _dispatched_threads_lock:
+            _dispatched_threads.add(thread)
+            finished = [t for t in _dispatched_threads if not t.is_alive()]
+            for dead in finished:
+                _dispatched_threads.discard(dead)
+
     def _dispatch(
         self,
         run_id: int,
@@ -261,12 +325,11 @@ class PublicationRunWorkflow:
         article_id: int | None,
         article_url: str | None,
     ) -> None:
-        threading.Thread(
+        self._spawn(
             target=self._run,
             args=(run_id, article_id, article_url),
-            daemon=True,
             name=f"publish-{run_id}",
-        ).start()
+        )
 
     def _dispatch_batch(
         self,
@@ -274,12 +337,11 @@ class PublicationRunWorkflow:
         *,
         article_ids: list[int],
     ) -> None:
-        threading.Thread(
+        self._spawn(
             target=self._run_batch,
             args=(run_id, article_ids),
-            daemon=True,
             name=f"publish-batch-{run_id}",
-        ).start()
+        )
 
     def _start_heartbeat(self, run_id: int) -> tuple[threading.Event, threading.Thread]:
         """Start the lease-heartbeat thread; caller must set the event and
@@ -728,11 +790,26 @@ class PublicationRunWorkflow:
             "error_code": error_code,
             "error_detail": error_detail,
         }
-        if summary is not None:
-            fields["run_metadata"] = self._merge_summary(run_id, summary)
-        return self._transition(
-            run_id, from_status="running", to_status="failed", **fields
-        )
+        try:
+            if summary is not None:
+                fields["run_metadata"] = self._merge_summary(run_id, summary)
+            return self._transition(
+                run_id, from_status="running", to_status="failed", **fields
+            )
+        except (SQLAlchemyError, RuntimeError) as exc:
+            # The run row is unreachable (typically: the manager was closed
+            # while this batch was finishing). Re-entering the DB would just
+            # retry the same dead handle and mask the original failure, so
+            # record both errors and stop; the caller already logged the
+            # original exception before calling fail().
+            logger.error(
+                "Could not persist failure for publication run {}: {} "
+                "(persistence error: {})",
+                run_id,
+                error_detail,
+                exc,
+            )
+            return False
 
     # ------------------------------------------------------------------
     # lease recovery

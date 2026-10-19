@@ -13,6 +13,7 @@ import sqlite3
 
 import pytest
 
+from news_collector.logic.workflows import publication_run_workflow
 from news_collector.storage import database as database_module
 
 # Frozen instant for fixture payload timestamps, so shared fixtures cannot
@@ -42,9 +43,29 @@ def _allow_example_com_source_images():
         image_handler.REMOTE_IMAGE_ALLOWLIST = original
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown(item, nextitem):
+    """Drain dispatched publication workers before fixture finalizers run.
+
+    Fixture finalizers execute inside this hook, and a test-requested fixture
+    such as ``monkeypatch`` finalizes *before* the autouse DB fixture. Joining
+    only in the fixture would therefore let a still-starting batch pick up the
+    already-restored real pipeline (and then the closed DB). Joining here runs
+    while every fixture — including the test's fakes — is still installed.
+    """
+    publication_run_workflow.join_dispatched_publication_threads()
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _close_global_db_manager():
     yield
+    # Last line of defence before the shared manager is closed: a publication
+    # worker still finishing would otherwise reach complete()/fail() against
+    # a disposed engine (issue #367). The registry is module-level because
+    # teardown has no workflow instance. No timeout: a hung worker must fail
+    # loudly rather than be hidden by closing the DB underneath it.
+    publication_run_workflow.join_dispatched_publication_threads()
     manager = getattr(database_module, "_db_manager", None)
     if manager is not None:
         manager.close()
