@@ -5,6 +5,14 @@ on:
     branches: ["main", "master"]
   pull_request:
     branches: ["main", "master"]
+    paths:
+      - "news_collector/collectors/**"
+      - "news_collector/contracts/**"
+      - "news_collector/system/**"
+      - "scripts/run_collector.py"
+      - "scripts/validate_export.py"
+      - "news_collector/config/sources.yaml"
+      - ".github/workflows/e2e.yml"
   workflow_dispatch:
 
 concurrency:
@@ -28,9 +36,11 @@ jobs:
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
 
-      - name: Dry-run collection and export
+      - name: Dry-run collection and export (three fast tier-A RSS sources)
         run: |
-          .venv/bin/python scripts/run_collector.py --dry-run --export-json output.json
+          .venv/bin/python scripts/run_collector.py --dry-run \
+            --sources ieee_spectrum_ai ars_technica_technology_lab nasa_news \
+            --export-json output.json
 
       - name: Validate export schema contract
         run: .venv/bin/python scripts/validate_export.py output.json

@@ -159,8 +159,21 @@ it, so it could silently describe a stale surface.
   - runs `make test-system`
 - `.github/workflows/source_reliability.yml`
   - source config, feed reliability, and LLM resilience checks
-- `.github/workflows/e2e.yml`
-  - legacy E2E contract validation workflow
+- `.github/workflows/e2e.yml` (E2E Contract Test)
+  - `pull_request` runs only when the diff touches the collector/export
+    surface: `news_collector/collectors/**`, `news_collector/contracts/**`,
+    `news_collector/system/**`, `scripts/run_collector.py`,
+    `scripts/validate_export.py`, `news_collector/config/sources.yaml`, or the
+    workflow itself. Pushes to `main`/`master` and manual dispatch remain
+    unfiltered.
+  - The dry run is limited to three fast tier-A RSS sources
+    (`ieee_spectrum_ai`, `ars_technica_technology_lab`, `nasa_news`) instead of
+    all configured sources, then `scripts/validate_export.py` validates the
+    export against the frontend contract and fails on a zero-article or invalid
+    export.
+  - It is not a branch-protection required check today. Do not make it one
+    while it is `paths:`-filtered: a PR outside those paths would leave the
+    required status pending.
 - `.github/workflows/publication-smoke.yml`
   - path-triggered on PRs touching `news_collector/contracts/frontend_schema.py`,
     `news_collector/contracts/publication_validation.py`,
