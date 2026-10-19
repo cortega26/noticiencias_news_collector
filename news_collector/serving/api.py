@@ -20,6 +20,9 @@ Invariants:
 Failure modes:
 - Raises HTTP 400 exceptions if cursor formats are malformed.
 - Raises HTTP 503 if the database is unavailable during readiness probes.
+- Answers HTTP 503 with ``error_code=published_content_unavailable`` when the
+  published-content routes run without their deployment capability (a git
+  binary plus a frontend checkout or a clone the process can make).
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ import hmac
 import json
 import logging
 import os
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,6 +47,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Union,
     cast,
 )
 from urllib.parse import urlparse
@@ -61,6 +66,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import JSONResponse
 from noticiencias.config_manager import (
     default_config_path,
     default_env_path,
@@ -259,6 +265,83 @@ def _merge_circuit_into_health_record(
 # GUI-produced hero image. Overridable in tests via monkeypatch.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 _UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+
+# Plan 151: the three published-content routes (GET /v1/admin/content,
+# DELETE /v1/admin/content/{refinery_id}, POST /v1/admin/content/bulk-reset)
+# read the frontend repository through GitPython. That is a *local-admin*
+# capability: it needs a git binary and a frontend checkout (or a clone the
+# process can make). The hosted serving image (Dockerfile.serving) ships
+# neither, so the capability is probed before the lazy import and reported as
+# an explicit 503 instead of an ImportError-driven 500.
+PUBLISHED_CONTENT_UNAVAILABLE_CODE = "published_content_unavailable"
+PUBLISHED_CONTENT_REQUIREMENT = (
+    "the local admin stack: a git binary and a frontend checkout"
+)
+
+# Same working-tree location the three handlers below pass as temp_target_dir.
+_PUBLISHED_CONTENT_TEMP_TARGET_DIR = Path("temp/refinery_target")
+
+
+def _published_content_unavailable_response(missing: str) -> JSONResponse:
+    """503 naming the missing requirement — no internal paths, no tracebacks."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={
+            "detail": (
+                "Published content is unavailable in this deployment. This "
+                f"route requires {PUBLISHED_CONTENT_REQUIREMENT} "
+                f"(missing here: {missing})."
+            ),
+            "error_code": PUBLISHED_CONTENT_UNAVAILABLE_CODE,
+        },
+    )
+
+
+def _published_content_missing_requirement(
+    *,
+    target_repo_url: str,
+    collector_repo_root: Path,
+    temp_target_dir: Path,
+    extra_candidates: Optional[Iterable[Path]] = None,
+) -> Optional[str]:
+    """Name what the published-content routes lack, or None when they can run.
+
+    Cheap and deterministic: no network, no clone, no subprocess. The checkout
+    lookup is the module's own resolution (``find_local_target_checkout``), so
+    there is no second source of truth. A missing checkout is deliberately
+    *not* a missing capability — with a git binary the module clones one on
+    demand when a target repository is configured, which is the documented
+    local-admin flow.
+    """
+    if shutil.which("git") is None:
+        return "a git executable"
+    try:
+        from news_collector.logic.workflows.published_content import (
+            POSTS_SUBPATH,
+            find_local_target_checkout,
+        )
+    except ImportError:
+        # git is on PATH but GitPython still refuses to initialise it.
+        return "a working git installation"
+
+    try:
+        local_checkout = find_local_target_checkout(
+            target_repo_url,
+            collector_repo_root=collector_repo_root,
+            extra_candidates=extra_candidates,
+        )
+    except OSError:
+        local_checkout = None
+
+    if local_checkout is not None:
+        return None
+    if (temp_target_dir / POSTS_SUBPATH).exists():
+        return None
+    if str(target_repo_url or "").strip():
+        # No working tree yet: the module clones one on demand.
+        return None
+    return "a configured frontend repository"
 
 
 def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
@@ -2423,17 +2506,28 @@ def create_app(  # noqa: C901
     @app.get("/v1/admin/content", response_model=AdminContentEnvelope)
     def admin_published_content(
         _: None = Depends(verify_admin_token),
-    ) -> AdminContentEnvelope:
-        from news_collector.logic.workflows.published_content import (
-            resolve_published_content_snapshot,
-        )
-
+    ) -> Union[AdminContentEnvelope, JSONResponse]:
         cfg = load_config()
+        missing = _published_content_missing_requirement(
+            target_repo_url=str(cfg.github.target_repo_url or ""),
+            collector_repo_root=Path(".").resolve(),
+            temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
+        )
+        if missing is not None:
+            return _published_content_unavailable_response(missing)
+        try:
+            from news_collector.logic.workflows.published_content import (
+                resolve_published_content_snapshot,
+            )
+        except ImportError:
+            # Defence in depth: a missing binary must never surface as a 500.
+            return _published_content_unavailable_response("a working git installation")
+
         try:
             snapshot = resolve_published_content_snapshot(
                 target_repo_url=cfg.github.target_repo_url,
                 collector_repo_root=Path(".").resolve(),
-                temp_target_dir=Path("temp/refinery_target"),
+                temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
                 github_token=str(cfg.github.token or ""),
                 refresh_clone=False,
             )
@@ -2590,24 +2684,35 @@ def create_app(  # noqa: C901
         refinery_id: str,
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
-    ) -> AdminMutationResult:
+    ) -> Union[AdminMutationResult, JSONResponse]:
         """Unpublish one article: git rm + commit + push + DB delete.
 
         Dispatches to reset_one_article (plan 017 semantics: DB rows are
         deleted only after the git push succeeds).
         """
-        from news_collector.logic.workflows.published_content import (
-            find_published_article_by_refinery_id,
-            reset_one_article,
-            resolve_published_content_snapshot,
-        )
-
         cfg = load_config()
+        missing = _published_content_missing_requirement(
+            target_repo_url=str(cfg.github.target_repo_url or ""),
+            collector_repo_root=Path(".").resolve(),
+            temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
+        )
+        if missing is not None:
+            return _published_content_unavailable_response(missing)
+        try:
+            from news_collector.logic.workflows.published_content import (
+                find_published_article_by_refinery_id,
+                reset_one_article,
+                resolve_published_content_snapshot,
+            )
+        except ImportError:
+            # Defence in depth: a missing binary must never surface as a 500.
+            return _published_content_unavailable_response("a working git installation")
+
         try:
             snapshot = resolve_published_content_snapshot(
                 target_repo_url=cfg.github.target_repo_url,
                 collector_repo_root=Path(".").resolve(),
-                temp_target_dir=Path("temp/refinery_target"),
+                temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
                 github_token=str(cfg.github.token or ""),
                 refresh_clone=True,
             )
@@ -2641,21 +2746,32 @@ def create_app(  # noqa: C901
         payload: AdminBulkResetRequest,
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_admin_token),
-    ) -> AdminBulkResetResult:
+    ) -> Union[AdminBulkResetResult, JSONResponse]:
         """Bulk unpublish (batch_cap 5, continue-on-error, per-item report)."""
-        from news_collector.logic.workflows.published_content import (
-            find_published_article_by_refinery_id,
-            reset_one_article,
-            resolve_published_content_snapshot,
+        cfg = load_config()
+        missing = _published_content_missing_requirement(
+            target_repo_url=str(cfg.github.target_repo_url or ""),
+            collector_repo_root=Path(".").resolve(),
+            temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
         )
+        if missing is not None:
+            return _published_content_unavailable_response(missing)
+        try:
+            from news_collector.logic.workflows.published_content import (
+                find_published_article_by_refinery_id,
+                reset_one_article,
+                resolve_published_content_snapshot,
+            )
+        except ImportError:
+            # Defence in depth: a missing binary must never surface as a 500.
+            return _published_content_unavailable_response("a working git installation")
         from news_collector.serving.bulk_helper import run_bulk
 
-        cfg = load_config()
         try:
             snapshot = resolve_published_content_snapshot(
                 target_repo_url=cfg.github.target_repo_url,
                 collector_repo_root=Path(".").resolve(),
-                temp_target_dir=Path("temp/refinery_target"),
+                temp_target_dir=_PUBLISHED_CONTENT_TEMP_TARGET_DIR,
                 github_token=str(cfg.github.token or ""),
                 refresh_clone=True,
             )
