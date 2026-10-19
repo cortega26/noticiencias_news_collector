@@ -22,6 +22,39 @@
 - **Category**: security / dependencies
 - **Planned at**: commit `1ff6926`, 2026-10-18
 
+### Blocker note (2026-10-19) — the fix is unavailable upstream
+
+The first execution attempt proved the bump cannot be delivered as specified:
+`semgrep` — a direct dependency of the `security` extra — pins `mcp` **exactly**
+(`mcp==1.29.0` in semgrep 1.180.0; every release from 1.173.0 through 1.181.0
+pins the same version, verified against PyPI), so
+`scripts/sync_lockfiles.py --upgrade-package mcp==1.30.0` fails with
+`ResolutionImpossible`, and the advisory's fix versions (`1.30.0`, `2.2.0`) are
+unreachable through this path. `make security-dev` fails closed on the advisory
+by design (no severity in the record → `UNKNOWN` → HIGH), which is the documented
+policy — the gate is not wrong, the fix is missing.
+
+**Operator decision required (the plan cannot choose):**
+
+- **(a) Wait upstream.** No semgrep release lifts the pin as of 1.181.0. Keep
+  `security-dev` unwired until a bump lands, and revisit then. Cost: the dev-lock
+  advisory stays unknown-to-CI, and the ledger's stale "security-dev fully green
+  (2026-10-12)" claim must stay corrected.
+- **(b) Decouple semgrep from the audited environment.** Move semgrep (and its
+  `mcp` pin) out of the `security` extra / the audited lock — e.g. install it
+  unpinned in the CI job that runs it. Cost: toolchain restructuring; the
+  advisory would need a recorded disposition (it is semgrep's own MCP transport,
+  not production-reachable).
+- **(c) A dated `PIP_AUDIT_ALLOWLIST` entry** for `GHSA-84m7-p3x7-pcfv` with a
+  reason and an expiry — the mechanism `SECURITY.md` provides. Cost: it hides a
+  real advisory in a dev-only tool; the plan forbade the executor from doing it
+  unilaterally, which is exactly why this needs the operator's word.
+
+Do not re-execute until one option is chosen. (Independent note from the same
+run: locally, `make security` can be red because `gitleaks 8.18.1 detect` scans
+every ref in the shared object store, including sibling unmerged branches; a
+HEAD-scoped scan is clean and CI is unaffected because it checks out one ref.)
+
 ## Why this matters
 
 `make security-dev` is red today. `pip-audit -r requirements-security.lock`
