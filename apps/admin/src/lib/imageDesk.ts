@@ -1,11 +1,14 @@
 import type { AdminImageBriefItem } from './types';
 
-/** Escape text for safe interpolation into an HTML template string. */
+/** Escape text for safe interpolation into HTML text and attribute values. */
 export function escapeHtml(value: unknown): string {
   if (value == null) return '';
-  const div = document.createElement('div');
-  div.textContent = String(value);
-  return div.innerHTML;
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**

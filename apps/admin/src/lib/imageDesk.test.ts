@@ -68,4 +68,12 @@ describe('renderImageCard', () => {
     expect(host.querySelector('pre[data-prompt]')).toBeNull();
     expect(host.textContent).toContain('Prompt no disponible');
   });
+
+  it('escapes quotes so brief fields cannot break out of attributes', () => {
+    const host = mount({ ...brief, topic: 'x" data-evil="1' });
+
+    const topic = host.querySelector<HTMLInputElement>('input[data-field="topic"]');
+    expect(topic?.getAttribute('data-evil')).toBeNull();
+    expect(topic?.value).toBe('x" data-evil="1');
+  });
 });
