@@ -1378,8 +1378,7 @@ def create_app(  # noqa: C901
         The delivery is persisted as a durable receipt before processing
         (plan 060 Phase 5a); a duplicate delivery returns the stored result
         without reapplying transitions. The response is always 202 unless
-        payload validation fails (422) or the raw body exceeds the documented
-        cap (413, ``verify_webhook_body_size`` — plan 142).
+        payload validation fails.
         """
         from news_collector.contracts.webhook import parse_webhook_payload
         from news_collector.serving.webhook_handler import handle_webhook_event
