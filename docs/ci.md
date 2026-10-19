@@ -222,8 +222,12 @@ it, so it could silently describe a stale surface.
 ### Other triggers (consult each YAML; some also run on PRs)
 
 - `.github/workflows/audit-inventory-weekly.yml` + `.github/workflows/inventory-autorefresh.yml` — inventory drift detector and self-heal
-- `.github/workflows/dependency-lock-check.yml` — lockfile freshness
-- `.github/workflows/manual-lock-sync.yml` — manual lockfile refresh
+- `.github/workflows/dependency-lock-check.yml` — lockfile freshness for all
+  four hash-pinned locks (`requirements.lock`, `requirements-refinery.lock`,
+  `requirements-security.lock`, and the isolated semgrep tool env,
+  `requirements-semgrep.lock`; plan 162)
+- `.github/workflows/manual-lock-sync.yml` — manual lockfile refresh (regenerates
+  and commits the same four)
 - `.github/workflows/daily_collector.yml` — scheduled collection
 - `.github/workflows/mutation.yml` — mutation testing (weekly, Mon 06:00 UTC, plus a path-filtered `pull_request` run when a PR touches `editorial/categories.py`, `editorial/health_scope.py`, `logic/workflows/publication_identity.py` or `validation/rules.py`): `mutmut run` over the critical pure modules, then `scripts/mutation_score.py --check` fails below the per-module floors in `[tool.mutation.floors]` (local: `make mutation`; measured ~3.5 min for the 9 floored modules with `--max-children 2`)
 - `.github/workflows/test-health-weekly.yml` — test health (weekly, Mon 07:00 UTC; manual input `days`, default 14): the whole suite with the clock moved forward (`TIME_SHIFT_DAYS`, `tests/_plugins/time_shift_plugin.py`) so time-dependent tests and accepted-risk exceptions about to expire (pip-audit allowlist) fail here first; not a PR gate (local: `TIME_SHIFT_DAYS=14 make test-timeshift`)

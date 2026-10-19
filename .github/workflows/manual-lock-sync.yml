@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- requirements.lock requirements-refinery.lock requirements-security.lock; then
+          if git diff --quiet -- requirements.lock requirements-refinery.lock requirements-security.lock requirements-semgrep.lock; then
             {
               echo "## Manual follow-up"
               echo "No lockfile changes detected. Nothing to push or review."
@@ -54,7 +54,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
 
           git checkout -b "${branch_name}"
-          git add requirements.lock requirements-refinery.lock requirements-security.lock
+          git add requirements.lock requirements-refinery.lock requirements-security.lock requirements-semgrep.lock
           git commit -m "chore: refresh dependency lockfiles"
           git push --set-upstream origin "${branch_name}"
 
