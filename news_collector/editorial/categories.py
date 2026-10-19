@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
@@ -115,6 +116,46 @@ FIRST_PARTY_HOSTS = {"noticiencias.com", "www.noticiencias.com"}
 FIRST_PARTY_SOURCE_IDS = {"noticiencias", "noticiencias_editorial"}
 FIRST_PARTY_NAME_PATTERNS = ("noticiencias", "equipo editorial", "equipo de salud")
 
+# Only these labels are broad enough that the outlet's category can hide the
+# article's real domain (plan 170). Specific labels (software, physics, ...)
+# and first-party editorial sources keep their direct mapping.
+BROAD_SOURCE_CATEGORIES = frozenset({"technology", "tech"})
+
+# Terms are accent-folded, lowercase substrings matched against the article
+# text. Keep the list small and evidence-backed; every term needs a positive
+# and a negative fixture before it ships.
+CONTENT_CATEGORY_SIGNALS: dict[str, dict[str, tuple[str, ...]]] = {
+    "ARQUEOLOGÍA": {
+        "strong": (
+            "arqueolog",
+            "paleoantrop",
+            "paleontolog",
+            "neandertal",
+            "hominid",
+            "prehistori",
+        ),
+        "supporting": (
+            "yacimiento",
+            "excavaci",
+            "fosil",
+            "cueva",
+            "entierro",
+            "restos oseos",
+            "esqueleto",
+            "hominino",
+        ),
+    },
+}
+
+CONTENT_OVERRIDE_MIN_SIGNAL_GROUPS = 2
+
+
+@dataclass(frozen=True)
+class ContentSignalMatch:
+    category: str
+    groups: tuple[str, ...]
+    signals: tuple[str, ...]
+
 
 def normalize_raw_category(value: Any) -> str:
     if value is None:
@@ -132,6 +173,57 @@ def normalize_raw_category(value: Any) -> str:
 
 def is_generic_source_category(value: Any) -> bool:
     return normalize_raw_category(value) in GENERIC_SOURCE_CATEGORIES
+
+
+def _normalize_content_text(value: str) -> str:
+    """Fold accents/case and collapse punctuation for signal matching."""
+    text = unicodedata.normalize("NFKD", str(value or "").casefold())
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return f" {text.strip()} "
+
+
+def match_content_signals(
+    *,
+    title: str,
+    summary: str,
+    content: str = "",
+) -> ContentSignalMatch | None:
+    """Return the first content category that reaches the minimum signal groups.
+
+    Pure: no I/O. ``content`` is truncated to the first 2,000 characters so a
+    long body cannot accumulate enough stray terms on its own.
+    """
+    haystack = _normalize_content_text(f"{title}\n{summary}\n{content[:2000]}")
+
+    for category, groups in CONTENT_CATEGORY_SIGNALS.items():
+        matched_groups: list[str] = []
+        matched_signals: list[str] = []
+        for group_name, terms in groups.items():
+            hits = [term for term in terms if term in haystack]
+            if hits:
+                matched_groups.append(group_name)
+                matched_signals.extend(hits)
+
+        if len(matched_groups) >= CONTENT_OVERRIDE_MIN_SIGNAL_GROUPS:
+            return ContentSignalMatch(
+                category=category,
+                groups=tuple(matched_groups),
+                signals=tuple(matched_signals),
+            )
+
+    return None
+
+
+def detect_content_category(
+    *,
+    title: str,
+    summary: str,
+    content: str = "",
+) -> str | None:
+    """Return the canonical category implied by the content, if any."""
+    match = match_content_signals(title=title, summary=summary, content=content)
+    return match.category if match else None
 
 
 def canonicalize_category_label(value: str | None) -> str | None:

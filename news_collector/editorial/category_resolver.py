@@ -4,12 +4,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from news_collector.editorial.categories import (
+    BROAD_SOURCE_CATEGORIES,
     DIRECT_CATEGORY_MAP,
     GENERIC_CATEGORIES,
     PUBLIC_CATEGORY_LABELS,
     get_allowed_classifier_categories,
     is_first_party_editorial_source,
     is_generic_source_category,
+    match_content_signals,
     normalize_raw_category,
 )
 from news_collector.editorial.classifier import EditorialClassifier
@@ -75,6 +77,31 @@ class EditorialCategoryResolver:
         allowed_categories = get_allowed_classifier_categories(
             allow_editorial=allow_editorial
         )
+
+        # A broad outlet label (technology/tech) must not hide the article's
+        # real domain. First-party editorial sources keep their direct mapping.
+        if selected_normalized in BROAD_SOURCE_CATEGORIES and not allow_editorial:
+            content_match = match_content_signals(
+                title=title,
+                summary=summary,
+                content=content,
+            )
+            if content_match is not None:
+                logger.info(
+                    f"Category content override for article {article_id}: "
+                    f"source_category={selected_normalized} "
+                    f"groups={','.join(content_match.groups)} "
+                    f"signals={','.join(content_match.signals)} "
+                    f"-> {content_match.category}"
+                )
+                return CategoryResolution(
+                    public_category=PUBLIC_CATEGORY_LABELS[content_match.category],
+                    selected_raw_category=self._string_or_none(selected_raw),
+                    top_level_raw_category=self._string_or_none(raw_category),
+                    metadata_raw_category=self._string_or_none(metadata_category),
+                    selected_normalized_category=selected_normalized,
+                    resolution_method="content_override",
+                )
 
         mapped_selected = DIRECT_CATEGORY_MAP.get(selected_normalized)
         if (
