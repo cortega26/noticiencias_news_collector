@@ -9,9 +9,11 @@
 - [x] Reconcile README/contributor guides, operations, CI and derived context
       (both repos' README/CONTRIBUTING checked; frontend README historical
       labeling fixed; frontend AGENTS.md stray tool-memory block removed).
-- [ ] Review remaining active documentation, links and historical boundaries
-      — partial: high-authority docs done, long tail of leaf docs (see
-      results.md "Remaining for a future session") not yet individually read.
+- [x] Review remaining active documentation, links and historical boundaries
+      — leaf-doc sweep completed 2026-10-19 (plan 165): all 24 backend leaf docs
+      read and verified; history-labeled `perf/bench.md`,
+      `docs/strategic_features.md`, `docs/security_removal_plan.md` and the
+      taxonomy README backfill note; no product-decision claims rewritten.
 - [ ] Review edits; run required checks; record coverage and limitations
       — checks run and recorded; sub-agent spec-vs-implementation review
       requested per docs/AGENTS.md §0.1(d), outcome recorded in results.md.

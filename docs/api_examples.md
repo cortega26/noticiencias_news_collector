@@ -5,7 +5,7 @@
 **Request**
 
 ```
-GET /v1/articles?source=nature&topic=health&page_size=1
+GET /v1/articles?source=scientific_american&topic=health&page_size=1
 ```
 
 **Response**
@@ -19,8 +19,8 @@ GET /v1/articles?source=nature&topic=health&page_size=1
       "summary": "Breakthrough in CRISPR gene therapy",
       "url": "https://example.com/crispr",
       "source": {
-        "id": "nature",
-        "name": "Nature"
+        "id": "scientific_american",
+        "name": "Scientific American"
       },
       "category": "science",
       "topics": [
@@ -51,7 +51,7 @@ GET /v1/articles?source=nature&topic=health&page_size=1
   },
   "filters": {
     "source": [
-      "nature"
+      "scientific_american"
     ],
     "topic": [
       "health"
@@ -81,11 +81,11 @@ GET /healthz
   "details": {
     "status": "healthy",
     "total_articles": 1835,
-    "backlog_articles": 12,
-    "recent_articles": 148,
+    "pending_processing": 12,
+    "articles_last_24h": 148,
     "active_sources": 37,
     "failed_sources": 0,
-    "last_updated": "2025-10-01T05:59:41.112313+00:00"
+    "database_type": "sqlite"
   }
 }
 ```

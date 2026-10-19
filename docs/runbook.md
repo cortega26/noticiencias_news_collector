@@ -103,7 +103,7 @@ and transport result, then the backend webhook logs and database identity.
 A successful workflow run is not deployment proof. Events without matching
 IDs do not complete/reject arbitrary attempts; a missing best-effort callback
 can leave state stale after a successful deployment. Use the sibling
-`docs/webhook-integration.md` for transport details.
+`../noticiencias/docs/webhook-integration.md` for transport details.
 
 Record incident evidence, mitigation and verification results. No production
 incident, live alert or restoration was exercised by the documentation audit.

@@ -7,8 +7,10 @@ Status: Active. For broader incidents, see [runbook.md](runbook.md).
 Use `scripts/run_collector.py` from the backend root with `.venv/bin/python`.
 Inspect `--help` before combining operational flags. Runtime settings resolve
 through `noticiencias/config_manager.py` and
-`news_collector/config/settings.py`; source configuration lives under `config/`,
-including the editable `config/sources.yaml` catalog.
+`news_collector/config/settings.py`; the editable source catalog and its
+loader live at `news_collector/config/sources.yaml` and
+`news_collector/config/sources.py` (the `config/` directory holds other
+artefacts such as prompts, features and systemd units, not the source list).
 
 For throttling, inspect `[rate_limiting]` in the effective configuration and
 source-specific settings. Preserve provider backoff and robots restrictions.
@@ -34,7 +36,7 @@ rate limiting, parsing or persistence first.
    `.venv/bin/python -m pytest tests/test_rate_limit_and_backoff.py --no-cov`.
    This is a focused regression check, not the full change-class gate.
 3. A targeted command such as
-   `.venv/bin/python scripts/run_collector.py --dry-run --sources nature`
+   `.venv/bin/python scripts/run_collector.py --dry-run --sources scientific_american`
    can exercise connectivity. Dry-run still initializes dependencies and
    may cause network/log/cache activity; `--export-json` can write a file. It
    neither drains backlog nor proves persisted throughput.

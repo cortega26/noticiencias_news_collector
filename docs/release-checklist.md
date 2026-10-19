@@ -7,7 +7,7 @@ Esta lista asegura que cada release del News Collector cumple los contratos oper
 - [ ] No hay regresiones abiertas en la matriz de pruebas manuales.
 
 ## 2. Presupuestos de Performance y Seguridad
-- [ ] Las pruebas de rendimiento aplicables se ejecutaron y pasaron realmente; `make perf` puede ocultar fallos. Ver `docs/performance_baselines.md`.
+- [ ] Las pruebas de rendimiento aplicables se ejecutaron y pasaron realmente; `make perf` puede terminar en verde sin haber ejecutado ninguna prueba (exit code 5 → `SKIPPED`). Ver `docs/performance_baselines.md`.
 - [ ] `make security` está libre de hallazgos HIGH y el gate (`scripts/security_gate.py`) marca estado `pass`.
 
 ## 3. Documentación y Comunicación

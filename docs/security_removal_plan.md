@@ -12,6 +12,12 @@ tornado 6.5.8 -> 6.5.10 (`GHSA-chx6-46f5-w4vp`, fix 6.5.9; pre-existing on
 main 22d3e86, not caused by the protobuf work) — both `security-dev` legs now
 report no HIGH findings.
 
+> **Historical note (2026-10-19, plan 156):** `semgrep` and its dependency tree
+> now live in the separate `requirements-semgrep.lock` (installed only into
+> `.venv-security`), so `requirements-security.lock` no longer contains
+> `semgrep`/`protobuf`. The resolution recorded above stands; the lock names in
+> the checklist describe the tree at the time of the fix.
+
 ## Dependency Chain
 
 The conflicting constraints come from:

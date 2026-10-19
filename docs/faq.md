@@ -11,7 +11,8 @@ ver [database_deployment.md](database_deployment.md).
 ## Respuestas HTTP 429
 
 Identificar la fuente y sus respuestas/reintentos en los registros. Revisar
-`[rate_limiting]` y la configuración de esa fuente en `config/`. Mantener el
+`[rate_limiting]` y la configuración de esa fuente en
+`news_collector/config/sources.yaml`. Mantener el
 backoff y las restricciones del proveedor. Una ejecución focalizada puede
 comprobar conectividad; no demuestra que el backlog se haya procesado.
 
