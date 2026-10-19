@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T18:11:05.978913+00:00",
+  "generated_at": "2026-10-19T18:32:35.994590+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -163,7 +163,6 @@
     ],
     "fly-serving.toml": null,
     "fly-tunnel.toml": null,
-    "gitleaks": null,
     "latest-log.txt": null,
     "logs/": [
       "archive"
@@ -259,6 +258,7 @@
       "158-ci-toolchain-truth.md",
       "159-429-clock-determinism.md",
       "160-gitleaks-830-gate.md",
+      "161-eslint-10-admin.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -282,6 +282,7 @@
       "verify_noise_filtering.py"
     ],
     "scripts/": [
+      "README.md",
       "__init__.py",
       "adversarial_review.py",
       "audit.coveragerc",
@@ -1342,6 +1343,7 @@
     "plans/158-ci-toolchain-truth.md",
     "plans/159-429-clock-determinism.md",
     "plans/160-gitleaks-830-gate.md",
+    "plans/161-eslint-10-admin.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
@@ -1519,6 +1521,7 @@
     "quality_gate/snapshots/02_printing/output.md",
     "quality_gate/snapshots/03_battery/output.md",
     "reports/evaluation/llm-routing-2026-09.md",
+    "scripts/README.md",
     "scripts/debugging/README.md",
     "spec-admin-api-surface.md",
     "spec-admin-stack-ports.md",

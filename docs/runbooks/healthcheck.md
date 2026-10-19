@@ -22,6 +22,13 @@ threshold fails rather than merely warning. Successful/warning results exit 0.
 The command prints human-readable check lines and summary, not a promised
 `--json` output format. `tests/test_healthcheck.py` owns regression coverage.
 
+CI's `healthcheck-smoke` job (`.github/workflows/ci.yml`) runs this command
+against an empty checkout, not an operational database. With no rows the
+`latest_ingest` check warns and the backlog threshold cannot be exceeded, so
+the job proves only that the command and schema initialization work. It does
+not assert the backlog or ingest thresholds; run the check against the real
+database for that.
+
 For connectivity failures, inspect the effective SQLite path, permissions,
 locks and migration revision. For backlog, inspect real collection errors
 and persistence; dry-run cannot establish that pending articles were processed.

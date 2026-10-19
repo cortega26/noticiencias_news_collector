@@ -12,7 +12,7 @@ Scope: workflow and local-parity reference for the current repo
 | Whole workspace (requires clean Git worktrees) | `bash scripts/verify_workspace.sh --backend . --frontend ../noticiencias` | both gates + schema parity + artifact checks; frontend builds may generate artifacts or upload derivatives depending on mode/credentials |
 
 These aggregate local commands cover many checks, not every workflow step.
-Backend `verify-ci` omits the build/performance/healthcheck jobs and the
+Backend `verify-ci` omits the build/performance/healthcheck-smoke jobs and the
 separate `quality-ci`, `quality-gate` and admin checks. Frontend CI adds Worker,
 coverage and dependency-graph checks. Follow the applicable workflow and
 change matrix; a clean-tree requirement does not make builds filesystem- or
@@ -35,7 +35,7 @@ Current jobs:
 - `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `admin-contracts` — admin OpenAPI/type drift check + admin tests, build and lint (see "Admin contracts")
-- `healthcheck` — collector health probe
+- `healthcheck-smoke` — runs the collector healthcheck against the empty CI checkout (the schema is created at runtime). With no rows, `latest_ingest` is a warning and the backlog threshold cannot be exceeded, so this job only proves the healthcheck command can run; it is not a dependency of `build-artifacts` and does not assert the operational thresholds. Use [`runbooks/healthcheck.md`](runbooks/healthcheck.md) against a real database for that.
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)
 
@@ -159,8 +159,21 @@ it, so it could silently describe a stale surface.
   - runs `make test-system`
 - `.github/workflows/source_reliability.yml`
   - source config, feed reliability, and LLM resilience checks
-- `.github/workflows/e2e.yml`
-  - legacy E2E contract validation workflow
+- `.github/workflows/e2e.yml` (E2E Contract Test)
+  - `pull_request` runs only when the diff touches the collector/export
+    surface: `news_collector/collectors/**`, `news_collector/contracts/**`,
+    `news_collector/system/**`, `scripts/run_collector.py`,
+    `scripts/validate_export.py`, `news_collector/config/sources.yaml`, or the
+    workflow itself. Pushes to `main`/`master` and manual dispatch remain
+    unfiltered.
+  - The dry run is limited to three fast tier-A RSS sources
+    (`ieee_spectrum_ai`, `ars_technica_technology_lab`, `nasa_news`) instead of
+    all configured sources, then `scripts/validate_export.py` validates the
+    export against the frontend contract and fails on a zero-article or invalid
+    export.
+  - It is not a branch-protection required check today. Do not make it one
+    while it is `paths:`-filtered: a PR outside those paths would leave the
+    required status pending.
 - `.github/workflows/publication-smoke.yml`
   - path-triggered on PRs touching `news_collector/contracts/frontend_schema.py`,
     `news_collector/contracts/publication_validation.py`,
