@@ -4,7 +4,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import astroPlugin from 'eslint-plugin-astro';
 import securityPlugin from 'eslint-plugin-security';
 import noSecretsPlugin from 'eslint-plugin-no-secrets';
-import astroParser from 'astro-eslint-parser';
+import * as astroParser from 'astro-eslint-parser';
 import globals from 'globals';
 import path from 'path';
 import { fileURLToPath } from 'url';

@@ -146,18 +146,14 @@ jobs:
         run: npm ci --legacy-peer-deps
         working-directory: apps/admin
       - name: Admin dependency advisories
-        # Gate critical npm advisories (plan 145). The admin app is the repo's
+        # Gate high npm advisories (plan 145). The admin app is the repo's
         # only npm surface; Dependabot's npm entry only opens bumps, so this
         # step is what actually blocks a regression.
-        # 2026-10-19: threshold lowered from high to critical because the five
-        # high advisories are one dev-lint chain with no fix compatible with the
-        # committed eslint config: braces@3.0.3 (GHSA-vfj7-8cjw-p6xm, no patched
-        # release) -> micromatch -> fast-glob -> astro-eslint-parser@1.4.0 ->
-        # eslint-plugin-astro@1.7.0. eslint-plugin-astro >=2 requires eslint 10
-        # and astro-eslint-parser >=2, which dropped the default ESM export that
-        # apps/admin/eslint.config.mjs imports. Revisit when braces ships a fix
-        # or the admin eslint config is migrated to the parser's named export.
-        run: npm audit --audit-level=critical
+        # 2026-10-19: back to high after plan 161 migrated the admin eslint
+        # chain to eslint 10 / eslint-plugin-astro 3 / astro-eslint-parser 3,
+        # which removes the braces@3.0.3 chain (GHSA-vfj7-8cjw-p6xm, no patched
+        # release) that forced the critical threshold in plan 145.
+        run: npm audit --audit-level=high
         working-directory: apps/admin
       - name: Admin contract drift check
         run: make admin-contracts-check
