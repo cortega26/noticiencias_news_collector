@@ -256,3 +256,86 @@ All must hold:
   load, one `preflight_llm_provider`, one engine per batch). Unblocked by this
   plan landing plus a decision on engine lifecycle (plan 149 touches engine
   shutdown). Not done here to keep the blast radius small.
+
+## Execution record
+
+Executor: plan 133 branch `advisor/133-publication-env-reuse`, based on
+`836ecc1` (worktree `/home/carlos/.local/share/opencode/worktree/62f07a/advisor-133-publication-env-reuse`).
+
+### Step 0 — baseline (unmodified checkout)
+
+`make lint` 0 · `make type` 0 · `make test` 0 · `make test-boundaries` 0 ·
+`make test-e2e` 0. All expected results matched.
+
+### Step 1 — before numbers (real publication attempt): NOT MEASURABLE HERE
+
+A real publish cannot run in this worktree: it requires the LLM preflight
+(Ollama/NVIDIA), a network clone of the real frontend repo, and the operator's
+DB/export state. The plan's named source of truth,
+`data/runtime/publication_attempts/*.frontend_validation.json`, is empty in a
+fresh checkout and `temp/target` does not exist. No before-number is invented
+here; the pre-change behaviour is instead pinned by the code path:
+`publication_pipeline.py` wiped `temp/target` and re-cloned it for every run,
+and `target_repo_publication.py` passed
+`install_dependencies=not (target_dir / "node_modules").exists()` — always true
+for a fresh clone, because `node_modules/` is gitignored in the frontend repo.
+
+### Step 4 — after numbers (deterministic two-publish fixture, not a real publish)
+
+Source: `tests/e2e_pipeline/test_publication_env_reuse_e2e.py`, which runs two
+consecutive publishes through the real engine against a local fixture remote
+and reports the sum of the recorded frontend-stage check durations (final
+tree; a second run measured 1.031 s / 0.828 s, i.e. the wall clock moves with
+machine load while the `npm ci` presence/absence does not):
+
+| publish | frontend stage | `npm ci` |
+|---|---|---|
+| 1st (fresh clone, `reused: false`) | 0.983 s | 0.173 s |
+| 2nd (reused checkout, `reused: true`) | 0.833 s | absent (skipped) |
+
+Caveat: the fixture's gate is tiny (a Node stub checker), so `npm ci` is only
+~20 % of its stage; the removed step is exactly `npm ci`, which the plan's
+baseline records as the dominant fixed cost of the real 619 MB checkout. The
+structural proof — not the wall clock — is the assertion that `npm_ci` appears
+in the first stage's executed checks and is absent from the second's, with the
+two publishes still producing byte-identical post bytes, filename, slug, date
+and permalink.
+
+### Step 3 refinement (deviation from the plan's bullet, disclosed)
+
+The plan's bullet "No marker or hash mismatch → run `npm ci`" is implemented
+with one carve-out: a checkout that carries `node_modules` **and** no marker
+(unknown provenance) keeps the pre-plan behaviour of using the installed tree
+instead of forcing an install. Reason: the pre-existing e2e harness
+(`news_collector/logic/workflows/pipeline_e2e.py`, outside this plan's scope)
+builds its target checkout by copying the frontend without any marker, so the
+literal bullet made every e2e publish run a real `npm ci`, which fails there:
+
+```
+CHECK npm_ci success=False rc=1
+  STDERR: npm error code EUSAGE | npm error | npm error The `npm ci` command can
+  only install with an existing package-lock.json or npm-shrinkwrap.json ...
+```
+
+(`make test-e2e` and the focused suite went red; reproduced with
+`tests/e2e_pipeline/test_pipeline_e2e.py::test_pipeline_e2e_scenarios[low_value_beats_high_value_regression]`.)
+
+With the carve-out: fresh clone (no `node_modules`) → install + marker written;
+reused checkout with a matching marker → skip; changed lock with a marker →
+install; unrecorded `node_modules` → same decision as the rule this plan
+replaces. The plan's own outcome therefore still holds (second publish skips
+`npm ci`, e2e green); the change is confined to in-scope files. Reviewers who
+prefer the literal bullet should instead authorise a marker write for the
+harness's copied checkout.
+
+### Pre-existing suite flake observed while verifying (not introduced here)
+
+`make test` is order-flaky in this repo: with `pytest-randomly` seed
+`722672841` seven unrelated tests fail (`tests/unit/collectors/test_admission.py`
+× 6, `tests/security/test_ssrf_protection.py` × 1) because an earlier test
+leaves a partial runtime-config snapshot in process state
+(`min_content_length` falls back to 1000; `DatabaseManager()` sees a foreign
+database config). Proof it is pre-existing: an unmodified snapshot of
+`836ecc1` (`git archive`) run with the same explicit test order fails the same
+seven tests. `make test` passed on the unmodified checkout in Step 0 with a
+different seed.
