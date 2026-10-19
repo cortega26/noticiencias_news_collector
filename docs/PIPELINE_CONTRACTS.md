@@ -167,10 +167,15 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   each hosted page in `webhook_pull_receipts` before advancing the durable
   endpoint cursor in `webhook_pull_cursors`. The cursor proves receipt, not
   application; staged rows keep their payload and retry lease until the local
-  handler succeeds. Application stays in hosted ID order and stops at the
-  first failed event. For an applying run, exit 0 reports no known pending
-  work, 1 reports a fetch, validation, or apply failure, and 2 reports a cap
-  or pending work; dry-run exit 0 means parse-only and makes no acknowledgments.
+  handler succeeds. Application stays in hosted ID order: the drain stops at
+  the first retryable failure and steps over receipts that exhausted their
+  delivery attempts (derived: `status='failed'` with
+  `attempts >= MAX_DELIVERY_ATTEMPTS`, 5 — payload and counter are retained,
+  no extra status value). For an applying run, exit 0 reports a completed
+  pass (malformed and exhausted receipts are a report), 1 reports an
+  unexpected failure resolving the endpoint/token or fetching, and 2 reports
+  remaining work (pending or leased rows, the safety cap, business
+  attention); dry-run exit 0 means parse-only and makes no acknowledgments.
   The endpoint remains read-only and admin-authenticated.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
