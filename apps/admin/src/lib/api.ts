@@ -125,11 +125,44 @@ export class ValidationError extends Error {
  * refused/CORS) or the dev proxy / a deployment gateway returned 502/503/504
  * because nothing healthy is listening behind it. Almost always "the API is
  * not running" in local dev.
+ *
+ * A 502/503/504 *with* a structured body is not this class: see
+ * {@link ApiError} (e.g. the published-content capability 503, plan 151).
  */
 export class NetworkError extends Error {
   constructor(message = 'Cannot reach the serving API — is it running? Try `make admin`.') {
     super(message);
     this.name = 'NetworkError';
+  }
+}
+
+/** The machine-readable error fields the serving API returns on 4xx/5xx. */
+interface StructuredErrorBody {
+  detail: string | undefined;
+  errorCode: string | undefined;
+}
+
+/**
+ * A non-2xx response whose body carried a structured `detail` and/or
+ * `error_code` (for example the 503 `published_content_unavailable` from the
+ * published-content routes). Unlike {@link NetworkError}, the API answered:
+ * the operator needs the reason it gave, not advice to debug the network.
+ *
+ * The message is the body's `detail` when present so logs and the generic
+ * error UI stay informative; `status`, `errorCode` and `detail` are exposed
+ * for callers that want to render the reason specifically.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly errorCode: string | undefined;
+  readonly detail: string | undefined;
+
+  constructor(status: number, body: StructuredErrorBody) {
+    super(body.detail ?? `HTTP ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.errorCode = body.errorCode;
+    this.detail = body.detail;
   }
 }
 
@@ -149,6 +182,30 @@ export class ConflictError<T = unknown> extends Error {
 }
 
 const API_BASE: string = (import.meta.env.PUBLIC_ADMIN_API_BASE as string) ?? '';
+
+/**
+ * Read a structured error body without assuming one is present: an empty,
+ * non-JSON, or differently-shaped body yields `null` and the caller keeps the
+ * previous generic handling. `content-type` is deliberately not trusted — it
+ * may be absent or wrong (proxies, test doubles) — so the body is attempted
+ * as JSON and only a `detail`/`error_code` object is accepted.
+ */
+async function readStructuredError(response: Response): Promise<StructuredErrorBody | null> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return null;
+  }
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return null;
+
+  const record = body as Record<string, unknown>;
+  const detail = typeof record.detail === 'string' && record.detail ? record.detail : undefined;
+  const errorCode =
+    typeof record.error_code === 'string' && record.error_code ? record.error_code : undefined;
+  if (!detail && !errorCode) return null;
+  return { detail, errorCode };
+}
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -185,14 +242,21 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await response.json().catch(() => ({}));
     throw new ConflictError(body, 'A conflicting operation is already in progress');
   }
-  // 502/503/504 never come from the app itself — it's the dev proxy or a
-  // deployment gateway saying nothing healthy answered on :8000.
+  // 502/503/504 normally come from the dev proxy or a deployment gateway
+  // saying nothing healthy answered on :8000 — but the app itself also
+  // answers 503 with a structured `error_code` when a capability is missing
+  // (published content, plan 151). Carry that reason instead of blaming the
+  // network.
   if (response.status === 502 || response.status === 503 || response.status === 504) {
+    const body = await readStructuredError(response);
+    if (body) throw new ApiError(response.status, body);
     throw new NetworkError(
       `Cannot reach the serving API (HTTP ${response.status}) — is it running? Try \`make admin\`.`
     );
   }
   if (!response.ok) {
+    const body = await readStructuredError(response);
+    if (body) throw new ApiError(response.status, body);
     throw new Error(`HTTP ${response.status}`);
   }
   return (await response.json()) as T;

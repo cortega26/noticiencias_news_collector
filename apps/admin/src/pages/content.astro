@@ -48,6 +48,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 
 <script>
   import {
+    ApiError,
     bulkResetContent,
     clearToken,
     getContent,
@@ -129,6 +130,20 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
+        return;
+      }
+      if (rowsEl && e instanceof ApiError && e.errorCode === 'published_content_unavailable') {
+        // This deployment cannot read the published content (no git/checkout):
+        // show the API's reason instead of a generic "network" error.
+        rowsEl.innerHTML = `
+          <tr>
+            <td colspan="5" class="px-5 py-10">
+              <div class="mx-auto max-w-2xl rounded-lg border border-rose-500/50 bg-ink-900 px-4 py-3 text-sm">
+                <p class="font-medium text-rose-400">El contenido publicado requiere el stack de administración local</p>
+                <p class="mt-1 text-ink-300">${esc(e.detail ?? e.message)}</p>
+              </div>
+            </td>
+          </tr>`;
         return;
       }
       if (rowsEl) {
