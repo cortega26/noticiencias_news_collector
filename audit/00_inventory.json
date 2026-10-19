@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T14:35:54.190437+00:00",
+  "generated_at": "2026-10-19T14:57:04.615951+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -251,6 +251,8 @@
       "150-dx-small-items.md",
       "151-serving-image-runtime-deps.md",
       "152-runtime-config-isolation.md",
+      "153-publish-batch-thread-lifecycle.md",
+      "154-stage4-critic-canary.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -581,6 +583,10 @@
     {
       "target": "admin-test",
       "description": "Run the Refinery admin GUI client unit tests (vitest)"
+    },
+    {
+      "target": "admin-lint",
+      "description": "Lint the Astro admin app (prettier + eslint)"
     },
     {
       "target": "webhooks-pull",
@@ -1306,6 +1312,8 @@
     "plans/150-dx-small-items.md",
     "plans/151-serving-image-runtime-deps.md",
     "plans/152-runtime-config-isolation.md",
+    "plans/153-publish-batch-thread-lifecycle.md",
+    "plans/154-stage4-critic-canary.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
