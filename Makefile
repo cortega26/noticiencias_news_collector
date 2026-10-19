@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery bootstrap-security docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery bootstrap-security docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check editorial-eval-install editorial-eval-replay
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -37,6 +37,7 @@ COVERAGE_DIR := $(REPORTS_DIR)/coverage
 PERF_DIR := $(REPORTS_DIR)/perf
 E2E_DIR := $(REPORTS_DIR)/e2e
 SECURITY_DIR := $(REPORTS_DIR)/security
+EDITORIAL_EVAL_DIR := $(REPORTS_DIR)/editorial-eval
 PLACEHOLDER_REPORT_JSON := $(REPORTS_DIR)/placeholders.json
 PLACEHOLDER_REPORT_MD := $(REPORTS_DIR)/placeholders.md
 PLACEHOLDER_SARIF := $(REPORTS_DIR)/placeholder-audit.sarif
@@ -182,6 +183,34 @@ admin-contracts-generate: bootstrap ## Regenerate the admin OpenAPI artifact and
 admin-contracts-check: bootstrap ## Fail if the admin OpenAPI artifact or generated TS types are stale (plan 080 Phase 2)
 	@PYTHONPATH=$(CURDIR) $(PYTHON_BIN) scripts/export_admin_openapi.py --check apps/admin/openapi.json
 	@cd apps/admin && npm run contracts:check
+
+EDITORIAL_EVAL_ENV := PROMPTFOO_PYTHON=$(CURDIR)/$(VENV)/$(BIN_DIR)/python \
+	PROMPTFOO_DISABLE_TELEMETRY=1 \
+	PROMPTFOO_DISABLE_UPDATE=1 \
+	PROMPTFOO_DISABLE_REMOTE_GENERATION=true \
+	PROMPTFOO_DISABLE_SHARING=1 \
+	PROMPTFOO_SELF_HOSTED=1
+
+editorial-eval-install: ## Install the dev-only Promptfoo replay package (plan 080 Phase 3; not used by test/CI)
+	@cd tools/editorial_eval && npm ci --no-audit --no-fund
+
+editorial-eval-replay: ## Prepare and run the offline editorial replay controls (plan 080 Phase 3; not part of ordinary test/CI)
+	@test -x $(CURDIR)/$(VENV)/$(BIN_DIR)/python || { echo "Run 'make bootstrap' first (missing $(VENV)/$(BIN_DIR)/python)." >&2; exit 1; }
+	@test -d tools/editorial_eval/node_modules || { echo "Run 'make editorial-eval-install' first (missing tools/editorial_eval/node_modules)." >&2; exit 1; }
+	@$(PYTHON_BIN) tools/editorial_eval/prepare.py \
+		--cases tests/data/editorial_eval/cases.jsonl \
+		--baseline tests/data/editorial_eval/baseline.jsonl \
+		--candidate tests/data/editorial_eval/candidate.jsonl \
+		--output-dir $(EDITORIAL_EVAL_DIR)
+	@cd tools/editorial_eval && $(EDITORIAL_EVAL_ENV) npm run eval:validate
+	@cd tools/editorial_eval && $(EDITORIAL_EVAL_ENV) npm run eval:baseline
+	@cd tools/editorial_eval && $(EDITORIAL_EVAL_ENV) npm run eval:replay; \
+		status=$$?; \
+		if [ $$status -ne 100 ]; then \
+			echo "Unexpected paired-replay exit $$status (expected negative-control exit 100)." >&2; \
+			exit 1; \
+		fi; \
+		echo "Paired replay returned the expected negative-control exit 100; see $(EDITORIAL_EVAL_DIR)/results.json."
 
 
 enrichment-eval: bootstrap ## Plan 048: evaluate production pattern_v1 + curated candidate against the reviewed corpus (reports/evaluation/)
