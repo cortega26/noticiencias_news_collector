@@ -15,6 +15,7 @@ except ImportError:
     PlaywrightTimeoutError = None  # type: ignore[assignment,misc]
 
 from news_collector.utils.logger import get_logger
+from news_collector.utils.security import validate_url_safety
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -124,6 +125,14 @@ class HeadlessEnricher:
                     )
                 except PlaywrightTimeoutError:
                     raise TimeoutError("Navigation timeout")  # noqa: B904
+
+                # 1b. Post-navigation safety re-check (plan 141): the page can
+                # redirect; validate the URL the browser actually landed on
+                # before its body is used as article content.
+                try:
+                    validate_url_safety(page.url)
+                except ValueError as exc:
+                    raise ValueError("Unsafe final URL after navigation") from exc
 
                 # 2. Allowed Actions
                 self._perform_actions(
