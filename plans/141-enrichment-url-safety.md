@@ -37,6 +37,31 @@ it also flagged a second-order effect: those 51 currently-passing tests only pas
 because real DNS resolves `example.com`, so the guard would give the unit suite a
 live-network dependency. Both points are now in scope below; nothing else changed.
 
+### Refresh note 2 (2026-10-19) — scope extension after a second correct STOP
+
+The second attempt implemented the whole plan (guard at the router + post-navigation
+re-checks, 21 new tests, hermetic `tests/unit/enrichment/` under `unshare -rn` = 88
+passed) and then STOPped because two declared gates went red on fixtures in files
+the plan had not scoped. That is the same class as refresh 1, so the scope now
+covers fixture-level stubbing **across `tests/`** (assertions stay frozen):
+
+1. `tests/unit/test_headless_enricher_simple.py::test_enrich_flow` — a bare
+   `MagicMock` page makes `page.url` a mock, so the new final-URL re-check fails
+   closed. Verified remedy: set `mock_page.url = "http://example.com"`.
+2. `tests/unit/collectors/test_rss_enrichment_fanout.py::test_pacing_per_host_cap_never_exceeded_under_fanout`
+   — candidates use `https://paced.example.com` (RFC 2606 reserved, never
+   resolves), so the guard rejects before `HostPacer`. Verified remedy: patch
+   `news_collector.enrichment.router.validate_url_safety` in the test's existing
+   patch block.
+3. `tests/integration/test_headless_activation.py` — fixtures use `http://test.com`
+   (does not resolve here); 2 of 3 tests fail after the change. Verified remedy:
+   one class-level guard patch.
+
+Also folded in from that attempt: `scrapling_http` follows redirects, so it needs
+the same final-URL re-check as the browser strategies (see Step 2 item 4) — its
+initial URL was guarded but its redirect targets were not, and `openai_blog` uses
+that strategy.
+
 ## Why this matters
 
 Article URLs come from third-party feed content. The HTTP path enforces a
@@ -109,6 +134,15 @@ the rest are `declared`.
 - `tests/unit/enrichment/test_router.py` — **fixture-level stubbing only**: add
   the class-level guard patch (and stub `socket.getaddrinfo` where a test relies
   on real DNS). Do not change any assertion, expected value, or test name there.
+- `tests/unit/enrichment/test_host_pacer.py`,
+  `tests/unit/test_headless_enricher_simple.py`,
+  `tests/unit/collectors/test_rss_enrichment_fanout.py`,
+  `tests/integration/test_headless_activation.py` — **fixture-level stubbing
+  only** (a class-level guard patch, or setting a mock's `url` attribute). Refresh
+  note 2 records the verified remedy for each. No assertion, expected value, or
+  test name may change.
+- **Rule for any other test file the guard breaks:** fixture-level stubbing is in
+  scope wherever the file lives; changing an expectation is not.
 
 **Out of scope** (do NOT touch):
 
@@ -187,6 +221,14 @@ stub is visible.
    Rule: keep the check cheap (no extra network beyond what the page load
    already did) and never bypass CSP or add flags.
 
+4. `scrapling_http` follows redirects (`Fetcher.get(..., follow_redirects=True)`),
+   so the **final** URL must be re-checked exactly like the browser strategies:
+   after the fetch, validate the response's final URL with the same guard; on
+   failure discard the body and return the module's failure shape. If the library
+   does not expose the final URL on the response object, STOP and report the
+   residual (it is a real hole: `openai_blog` uses this strategy) rather than
+   leaving it open silently.
+
 **Verify**: `.venv/bin/pytest tests/unit/enrichment -q --no-cov` → all pass; a
 test that a non-http scheme (e.g. `file:`) is rejected in the router; and the
 directory is **hermetic** — prove it by running it with DNS unavailable
@@ -231,6 +273,7 @@ including the new cases.
 All must hold:
 
 - [ ] `make lint`, `make type`, `make test`, `make test-boundaries` exit 0
+- [ ] `make test-integration` exits 0 (the guard touches integration fixtures too)
 - [ ] `grep -rn "validate_url_safety" news_collector/enrichment/` finds the guard
 - [ ] New tests cover loopback / link-local / non-http scheme / private range, per strategy, and fail on the pre-change code (prove once)
 - [ ] `tests/unit/enrichment/` is hermetic (no live DNS): the stub is visible in the diff and the offline run is recorded
@@ -249,10 +292,9 @@ All must hold:
   loosen the guard.
 - A production source turns out to rely on a non-http scheme → STOP and report
   (that source needs its own decision, not a bypass).
-- You need to change an *assertion*, an expected value, or a test name in
-  `tests/unit/enrichment/test_router.py` (or delete a test) to make the guard
-  pass → STOP and report; fixture-level stubbing is in scope, rewriting
-  expectations is not.
+- You need to change an *assertion*, an expected value, or a test name in any
+  test (or delete one) to make the guard pass → STOP and report; fixture-level
+  stubbing — anywhere in `tests/` — is in scope, rewriting expectations is not.
 
 ## Maintenance notes
 
