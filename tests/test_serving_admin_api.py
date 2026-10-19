@@ -718,6 +718,51 @@ def test_admin_source_health_missing_file_returns_empty(
         assert response.json()["sources"] == []
 
 
+def test_admin_source_health_export_read_once_until_file_changes(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 148: consecutive GETs reuse the parsed export (keyed by
+    mtime+size); an operator rewrite must still be visible on the next GET."""
+    export = {
+        "nature": {
+            "source_id": "nature",
+            "source_name": "Nature",
+            "operational_state": "healthy_full_text",
+        }
+    }
+    health_path = tmp_path / "exports" / "source_health.json"
+    health_path.parent.mkdir(parents=True)
+    health_path.write_text(json.dumps(export), encoding="utf-8")
+    monkeypatch.setattr(
+        "news_collector.serving.api.ADMIN_SOURCE_HEALTH_PATH", str(health_path)
+    )
+
+    real_read_text = Path.read_text
+    reads: list = []
+
+    def _counting_read_text(self, *args, **kwargs):
+        reads.append(str(self))
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", _counting_read_text)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.get("/v1/admin/sources/health", headers=_admin_headers())
+        second = api_client.get("/v1/admin/sources/health", headers=_admin_headers())
+        assert first.status_code == second.status_code == 200
+        assert first.json() == second.json()
+        assert reads.count(str(health_path)) == 1
+
+        export["nature"]["operational_state"] = "healthy_summary_only"
+        export["nature"]["articles_saved"] = 99_999
+        health_path.write_text(json.dumps(export), encoding="utf-8")
+        third = api_client.get("/v1/admin/sources/health", headers=_admin_headers())
+        assert reads.count(str(health_path)) == 2
+        assert third.json()["sources"][0]["operational_state"] == (
+            "healthy_summary_only"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Analytics
 # ---------------------------------------------------------------------------
@@ -764,6 +809,48 @@ def test_admin_config_excludes_secrets(api_client: TestClient) -> None:
         raw = json.dumps(body)
         assert "PLANTED-SECRET" not in raw
         assert "token" not in body["github"]
+
+
+def test_admin_config_loads_once_until_config_files_change(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 148: GET /v1/admin/config memoizes load_config() keyed on the
+    config files' mtime+size; changing one must be visible on the next GET
+    (the cached object itself is never handed to a caller)."""
+    from noticiencias.config_manager import load_config as _load
+
+    from news_collector.serving import api as serving_api
+
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        Path("config.toml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    loads: list = []
+
+    def _counting_load_config():
+        loads.append(1)
+        return _load(cfg_file)
+
+    monkeypatch.setattr(serving_api, "load_config", _counting_load_config)
+    monkeypatch.setattr(serving_api, "default_config_path", lambda: cfg_file)
+    monkeypatch.setattr(serving_api, "default_env_path", lambda: tmp_path / ".env")
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.get("/v1/admin/config", headers=_admin_headers())
+        second = api_client.get("/v1/admin/config", headers=_admin_headers())
+        assert first.status_code == second.status_code == 200
+        assert first.json() == second.json()
+        assert len(loads) == 1
+
+        cfg_file.write_text(
+            cfg_file.read_text(encoding="utf-8") + "\n# plan 148 probe\n",
+            encoding="utf-8",
+        )
+        third = api_client.get("/v1/admin/config", headers=_admin_headers())
+        assert third.status_code == 200
+        assert third.json() == first.json()
+        assert len(loads) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -1632,6 +1719,52 @@ def test_admin_prompts_roundtrip(api_client: TestClient, tmp_path, monkeypatch) 
 
         reloaded = yaml.safe_load(prompts_file.read_text(encoding="utf-8"))
         assert reloaded["editor"]["system"] == "Nuevo prompt."
+
+
+def test_admin_prompts_read_once_until_file_changes(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 148: prompts.yaml is parsed once per (mtime, size); a rewrite is
+    visible on the next GET."""
+    import yaml
+
+    from news_collector.serving import api as serving_api
+
+    prompts_file = tmp_path / "prompts.yaml"
+    prompts_file.write_text(
+        yaml.safe_dump({"auditor": {"system": "first version"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        serving_api,
+        "Path",
+        lambda *a, **k: prompts_file if "prompts" in str(a[0]) else Path(*a),
+    )
+
+    real_read_text = Path.read_text
+    reads: list = []
+
+    def _counting_read_text(self, *args, **kwargs):
+        reads.append(str(self))
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", _counting_read_text)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.get("/v1/admin/prompts", headers=_admin_headers())
+        second = api_client.get("/v1/admin/prompts", headers=_admin_headers())
+        assert first.status_code == second.status_code == 200
+        assert first.json()["prompts"]["auditor"]["system"] == "first version"
+        assert first.json() == second.json()
+        assert reads.count(str(prompts_file)) == 1
+
+        prompts_file.write_text(
+            yaml.safe_dump({"auditor": {"system": "second version"}}),
+            encoding="utf-8",
+        )
+        third = api_client.get("/v1/admin/prompts", headers=_admin_headers())
+        assert reads.count(str(prompts_file)) == 2
+        assert third.json()["prompts"]["auditor"]["system"] == "second version"
 
 
 def test_admin_images_queue_reads_briefs(
@@ -3081,6 +3214,45 @@ def test_admin_sources_list_still_carries_circuit_per_source(
         assert response.status_code == 200
         for item in response.json()["sources"]:
             assert "circuit" in item
+
+
+def test_admin_sources_catalog_read_once_until_file_changes(
+    api_client: TestClient, sources_yaml_path: Path, monkeypatch
+) -> None:
+    """Plan 148: the sources catalog is parsed once per (mtime, size); an
+    operator save through the workflow must be visible on the next GET."""
+    from news_collector.logic.workflows.source_catalog_workflow import (
+        SourceCatalogWorkflow,
+    )
+
+    real_load = SourceCatalogWorkflow.load
+    loads: list = []
+
+    def _counting_load(self):
+        loads.append(1)
+        return real_load(self)
+
+    monkeypatch.setattr(SourceCatalogWorkflow, "load", _counting_load)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.get("/v1/admin/sources", headers=_admin_headers())
+        second = api_client.get("/v1/admin/sources", headers=_admin_headers())
+        assert first.status_code == second.status_code == 200
+        assert first.json() == second.json()
+        assert len(loads) == 1
+
+        sources_yaml_path.write_text(
+            sources_yaml_path.read_text(encoding="utf-8")
+            + "\nplan148_probe:\n"
+            + "  name: Plan 148 probe\n"
+            + "  url: https://plan148.example.com/feed\n"
+            + "  category: science\n",
+            encoding="utf-8",
+        )
+        third = api_client.get("/v1/admin/sources", headers=_admin_headers())
+        assert len(loads) == 2
+        source_ids = {item["source_id"] for item in third.json()["sources"]}
+        assert "plan148_probe" in source_ids
 
 
 # Plan 111: triage list carries per-page similarity groups

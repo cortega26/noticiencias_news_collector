@@ -24,7 +24,7 @@ import urllib.robotparser as robotparser
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Set, Tuple
 from urllib.parse import urlparse
 
 import httpx
@@ -921,6 +921,8 @@ class BaseCollector(ABC):
         source_id: str,
         articles_data: Sequence[CollectorArticleModel | Dict[str, Any]],
         limit: int = 5,
+        *,
+        existing_urls: Optional[Set[str]] = None,
     ) -> int:
         """
         Apply strict sequential filters:
@@ -928,6 +930,13 @@ class BaseCollector(ABC):
            every collector; see news_collector.collectors.admission)
         2. Duplicate Check
         3. Top-N Sorting
+
+        ``existing_urls`` (plan 148): a caller that already ran the bulk
+        ``articles_exist`` lookup (the RSS collector filters duplicate
+        candidates before this save path) can pass its result here so the
+        same set is not recomputed. The set must hold canonicalized URLs —
+        exactly what ``articles_exist`` returns — and callers that cannot
+        prove that must omit it; the fallback recomputes the lookup here.
         """
         cfg = get_runtime_config()
         saved_count = 0
@@ -995,8 +1004,9 @@ class BaseCollector(ABC):
         # Filter 2: Duplicate Check (Already Published) - BULK OPTIMIZATION (QW4)
         unique_candidates: list[CollectorArticleModel] = []
         if valid_candidates:
-            candidate_urls = [str(a.url) for a in valid_candidates]
-            existing_urls = self.db_manager.articles_exist(candidate_urls)
+            if existing_urls is None:
+                candidate_urls = [str(a.url) for a in valid_candidates]
+                existing_urls = self.db_manager.articles_exist(candidate_urls)
 
             for article in valid_candidates:
                 if str(article.url) in existing_urls:
