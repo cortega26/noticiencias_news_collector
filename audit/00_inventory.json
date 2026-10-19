@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T20:25:33.996858+00:00",
+  "generated_at": "2026-10-19T20:55:28.010514+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -118,6 +118,7 @@
       "AGENTS.md",
       "ARCHITECTURE.md",
       "CHANGELOG.md",
+      "EDITORIAL_EVALUATION.md",
       "EDITORIAL_EVALUATION_PROTOCOL.md",
       "EDITORIAL_MODES.md",
       "INDEX.md",
@@ -539,6 +540,7 @@
       "config_editor.py",
       "diagnose_feeds.py",
       "diagnose_refinery_path.py",
+      "editorial_eval",
       "fix_makefile_tabs.py",
       "perf",
       "placeholder_audit.py",
@@ -619,6 +621,14 @@
     {
       "target": "admin-contracts-check",
       "description": "Fail if the admin OpenAPI artifact or generated TS types are stale (plan 080 Phase 2)"
+    },
+    {
+      "target": "editorial-eval-install",
+      "description": "Install the dev-only Promptfoo replay package (plan 080 Phase 3; not used by test/CI)"
+    },
+    {
+      "target": "editorial-eval-replay",
+      "description": "Prepare and run the offline editorial replay controls (plan 080 Phase 3; not part of ordinary test/CI)"
     },
     {
       "target": "enrichment-eval",
@@ -1137,6 +1147,7 @@
     "docs/AGENTS.md",
     "docs/ARCHITECTURE.md",
     "docs/CHANGELOG.md",
+    "docs/EDITORIAL_EVALUATION.md",
     "docs/EDITORIAL_EVALUATION_PROTOCOL.md",
     "docs/EDITORIAL_MODES.md",
     "docs/INDEX.md",
@@ -1292,8 +1303,10 @@
     "plans/080/spec.md",
     "plans/080/tests/README.md",
     "plans/080/tests/baseline.md",
+    "plans/080/tests/final-results.md",
     "plans/080/tests/phase-1-results.md",
     "plans/080/tests/phase-2-results.md",
+    "plans/080/tests/phase-3-results.md",
     "plans/080/tests/planning-results.md",
     "plans/080/todo.md",
     "plans/081/spec.md",
@@ -1592,7 +1605,8 @@
     "todo-refinery-gui.md",
     "todo-test-suite-audit.md",
     "todo-webhook-inbox-pull.md",
-    "todo.md"
+    "todo.md",
+    "tools/editorial_eval/README.md"
   ],
   "open_questions": []
 }
