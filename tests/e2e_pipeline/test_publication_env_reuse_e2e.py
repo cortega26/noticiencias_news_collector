@@ -296,7 +296,9 @@ def test_two_publishes_reuse_the_checkout_and_keep_identity(
     marker = second["marker_files"][0]
     assert target.resolve() not in marker.resolve().parents
     assert marker.name.startswith("npm_ci_")
-    assert json.loads(marker.read_text(encoding="utf-8"))["lock_sha256"]
+    marker_payload = json.loads(marker.read_text(encoding="utf-8"))
+    assert marker_payload["lock_sha256"]
+    assert marker_payload["provenance"] == "installed"
 
     # The installed toolchain the reuse exists to keep survived both runs.
     assert (target / "node_modules" / ".bin" / "prettier").exists()

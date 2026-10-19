@@ -328,6 +328,28 @@ replaces. The plan's own outcome therefore still holds (second publish skips
 prefer the literal bullet should instead authorise a marker write for the
 harness's copied checkout.
 
+### Step 3 revision (review round): assumed provenance + formatting-insensitive fingerprint
+
+An unmarked checkout that already had `node_modules` skipped the install and
+recorded nothing, so a lock change *after* that observation was silently
+skipped for that checkout class (the operator's pre-existing `temp/target` is
+exactly it: deps present, no marker). The decision now records the observed
+fingerprint with `"provenance": "assumed"`, logs the structured event
+`publication.frontend_dependencies.assumed`, and still skips the install; the
+post-`npm ci` write records `"provenance": "installed"`. Tests cover:
+unmarked tree → no install + assumed marker; the next lock change → install;
+real install → installed provenance. `read_frontend_dependency_marker` still
+returns only the fingerprint string, so the comparison is unaffected.
+
+The fingerprint hashes the *canonical* JSON of both manifests instead of raw
+bytes: the gate itself formats the checkout (`npx prettier --write`), and on
+the e2e harness's fixture that rewrite normalises `package.json` (trailing
+newline added), which a byte-level fingerprint read as a dependency change —
+forcing a real `npm ci` on the second validation call of the self-repair path
+(caught by `test_frontend_validation_failure_is_classified_for_taxonomy_and_permalink`).
+Canonical JSON (sorted keys, fixed separators) keeps the trigger sensitive to
+dependency changes only; unparsable content is still compared verbatim.
+
 ### Pre-existing suite flake observed while verifying (not introduced here)
 
 `make test` is order-flaky in this repo: with `pytest-randomly` seed

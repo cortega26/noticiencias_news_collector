@@ -304,20 +304,62 @@ def test_dependencies_need_install_without_node_modules(tmp_path) -> None:
     assert frontend_dependencies_need_install(checkout, marker) is True
 
 
-def test_dependencies_without_recorded_install_keep_previous_behaviour(
-    tmp_path,
+def test_dependencies_without_marker_record_assumed_provenance(
+    tmp_path, monkeypatch
 ) -> None:
     """A tree that carries dependencies but no marker has unrecorded
     provenance (operator-provisioned checkout, e2e harness fixture). It is
     used as-is — exactly what the pre-plan `node_modules.exists()` rule did —
-    so the fingerprint never forces an install that did not happen before."""
+    but the current fingerprint is recorded as *assumed* so that a later
+    manifest change still triggers an install instead of being skipped."""
+    from news_collector.logic.workflows import frontend_publication_validation as fvp
+
+    events: list = []
+    monkeypatch.setattr(
+        fvp.logger, "warning", lambda *a, **k: events.append(a[0] if a else None)
+    )
+    checkout = _make_frontend_checkout(tmp_path)
+    (checkout / "node_modules").mkdir()
+    marker = frontend_dependency_marker_path(
+        checkout, tmp_path / "runtime" / "frontend_deps"
+    )
+    fingerprint = frontend_dependency_fingerprint(checkout)
+
+    assert not marker.exists()
+    assert frontend_dependencies_need_install(checkout, marker) is False
+
+    structured = [event for event in events if isinstance(event, dict)]
+    assert len(structured) == 1
+    assert structured[0]["event"] == "publication.frontend_dependencies.assumed"
+    assert structured[0]["target_dir"] == str(checkout)
+    assert structured[0]["marker_path"] == str(marker)
+    assert structured[0]["lock_sha256"] == fingerprint
+
+    recorded = json.loads(marker.read_text(encoding="utf-8"))
+    assert recorded["provenance"] == "assumed"
+    assert recorded["lock_sha256"] == fingerprint
+    assert read_frontend_dependency_marker(marker) == fingerprint
+
+    # The lock change that follows the observation is detected.
+    (checkout / "package-lock.json").write_text(
+        f"{json.dumps({**_PACKAGE_LOCK, 'lockfileVersion': 2}, indent=2)}\n",
+        encoding="utf-8",
+    )
+    assert frontend_dependencies_need_install(checkout, marker) is True
+
+
+def test_dependencies_without_recorded_install_keep_previous_behaviour(
+    tmp_path,
+) -> None:
+    """The assumed-provenance write never forces an install that did not
+    happen before: a second call with unchanged manifests still skips."""
     checkout = _make_frontend_checkout(tmp_path)
     (checkout / "node_modules").mkdir()
     marker = frontend_dependency_marker_path(
         checkout, tmp_path / "runtime" / "frontend_deps"
     )
 
-    assert not marker.exists()
+    assert frontend_dependencies_need_install(checkout, marker) is False
     assert frontend_dependencies_need_install(checkout, marker) is False
 
 
@@ -353,6 +395,26 @@ def test_dependencies_reinstall_when_lock_changes(tmp_path) -> None:
     )
 
     assert frontend_dependencies_need_install(checkout, marker) is True
+
+
+def test_dependency_fingerprint_ignores_manifest_formatting(tmp_path) -> None:
+    """The gate itself formats the checkout (`npx prettier --write`), so a
+    formatting-only rewrite of a manifest must not force a re-install."""
+    checkout = _make_frontend_checkout(tmp_path)
+    (checkout / "node_modules").mkdir()
+    marker = frontend_dependency_marker_path(
+        checkout, tmp_path / "runtime" / "frontend_deps"
+    )
+    fingerprint_before = frontend_dependency_fingerprint(checkout)
+    assert frontend_dependencies_need_install(checkout, marker) is False
+
+    (checkout / "package.json").write_text(
+        f"{json.dumps(json.loads((checkout / 'package.json').read_text()), indent=4)}\n",
+        encoding="utf-8",
+    )
+
+    assert frontend_dependency_fingerprint(checkout) == fingerprint_before
+    assert frontend_dependencies_need_install(checkout, marker) is False
 
 
 def test_dependency_marker_path_is_keyed_by_checkout(tmp_path) -> None:
@@ -407,6 +469,8 @@ def test_frontend_validation_writes_marker_after_successful_install(tmp_path) ->
     assert read_frontend_dependency_marker(marker) == frontend_dependency_fingerprint(
         checkout
     )
+    # A real install records installed provenance, not an assumption.
+    assert json.loads(marker.read_text(encoding="utf-8"))["provenance"] == "installed"
     assert frontend_dependencies_need_install(checkout, marker) is False
 
 
