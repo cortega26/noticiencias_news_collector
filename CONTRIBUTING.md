@@ -14,15 +14,32 @@ Thanks for helping us keep the Noticiencias stack healthy! This document capture
 
 ## Pre-commit hooks
 
-- Install the hooks once per clone:
+- Install both hook stages once per clone:
   ```bash
-  pre-commit install
+  .venv/bin/pre-commit install --hook-type pre-commit --hook-type pre-push
   ```
-- Hooks run automatically on staged files. Para verificar todo antes de abrir un PR:
+  The `pre-push` stage runs the gitleaks secret scan. `pre-commit install`
+  alone installs only the `pre-commit` stage, so the secret scan would never
+  run locally.
+- The `gitleaks-push` hook uses `language: system`, so **`gitleaks` must be on
+  your `PATH`** and its version must match CI: **8.30.1** (the
+  `GITLEAKS_VERSION` pin in `.github/workflows/quality.yml`). A different
+  local version can disagree with the committed baseline; install 8.30.1 from
+  its release archive rather than an older system package. The same binary is
+  used by `make security`.
+- Hooks run automatically on staged files, and the secret scan runs on push.
+  Para verificar todo antes de abrir un PR:
   ```bash
   make lint
   ```
 - `make lint` checks Makefile tabs, Black, Ruff and deprecated Streamlit arguments; it does not invoke pre-commit or mypy. Run `pre-commit run --all-files` explicitly for the hook suite. isort owns import ordering in the hook configuration; Ruff I rules are disabled.
+
+## Repository scripts
+
+Start with [`scripts/README.md`](scripts/README.md) when you need an entrypoint.
+It groups the scripts by purpose and names the ones referenced by the Makefile,
+workflows and docs; everything else is listed as a one-off/historical script.
+Add new scripts to that index in the same PR.
 
 ## Quality gate checklist
 

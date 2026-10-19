@@ -120,6 +120,9 @@ dmypy.json
 .pyre/
 
 # Project-specific ignores
+# gitleaks is installed locally (8.30.1, matching CI) and must not be
+# committed; the pre-push hook and `make security` resolve it from PATH.
+/gitleaks
 *.db
 data/logs/
 data/dlq/
