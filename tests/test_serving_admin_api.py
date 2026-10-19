@@ -1176,6 +1176,9 @@ def test_admin_publish_lifecycle_and_db_survives(
                     "pr_url": "https://github.com/org/noticiencias/pull/9",
                     "final_slug": "x",
                     "stages": [],
+                    # The canonical writer always stamps generated_at; the
+                    # run-131 freshness gate requires it (written mid-run).
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                 }
             ),
             encoding="utf-8",
@@ -2916,6 +2919,9 @@ def test_admin_publish_batch_lifecycle_reports_per_item(
                     "pr_url": f"https://github.com/org/noticiencias/pull/{process_id}",
                     "final_slug": f"slug-{process_id}",
                     "stages": [],
+                    # The canonical writer always stamps generated_at; the
+                    # run-131 freshness gate requires it (written mid-run).
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                 }
             ),
             encoding="utf-8",
