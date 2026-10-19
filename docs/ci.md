@@ -33,11 +33,16 @@ Current jobs:
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
 - `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
+- `admin-contracts` — admin OpenAPI/type drift check + admin tests, build and lint (see "Admin contracts")
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)
 
 The `full` profile is the one that measures the `e2e`-marked suites (admin/public API), which the unit profile never collects; the unit profile remains the fast local gate behind `make type`.
+
+`make e2e` is a local gate (not a CI job) with the same contract as `make perf`:
+it fails on any real test failure and only exits cleanly when zero `e2e` tests are
+collected, writing `reports/e2e/SKIPPED`.
 
 These jobs are the current automation reality. Documentation should not claim a different required-check set than the workflow actually defines.
 
@@ -48,7 +53,7 @@ These jobs are the current automation reality. Documentation should not claim a 
 - `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses `--config auto` and is non-blocking
 - `make quality-gate` — snapshot-first quality gate (no LLM)
 - `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy; one bounded allowlist exception (`GHSA-84m7-p3x7-pcfv`, `mcp` via semgrep's exact pin, dev tooling only) expires 2026-11-30, durable fix tracked by plan 144
-- gitleaks secret scan (binary downloaded in CI, `make security` runs it locally when installed)
+- gitleaks secret scan (binary downloaded in CI; locally `make security` runs it when installed and fails with an explicit message when it is missing — set `SKIP_SECRET_SCAN=1` to skip that leg deliberately). The CI pin lives in `GITLEAKS_VERSION` in `.github/workflows/quality.yml`; use the same version locally.
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 
 ## Local Parity Commands
@@ -92,7 +97,9 @@ make verify-ci
   Python + Node 24 and `npm ci` in `apps/admin`, then runs
   `make admin-contracts-check` (fresh OpenAPI export compared against
   `apps/admin/openapi.json`, then `openapi-typescript --check` on the committed
-  types), `make admin-test` and `make admin-build`.
+  types), `make admin-test`, `make admin-build` and `make admin-lint`
+  (`prettier --check` + `eslint`, the same check as the `admin-lint` pre-commit
+  hook).
 - Local regeneration: `make admin-contracts-generate`.
 - Ownership: Pydantic models in `news_collector/contracts/admin.py` are the
   source; the exporter is the only writer of `apps/admin/openapi.json`; the

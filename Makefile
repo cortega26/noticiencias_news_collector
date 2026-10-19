@@ -31,6 +31,7 @@ PYTHON_REFINERY := $(VENV_REFINERY)/$(BIN_DIR)/python
 REPORTS_DIR := reports
 COVERAGE_DIR := $(REPORTS_DIR)/coverage
 PERF_DIR := $(REPORTS_DIR)/perf
+E2E_DIR := $(REPORTS_DIR)/e2e
 SECURITY_DIR := $(REPORTS_DIR)/security
 PLACEHOLDER_REPORT_JSON := $(REPORTS_DIR)/placeholders.json
 PLACEHOLDER_REPORT_MD := $(REPORTS_DIR)/placeholders.md
@@ -116,7 +117,7 @@ test-refinery: bootstrap-refinery ## Run AppTest-based characterization tests fo
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" REFINERY_UI_UNSAFE_ALLOW=1 PYTHONPATH=$(CURDIR) $(PYTHON_REFINERY) -m pytest -c tools/ci/pytest_refinery.toml --rootdir=.
 
 
-.PHONY: serve admin admin-install admin-dev admin-build admin-test webhooks-pull
+.PHONY: serve admin admin-install admin-dev admin-build admin-test admin-lint webhooks-pull
 serve: ## Run the serving API (FastAPI, autoreload). Port: SERVING_PORT, or `make serve API_PORT=9000` (default 8000, honored strictly)
 	@NEWS_COLLECTOR_PATH="$(CURDIR)" SERVING_PORT="$(or $(SERVING_PORT),$(or $(API_PORT),8000))" $(PYTHON_BIN) -m news_collector.serving
 
@@ -139,6 +140,9 @@ admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/
 
 admin-test: ## Run the Refinery admin GUI client unit tests (vitest)
 	@cd apps/admin && npm test
+
+admin-lint: ## Lint the Astro admin app (prettier + eslint)
+	@cd apps/admin && npm run lint
 
 webhooks-pull: bootstrap ## Replay frontend callback receipts from the hosted serving inbox into the local DB (ADR-0011). Needs BACKEND_ADMIN_URL or BACKEND_WEBHOOK_URL + ADMIN_API_KEY; extra flags via ARGS=
 	@$(PYTHON_BIN) scripts/ops/pull_webhook_receipts.py $(ARGS)
@@ -308,7 +312,15 @@ test-boundaries: bootstrap ## Run D1 System Boundary tests (Behavior only, no co
 	@PYTHONPATH=$(CURDIR) $(PYTEST) tests/unit/system/test_d1_pipeline_boundaries.py --no-cov
 
 e2e: bootstrap ## Run end-to-end pytest suite (marked tests)
-	@$(PYTEST) -m "e2e" || { echo "E2E tests require additional setup and were skipped."; true; }
+	@mkdir -p $(E2E_DIR)
+	@$(PYTEST) -m "e2e" --junitxml=$(E2E_DIR)/junit.xml; \
+	code=$$?; \
+	if [ $$code -eq 5 ]; then \
+		echo "E2E tests not defined; skipped."; \
+		touch $(E2E_DIR)/SKIPPED; \
+	elif [ $$code -ne 0 ]; then \
+		exit $$code; \
+	fi
 
 perf: bootstrap ## Run performance-focused pytest suite (marked tests)
 	@mkdir -p $(PERF_DIR)
@@ -336,8 +348,11 @@ security: bootstrap ## Run security and dependency scans
 	@if command -v gitleaks >/dev/null 2>&1; then \
 		gitleaks detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json --report-format json --report-path $(GITLEAKS_REPORT) --no-banner || true; \
 		$(PYTHON_BIN) scripts/security_gate.py gitleaks $(GITLEAKS_REPORT) --severity HIGH --status $(SECURITY_STATUS); \
+	elif [ "$${SKIP_SECRET_SCAN:-0}" = "1" ]; then \
+		echo "[security] secret scan skipped by SKIP_SECRET_SCAN=1"; \
 	else \
-		echo "[security] gitleaks not installed; skipping secret scan (CI installs it)."; \
+		echo "[security] gitleaks not installed; install it or set SKIP_SECRET_SCAN=1 to skip explicitly" >&2; \
+		exit 1; \
 	fi
 
 security-dev: bootstrap ## Run security audit on dev and refinery environments
