@@ -23,6 +23,18 @@ expiration. `security-dev` evaluates through that same allowlist; no CLI-level
 exception exists. Mypy is limited to `MYPY_TARGETS` in `Makefile`, not
 strict checking of all code.
 
+Current exception (2026-10-19): `GHSA-84m7-p3x7-pcfv` for `mcp==1.29.0` is
+allowlisted until **2026-11-30**. `mcp` is semgrep 1.180.0's MCP server;
+semgrep pins `mcp==1.29.0` exactly (no release through 1.181.0 lifts the pin),
+so the advisory's fix versions (1.30.0/2.2.0) are unreachable through
+`scripts/sync_lockfiles.py` — the gate correctly failed closed and the operator
+chose a bounded exception. It is dev-only: absent from `requirements.lock` and
+`requirements-refinery.lock` and from every image. The durable fix (decouple
+semgrep from the audited environment) is plan 144; after the expiry the gate
+fails closed again by design. `security-dev` runs in
+`.github/workflows/quality.yml`, so this exception is exercised by CI instead of
+a manual command.
+
 Placeholder audits and inventory workflows are separate automation; see their
 YAML and [ci.md](ci.md) for triggers. Dependabot configuration lives in
 `.github/dependabot.yml`; it is not a substitute for lockfile audit results.
