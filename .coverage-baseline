@@ -420,6 +420,10 @@
           "branch": 81.48,
           "line": 94.07
         },
+        "logic/workflows/published_content.py": {
+          "branch": 57.58,
+          "line": 76.69
+        },
         "logic/workflows/published_content_utils.py": {
           "branch": 100.0,
           "line": 100.0
