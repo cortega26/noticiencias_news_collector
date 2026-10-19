@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T18:32:35.994590+00:00",
+  "generated_at": "2026-10-19T19:08:34.588926+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -277,6 +277,7 @@
     ],
     "requirements-refinery.lock": null,
     "requirements-security.lock": null,
+    "requirements-semgrep.lock": null,
     "requirements.lock": null,
     "scratch/": [
       "verify_noise_filtering.py"
@@ -558,6 +559,10 @@
     {
       "target": "bootstrap-refinery",
       "description": "Provision refinery environment"
+    },
+    {
+      "target": "bootstrap-security",
+      "description": "Provision isolated semgrep tool environment"
     },
     {
       "target": "migrate",
@@ -910,8 +915,7 @@
     ],
     "optional_security": [
       "bandit>=1.7.9",
-      "pip-audit>=2.9.0",
-      "semgrep>=1.60.0"
+      "pip-audit>=2.9.0"
     ]
   },
   "function_index_sample": {

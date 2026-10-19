@@ -13,9 +13,9 @@ does not prove it is required for merge.
 | Entry point | Current behavior |
 | --- | --- |
 | `make security` | pip-audit and Bandit JSON interpreted by `scripts/security_gate.py`; gitleaks only if installed locally |
-| `make quality-ci` | Context validation, Ruff, scoped mypy plus coverage tests, Bandit and pip-audit gates; Semgrep `--config auto` is non-blocking |
-| `.github/workflows/quality.yml` | Installs gitleaks, runs quality checks and the separate secret scan; uploads reports |
-| `make security-dev` | Audits security/refinery locks through the shared `scripts/security_gate.py` policy (`PIP_AUDIT_ALLOWLIST`, reason + expiry enforced), like every pip-audit leg |
+| `make quality-ci` | Context validation, Ruff, scoped mypy plus coverage tests, Bandit and pip-audit gates; Semgrep runs from the isolated `.venv-security` with `--config auto` and is non-blocking |
+| `.github/workflows/quality.yml` | Installs gitleaks, provisions `.venv-security` (cached on `requirements-semgrep.lock`), runs quality checks and the separate secret scan; uploads reports |
+| `make security-dev` | Audits security/refinery locks through the shared `scripts/security_gate.py` policy (`PIP_AUDIT_ALLOWLIST`, reason + expiry enforced), like every pip-audit leg; the security lock is semgrep-free and the allowlist is empty |
 
 The gate applies scanner-specific severity handling. pip-audit exceptions in
 `PIP_AUDIT_ALLOWLIST` require reasons and expiry dates and are checked for
@@ -23,17 +23,23 @@ expiration. `security-dev` evaluates through that same allowlist; no CLI-level
 exception exists. Mypy is limited to `MYPY_TARGETS` in `Makefile`, not
 strict checking of all code.
 
-Current exception (2026-10-19): `GHSA-84m7-p3x7-pcfv` for `mcp==1.29.0` is
-allowlisted until **2026-11-30**. `mcp` is semgrep 1.180.0's MCP server;
-semgrep pins `mcp==1.29.0` exactly (no release through 1.181.0 lifts the pin),
-so the advisory's fix versions (1.30.0/2.2.0) are unreachable through
-`scripts/sync_lockfiles.py` — the gate correctly failed closed and the operator
-chose a bounded exception. It is dev-only: absent from `requirements.lock` and
-`requirements-refinery.lock` and from every image. The durable fix (decouple
-semgrep from the audited environment) is plan 144; after the expiry the gate
-fails closed again by design. `security-dev` runs in
-`.github/workflows/quality.yml`, so this exception is exercised by CI instead of
-a manual command.
+The last exception, `GHSA-84m7-p3x7-pcfv` for `mcp==1.29.0`, was **retired on
+2026-10-19** (plan 156). `mcp` arrived through semgrep, which pins it exactly
+(no release through 1.181.0 lifts the pin), so the advisory's fix versions
+(1.30.0/2.2.0) were unreachable through `scripts/sync_lockfiles.py`. Rather
+than renew the exception, semgrep moved out of the audited `security` extra
+into a dedicated `sast` extra and `requirements-semgrep.lock`, installed only
+into `.venv-security`. `requirements-security.lock` is semgrep/mcp-free, so
+`pip-audit` is green without a suppression and `PIP_AUDIT_ALLOWLIST` is empty.
+`security-dev` runs in `.github/workflows/quality.yml`, so the empty allowlist
+is exercised by CI instead of a manual command.
+
+**Deliberate audit-scope decision.** Semgrep's own dependency tree is no longer
+audited by `security-dev`. Semgrep is a dev/CI tool with the same posture as the
+gitleaks binary: it ships in no image, is not imported by first-party code, and
+is installed from a hash-pinned lock. Revisit if its tree needs auditing —
+adding it back to an audited lock re-introduces the `mcp` exception until
+upstream lifts the pin.
 
 Placeholder audits and inventory workflows are separate automation; see their
 YAML and [ci.md](ci.md) for triggers. Dependabot configuration lives in
