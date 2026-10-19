@@ -1334,8 +1334,20 @@ def create_app(  # noqa: C901
             if article.cluster_id is None:
                 return []
 
+            # Plan 148: select exactly the columns RelatedArticleResponse
+            # serializes (same projection discipline as
+            # ``_build_article_payload``), instead of hydrating full Article
+            # rows — content/article_metadata are the large columns and are
+            # never read here. Filter, ordering and limit stay byte-identical.
             related = (
-                session.query(Article)
+                session.query(
+                    Article.id,
+                    Article.title,
+                    Article.source_id,
+                    Article.source_name,
+                    Article.url,
+                    Article.final_score,
+                )
                 .filter(
                     Article.cluster_id == article.cluster_id,
                     Article.id != article_id,
