@@ -416,7 +416,9 @@ export interface paths {
          *     `article_id`, must be in the current export) or ingest+refine a
          *     `article_url`, then open a PR against the frontend repo. Exactly one
          *     of `article_id` / `article_url` is required. A second call while one
-         *     run is active yields 409 with the active run's id.
+         *     run is active yields 409 with the active run's id; an article whose
+         *     brief still needs an editorial image yields 409 `image_required`
+         *     without starting a run.
          */
         post: operations["admin_publish_v1_admin_publish_post"];
         delete?: never;
@@ -1069,6 +1071,8 @@ export interface components {
             article_id: string;
             /** Draft Alt Text */
             draft_alt_text?: string | null;
+            /** Generated Prompt */
+            generated_prompt?: string | null;
             /** News Angle */
             news_angle?: string | null;
             /** Reason */
@@ -2404,7 +2408,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminPublishStarted"];
                 };
             };
-            /** @description A publication run is already queued or running. */
+            /** @description A publication run is already queued or running (the body carries its run id), or the article's image brief still needs an editorial image (`detail.error_code=image_required`). */
             409: {
                 headers: {
                     [name: string]: unknown;

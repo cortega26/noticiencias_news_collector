@@ -270,6 +270,7 @@ class TestResolve:
 
         assert result.resolved is False
         assert result.queued_brief is True
+        assert result.reason == "image_download_failed"
         image_briefs_stub.save_brief.assert_called_once()
 
     def test_img_07_missing_image_url_queues_brief(
@@ -288,6 +289,7 @@ class TestResolve:
 
         assert result.resolved is False
         assert result.queued_brief is True
+        assert result.reason == "missing_source_image"
 
     def test_img_08_default_placeholder_queues_brief(
         self, handler, image_briefs_stub, target_dir
@@ -305,6 +307,7 @@ class TestResolve:
 
         assert result.resolved is False
         assert result.queued_brief is True
+        assert result.reason == "placeholder_image_debt"
 
     def test_img_auto_alt_text_set_when_missing(
         self, handler, image_briefs_stub, target_dir
@@ -349,6 +352,7 @@ class TestResolve:
 
         assert result.resolved is False
         assert result.queued_brief is True
+        assert result.reason == "missing_source_image"
         download.assert_not_called()
 
     def _alt_brief(self, alt="Fotografía real del experimento."):
@@ -469,6 +473,7 @@ class TestThirdPartyImagePolicy:
         assert result.resolved is False
         assert result.queued_brief is True
         assert result.image_url is None
+        assert result.reason == "third_party_image_blocked"
         assert "licen" in (result.message or "")
         download.assert_not_called()
         saved = image_briefs_stub.build_brief.call_args

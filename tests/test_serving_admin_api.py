@@ -255,6 +255,41 @@ def _join_worker_thread(started_threads: list, name: str, timeout: float = 10.0)
     return worker
 
 
+def _seed_image_brief(
+    tmp_path: Path,
+    *,
+    article_id: str = "3724",
+    status: str = "needs_editorial_image",
+    slug: str = "test-image-brief",
+    prompt: str = (
+        "Escena editorial fotorrealista de un laboratorio moderno con luz "
+        "natural y un hallazgo médico sobre la mesa."
+    ),
+):
+    """Persist one brief in an isolated store and return it."""
+    from news_collector.contracts.image_brief import ImageBriefModel
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(
+        ImageBriefModel(
+            slug=slug,
+            article_id=article_id,
+            status=status,
+            reason="missing_source_image",
+            topic="salud",
+            news_angle="nuevo hallazgo",
+            scientific_domain="medicina",
+            subject_scene="laboratorio",
+            tone="informativo",
+            draft_alt_text="Imagen de laboratorio",
+            generated_prompt=prompt,
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+    return store
+
+
 # ---------------------------------------------------------------------------
 # Auth (mirrors verify_webhook_token, distinct ADMIN_API_KEY)
 # ---------------------------------------------------------------------------
@@ -1307,6 +1342,115 @@ def test_admin_publish_lifecycle_and_db_survives(
         assert after.status_code == 200
 
 
+def test_admin_publish_refuses_needs_editorial_image_without_a_run(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 168: a pending brief is a structured 409, never a doomed run."""
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStartResult,
+        PublicationRunWorkflow,
+    )
+
+    prompt = (
+        "Escena editorial fotorrealista de un grupo neandertal cuidando a un "
+        "herido junto al fuego, luz cálida de cueva."
+    )
+    store = _seed_image_brief(tmp_path, prompt=prompt)
+    store_kwargs: dict = {}
+
+    def _store(*args, **kwargs):
+        store_kwargs.update(kwargs)
+        return store
+
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore", _store
+    )
+    start_mock = MagicMock(
+        return_value=PublicationRunStartResult(
+            status="started", run_id=99, detail="Publication started."
+        )
+    )
+    monkeypatch.setattr(PublicationRunWorkflow, "start", start_mock)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish", json={"article_id": 3724}, headers=_admin_headers()
+        )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"] == {
+        "error_code": "image_required",
+        "slug": "test-image-brief",
+        "article_id": 3724,
+        "prompt": prompt,
+    }
+    # The lookup must never create data/ directories (read-only pre-check).
+    assert store_kwargs == {"read_only": True}
+    start_mock.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["editorial_image_ready", "resolved"])
+def test_admin_publish_proceeds_when_the_image_is_ready(
+    api_client: TestClient, tmp_path, monkeypatch, status: str
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStartResult,
+        PublicationRunWorkflow,
+    )
+
+    store = _seed_image_brief(tmp_path, status=status)
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a, **k: store,
+    )
+    start_mock = MagicMock(
+        return_value=PublicationRunStartResult(
+            status="started", run_id=99, detail="Publication started."
+        )
+    )
+    monkeypatch.setattr(PublicationRunWorkflow, "start", start_mock)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish", json={"article_id": 3724}, headers=_admin_headers()
+        )
+
+    assert response.status_code == 202, response.text
+    assert response.json()["run_id"] == "99"
+    start_mock.assert_called_once_with(article_id=3724, article_url=None)
+
+
+def test_admin_publish_proceeds_without_an_image_brief(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStartResult,
+        PublicationRunWorkflow,
+    )
+
+    empty_store = ImageBriefStore(tmp_path)
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a, **k: empty_store,
+    )
+    start_mock = MagicMock(
+        return_value=PublicationRunStartResult(
+            status="started", run_id=99, detail="Publication started."
+        )
+    )
+    monkeypatch.setattr(PublicationRunWorkflow, "start", start_mock)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish", json={"article_id": 3724}, headers=_admin_headers()
+        )
+
+    assert response.status_code == 202, response.text
+    assert response.json()["run_id"] == "99"
+    start_mock.assert_called_once_with(article_id=3724, article_url=None)
+
+
 def test_admin_publish_concurrent_yields_one_202_one_409(
     api_client: TestClient, monkeypatch
 ) -> None:
@@ -1801,7 +1945,10 @@ def test_admin_images_queue_reads_briefs(
         response = api_client.get("/v1/admin/images", headers=_admin_headers())
         assert response.status_code == 200
         briefs = response.json()["briefs"]
-        assert any(b["slug"] == "test-brief" for b in briefs)
+        row = next(b for b in briefs if b["slug"] == "test-brief")
+        assert row["generated_prompt"] == (
+            "Genera una imagen de un laboratorio moderno con un hallazgo medico."
+        )
 
 
 def test_admin_config_save_roundtrip_and_secret_drop(

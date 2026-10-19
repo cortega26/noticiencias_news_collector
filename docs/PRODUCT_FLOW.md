@@ -60,6 +60,17 @@ reuse licence on record). A blocked article queues an image brief with reason
 `third_party_image_blocked` and waits in the Images desk until an original or
 licensed image is uploaded. See `../archive/completed-tasks/spec-third-party-image-policy.md`.
 
+The Images desk shows the brief's stored `generated_prompt` (copy button) so the
+operator can generate the image without opening the JSON sidecar. Publishing an
+article whose brief is still `needs_editorial_image` is refused before dispatch
+with `409` and `detail.error_code=image_required` (slug, article id and prompt
+included) instead of starting a run that is guaranteed to fail; an
+`editorial_image_ready` brief or no brief at all proceeds normally, and
+`article_url` publishes are unchanged. When the worker does hit an unresolved
+image (for example a URL publish, or a brief changed mid-flight), the run error
+names the reason (`missing_source_image`, `third_party_image_blocked`,
+`image_download_failed`, `placeholder_image_debt`).
+
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
 The target artifact is Markdown under `src/content/posts/<canonical-slug>.md`

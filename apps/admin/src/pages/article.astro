@@ -13,8 +13,15 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 </AdminLayout>
 
 <script>
-  import { clearToken, getArticle, showAuthGate, startPublish } from '../lib/api';
+  import { clearToken, ConflictError, getArticle, showAuthGate, startPublish } from '../lib/api';
   import type { AdminArticleDetail } from '../lib/types';
+
+  interface ImageRequiredDetail {
+    error_code: string;
+    slug?: string;
+    article_id?: number;
+    prompt?: string;
+  }
 
   const root = document.getElementById('detail');
 
@@ -148,9 +155,30 @@ import AdminLayout from '../layouts/AdminLayout.astro';
               },
               (err: Error) => {
                 pubBtn.toggleAttribute('disabled', false);
-                if (pubMsg) {
-                  pubMsg.textContent = `No se pudo iniciar la publicación: ${err.message}`;
+                if (!pubMsg) return;
+                if (err instanceof ConflictError) {
+                  const body = err.body as {
+                    run_id?: string;
+                    detail?: string | ImageRequiredDetail;
+                  };
+                  const detail = body?.detail;
+                  if (
+                    detail &&
+                    typeof detail === 'object' &&
+                    detail.error_code === 'image_required'
+                  ) {
+                    const prompt = detail.prompt
+                      ? `<details class="mt-2"><summary class="cursor-pointer">Ver prompt de imagen</summary><pre class="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded border border-ink-700 bg-ink-900 p-2 font-mono text-[11px] text-ink-200">${esc(detail.prompt)}</pre></details>`
+                      : '';
+                    pubMsg.innerHTML = `Falta una imagen editorial para este artículo. <a class="underline" href="/images">Abre la cola de imágenes</a>, genera o sube la imagen y vuelve a publicar.${prompt}`;
+                    return;
+                  }
+                  if (body?.run_id) {
+                    pubMsg.innerHTML = `Ya hay una publicación en curso (<span class="font-mono">${esc(body.run_id)}</span>) — obsérvala en <a class="underline" href="/triage">Curaduría</a>.`;
+                    return;
+                  }
                 }
+                pubMsg.textContent = `No se pudo iniciar la publicación: ${err.message}`;
               }
             );
           });

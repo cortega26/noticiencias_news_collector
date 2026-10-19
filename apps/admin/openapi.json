@@ -981,6 +981,17 @@
             ],
             "title": "Draft Alt Text"
           },
+          "generated_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Prompt"
+          },
           "news_angle": {
             "anyOf": [
               {
@@ -3694,7 +3705,7 @@
     },
     "/v1/admin/publish": {
       "post": {
-        "description": "Start one Refinery run (async): refine a candidate article (by\n`article_id`, must be in the current export) or ingest+refine a\n`article_url`, then open a PR against the frontend repo. Exactly one\nof `article_id` / `article_url` is required. A second call while one\nrun is active yields 409 with the active run's id.",
+        "description": "Start one Refinery run (async): refine a candidate article (by\n`article_id`, must be in the current export) or ingest+refine a\n`article_url`, then open a PR against the frontend repo. Exactly one\nof `article_id` / `article_url` is required. A second call while one\nrun is active yields 409 with the active run's id; an article whose\nbrief still needs an editorial image yields 409 `image_required`\nwithout starting a run.",
         "operationId": "admin_publish_v1_admin_publish_post",
         "parameters": [
           {
@@ -3743,7 +3754,7 @@
                 }
               }
             },
-            "description": "A publication run is already queued or running."
+            "description": "A publication run is already queued or running (the body carries its run id), or the article's image brief still needs an editorial image (`detail.error_code=image_required`)."
           },
           "422": {
             "content": {
