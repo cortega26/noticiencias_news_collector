@@ -16,6 +16,7 @@ Does NOT own:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
@@ -43,6 +44,13 @@ CT_TO_EXT: Dict[str, str] = {
     "image/gif": ".gif",
     "image/svg+xml": ".svg",
 }
+
+# Plan 142 GUARD: slug allowlist for on-disk asset filenames. Mirrors
+# image_briefs._validate_slug (NC-BE-087 S1): ASCII alphanumerics plus `-`/`_`,
+# starting with an alphanumeric — no `.`, `/`, `\`, or empty. The identity
+# resolver's DB branch can return a preferred slug verbatim, so the writer (not
+# the resolver) owns this enforcement.
+_SAFE_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
 @dataclass
@@ -255,6 +263,18 @@ class ArticleImageHandler:
         if not url or not url.startswith("http"):
             return None
 
+        # Plan 142 GUARD: reject traversal-shaped or otherwise unsafe slugs
+        # before any filesystem effect. The publication flow must keep running
+        # (briefs still queue), so this is a logged None, never a raise.
+        if not _SAFE_SLUG_RE.match(str(slug or "")):
+            logger.warning(
+                "Refusing to save downloaded image: unsafe slug {!r} "
+                "(must match {})",
+                slug,
+                _SAFE_SLUG_RE.pattern,
+            )
+            return None
+
         assets_dir = target_dir / "src/assets/images"
         assets_dir.mkdir(parents=True, exist_ok=True)
 
@@ -284,6 +304,19 @@ class ArticleImageHandler:
 
             filename = f"{slug}{ext}"
             local_path = assets_dir / filename
+            # Plan 142 GUARD (defense-in-depth): the resolved path must stay
+            # inside the assets directory, mirroring image_briefs.brief_path
+            # and target_repo_writer's NC-BE-015 containment check.
+            try:
+                local_path.resolve().relative_to(assets_dir.resolve())
+            except ValueError:
+                logger.warning(
+                    "Refusing to save downloaded image: slug {!r} resolves "
+                    "outside {}",
+                    slug,
+                    assets_dir,
+                )
+                return None
             local_path.write_bytes(response.content)
             logger.info(
                 "Image saved: {} ({} KB, {})",
@@ -307,11 +340,25 @@ class ArticleImageHandler:
         canonical_date: str,
         preferred_slug: str | None,
     ) -> str:
-        if preferred_slug:
+        if preferred_slug and _SAFE_SLUG_RE.match(preferred_slug):
             return preferred_slug
+        if preferred_slug:
+            logger.warning(
+                "Ignoring unsafe preferred slug {!r} for article {}; using "
+                "the deterministic title slug instead.",
+                preferred_slug,
+                article_id,
+            )
         title = str(article.get("title") or "").strip()
         base_slug = slugify_text(title, fallback=f"article-{article_id}")
-        return f"{canonical_date}-{base_slug}"
+        candidate = f"{canonical_date}-{base_slug}"
+        if not _SAFE_SLUG_RE.match(candidate):
+            # ``slugify_text`` returns its fallback verbatim when the title
+            # slugifies to empty, so an unsafe article id (or an unexpected
+            # canonical_date shape) can reach here — sanitize once more
+            # instead of aborting the image step.
+            candidate = slugify_text(candidate, fallback="article")
+        return candidate
 
     def _resolve_downloaded(
         self,
