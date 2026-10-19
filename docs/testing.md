@@ -30,6 +30,19 @@ measured source set and threshold.
 - **Test Config**: `tools/ci/pytest_system.toml`
 - **Coverage Config**: `tools/ci/coverage_system.rc`
 
+## Runtime-config isolation guard
+
+The autouse `_restore_runtime_config_state` fixture in `tests/conftest.py`
+snapshots the global runtime-config state (`RUNTIME` fields, `_CONFIG_STATE`,
+`_CURRENT_SNAPSHOT`, `_CONFIG_VERSION`) before each test and restores it
+afterwards. Without it, a test that publishes a runtime-config snapshot leaves
+it behind for later tests: seeds `722672841` and `303127521` used to fail with
+`min_content_length` falling back to 1000 and `KeyError: 'type'` in
+`DatabaseManager._setup_database`. Reproduce order-dependent failures with
+`pytest tests -p randomly --randomly-seed=N`. The guard is manual
+save/restore on purpose — an autouse fixture must not depend on `monkeypatch`
+(that changes the teardown order of every test).
+
 ## CI Integration
 
 The `system-contract-and-coverage` job in `.github/workflows/system-verification.yml`

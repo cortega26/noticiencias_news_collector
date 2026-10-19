@@ -43,6 +43,58 @@ def _allow_example_com_source_images():
 
 
 @pytest.fixture(autouse=True)
+def _restore_runtime_config_state():
+    """Restore the global runtime-config state around every test (plan 152).
+
+    ``refresh_runtime_config()`` mutates the process-wide ``RUNTIME`` holder
+    and publishes a new ``_CURRENT_SNAPSHOT``.  A test that refreshes with a
+    partial config — e.g. ``test_main_manual_url`` drives
+    ``run_publication_pipeline`` with a ``SimpleNamespace`` (a non-``Config``
+    double, so the resolvers/builders are skipped) while a previous test's
+    teardown has already swapped ``RUNTIME`` for a pristine
+    ``RuntimeSettings()`` — leaves a snapshot with empty ``database_config``
+    (``KeyError: 'type'`` in ``DatabaseManager._setup_database``) and no
+    ``min_content_length`` (admission falls back to 1000).  Later tests then
+    read it via ``get_runtime_config()`` as if it were their own.  Reproduce
+    with ``-p randomly`` seeds ``722672841`` / ``303127521``.
+
+    The process-wide global is production semantics (refreshed once per
+    pipeline cycle), so the isolation belongs here, in the harness: save the
+    module globals plus every ``RUNTIME`` field (identity references only —
+    the resolvers rebind whole attributes and dicts, they never mutate the
+    previous dicts in place), then restore them in ``finally``.
+
+    Manual save/restore, not ``monkeypatch``: an autouse fixture that depends
+    on ``monkeypatch`` changes the teardown order of every test that patches
+    module state itself (see ``_allow_example_com_source_images``).
+    """
+    import dataclasses
+
+    from news_collector.config import settings as settings_module
+
+    runtime = settings_module.RUNTIME
+    saved_runtime_fields = {
+        field.name: getattr(runtime, field.name)
+        for field in dataclasses.fields(runtime)
+    }
+    saved_snapshot = settings_module._CURRENT_SNAPSHOT
+    saved_config_state = settings_module._CONFIG_STATE
+    saved_version = settings_module._CONFIG_VERSION
+    try:
+        yield
+    finally:
+        settings_module._CURRENT_SNAPSHOT = saved_snapshot
+        settings_module._CONFIG_STATE = saved_config_state
+        settings_module._CONFIG_VERSION = saved_version
+        # A test may have swapped RUNTIME for a new holder (module reload or
+        # an explicit cleanup); restore the original object and its pre-test
+        # field values so accessors see a consistent state again.
+        settings_module.RUNTIME = runtime
+        for name, value in saved_runtime_fields.items():
+            setattr(runtime, name, value)
+
+
+@pytest.fixture(autouse=True)
 def _close_global_db_manager():
     yield
     manager = getattr(database_module, "_db_manager", None)
