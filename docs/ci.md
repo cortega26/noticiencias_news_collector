@@ -56,6 +56,7 @@ These jobs are the current automation reality. Documentation should not claim a 
 - `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy; one bounded allowlist exception (`GHSA-84m7-p3x7-pcfv`, `mcp` via semgrep's exact pin, dev tooling only) expires 2026-11-30, durable fix tracked by plan 144
 - gitleaks secret scan (binary downloaded in CI; locally `make security` runs it when installed and fails with an explicit message when it is missing — set `SKIP_SECRET_SCAN=1` to skip that leg deliberately). The CI pin lives in `GITLEAKS_VERSION` in `.github/workflows/quality.yml`; use the same version locally.
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
+- Plan 160 fixes the gitleaks 8.30 run: `.gitleaks-baseline.json` is refreshed with the pinned CI binary and the test-fixture path is allowlisted.
 
 ## Local Parity Commands
 
@@ -116,11 +117,27 @@ dedicated file, update every `cache-key` in the same change.
 
 ## Other Active Workflows
 
+### Collector incidents
+
+- `.github/workflows/collector-incident-watcher.yml` — reacts to completed
+  `Daily News Collection` runs on the default branch: one stable issue on the
+  first failure after a healthy run, at most one update per 24 h per identical
+  fingerprint, recovery comment and close on the next success, and the 30 h
+  rule for cancellations. Its fail-closed branches and operator steps are in
+  [`runbook.md#collector-failure-incidents`](runbook.md#collector-failure-incidents).
+
 ### Documentation
 
 - `.github/workflows/docs.yml`
   - link-checks `README.md` and `docs/**`; it does not run `make docs-check`
 - `make docs-check` validates selected active docs locally and in `make verify-ci`; it is not a job in the main CI workflow.
+
+### Generated API reference
+
+`docs/api/` is not committed (plan 147). `make docs-api` generates the pdoc
+reference into `docs/api/` on demand; do not commit the output. The retired
+committed copy was last regenerated on 2026-09-25 and nothing linked or checked
+it, so it could silently describe a stale surface.
 
 ### Admin contracts
 

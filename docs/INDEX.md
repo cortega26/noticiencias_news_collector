@@ -35,6 +35,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 |---|---|
 | All configuration fields and their defaults | [`config_fields.md`](config_fields.md) |
 | API usage examples | [`api_examples.md`](api_examples.md) |
+| API reference (generated on demand; not committed) | [`ci.md`](ci.md) — run `make docs-api` |
 | Common output format across pipeline stages | [`common_output_format.md`](common_output_format.md) |
 | Contract inventory (all typed boundaries) | [`contracts_inventory.md`](contracts_inventory.md) |
 | SQLite deployment, migrations and recovery | [`database_deployment.md`](database_deployment.md) |
