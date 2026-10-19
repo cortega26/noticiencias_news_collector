@@ -844,6 +844,51 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
+# Plan 142: inbound webhook bodies are bounded before validation and
+# persistence. Real frontend envelopes are a few KB (one diagnostic per
+# Content Guard check; the deploy callback is a single diagnostic), so 2 MiB
+# is generous headroom that no legitimate CI payload reaches — while a caller
+# holding the shared key can no longer grow webhook_receipts without bound.
+_WEBHOOK_MAX_BODY_BYTES = 2 * 1024 * 1024
+
+
+def _check_webhook_body_size(raw_body: bytes) -> None:
+    """Reject an inbound webhook body above the documented cap (413)."""
+    if len(raw_body) > _WEBHOOK_MAX_BODY_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Webhook payload too large ({len(raw_body)} bytes, "
+                f"limit {_WEBHOOK_MAX_BODY_BYTES})"
+            ),
+        )
+
+
+async def verify_webhook_body_size(request: Request) -> None:
+    """413 before payload validation when the raw body exceeds the cap.
+
+    Rejects on the declared ``Content-Length`` first (no body read), then on
+    the actual body for requests that do not declare one. Runs before the
+    other webhook dependencies so an oversize body is refused before any
+    authentication or validation work; Starlette caches the read body for
+    FastAPI's own parse.
+    """
+    declared = request.headers.get("content-length")
+    if (
+        declared is not None
+        and declared.isdigit()
+        and int(declared) > _WEBHOOK_MAX_BODY_BYTES
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                f"Webhook payload too large ({declared} bytes, "
+                f"limit {_WEBHOOK_MAX_BODY_BYTES})"
+            ),
+        )
+    _check_webhook_body_size(await request.body())
+
+
 def verify_webhook_token(
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> None:
@@ -1321,6 +1366,7 @@ def create_app(  # noqa: C901
     )
     def frontend_webhook(
         payload: Dict[str, Any],
+        _size: None = Depends(verify_webhook_body_size),
         manager: DatabaseManager = Depends(get_db),
         _: None = Depends(verify_webhook_token),
     ) -> Dict[str, Any]:
@@ -1332,7 +1378,8 @@ def create_app(  # noqa: C901
         The delivery is persisted as a durable receipt before processing
         (plan 060 Phase 5a); a duplicate delivery returns the stored result
         without reapplying transitions. The response is always 202 unless
-        payload validation fails.
+        payload validation fails (422) or the raw body exceeds the documented
+        cap (413, ``verify_webhook_body_size`` — plan 142).
         """
         from news_collector.contracts.webhook import parse_webhook_payload
         from news_collector.serving.webhook_handler import handle_webhook_event
