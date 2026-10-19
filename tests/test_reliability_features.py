@@ -6,8 +6,29 @@ import pytest
 from news_collector.collectors.html_collector import HtmlCollector
 
 
+def _frozen_clock(instant: datetime) -> type[datetime]:
+    """Return a ``datetime`` subclass whose ``now()`` always reports *instant*."""
+
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return instant.replace(tzinfo=None)
+            return instant.astimezone(tz)
+
+    return _FrozenDatetime
+
+
+@pytest.mark.parametrize(
+    "frozen_now",
+    [
+        datetime(2026, 10, 19, 12, 0, 0, tzinfo=timezone.utc),
+        datetime(2026, 12, 31, 23, 59, 30, tzinfo=timezone.utc),
+    ],
+    ids=["mid-year", "year-boundary"],
+)
 @pytest.mark.asyncio
-async def test_429_retry_after_handling():
+async def test_429_retry_after_handling(frozen_now):
     """Verify 429 response triggers explicit COOLDOWN."""
     collector = HtmlCollector()
     collector.db_manager = MagicMock()
@@ -19,34 +40,42 @@ async def test_429_retry_after_handling():
     mock_response.status_code = 429
     mock_response.headers = {"Retry-After": "60"}
 
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_instance = mock_client_cls.return_value
-        mock_instance.__aenter__.return_value = mock_instance
-        mock_instance.get = AsyncMock(return_value=mock_response)
+    # Freeze the clock at the module the collector reads it from, so the
+    # expected cooldown is derived from the same instant the production code
+    # sees (no wall-clock window).
+    with patch(
+        "news_collector.collectors.base_collector.datetime",
+        _frozen_clock(frozen_now),
+    ):
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_instance = mock_client_cls.return_value
+            mock_instance.__aenter__.return_value = mock_instance
+            mock_instance.get = AsyncMock(return_value=mock_response)
 
-        source_config = {"url": "http://example.com/429", "crawl_interval_seconds": 300}
+            source_config = {
+                "url": "http://example.com/429",
+                "crawl_interval_seconds": 300,
+            }
 
-        # Mock robots check
-        with patch.object(collector, "_respect_robots", return_value=(True, 0)):
-            # Run collection
-            stats = await collector.collect_from_source_async(
-                "test_source_429", source_config
-            )
+            # Mock robots check
+            with patch.object(collector, "_respect_robots", return_value=(True, 0)):
+                # Run collection
+                stats = await collector.collect_from_source_async(
+                    "test_source_429", source_config
+                )
 
-        # Assert failed
-        assert stats["success"] is False
-        assert stats["articles_found"] == 0
+    # Assert failed
+    assert stats["success"] is False
+    assert stats["articles_found"] == 0
 
-        # Assert DB updated with forced cooldown
-        collector.db_manager.update_source_circuit_state.assert_called_once()
-        call_args = collector.db_manager.update_source_circuit_state.call_args
-        assert call_args.kwargs.get("force_cooldown_until") is not None
+    # Assert DB updated with forced cooldown
+    collector.db_manager.update_source_circuit_state.assert_called_once()
+    call_args = collector.db_manager.update_source_circuit_state.call_args
+    assert call_args.kwargs.get("force_cooldown_until") is not None
 
-        # Verify the time matches roughly now + 60s
-        forced_time = call_args.kwargs["force_cooldown_until"]
-        now = datetime.now(timezone.utc)
-        diff = (forced_time - now).total_seconds()
-        assert 50 < diff < 70  # Allow some execution time buffer
+    # The cooldown is exactly Retry-After (60 s) from the frozen instant.
+    forced_time = call_args.kwargs["force_cooldown_until"]
+    assert forced_time == frozen_now + timedelta(seconds=60)
 
 
 @pytest.mark.asyncio
