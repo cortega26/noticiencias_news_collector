@@ -511,7 +511,7 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 131 | [Publish-run summary truth](131-publish-run-summary-truth.md) | P1 | S | — | TODO |
+| 131 | [Publish-run summary truth](131-publish-run-summary-truth.md) | P1 | S | — | DONE — merged in `d078196` (branch `advisor/131-publish-run-summary-truth`, commits `d28bdcd` + `c15a569`): summary evidence merges only when the attempt's `generated_at` is strictly later than the run row's `started_at` (the plan's documented fallback — the attempt writer has no run id and `PublicationAttemptSummary` is a contract model, both out of scope); fail-closed on missing/malformed timestamps; 6/7 new cases fail on the original source; reviewer re-ran lint / type (ratchet 89.10 vs 88.44) / test / boundaries / integration green. KEEP: reference until the next archive sweep. |
 | 132 | [Webhook inbox poison-row containment](132-webhook-inbox-poison-row.md) | P1 | M | — | TODO |
 | 133 | [Publication environment reuse](133-publication-env-reuse.md) | P1 | M | sequence with 131/134 | TODO |
 | 134 | [Serving image import surface](134-serving-image-import-surface.md) | P1 | M | — | TODO |
