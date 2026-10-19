@@ -58,7 +58,7 @@ scraped from the source article is **not** downloaded unless its host is in
 `REMOTE_IMAGE_ALLOWLIST` (empty by default — a source outlet's lead image has no
 reuse licence on record). A blocked article queues an image brief with reason
 `third_party_image_blocked` and waits in the Images desk until an original or
-licensed image is uploaded. See `spec-third-party-image-policy.md`.
+licensed image is uploaded. See `../archive/completed-tasks/spec-third-party-image-policy.md`.
 
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
