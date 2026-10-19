@@ -145,3 +145,100 @@ def test_script_writes_reports(tmp_path):
     assert data["line_rate"] == 90.0
     assert data["tests_touching_no_code"] == ["tests/t.py::test_a"]
     assert (out / "test_audit.md").read_text().startswith("# Auditoría")
+
+
+def test_static_mode_writes_reduced_report(tmp_path):
+    tdir = tmp_path / "tests"
+    tdir.mkdir()
+    (tdir / "test_s.py").write_text(
+        "def test_ok():\n    assert 1\n" "def test_weak():\n    print('hi')\n"
+    )
+    out = tmp_path / "out"
+
+    rc = sa.main(["--static-only", "--tests", str(tdir), "--out", str(out)])
+
+    assert rc == 0
+    data = json.loads((out / "test_audit.json").read_text())
+    assert data["total_tests"] == 2
+    assert data["no_assertion"] == [f"{tdir / 'test_s.py'}::test_weak"]
+    assert "line_rate" not in data and "tests_touching_no_code" not in data
+    assert "Tests sin aserción" in (out / "test_audit.md").read_text()
+
+
+def test_baseline_gate_blocks_growth_and_allows_shrink(tmp_path, capsys):
+    tdir = tmp_path / "tests"
+    tdir.mkdir()
+    weak = tdir / "test_s.py"
+    weak.write_text("def test_weak():\n    print('hi')\n")
+    out = tmp_path / "out"
+    baseline = tmp_path / "baseline.json"
+
+    rc = sa.main(
+        [
+            "--static-only",
+            "--tests",
+            str(tdir),
+            "--out",
+            str(out),
+            "--write-baseline",
+            str(baseline),
+        ]
+    )
+    assert rc == 0
+    assert json.loads(baseline.read_text()) == {"no_assertion": [f"{weak}::test_weak"]}
+
+    # Fixing a test shrinks the list and needs no baseline refresh.
+    weak.write_text("def test_weak():\n    assert True\n")
+    rc = sa.main(
+        [
+            "--static-only",
+            "--tests",
+            str(tdir),
+            "--out",
+            str(out),
+            "--baseline",
+            str(baseline),
+        ]
+    )
+    assert rc == 0
+    assert "no longer assertion-free" in capsys.readouterr().out
+
+    # A new assertion-free test must fail the gate and be named.
+    weak.write_text(
+        "def test_weak():\n    assert True\n" "def test_new_weak():\n    pass\n"
+    )
+    rc = sa.main(
+        [
+            "--static-only",
+            "--tests",
+            str(tdir),
+            "--out",
+            str(out),
+            "--baseline",
+            str(baseline),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert f"{weak}::test_new_weak" in captured.err
+
+
+def test_baseline_gate_fails_closed_when_missing(tmp_path, capsys):
+    tdir = tmp_path / "tests"
+    tdir.mkdir()
+    (tdir / "test_s.py").write_text("def test_ok():\n    assert 1\n")
+
+    rc = sa.main(
+        [
+            "--static-only",
+            "--tests",
+            str(tdir),
+            "--out",
+            str(tmp_path / "out"),
+            "--baseline",
+            str(tmp_path / "missing.json"),
+        ]
+    )
+
+    assert rc == 1
+    assert "not found" in capsys.readouterr().err

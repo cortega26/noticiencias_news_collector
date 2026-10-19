@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review toolchain-check lock-parity-check
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -269,7 +269,7 @@ toolchain-check: bootstrap ## Fail when venv gate tools drift from the .pre-comm
 lock-parity-check: bootstrap ## Fail when the venv diverges from requirements.lock
 	@$(PYTHON_BIN) scripts/check_lock_parity.py
 
-verify-ci: lint type test test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test weak-tests-check test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
@@ -458,6 +458,12 @@ test-audit: bootstrap ## Audit the test suite: coverage incl. noticiencias+scrip
 	@$(PYTHON_BIN) -m pytest tests --ignore=tests/e2e_pipeline --collect-only -q --no-cov -p no:randomly 2>/dev/null | grep "::" > reports/audit/collected.txt
 	@$(PYTHON_BIN) -m pytest tests --ignore=tests/e2e_pipeline -q -p no:randomly --cov=news_collector --cov=apps --cov=noticiencias --cov=scripts --cov-config=scripts/audit.coveragerc --cov-context=test --cov-report=json:reports/audit/cov.json --cov-report=
 	@$(PYTHON_BIN) scripts/test_suite_audit.py --coverage reports/audit/cov.json --collected reports/audit/collected.txt
+
+weak-tests-baseline: bootstrap ## Refresh the assertion-free-test baseline (deliberate, reviewer-visible decision)
+	@$(PYTHON_BIN) scripts/test_suite_audit.py --static-only --write-baseline audit/weak_tests_baseline.json
+
+weak-tests-check: bootstrap ## Fail when assertion-free tests grow beyond audit/weak_tests_baseline.json (static: seconds)
+	@$(PYTHON_BIN) scripts/test_suite_audit.py --static-only --baseline audit/weak_tests_baseline.json
 
 mutation: bootstrap ## Mutation testing of the critical pure modules + per-module score vs floors (slow; installs mutmut in .mutlib, not in the venv)
 	@$(PYTHON_BIN) -m pip install -q --target .mutlib mutmut

@@ -12,8 +12,8 @@ class TestSecurity(unittest.TestCase):
         mock_getaddrinfo.return_value = [
             (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 80))
         ]
-        # Should not raise
-        validate_url_safety("https://google.com")
+        # Should not raise: a public IP is accepted (returns None).
+        self.assertIsNone(validate_url_safety("https://google.com"))
 
     @patch("socket.getaddrinfo")
     def test_validate_url_safety_private_ip(self, mock_getaddrinfo):

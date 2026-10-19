@@ -18,8 +18,12 @@ def rss_content(rss_sample_path):
 
 def test_rss_parser_golden_file(rss_content):
     """Test RSS extraction against a golden file."""
-    # Placeholder for more specific golden file check if needed
-    pass
+    parsed_feed = RssParser().parse_feed_content(rss_content)
+
+    assert [entry.get("title") for entry in parsed_feed.entries] == [
+        "NASA Discovery",
+        "Quantum Leap",
+    ]
 
 
 def test_rss_parser_mapping(rss_content):

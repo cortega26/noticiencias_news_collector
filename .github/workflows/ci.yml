@@ -185,6 +185,19 @@ jobs:
           CI_EXPECTED_FRONTEND_SCHEMA: "1"
         run: make test
 
+  weak-tests:
+    name: Weak tests (static ratchet)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python-env
+        with:
+          cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
+      - name: Gate assertion-free tests against the committed baseline
+        run: make weak-tests-check
+
   integration:
     name: Integration tests
     runs-on: ubuntu-24.04

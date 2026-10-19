@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T16:18:20.109398+00:00",
+  "generated_at": "2026-10-19T17:30:59.388259+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -84,7 +84,8 @@
       "11_ci_cdpipeline.md",
       "12_dx_checklist.md",
       "13_release_notes.md",
-      "14_editorial_quality_audit.md"
+      "14_editorial_quality_audit.md",
+      "weak_tests_baseline.json"
     ],
     "config/": [
       "features.yaml",
@@ -254,6 +255,10 @@
       "153-publish-batch-thread-lifecycle.md",
       "154-stage4-critic-canary.md",
       "155-critic-average-derivation.md",
+      "156-semgrep-decoupling.md",
+      "157-admin-503-error-code.md",
+      "158-ci-toolchain-truth.md",
+      "159-429-clock-determinism.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -818,6 +823,14 @@
       "description": "Audit the test suite: coverage incl. noticiencias+scripts, weak tests, tests touching no code (slow: full run)"
     },
     {
+      "target": "weak-tests-baseline",
+      "description": "Refresh the assertion-free-test baseline (deliberate, reviewer-visible decision)"
+    },
+    {
+      "target": "weak-tests-check",
+      "description": "Fail when assertion-free tests grow beyond audit/weak_tests_baseline.json (static: seconds)"
+    },
+    {
       "target": "mutation",
       "description": "Mutation testing of the critical pure modules + per-module score vs floors (slow; installs mutmut in .mutlib, not in the venv)"
     },
@@ -1328,6 +1341,10 @@
     "plans/153-publish-batch-thread-lifecycle.md",
     "plans/154-stage4-critic-canary.md",
     "plans/155-critic-average-derivation.md",
+    "plans/156-semgrep-decoupling.md",
+    "plans/157-admin-503-error-code.md",
+    "plans/158-ci-toolchain-truth.md",
+    "plans/159-429-clock-determinism.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
