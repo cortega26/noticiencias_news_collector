@@ -323,6 +323,86 @@ def test_extract_articles_bulk_match_uses_canonicalized_urls(rss_collector):
     ]
 
 
+def test_collect_source_runs_url_existence_lookup_once_per_cycle(rss_collector):
+    """Plan 148: the bulk `articles_exist` set computed while extracting
+    candidates is handed to the save path, so one RSS source cycle issues
+    exactly one URL-existence lookup (not one per extraction + save path).
+    The extraction set must survive into `_filter_and_save_articles` — a
+    candidate that reaches the duplicate filter would otherwise trigger the
+    second lookup this test pins away."""
+    from datetime import timezone
+
+    candidates = [
+        _recent_candidate("https://once.example.com/a"),
+        _recent_candidate("https://once.example.com/b"),
+    ]
+
+    def _fake_process(raw_article, source_id, source_config):
+        return {
+            "url": raw_article["url"],
+            "title": raw_article["title"],
+            "summary": raw_article["summary"],
+            "content": "x" * 600,
+            "source_id": source_id,
+            "source_name": source_config["name"],
+            "category": source_config["category"],
+            "published_date": datetime.now(timezone.utc).isoformat(),
+        }
+
+    db_manager = MagicMock()
+    db_manager.get_source_circuit_state.return_value = None
+    db_manager.articles_exist.return_value = set()
+    db_manager.save_articles_bulk.return_value = 2
+    rss_collector.db_manager = db_manager
+
+    with (
+        patch.object(rss_collector, "_respect_robots", return_value=(True, 0.0)),
+        patch.object(rss_collector, "_enforce_domain_rate_limit", return_value=None),
+        patch.object(
+            rss_collector,
+            "_fetch_feed_robust",
+            return_value={
+                "success": True,
+                "status_code": 200,
+                "content": b"xml-content",
+                "url": "http://feed.com",
+            },
+        ),
+        patch.object(
+            rss_collector,
+            "_parse_feed_robust",
+            return_value={"success": True, "parsed_feed": object()},
+        ),
+        patch.object(rss_collector.parser, "extract_items", return_value=candidates),
+        patch.object(rss_collector, "_process_article", side_effect=_fake_process),
+        patch.object(
+            rss_collector,
+            "router",
+            MagicMock(route_enrichment=lambda *a, **k: {}),
+        ),
+        patch.object(rss_collector, "image_extractor", MagicMock()),
+    ):
+        stats = rss_collector.collect_from_source(
+            "s1",
+            {
+                "url": "http://feed.com",
+                "name": "RSS",
+                "category": "science",
+                "credibility_score": 0.9,
+            },
+        )
+
+    assert stats["success"] is True
+    assert db_manager.articles_exist.call_count == 1
+    assert db_manager.articles_exist.call_args[0][0] == [
+        "https://once.example.com/a",
+        "https://once.example.com/b",
+    ]
+    # Both admitted candidates went through the save path's duplicate filter.
+    db_manager.save_articles_bulk.assert_called_once()
+    assert db_manager.article_exists.call_count == 0
+
+
 # --- Step 3b (plan 092): characterization backfill ---------------------------
 # Pin CURRENT behavior with fakes only (no network, no timers). If any of
 # these pin something that looks buggy, that is a report — not a fix — per

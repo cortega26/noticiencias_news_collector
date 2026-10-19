@@ -18,7 +18,7 @@ import hashlib
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, TypedDict
 from urllib.parse import urlparse
 
 import feedparser
@@ -321,8 +321,12 @@ class RSSCollector(BaseCollector):
             parsed_feed = parse_result["parsed_feed"]
 
             # 3. Extract Articles
+            existing_urls: Set[str] = set()
             raw_articles = self._extract_articles_from_feed(
-                parsed_feed, source_config, source_id
+                parsed_feed,
+                source_config,
+                source_id,
+                existing_urls_out=existing_urls,
             )
             stats["articles_found"] = len(raw_articles)
 
@@ -374,7 +378,10 @@ class RSSCollector(BaseCollector):
 
             # Apply strict sequential filters and save
             saved_count = self._filter_and_save_articles(
-                source_id, processed_candidates, limit=5
+                source_id,
+                processed_candidates,
+                limit=5,
+                existing_urls=existing_urls,
             )
             stats["articles_saved"] = saved_count
             stats["success"] = True
@@ -811,9 +818,16 @@ class RSSCollector(BaseCollector):
         parsed_feed,
         source_config: Dict[str, Any],
         source_id: str,
+        *,
+        existing_urls_out: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Extrae artículos usando el RssParser logic.
+
+        ``existing_urls_out`` (plan 148): when provided, the bulk
+        ``articles_exist`` result computed here is copied into it, so the
+        caller can hand the same set to ``_filter_and_save_articles``
+        instead of issuing the lookup twice per source cycle.
         """
         cfg = get_runtime_config()
         # Fetch multiplier logic is now implicit since parser returns all valid items,
@@ -839,6 +853,10 @@ class RSSCollector(BaseCollector):
         existing_urls = self.db_manager.articles_exist(
             [cand["url"] for cand in candidates]
         )
+        if existing_urls_out is not None:
+            # Plan 148: the save path reuses this set instead of recomputing
+            # the same canonicalized-URL lookup for the admitted candidates.
+            existing_urls_out.update(existing_urls)
 
         count = 0
         for cand in candidates:
