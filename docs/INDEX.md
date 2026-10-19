@@ -22,6 +22,7 @@ and the rules for which file wins when docs and code disagree, see `docs/SOURCE_
 | Understand the back-end package map and dependency direction | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Know which files win when docs and code disagree | [`SOURCE_OF_TRUTH.md`](SOURCE_OF_TRUTH.md) |
 | Recover from an operational incident | [`runbook.md`](runbook.md) |
+| Respond to a failed scheduled collection | [`runbook.md#collector-failure-incidents`](runbook.md#collector-failure-incidents) |
 | Debug a specific collector issue | [`collector_runbook.md`](collector_runbook.md) |
 | Understand CI workflows and gates | [`ci.md`](ci.md) |
 | Find retired root task records and what is still live at the root | [`../archive/completed-tasks/README.md`](../archive/completed-tasks/README.md) |
