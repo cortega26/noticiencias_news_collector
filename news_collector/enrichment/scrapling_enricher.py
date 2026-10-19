@@ -237,6 +237,15 @@ class ScraplingHttpEnricher:
         start = time.time()
         try:
             page = Fetcher.get(url, timeout=timeout, follow_redirects=True)
+
+            # Post-navigation safety re-check (plan 141): the fetch follows
+            # redirects; validate the URL the client actually landed on before
+            # its body is used as article content.
+            try:
+                validate_url_safety(page.url)
+            except ValueError as exc:
+                raise ValueError("Unsafe final URL after navigation") from exc
+
             text = str(page.get_all_text(separator=" ", strip=True))
             content = " ".join(text.split())
             duration = time.time() - start
