@@ -56,6 +56,7 @@ class MockHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
 
+@patch("news_collector.enrichment.router.validate_url_safety", MagicMock())
 class TestHeadlessFunnel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

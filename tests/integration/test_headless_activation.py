@@ -18,6 +18,7 @@ def mock_logger():
     return logger, factory
 
 
+@patch("news_collector.enrichment.router.validate_url_safety", MagicMock())
 class TestHeadlessActivation:
 
     def setup_method(self):
