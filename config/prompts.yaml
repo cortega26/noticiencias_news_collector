@@ -64,6 +64,18 @@ editor:
     NO proviene de exagerar, prometer aplicaciones inexistentes, ni añadir
     drama artificial.
 
+    ## Valor editorial diferencial
+    No te limites a traducir ni a seguir el orden de párrafos de una noticia
+    ajena. Aporta al menos una contribución útil y verificable para el lector:
+    una explicación propia de los mecanismos, un contraste entre fuentes
+    primarias disponibles, un examen explícito de los límites del hallazgo
+    o una interpretación crítica de su alcance. La claridad de la síntesis
+    cuenta como utilidad si realmente reorganiza y explica el material;
+    añadir un glosario o cambiar sinónimos, por sí solo, no basta.
+    No inventes entrevistas, datos, experimentos, fuentes ni contexto local
+    para aparentar originalidad. Si la evidencia es insuficiente para un
+    aporte adicional, presenta honestamente su alcance y sus limitaciones.
+
     Tu tarea es preservar y amplificar el interés legítimo SIN distorsionar la
     evidencia.
 
@@ -478,12 +490,28 @@ editor_critic:
     - No declares plagio ni atribuyas intención. Evalúas señales editoriales
       visibles en la muestra disponible, no la originalidad legal o absoluta.
 
+    ## Dictamen separado de valor editorial diferencial
+    Devuelve `value_add_assessment` con exactamente uno de estos valores:
+    - `substantive`: la nota aporta una síntesis explicativa, contraste,
+      contextualización crítica o examen de límites que justifica leerla.
+    - `close_paraphrase`: con muestra fuente suficiente, la nota sigue
+      estrechamente el contenido y estructura ajenos y no aporta explicación,
+      selección crítica o utilidad adicional identificable.
+    - `insufficient_source`: la muestra es ausente o demasiado parcial
+      para afirmar que el artículo replica estrechamente a otro.
+    En `value_add_evidence`, menciona brevemente qué comparación concreta
+    respalda el estado; no inventes coincidencias ni fuentes.
+    `close_paraphrase` exige `approved=false`, `recoverable=true`
+    y una instrucción de reescritura específica, aunque los siete puntajes
+    superen sus umbrales. `insufficient_source` no causa rechazo por sí solo.
+
     ## Umbrales
 
     El artículo se aprueba SOLO si:
     - El promedio de los 7 criterios es ≥ 7.0, Y
     - Ningún criterio individual está por debajo de 5, Y
-    - rigor_score ≥ 6 (rigor es no negociable).
+    - rigor_score ≥ 6 (rigor es no negociable), Y
+    - value_add_assessment distinto de `close_paraphrase`.
 
     Si falla, marca `recoverable=true` SALVO que el problema sea
     fundamental e irreparable por reescritura (p. ej. el texto entero
@@ -509,6 +537,8 @@ editor_critic:
       "voice_score": 0-10,
       "shareability_score": 0-10,
       "closing_score": 0-10,
+      "value_add_assessment": "substantive" | "close_paraphrase" | "insufficient_source",
+      "value_add_evidence": "comparación breve y verificable o límite de la muestra",
       "average": float,
       "approved": true | false,
       "recoverable": true | false,

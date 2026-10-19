@@ -209,12 +209,16 @@ def _parse_editorial_critic_scores(
 
 
 def _validate_editorial_critic_approval(
-    approved: bool, average: float, scores: dict[str, int]
+    approved: bool,
+    average: float,
+    scores: dict[str, int],
+    value_add_assessment: str | None = None,
 ) -> None:
     meets_thresholds = (
         average >= 7.0
         and all(score >= 5 for score in scores.values())
         and scores["rigor_score"] >= 6
+        and value_add_assessment != "close_paraphrase"
     )
     if approved != meets_thresholds:
         raise ValueError("approved verdict contradicts the stated thresholds")
@@ -252,7 +256,14 @@ def _parse_editorial_critic_result(
 
     approved, recoverable, feedback = _parse_editorial_critic_flags(result)
     average, scores = _parse_editorial_critic_scores(result)
-    _validate_editorial_critic_approval(approved, average, scores)
+    value_add_assessment = result.get("value_add_assessment")
+    if value_add_assessment is not None and value_add_assessment not in {
+        "substantive",
+        "close_paraphrase",
+        "insufficient_source",
+    }:
+        raise ValueError("invalid value_add_assessment")
+    _validate_editorial_critic_approval(approved, average, scores, value_add_assessment)
     return approved, recoverable, feedback, average, scores
 
 
@@ -1372,6 +1383,8 @@ class EditorAgent:
 
         Returns a typed verdict. Fail-open results remain publishable but are
         not persisted as reviewed checkpoints, so a later run can retry them.
+        A confirmed close paraphrase surviving repair is held by the
+        publication engine; generic low style scores remain advisory.
 
         Fails open: if the prompt is unavailable, the model returns
         unparseable output, or the call raises, the article is approved so
@@ -1440,13 +1453,21 @@ class EditorAgent:
                 "approved": True,
                 "average": average,
                 "scores": scores,
+                "value_add_assessment": result.get("value_add_assessment"),
+                "value_add_evidence": result.get("value_add_evidence"),
             }
             return CriticVerdict(True)
 
         # If the model said `approved=false` but gave no reason, build one
         # from the lowest score so the repair loop has something to act on.
         if not feedback:
-            if scores:
+            if result.get("value_add_assessment") == "close_paraphrase":
+                feedback = (
+                    "El borrador sigue demasiado de cerca la fuente sin "
+                    "aporte editorial identificable. Reorganiza y explica "
+                    "sus hallazgos de forma crítica, sin inventar datos."
+                )
+            elif scores:
                 worst_dim, worst_score = min(scores.items(), key=lambda kv: kv[1])
                 feedback = (
                     f"Bajo puntaje en {worst_dim} ({worst_score}/10). "
@@ -1463,6 +1484,8 @@ class EditorAgent:
             "approved": False,
             "average": average,
             "scores": scores,
+            "value_add_assessment": result.get("value_add_assessment"),
+            "value_add_evidence": result.get("value_add_evidence"),
         }
         return CriticVerdict(False, feedback, recoverable)
 
@@ -2230,6 +2253,13 @@ class EditorAgent:
         Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
         Includes checkpointing to prevent data loss.
         """
+        # Per-article lifecycle invariant: the refinery engine reads this
+        # attribute after process_article returns to enforce the
+        # close-paraphrase hold. Clear any verdict from a previous article
+        # first, even when Stage 4 is skipped (kill switch or missing
+        # prompt), so a stale verdict can never block a different article.
+        self.last_critic_verdict = None
+
         # 1. Extract Info (typed normalized input; plan 060 Phase 7c-1)
         # content_mode drives verification honesty. RSS payloads that fall back
         # from an empty `content` field to `summary` are marked as

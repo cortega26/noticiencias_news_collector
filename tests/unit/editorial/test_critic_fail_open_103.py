@@ -217,7 +217,7 @@ class TestEditorialRepairProviderFailure:
         assert "Direct Headline" in result
         agent._repair_editorial.assert_called_once()
         assert not any(
-            "stage2_6_editorial_critic_source_aware_v2_ok" in p.name
+            "stage2_6_editorial_critic_value_add_v3_ok" in p.name
             for p in agent.cache_dir.rglob("*")
             if p.is_file()
         )
