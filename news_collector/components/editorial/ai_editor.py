@@ -1,5 +1,4 @@
 import json
-import math
 import os
 import re
 import time
@@ -176,17 +175,21 @@ def _system_with_untrusted_data_policy(system_prompt: str) -> str:
     return f"{system_prompt.rstrip()}\n\n{_UNTRUSTED_DATA_POLICY}".strip()
 
 
-def _parse_editorial_critic_average(result: dict[Any, Any]) -> float:
-    average_raw = result["average"]
-    if isinstance(average_raw, bool) or not isinstance(average_raw, (int, float)):
-        raise ValueError("average must be numeric")
+def _log_editorial_critic_average_drift(
+    model_average: object, derived_average: float
+) -> None:
+    """Record (never reject) the model's arithmetic drift on the average."""
+    if isinstance(model_average, bool) or not isinstance(model_average, (int, float)):
+        return
     try:
-        average = float(average_raw)
-    except OverflowError as exc:
-        raise ValueError("average must be finite and between 0 and 10") from exc
-    if not math.isfinite(average) or not 0 <= average <= 10:
-        raise ValueError("average must be finite and between 0 and 10")
-    return average
+        drift = abs(float(model_average) - derived_average)
+    except (OverflowError, ValueError):
+        return
+    if drift > 0.11:
+        logger.debug(
+            f"Editorial critic average drift: model={model_average} "
+            f"derived={derived_average} (ignored)"
+        )
 
 
 def _parse_editorial_critic_score_values(result: dict[Any, Any]) -> dict[str, int]:
@@ -200,11 +203,14 @@ def _parse_editorial_critic_score_values(result: dict[Any, Any]) -> dict[str, in
 def _parse_editorial_critic_scores(
     result: dict[Any, Any],
 ) -> tuple[float, dict[str, int]]:
-    average = _parse_editorial_critic_average(result)
+    """Derive the average from the validated scores.
+
+    The model's own ``average`` is arithmetic, not a gate input: when it is
+    present and drifts by more than 0.11 it is logged and ignored.
+    """
     scores = _parse_editorial_critic_score_values(result)
-    calculated_average = sum(scores.values()) / len(_EDITORIAL_CRITIC_SCORE_KEYS)
-    if abs(average - calculated_average) > 0.11:
-        raise ValueError("average does not match the seven criterion scores")
+    average = round(sum(scores.values()) / len(_EDITORIAL_CRITIC_SCORE_KEYS), 2)
+    _log_editorial_critic_average_drift(result.get("average"), average)
     return average, scores
 
 
@@ -245,7 +251,6 @@ def _parse_editorial_critic_result(
 
     required_keys = (
         *_EDITORIAL_CRITIC_SCORE_KEYS,
-        "average",
         "approved",
         "recoverable",
         "feedback",
