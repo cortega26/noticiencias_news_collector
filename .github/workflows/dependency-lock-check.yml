@@ -1,3 +1,6 @@
+# Lock freshness gate for all three hash-pinned lockfiles. If a lock drifts,
+# the heal path is the manual-lock-sync workflow (workflow_dispatch), which
+# regenerates and commits them with pip-tools.
 name: Dependency lock sync
 
 on:
@@ -6,12 +9,14 @@ on:
     paths:
       - "requirements.lock"
       - "requirements-security.lock"
+      - "requirements-refinery.lock"
       - "pyproject.toml"
       - ".github/workflows/dependency-lock-check.yml"
   pull_request:
     paths:
       - "requirements.lock"
       - "requirements-security.lock"
+      - "requirements-refinery.lock"
       - "pyproject.toml"
       - ".github/workflows/dependency-lock-check.yml"
 
