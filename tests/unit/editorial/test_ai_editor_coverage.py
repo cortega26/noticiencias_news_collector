@@ -1009,6 +1009,60 @@ class TestProcessArticlePaths:
         result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
 
+    @pytest.mark.parametrize("cached_text", ["", "   \n\t\n"])
+    def test_unusable_stage1_translation_cache_regenerates(self, tmp_path, cached_text):
+        """Plan 149 item 2: `Path.write_text` truncates before writing, so a
+        killed/ENOSPC mid-write leaves a 0-byte (or whitespace-only) file.
+        The stage-1 loader must return None (⇒ regenerate) instead of
+        silently adapting an empty draft — same publishable-body rule stage
+        2 applies before writing its own cache."""
+        agent = self._pipeline_agent(tmp_path)
+        article = {
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "url": "https://example.com/source",
+        }
+        agent.process_article(article, override_date="2026-03-02")
+        cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
+        assert cache_s1.exists()
+        cache_s1.write_text(cached_text, encoding="utf-8")
+
+        calls = []
+        original = agent._translate_scientific
+        agent._translate_scientific = lambda content: (
+            calls.append(content) or original(content)
+        )
+        result = agent.process_article(article, override_date="2026-03-02")
+
+        assert len(calls) == 1
+        assert cache_s1.read_text(encoding="utf-8").strip()
+        assert "Direct Headline" in result
+
+    def test_short_stage1_translation_cache_is_still_a_hit(self, tmp_path):
+        """Plan 149 item 2: the sanity check must not impose a length floor;
+        a legitimately short translation keeps its cache-hit semantics."""
+        agent = self._pipeline_agent(tmp_path)
+        article = {
+            "title": "Demo",
+            "summary": "Resumen",
+            "content": "Contenido " * 200,
+            "url": "https://example.com/source",
+        }
+        agent.process_article(article, override_date="2026-03-02")
+        cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
+        cache_s1.write_text("Traducción breve.", encoding="utf-8")
+
+        calls = []
+        original = agent._translate_scientific
+        agent._translate_scientific = lambda content: (
+            calls.append(content) or original(content)
+        )
+        result = agent.process_article(article, override_date="2026-03-02")
+
+        assert calls == []
+        assert "Direct Headline" in result
+
     def test_critic_checkpoint_write_failure(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
         original = agent.cache_dir

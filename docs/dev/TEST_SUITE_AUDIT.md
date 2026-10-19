@@ -33,9 +33,11 @@ The pytest default (`--cov=news_collector --cov=apps`) hid two packages. Full pi
 | news_collector/enrichment/nlp_stack.py | 79.4 | 52 |
 | news_collector/collectors/html_collector.py | 79.7 | 42 |
 
-Notes: `noticiencias/gui_config.py` (383 lines, 0 %) is the legacy Streamlit config GUI (candidate
-for removal); `noticiencias/config_manager.py` is a real gap (loading/validation of the
-sealed config contract). Zero-coverage scripts include CI-relevant ones (`sync_lockfiles`,
+Notes: `noticiencias/gui_config.py` is the Tkinter config editor behind `make config-gui` (not
+Streamlit, as an earlier revision of this note claimed); its pure helpers and save/reload paths are
+covered by `tests/unit/config/test_gui_config.py`, while the widget-building half needs a live Tk
+root and stays out of the gate. `noticiencias/config_manager.py` is a real gap (loading/validation
+of the sealed config contract). Zero-coverage scripts include CI-relevant ones (`sync_lockfiles`,
 `bump_version`, `validate_plans_ledger`, `quality_gate_refresh`, `update_changelog`).
 
 ## Tests that do not point at repo code

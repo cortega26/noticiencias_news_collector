@@ -1,6 +1,8 @@
 import json
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -1289,6 +1291,54 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         recorder.assert_called_once()
         self.assertEqual(recorder.call_args.kwargs["attempts"], 0)
         self.assertIsNone(recorder.call_args.kwargs["timeout_seconds"])
+
+    def test_close_releases_the_audit_worker_thread(self):
+        """Plan 149 item 1: without `close()` the single worker stays alive
+        blocked on its queue forever (one per audited publish/batch item)."""
+        finished = threading.Event()
+
+        class _FastAuditor:
+            def audit_article_sync(self, **_kwargs):
+                finished.set()  # proves the in-flight audit was not cut off
+                return {"status": "audit_passed", "reason": "ok", "attempts": 1}
+
+        baseline = threading.active_count()
+        self.engine.auditor = _FastAuditor()
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            self.engine._schedule_optional_audit(
+                article_id="1",
+                article_numeric_id=1,
+                content="c",
+                source_url="http://x",
+                article_data={},
+            )
+            future = self.engine._last_audit_future
+            self.assertIsNotNone(future)
+            self.engine.close()
+            self.assertTrue(finished.wait(10), "in-flight audit was cut off")
+            future.result(timeout=10)  # drain (the done callback already read it)
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline and (
+                any(t.is_alive() for t in self.engine.executor._threads)
+                or threading.active_count() > baseline
+            ):
+                time.sleep(0.01)
+
+        # `_threads` keeps stopped Thread handles (CPython behaviour), so
+        # liveness — not set emptiness — is the leak signal.
+        self.assertFalse(any(t.is_alive() for t in self.engine.executor._threads))
+        recorder.assert_called_once()
+        self.assertEqual(threading.active_count(), baseline)
+
+    def test_close_is_idempotent_and_safe_without_any_audit_run(self):
+        baseline = threading.active_count()
+        self.assertEqual(self.engine.executor._threads, set())
+
+        self.engine.close()
+        self.engine.close()
+
+        self.assertFalse(any(t.is_alive() for t in self.engine.executor._threads))
+        self.assertEqual(threading.active_count(), baseline)
 
 
 class TestDownloadImageDelegation(unittest.TestCase):

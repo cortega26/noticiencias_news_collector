@@ -298,6 +298,19 @@ class RefineryEngine:
         )
         self.publication_workflow = TargetRepoPublicationWorkflow()
 
+    def close(self) -> None:
+        """Release the engine's only OS resource: the audit worker thread.
+
+        The executor is `max_workers=1` and its thread starts lazily on the
+        first audit submit, so this is safe (and idempotent) on an engine
+        whose audit never ran. ``wait=False`` keeps the non-blocking audit
+        contract: a task already running finishes and still persists its
+        status through the done callback, while only tasks still queued are
+        cancelled. Every owner of an engine is expected to call this —
+        `run_publication_pipeline` does so in a ``finally``.
+        """
+        self.executor.shutdown(wait=False, cancel_futures=True)
+
     def process_articles(
         self, articles: List[Dict[str, Any]], target_repo_obj: Any, target_dir: Path
     ) -> Dict[str, Any]:

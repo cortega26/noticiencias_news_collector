@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-19T10:26:55.488263+00:00",
-  "python_version": "3.13.16",
+  "generated_at": "2026-10-19T13:20:11.130695+00:00",
+  "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
       "rules"
@@ -329,6 +329,7 @@
       "run_live_source_drift.py",
       "run_pipeline_e2e.py",
       "run_secret_scan.py",
+      "sanitize_gitleaks_report.py",
       "score_delta.py",
       "security_gate.py",
       "setup",
@@ -469,6 +470,7 @@
       "test_run_collector_continuous.py",
       "test_run_collector_smoke.py",
       "test_run_secret_scan.py",
+      "test_sanitize_gitleaks_report.py",
       "test_scan_placeholders.py",
       "test_schema_consistency.py",
       "test_scholarly_enricher.py",
@@ -486,6 +488,7 @@
       "test_utils_security.py",
       "test_validation_loop.py",
       "test_webhook.py",
+      "test_workflow_permissions.py",
       "test_xml_escaping.py",
       "tools",
       "unit",
