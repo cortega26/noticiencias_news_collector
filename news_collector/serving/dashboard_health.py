@@ -18,8 +18,13 @@ Interpretation rules (documented in the phase spec):
   threshold is ``warning``; otherwise ``pass``.
 - callbacks: any ``failed`` receipt is ``fail``; any pending ``received``
   receipt is ``warning``; otherwise ``pass``.
-- validation: any ``rejected`` publication event (Content Guard blocked an
-  attempt) is ``warning``; ``check_passed``-only is ``pass``.
+- validation: any ``rejected`` publication event is ``warning``. Only the
+  subset emitted by the Content Guard ``validation_result`` callback
+  (``details.event == "validation_result"``) is attributed to Content Guard
+  in the sentence; release-path rejections (``database.py``
+  ``release_article_publishing``) and reconciler ``legacy_projection``
+  repairs are real rejections too, but the sentence must not claim a Content
+  Guard verdict the data does not prove.
 """
 
 from __future__ import annotations
@@ -41,6 +46,14 @@ _ATTEMPT_STATES = ("PUBLISHING", "PR_CREATED", "REJECTED", "COMPLETED")
 _ATTEMPT_PENDING_STATES = ("PUBLISHING", "PR_CREATED")
 _RECEIPT_STATUSES = ("received", "processed", "failed")
 _VALIDATION_EVENT_TYPES = ("check_passed", "rejected")
+# `rejected` rows come from three unrelated paths. Only the frontend
+# validation_result callback (Content Guard failure) writes this details
+# marker; `database.release_article_publishing` writes
+# `{"reason", "failure_class"}` and
+# `publication_reconciliation._reject_from_legacy_evidence` writes
+# `{"reason", "source": "legacy_projection"}`.
+_CONTENT_GUARD_DETAIL_KEY = "event"
+_CONTENT_GUARD_DETAIL_VALUE = "validation_result"
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -175,13 +188,31 @@ def _validation_evidence(db: Any, now: datetime) -> AdminDashboardEvidence:
 
     measured_at = db.lifecycle.latest_publication_event_at(_VALIDATION_EVENT_TYPES)
     if defaults["rejected"]:
+        # Counts stay per event type; the Content Guard subset is computed
+        # separately so the sentence only attributes what the stored
+        # `details` payloads prove (see the module docstring rule).
+        content_guard_rejected = (
+            db.lifecycle.count_publication_events_by_type_and_detail(
+                ("rejected",),
+                detail_key=_CONTENT_GUARD_DETAIL_KEY,
+                detail_value=_CONTENT_GUARD_DETAIL_VALUE,
+            ).get("rejected", 0)
+        )
+        if content_guard_rejected == defaults["rejected"]:
+            detail = (
+                f"{defaults['rejected']} intento(s) rechazado(s) por Content Guard; "
+                f"{defaults['check_passed']} verificación(es) superada(s)."
+            )
+        else:
+            detail = (
+                f"{defaults['rejected']} intento(s) rechazado(s) "
+                f"({content_guard_rejected} por Content Guard); "
+                f"{defaults['check_passed']} verificación(es) superada(s)."
+            )
         return AdminDashboardEvidence(
             status="warning",
             evidence="present",
-            detail=(
-                f"{defaults['rejected']} intento(s) rechazado(s) por Content Guard; "
-                f"{defaults['check_passed']} verificación(es) superada(s)."
-            ),
+            detail=detail,
             measured_at=measured_at,
             counts=defaults,
         )
