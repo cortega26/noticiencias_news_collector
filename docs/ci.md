@@ -25,17 +25,19 @@ The main workflow is `.github/workflows/ci.yml`.
 Current jobs:
 
 - `lint` — `make lint`
-- `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet)
+- `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet); uploads `coverage-reports-unit`
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — `make test` unit suite without coverage; integration, E2E, and performance run in separate jobs
-- `integration` — `make test-integration` (integration directory and root tests marked `e2e`)
+- `integration` — `make test-integration` (integration directory and root tests marked `e2e`), then `make coverage-full` (unit + integration + `e2e`-marked suites in one instrumented run); uploads `coverage-reports-full`
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
-- `coverage` — ratchet the unit coverage artifact from `type` against the unit profile baseline
+- `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)
+
+The `full` profile is the one that measures the `e2e`-marked suites (admin/public API), which the unit profile never collects; the unit profile remains the fast local gate behind `make type`.
 
 These jobs are the current automation reality. Documentation should not claim a different required-check set than the workflow actually defines.
 
