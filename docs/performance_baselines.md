@@ -12,11 +12,11 @@ before using a result to justify an API/query change. Run the test directly so a
 .venv/bin/python -m pytest tests/perf/test_serving_api_perf.py --no-cov
 ```
 
-`make perf` selects the `perf` marker and writes JUnit output, but its Make
-recipe catches pytest failures and emits a `SKIPPED` artifact. A successful
-Make exit therefore does not prove that performance tests passed. Likewise,
-verify marker selection and collected test counts rather than assuming a
-named target ran every benchmark.
+`make perf` selects the `perf` marker and writes JUnit output. Exit code 5
+(no tests collected) is converted into a `SKIPPED` artifact, while real pytest
+failures propagate with a non-zero exit. A green Make exit can therefore mean
+the suite ran — or that no tests matched; verify marker selection and collected
+test counts rather than assuming a named target ran every benchmark.
 
 `news_collector/config/perf_thresholds.py` retains historical pipeline budgets.
 The earlier pipeline/enrichment/PostgreSQL profile test files cited here are

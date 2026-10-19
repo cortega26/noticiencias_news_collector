@@ -1,5 +1,11 @@
 # Collector Benchmark Summary
 
+Status: Historical capture (last revised 2026-02-18). The numbers below describe
+the fixtures, concurrency and hardware used in that session; they are not
+current SLOs, accepted capacity or production evidence. See
+[`docs/performance_baselines.md`](../docs/performance_baselines.md) for the
+current retained performance test and its limits.
+
 ## Fixtures & Methodology
 - Replay workloads using the new fixtures under `perf/fixtures/` to mimic mixed cached/uncached feeds and peak-hour spikes.
 - Benchmarks executed via `python tools/perf/profile_collectors.py` with latency instrumentation (avg/p50/p95) and CPU sampling.
@@ -14,7 +20,7 @@
 | Async | 4 | 215.5 | 32.5 | 2.12× | 145.0 / 203.5 | 0.009 / 0.207 |
 | Async | 8 | 215.9 | 32.4 | 2.11× | 145.0 / 203.5 | 0.009 / 0.207 |
 
-_Source: `tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_latency.jsonl --concurrency 1,2,4,8`【9c50a4†L33-L48】_
+_Source: `tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_latency.jsonl --concurrency 1,2,4,8`_
 
 ## Content-Hash Skip Impact (Warm Cache)
 | Collector | Pass | Duration (s) | CPU (s) | Notes |
@@ -24,7 +30,7 @@ _Source: `tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_lat
 | Async (4 workers) | Cold | 0.3540 | 0.0403 | Initial replay exercises parsing across workers |
 | Async (4 workers) | Warm | 0.3245 | 0.0100 | Hash match converts repeated 200s into short-circuit skips |
 
-_Measured via sequential passes on `perf/fixtures/rss_peak_hour.jsonl` reusing metadata between runs.【288402†L1-L8】_
+_Measured via sequential passes on `perf/fixtures/rss_peak_hour.jsonl` reusing metadata between runs._
 
 ## Profile Excerpt
 ```
@@ -38,4 +44,4 @@ ncalls  tottime  percall  cumtime  percall filename:lineno(function)
         3    0.449    0.150    0.449    0.150 {built-in method time.sleep}
 ```
 
-_Top cumulative cost centres from `python -m cProfile -s cumtime tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_latency.jsonl --concurrency 4`.【eda5ea†L1-L24】_
+_Top cumulative cost centres from `python -m cProfile -s cumtime tools/perf/profile_collectors.py --fixture perf/fixtures/rss_mixed_latency.jsonl --concurrency 4`._

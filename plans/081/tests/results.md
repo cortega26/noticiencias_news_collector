@@ -299,3 +299,81 @@ state the reviewer initially failed.
   the removal is not guaranteed to stay permanent and may need repeating.
   This plan did not add a frontend placeholder file to pre-empt that, since
   doing so was not verified as load-bearing or requested by the spec.
+
+## Leaf-doc sweep (2026-10-19)
+
+Plan 165 finished the long tail listed under "Remaining for a future session".
+Every one of the 24 backend leaf docs was read end to end and its verifiable
+claims (paths, scripts, Make targets, CLI flags, workflow/job names, config
+keys, response shapes) checked against the live tree at `b3614e8c`.
+
+Docs read: `docs/testing.md`, `docs/runbook.md`, `docs/collector_runbook.md`,
+`docs/operations.md`, `docs/database_deployment.md`, `docs/security.md`,
+`docs/api_examples.md`, `docs/EDITORIAL_MODES.md`,
+`docs/editorial_quality_system.md`, `docs/contracts_inventory.md`,
+`docs/common_output_format.md`, `docs/faq.md`, `docs/fixtures.md`,
+`docs/performance_baselines.md`, `docs/placeholder_policy.md`,
+`docs/release-checklist.md`, `docs/release_notes.md`,
+`docs/security_removal_plan.md`, `docs/runbooks/healthcheck.md`,
+`docs/strategic_features.md`, `docs/tools_audit_issues.md`, `perf/bench.md`,
+`scripts/debugging/README.md`, `news_collector/taxonomy/README.md`.
+The frontend docs in the same list remain out of scope (no writes to
+`../noticiencias`).
+
+Confirmed drift fixed:
+
+- `docs/collector_runbook.md` and `docs/faq.md` pointed at `config/sources.yaml`;
+  the catalogue is `news_collector/config/sources.yaml` (loaded by
+  `news_collector/config/sources.py`). The `--sources nature` example was also
+  invalid (no such source id); it now uses `scientific_american`.
+- `docs/api_examples.md` `/healthz` example documented keys the code no longer
+  returns. Replaced `backlog_articles`/`recent_articles`/`last_updated` with the
+  live `health_status()` shape (`pending_processing`, `articles_last_24h`,
+  `database_type`, ...); sample source changed to a real catalogue id.
+- `docs/security.md` said gitleaks runs "only if installed locally"; in fact
+  its absence fails `make security` unless `SKIP_SECRET_SCAN=1`.
+- `docs/performance_baselines.md` and `docs/release-checklist.md` said
+  `make perf` catches/hides pytest failures. It only converts exit code 5
+  (no tests collected) into `SKIPPED`; real failures propagate.
+- `docs/runbook.md` now names the sibling path explicitly
+  (`../noticiencias/docs/webhook-integration.md`), which the drift checker had
+  read as a backend path.
+- `docs/fixtures.md` said `make test-e2e` sets ordering; the suite runs under
+  randomized order and is `tmp_path`-isolated/order-safe.
+- `news_collector/taxonomy/README.md`: the `backfill_tags.py` helper it
+  documents is not in the tree; the section is labeled historical, commands
+  kept as the record.
+
+Labeled as history, not rewritten:
+
+- `perf/bench.md` — February-2026 benchmark capture; now labeled historical and
+  the dangling chat-export citation glyphs were removed (numbers untouched).
+- `docs/strategic_features.md` — proposal snapshot; a status header notes the
+  component names that do not exist in the tree.
+- `docs/security_removal_plan.md` — resolved protobuf exception record; a
+  historical note records that plan 156 moved semgrep to
+  `requirements-semgrep.lock` (the security lock is now semgrep-free).
+
+Deferred / not verifiable cheaply:
+
+- `docs/testing.md`'s historical seed-specific failure narrative (seeds
+  `722672841`, `303127521`) was not reproduced; the fixture/coverage claims
+  around it were verified.
+- `docs/release_notes.md` keeps its single 2025-09-30 NEJM feed entry as a
+  dated record; NEJM is not in the current source catalogue (data change, not
+  a doc edit).
+- `docs/database_deployment.md`'s hosted arrangement (Fly/Docker) is described
+  as unverified deployment, as before; no live deployment was exercised.
+- `docs/api_examples.md`'s "Future B2B surface" section stays explicitly
+  future/not-for-sale.
+
+Checks run:
+
+```
+DOC_DRIFT_FILES=<all 24 docs> .venv/bin/python scripts/check_doc_drift.py
+    # OK - 24 docs checked, all paths, commands, and invariants verified
+make docs-check            # OK (15 default docs)
+make context-validate      # Context validation passed
+make inventory-refresh && make inventory-check
+make plans-ledger-check
+```

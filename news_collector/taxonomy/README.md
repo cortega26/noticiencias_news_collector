@@ -41,6 +41,12 @@ if val_result.needs_review:
 
 ## Backfilling
 
+> Historical: the `backfill_tags.py` helper described below is not present in
+> the current tree, and no replacement tag-backfill CLI is shipped.
+> The commands are kept as the original record; do not run them expecting a
+> script in this checkout. A bulk tag rewrite needs a reviewed script against
+> the configured database.
+
 Use the CLI tool to clean existing content:
 
 ```bash

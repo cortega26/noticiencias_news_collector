@@ -1,5 +1,11 @@
 # Strategic Feature Recommendations (2026)
 
+Status: Proposal snapshot (2026-02-18), kept as a historical record. These are
+candidate features and effort estimates, not shipped behavior, commitments or
+current product state. Some component names in the implementation sketches
+(e.g. `IngestionPipeline`, `OllamaIntegration`, `ScoringEngine`) do not exist
+under those names in the tree; re-verify before acting on this list.
+
 **Author:** Principal Product Engineer  
 **Context:** `noticiencias_news_collector`  
 **Objective:** Maximum Net Value (ROI) with strict resource constraints.

@@ -20,7 +20,8 @@ For an intentional behavior or contract change:
    unless evidence supports changing them.
 4. Run the consuming tests plus the applicable contract/boundary gates.
    The current slow pipeline suite is `tests/e2e_pipeline/`, invoked through
-   `make test-e2e` with ordering specified by the Makefile.
+   `make test-e2e`; its scenarios are `tmp_path`-isolated and order-safe under
+   the randomized order.
 5. Commit fixture changes with the corresponding implementation and report
    which tests consumed them. An unreferenced fixture is not test coverage.
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T20:15:19.342268+00:00",
+  "generated_at": "2026-10-19T20:25:33.996858+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -262,6 +262,7 @@
       "162-lock-workflow-fourth-lock.md",
       "163-dead-code-and-e2e-close.md",
       "164-validation-rules-mutation.md",
+      "165-081-leaf-docs.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1354,6 +1355,7 @@
     "plans/162-lock-workflow-fourth-lock.md",
     "plans/163-dead-code-and-e2e-close.md",
     "plans/164-validation-rules-mutation.md",
+    "plans/165-081-leaf-docs.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
