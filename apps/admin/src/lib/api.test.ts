@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AUTH_BYPASS,
+  ApiError,
   AuthError,
   ConflictError,
   NetworkError,
@@ -112,6 +113,18 @@ function mockFetchReject(): void {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 }
 
+function mockFetchRawResponse(status: number, body: string, contentType?: string): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(body, {
+        status,
+        headers: contentType ? { 'Content-Type': contentType } : {},
+      })
+    )
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -211,11 +224,61 @@ describe('listArticles', () => {
     }
   );
 
-  it('still reports other 5xx as a bare HTTP error', async () => {
+  it('parses a JSON error body on other 5xx instead of a bare HTTP error', async () => {
     mockFetchResponse(500, { detail: 'boom' });
     const err = await listArticles('pending').catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
     expect(err).not.toBeInstanceOf(NetworkError);
-    expect((err as Error).message).toBe('HTTP 500');
+    expect((err as ApiError).status).toBe(500);
+    expect((err as ApiError).detail).toBe('boom');
+  });
+});
+
+describe('structured API errors', () => {
+  const capabilityBody = {
+    detail:
+      'Published content is unavailable in this deployment. This route requires the local admin stack: a git binary and a frontend checkout (missing here: a frontend checkout).',
+    error_code: 'published_content_unavailable',
+  };
+
+  it('carries status, errorCode and detail from the 503 capability body', async () => {
+    mockFetchResponse(503, capabilityBody);
+
+    const err = await getContent().catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(503);
+    expect((err as ApiError).errorCode).toBe('published_content_unavailable');
+    expect((err as ApiError).detail).toContain('requires the local admin stack');
+    // Not a transport failure: the operator must not be told to debug the network.
+    expect(err).not.toBeInstanceOf(NetworkError);
+  });
+
+  it('parses a structured body whose content-type is not JSON', async () => {
+    mockFetchRawResponse(503, JSON.stringify(capabilityBody));
+
+    const err = await getContent().catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).errorCode).toBe('published_content_unavailable');
+  });
+
+  it('keeps NetworkError for a 503 with a non-JSON body', async () => {
+    mockFetchRawResponse(503, '<html><body>Bad Gateway</body></html>', 'text/html');
+
+    const err = await getContent().catch((e) => e);
+
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err).not.toBeInstanceOf(ApiError);
+    expect((err as Error).message).toContain('HTTP 503');
+  });
+
+  it('does not crash on an empty 503 body', async () => {
+    mockFetchRawResponse(503, '');
+
+    const err = await getContent().catch((e) => e);
+
+    expect(err).toBeInstanceOf(NetworkError);
   });
 });
 
