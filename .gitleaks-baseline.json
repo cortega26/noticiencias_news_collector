@@ -24,5 +24,51 @@
     "Commit": "fba72d7645c578c2f7a6c2f7e496c67d07e69037",
     "RuleID": "generic-api-key",
     "Fingerprint": "fba72d7645c578c2f7a6c2f7e496c67d07e69037:plans/060/spec.md:generic-api-key:254"
+  },
+  {
+    "Description": "Generic API or secret token",
+    "StartLine": 217,
+    "EndLine": 217,
+    "StartColumn": 6,
+    "EndColumn": 28,
+    "Match": "key = _config_cache_key",
+    "Secret": "key",
+    "File": "news_collector/serving/api.py",
+    "SymlinkFile": "",
+    "Commit": "b3eddebff09af896a44e83cf59d060391fa3624d",
+    "Entropy": 1.5849625,
+    "Author": "Carlos Ortega",
+    "Email": "cortega26@users.noreply.github.com",
+    "Date": "2026-10-19T13:19:08Z",
+    "Message": "perf(serving): cache static admin reads by mtime+size (plan 148)",
+    "Tags": [
+      "secret",
+      "generic"
+    ],
+    "RuleID": "generic-api-key",
+    "Fingerprint": "b3eddebff09af896a44e83cf59d060391fa3624d:news_collector/serving/api.py:generic-api-key:217"
+  },
+  {
+    "Description": "Generic API or secret token",
+    "StartLine": 197,
+    "EndLine": 197,
+    "StartColumn": 25,
+    "EndColumn": 53,
+    "Match": "key=_CONTENT_GUARD_DETAIL_KEY",
+    "Secret": "key",
+    "File": "news_collector/serving/dashboard_health.py",
+    "SymlinkFile": "",
+    "Commit": "e5fcec5cfc28f284965ee61beef9cf50893da034",
+    "Entropy": 1.5849625,
+    "Author": "Carlos Ortega",
+    "Email": "cortega26@users.noreply.github.com",
+    "Date": "2026-10-19T13:18:14Z",
+    "Message": "fix(serving): stop attributing every rejection to Content Guard (plan 149)\n\npublication_events.event_type='rejected' is emitted by three unrelated\npaths: the frontend validation_result callback (real Content Guard\nfailure), database.release_article_publishing (pre-PR publish failure,\ndetails reason/failure_class) and the reconciler's legacy_projection\nrepair (details source='legacy_projection'). The dashboard read model\nselected on the event type alone and printed 'por Content Guard' for\nevery one of them.\n\n- LifecycleRepository.count_publication_events_by_type_and_detail(): read\n  aggregate filtering JSON details via the portable SQLAlchemy subscript\n  (same idiom as article_repository); NULL/missing details never match.\n- dashboard_health._validation_evidence(): counts stay per event type;\n  the sentence attributes only the callback subset\n  (details.event='validation_result') and otherwise reports the\n  breakdown ('N rechazado(s) (X por Content Guard)').\n\nTests drive each real emitter (apply_validation_result, the release\npath, the reconciler) and fail on the pre-change read model.",
+    "Tags": [
+      "secret",
+      "generic"
+    ],
+    "RuleID": "generic-api-key",
+    "Fingerprint": "e5fcec5cfc28f284965ee61beef9cf50893da034:news_collector/serving/dashboard_health.py:generic-api-key:197"
   }
 ]
