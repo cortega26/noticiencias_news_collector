@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery docs-check docs-review
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -261,6 +261,13 @@ typecheck: bootstrap ## Static mypy check plus unit tests and coverage ratchet
 	@mkdir -p $(COVERAGE_DIR)
 	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --cov-report=xml:$(COVERAGE_DIR)/coverage.xml --cov-report=html:$(COVERAGE_DIR)/html
 	@COVERAGE_PROFILE=unit COVERAGE_XML=$(COVERAGE_DIR)/coverage.xml bash scripts/coverage_ratcheter.sh check
+
+# Union measurement for the CI "full" coverage profile: unit + integration +
+# e2e-marked suites in one instrumented run. `-p no:randomly` keeps the
+# measurement stable (no per-run seed reordering execution/collection).
+coverage-full: bootstrap ## Run the union suite (unit + integration + e2e-marked) with coverage into coverage-full.xml
+	@mkdir -p $(COVERAGE_DIR)
+	@$(PYTEST) tests --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not perf" -p no:randomly --cov-report=xml:$(COVERAGE_DIR)/coverage-full.xml --cov-report=
 
 test: bootstrap ## Run unit tests (excludes integration, pipeline E2E, and performance suites)
 	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --no-cov

@@ -1,5 +1,756 @@
 {
   "profiles": {
+    "full": {
+      "files": {
+        "__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "collectors/__init__.py": {
+          "branch": 0.0,
+          "line": 60.0
+        },
+        "collectors/admission.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "collectors/base_collector.py": {
+          "branch": 88.52,
+          "line": 96.46
+        },
+        "collectors/dispatcher.py": {
+          "branch": 85.94,
+          "line": 97.22
+        },
+        "collectors/full_text.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "collectors/headless_collector.py": {
+          "branch": 40.48,
+          "line": 60.54
+        },
+        "collectors/html_collector.py": {
+          "branch": 92.55,
+          "line": 98.23
+        },
+        "collectors/rate_limit_utils.py": {
+          "branch": 58.33,
+          "line": 84.85
+        },
+        "collectors/reddit_collector.py": {
+          "branch": 0.0,
+          "line": 25.23
+        },
+        "collectors/rss_collector.py": {
+          "branch": 98.1,
+          "line": 99.06
+        },
+        "components/editorial/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "components/editorial/ai_editor.py": {
+          "branch": 86.83,
+          "line": 94.86
+        },
+        "components/editorial/auditor.py": {
+          "branch": 52.38,
+          "line": 74.91
+        },
+        "components/editorial/editorial_cached_stage.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "components/editorial/editorial_critic_gate.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "components/editorial/editorial_input.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "components/editorial/editorial_publication_artifact.py": {
+          "branch": 91.94,
+          "line": 98.48
+        },
+        "components/editorial/editorial_stages.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "components/publishing/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "components/publishing/github_publisher.py": {
+          "branch": 100.0,
+          "line": 99.11
+        },
+        "config/__init__.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "config/perf_thresholds.py": {
+          "branch": null,
+          "line": 0.0
+        },
+        "config/prompts.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "config/runtime.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "config/settings.py": {
+          "branch": 83.33,
+          "line": 92.13
+        },
+        "config/sources.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "config/version.py": {
+          "branch": 66.67,
+          "line": 90.91
+        },
+        "config_manager.py": {
+          "branch": 88.95,
+          "line": 96.51
+        },
+        "config_schema.py": {
+          "branch": 68.75,
+          "line": 93.59
+        },
+        "contracts/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/_constants.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/adapters.py": {
+          "branch": 75.0,
+          "line": 92.55
+        },
+        "contracts/admin.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "contracts/collector.py": {
+          "branch": 88.89,
+          "line": 96.5
+        },
+        "contracts/common.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "contracts/enrichment.py": {
+          "branch": 83.33,
+          "line": 98.11
+        },
+        "contracts/export.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/frontend_publication.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/frontend_schema.py": {
+          "branch": 92.11,
+          "line": 98.26
+        },
+        "contracts/image_brief.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/mock_article.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/pipeline_e2e.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/publication_validation.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/scoring.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "contracts/social_publication.py": {
+          "branch": 86.67,
+          "line": 90.24
+        },
+        "contracts/source_health.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/system.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/validation.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "contracts/webhook.py": {
+          "branch": 92.11,
+          "line": 97.74
+        },
+        "diagnostics.py": {
+          "branch": 86.11,
+          "line": 98.15
+        },
+        "editorial/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "editorial/categories.py": {
+          "branch": 78.57,
+          "line": 91.84
+        },
+        "editorial/category_resolver.py": {
+          "branch": 87.5,
+          "line": 97.92
+        },
+        "editorial/classifier.py": {
+          "branch": 90.0,
+          "line": 97.37
+        },
+        "editorial/council.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "editorial/grounding.py": {
+          "branch": 97.67,
+          "line": 99.57
+        },
+        "editorial/health_claims.py": {
+          "branch": 90.0,
+          "line": 97.5
+        },
+        "editorial/health_scope.py": {
+          "branch": 100.0,
+          "line": 90.48
+        },
+        "editorial/hero_alt.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "editorial/policy.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "editorial/readability.py": {
+          "branch": 98.65,
+          "line": 99.48
+        },
+        "editorial/uncertainty.py": {
+          "branch": 94.44,
+          "line": 97.3
+        },
+        "editorial/voice_tics.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "enrichment/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "enrichment/headless_enricher.py": {
+          "branch": 58.33,
+          "line": 80.42
+        },
+        "enrichment/host_pacer.py": {
+          "branch": 86.36,
+          "line": 94.44
+        },
+        "enrichment/http_enricher.py": {
+          "branch": 96.15,
+          "line": 98.65
+        },
+        "enrichment/nlp_stack.py": {
+          "branch": 54.31,
+          "line": 79.37
+        },
+        "enrichment/pipeline.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "enrichment/router.py": {
+          "branch": 89.19,
+          "line": 98.51
+        },
+        "enrichment/scholarly.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "enrichment/scrapling_enricher.py": {
+          "branch": 38.46,
+          "line": 60.55
+        },
+        "enrichment/strategy_lock_manager.py": {
+          "branch": 61.76,
+          "line": 81.44
+        },
+        "enrichment/strategy_optimizer.py": {
+          "branch": 91.67,
+          "line": 95.89
+        },
+        "exceptions.py": {
+          "branch": null,
+          "line": 0.0
+        },
+        "gui_config.py": {
+          "branch": 63.56,
+          "line": 58.49
+        },
+        "infrastructure/llm/attempts.py": {
+          "branch": 85.71,
+          "line": 100.0
+        },
+        "infrastructure/llm/factory.py": {
+          "branch": 98.15,
+          "line": 99.35
+        },
+        "infrastructure/llm/failure_kinds.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "infrastructure/llm/gemini_provider.py": {
+          "branch": 87.78,
+          "line": 97.87
+        },
+        "infrastructure/llm/health.py": {
+          "branch": 80.0,
+          "line": 100.0
+        },
+        "infrastructure/llm/model_registry.py": {
+          "branch": 81.63,
+          "line": 87.19
+        },
+        "infrastructure/llm/nvidia_provider.py": {
+          "branch": 95.31,
+          "line": 99.46
+        },
+        "infrastructure/llm/ollama_errors.py": {
+          "branch": 37.5,
+          "line": 75.0
+        },
+        "infrastructure/llm/openai_compat_provider.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "infrastructure/llm/provider.py": {
+          "branch": 89.58,
+          "line": 96.68
+        },
+        "infrastructure/llm/rate_limiter.py": {
+          "branch": 90.91,
+          "line": 99.34
+        },
+        "infrastructure/proxy_manager.py": {
+          "branch": 80.56,
+          "line": 91.58
+        },
+        "infrastructure/requests_client.py": {
+          "branch": 86.84,
+          "line": 100.0
+        },
+        "infrastructure/run_context.py": {
+          "branch": 60.0,
+          "line": 90.62
+        },
+        "logic/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "logic/parsers/image_extractor.py": {
+          "branch": 88.71,
+          "line": 96.88
+        },
+        "logic/parsers/rss_parser.py": {
+          "branch": 67.65,
+          "line": 86.79
+        },
+        "logic/workflows/_run_metadata.py": {
+          "branch": 80.0,
+          "line": 87.5
+        },
+        "logic/workflows/audit_scheduler.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "logic/workflows/collection_run_workflow.py": {
+          "branch": 97.22,
+          "line": 97.04
+        },
+        "logic/workflows/frontend_publication_validation.py": {
+          "branch": 84.72,
+          "line": 93.06
+        },
+        "logic/workflows/image_briefs.py": {
+          "branch": 70.83,
+          "line": 87.18
+        },
+        "logic/workflows/image_handler.py": {
+          "branch": 98.0,
+          "line": 99.32
+        },
+        "logic/workflows/live_source_drift.py": {
+          "branch": 91.67,
+          "line": 100.0
+        },
+        "logic/workflows/manual_ingest.py": {
+          "branch": 94.85,
+          "line": 98.86
+        },
+        "logic/workflows/pr_orchestrator.py": {
+          "branch": 79.41,
+          "line": 93.75
+        },
+        "logic/workflows/publication_attempts.py": {
+          "branch": 100.0,
+          "line": 92.06
+        },
+        "logic/workflows/publication_callbacks.py": {
+          "branch": 90.0,
+          "line": 96.24
+        },
+        "logic/workflows/publication_identity.py": {
+          "branch": 85.48,
+          "line": 92.21
+        },
+        "logic/workflows/publication_pipeline.py": {
+          "branch": 89.51,
+          "line": 97.25
+        },
+        "logic/workflows/publication_reconciliation.py": {
+          "branch": 76.79,
+          "line": 92.18
+        },
+        "logic/workflows/publication_run_workflow.py": {
+          "branch": 85.0,
+          "line": 96.36
+        },
+        "logic/workflows/published_content.py": {
+          "branch": 57.58,
+          "line": 76.69
+        },
+        "logic/workflows/published_content_utils.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "logic/workflows/refinery_engine.py": {
+          "branch": 88.68,
+          "line": 97.58
+        },
+        "logic/workflows/source_catalog_workflow.py": {
+          "branch": 75.0,
+          "line": 93.33
+        },
+        "logic/workflows/target_repo_publication.py": {
+          "branch": 96.67,
+          "line": 90.96
+        },
+        "logic/workflows/target_repo_writer.py": {
+          "branch": 96.67,
+          "line": 100.0
+        },
+        "monitoring/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "monitoring/canary.py": {
+          "branch": 65.38,
+          "line": 94.87
+        },
+        "monitoring/common.py": {
+          "branch": 41.67,
+          "line": 86.27
+        },
+        "monitoring/detectors.py": {
+          "branch": 65.12,
+          "line": 84.69
+        },
+        "monitoring/io.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "monitoring/reporting.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "observability/enrichment_metrics_store.py": {
+          "branch": 87.5,
+          "line": 94.46
+        },
+        "observability/llm_canary.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "observability/llm_metrics_store.py": {
+          "branch": 97.37,
+          "line": 100.0
+        },
+        "observability/llm_run_report.py": {
+          "branch": 98.15,
+          "line": 100.0
+        },
+        "observability/llm_run_stats.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "perf/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "perf/load_replay.py": {
+          "branch": 12.5,
+          "line": 51.7
+        },
+        "refinery/analytics_read_model.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "refinery/bulk_helper.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "refinery/main.py": {
+          "branch": 91.67,
+          "line": 98.78
+        },
+        "refinery/published_content.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "reranker/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "reranker/reranker.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "scoring/__init__.py": {
+          "branch": 0.0,
+          "line": 41.38
+        },
+        "scoring/basic_scorer.py": {
+          "branch": 64.74,
+          "line": 76.03
+        },
+        "scoring/cognitive_scorer.py": {
+          "branch": 90.0,
+          "line": 96.35
+        },
+        "scoring/coordinator.py": {
+          "branch": 97.92,
+          "line": 99.49
+        },
+        "scoring/feature_scorer.py": {
+          "branch": 73.44,
+          "line": 87.82
+        },
+        "scoring/heuristic_scorer.py": {
+          "branch": 92.86,
+          "line": 98.08
+        },
+        "scoring/interfaces.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "scoring/latam_relevance.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "scoring/pre_scorer.py": {
+          "branch": 84.72,
+          "line": 94.24
+        },
+        "serving/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "serving/__main__.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "serving/analytics_read_model.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "serving/api.py": {
+          "branch": 83.99,
+          "line": 91.7
+        },
+        "serving/bulk_helper.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "serving/dashboard_health.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "serving/webhook_handler.py": {
+          "branch": 92.86,
+          "line": 92.16
+        },
+        "storage/__init__.py": {
+          "branch": null,
+          "line": 66.67
+        },
+        "storage/analytics.py": {
+          "branch": 80.0,
+          "line": 96.15
+        },
+        "storage/analytics_repository.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "storage/article_repository.py": {
+          "branch": 85.0,
+          "line": 93.08
+        },
+        "storage/database.py": {
+          "branch": 81.82,
+          "line": 91.09
+        },
+        "storage/lifecycle_repository.py": {
+          "branch": 87.5,
+          "line": 96.87
+        },
+        "storage/maintenance.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "storage/migration_guard.py": {
+          "branch": 81.25,
+          "line": 95.77
+        },
+        "storage/models.py": {
+          "branch": 100.0,
+          "line": 93.73
+        },
+        "storage/source_repository.py": {
+          "branch": 96.43,
+          "line": 99.32
+        },
+        "storage/webhook_pull_repository.py": {
+          "branch": 85.0,
+          "line": 96.83
+        },
+        "storage/webhook_receipt_repository.py": {
+          "branch": 92.86,
+          "line": 99.06
+        },
+        "system/__init__.py": {
+          "branch": 82.5,
+          "line": 91.08
+        },
+        "system/activity_monitor.py": {
+          "branch": 92.11,
+          "line": 99.02
+        },
+        "system/bootstrap.py": {
+          "branch": 81.58,
+          "line": 100.0
+        },
+        "system/observability.py": {
+          "branch": 80.0,
+          "line": 100.0
+        },
+        "system/pipeline.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "system/reporter.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "system/reporting.py": {
+          "branch": 83.33,
+          "line": 91.55
+        },
+        "system/source_health.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "taxonomy/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "taxonomy/normalizer.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "utils/__init__.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "utils/dedupe.py": {
+          "branch": 83.33,
+          "line": 94.59
+        },
+        "utils/dict_wrapper.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "utils/pydantic_compat.py": {
+          "branch": 50.0,
+          "line": 83.33
+        },
+        "utils/refinery_helper.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "utils/security.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "utils/similarity.py": {
+          "branch": 85.71,
+          "line": 93.98
+        },
+        "utils/slug.py": {
+          "branch": null,
+          "line": 100.0
+        },
+        "utils/text_cleaner.py": {
+          "branch": 90.62,
+          "line": 88.41
+        },
+        "utils/url_canonicalizer.py": {
+          "branch": 96.55,
+          "line": 98.33
+        },
+        "validation/coordinator.py": {
+          "branch": 95.45,
+          "line": 98.33
+        },
+        "validation/publication_repairs.py": {
+          "branch": 100.0,
+          "line": 100.0
+        },
+        "validation/rules.py": {
+          "branch": 87.5,
+          "line": 94.55
+        },
+        "validation/validator.py": {
+          "branch": 100.0,
+          "line": 100.0
+        }
+      },
+      "recorded_at": "2026-10-19T13:56:12.549364+00:00",
+      "total_branch": 84.17,
+      "total_line": 92.82
+    },
     "unit": {
       "base_sha": "412b5054f5f459db66674babb8c8cf4069a534c4",
       "equivalent_pr_base_sha": "2a341da147b5591c811975094711cca3c56ebf15",
@@ -419,6 +1170,10 @@
         "logic/workflows/publication_run_workflow.py": {
           "branch": 81.48,
           "line": 94.07
+        },
+        "logic/workflows/published_content.py": {
+          "branch": 57.58,
+          "line": 76.69
         },
         "logic/workflows/published_content_utils.py": {
           "branch": 100.0,

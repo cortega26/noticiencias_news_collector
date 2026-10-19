@@ -891,6 +891,9 @@ def run_pipeline_e2e_scenario(  # noqa: C901
                     ),
                 ),
                 config=_make_engine_config(bundle_dir),
+                # The scenarios publish a fake remote hero image through a
+                # stubbed downloader; the shipped policy blocks every host.
+                remote_image_hosts=frozenset({"example.test"}),
             )
             engine._download_image = lambda url, slug, target: url
             # Deterministic auditor seam: the real auditor performs network

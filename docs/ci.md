@@ -25,17 +25,19 @@ The main workflow is `.github/workflows/ci.yml`.
 Current jobs:
 
 - `lint` — `make lint`
-- `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet)
+- `type` — `make type` (mypy on the three Makefile targets + unit-test coverage run + coverage ratchet); uploads `coverage-reports-unit`
 - `config` — `make config-validate` + `make config-docs-check`
 - `contract-parity` — cross-repo frontend schema parity (strict gate)
 - `test` — `make test` unit suite without coverage; integration, E2E, and performance run in separate jobs
-- `integration` — `make test-integration` (integration directory and root tests marked `e2e`)
+- `integration` — `make test-integration` (integration directory and root tests marked `e2e`), then `make coverage-full` (unit + integration + `e2e`-marked suites in one instrumented run); uploads `coverage-reports-full`
 - `pipeline-e2e` — `make test-e2e` (order-sensitive pipeline scenarios, without coverage instrumentation)
-- `coverage` — ratchet the unit coverage artifact from `type` against the unit profile baseline
+- `coverage` — ratchet both profiles: `coverage-reports-unit` feeds `profiles.unit`, `coverage-reports-full` feeds `profiles.full`
 - `perf` — `make perf` without coverage instrumentation (fails on collected-test failure; clean skip with `reports/perf/SKIPPED` only when zero perf tests are collected)
 - `healthcheck` — collector health probe
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)
+
+The `full` profile is the one that measures the `e2e`-marked suites (admin/public API), which the unit profile never collects; the unit profile remains the fast local gate behind `make type`.
 
 These jobs are the current automation reality. Documentation should not claim a different required-check set than the workflow actually defines.
 
@@ -45,7 +47,9 @@ These jobs are the current automation reality. Documentation should not claim a 
 
 - `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses `--config auto` and is non-blocking
 - `make quality-gate` — snapshot-first quality gate (no LLM)
+- `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy; one bounded allowlist exception (`GHSA-84m7-p3x7-pcfv`, `mcp` via semgrep's exact pin, dev tooling only) expires 2026-11-30, durable fix tracked by plan 144
 - gitleaks secret scan (binary downloaded in CI, `make security` runs it locally when installed)
+- the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 
 ## Local Parity Commands
 
@@ -132,7 +136,7 @@ make verify-ci
 - `.github/workflows/dependency-lock-check.yml` — lockfile freshness
 - `.github/workflows/manual-lock-sync.yml` — manual lockfile refresh
 - `.github/workflows/daily_collector.yml` — scheduled collection
-- `.github/workflows/mutation.yml` — mutation testing (weekly, Mon 06:00 UTC): `mutmut run` over the critical pure modules, then `scripts/mutation_score.py --check` fails below the per-module floors in `[tool.mutation.floors]` (local: `make mutation`)
+- `.github/workflows/mutation.yml` — mutation testing (weekly, Mon 06:00 UTC, plus a path-filtered `pull_request` run when a PR touches `editorial/categories.py`, `editorial/health_scope.py`, `logic/workflows/publication_identity.py` or `validation/rules.py`): `mutmut run` over the critical pure modules, then `scripts/mutation_score.py --check` fails below the per-module floors in `[tool.mutation.floors]` (local: `make mutation`; measured ~3.5 min for the 9 floored modules with `--max-children 2`)
 - `.github/workflows/test-health-weekly.yml` — test health (weekly, Mon 07:00 UTC; manual input `days`, default 14): the whole suite with the clock moved forward (`TIME_SHIFT_DAYS`, `tests/_plugins/time_shift_plugin.py`) so time-dependent tests and accepted-risk exceptions about to expire (pip-audit allowlist) fail here first; not a PR gate (local: `TIME_SHIFT_DAYS=14 make test-timeshift`)
 - `.github/workflows/live-source-drift.yml` — live feed cohort sweep
 - `.github/workflows/placeholder-audit-pr.yml` / `placeholder-audit-nightly.yml`

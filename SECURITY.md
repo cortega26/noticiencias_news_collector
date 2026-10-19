@@ -22,15 +22,26 @@ enforces the same exception set.
 
 ## Implemented allowlist and retired exceptions
 
-As checked on 2026-10-12, the `PIP_AUDIT_ALLOWLIST` in
-`scripts/security_gate.py` is **empty**. The last exception, for
-`GHSA-7gcm-g887-7qv7` (protobuf, dev tooling only, was expiring 2026-10-31),
-was removed when the security-lock sync upgraded semgrep 1.121.0 -> 1.180.0,
-which pulls opentelemetry-proto 1.37.0 / protobuf 6.33.6 (fixed);
-`pip-audit -r requirements-security.lock` reports no known vulnerabilities. The
-script still requires `reason` + `expires_on` for any future entry and validates
-expiry. This document records configured policy; it does not independently
-verify current upstream fix availability.
+As checked on 2026-10-19, the `PIP_AUDIT_ALLOWLIST` in
+`scripts/security_gate.py` holds **one dated exception**:
+`GHSA-84m7-p3x7-pcfv` for `mcp==1.29.0`. `mcp` is semgrep 1.180.0's own MCP
+server; semgrep pins `mcp==1.29.0` exactly (no release through 1.181.0 lifts
+the pin), so the advisory's fix versions (1.30.0/2.2.0) are unreachable through
+`scripts/sync_lockfiles.py`, and the gate fails closed (pip-audit reports no
+severity, and a missing severity maps to HIGH). The package appears only in
+`requirements-security.lock`, is absent from `requirements.lock` and
+`requirements-refinery.lock` and from every image, and is not reachable from
+production code or untrusted input. The entry expires on **2026-11-30** and
+`make security-dev` fails again from that date; the durable fix — decoupling
+semgrep from the audited environment — is tracked by plan 144.
+
+Before this entry, the allowlist was empty as of 2026-10-12: the protobuf
+exception `GHSA-7gcm-g887-7qv7` (dev tooling only, was expiring 2026-10-31) was
+removed when the security-lock sync upgraded semgrep 1.121.0 -> 1.180.0, which
+pulls opentelemetry-proto 1.37.0 / protobuf 6.33.6 (fixed). The script still
+requires `reason` + `expires_on` for any entry and validates expiry. This
+document records configured policy; it does not independently verify current
+upstream fix availability.
 
 The NLTK exception `GHSA-8mgp-746c-j5xp` (no upstream fix; last affected 3.10.3)
 was **retired on 2026-09-21 by removing the dependency**: `nltk` and `textblob`

@@ -19,9 +19,10 @@ Usage:
     python scripts/ops/pull_webhook_receipts.py [--endpoint URL] [--token T]
         [--limit 200] [--max-receipts 2000] [--dry-run]
 
-Exit codes: 0 on a completed pass (malformed payloads are a report, matching
-`reconcile_publication_attempts.py`), 1 when the endpoint/token cannot be
-resolved or the fetch fails — a timer can act on it.
+Exit codes: 0 on a completed pass (malformed payloads and exhausted receipts
+are a report, matching `reconcile_publication_attempts.py`), 1 when the
+endpoint/token cannot be resolved or the fetch fails — a timer can act on it —
+and 2 while receipts remain pending or the safety cap truncated the pass.
 """
 
 from __future__ import annotations
@@ -46,8 +47,10 @@ from news_collector.contracts.webhook import (  # noqa: E402
 from news_collector.serving.webhook_handler import handle_webhook_event  # noqa: E402
 from news_collector.storage.database import DatabaseManager  # noqa: E402
 from news_collector.storage.webhook_pull_repository import (  # noqa: E402
+    MAX_DELIVERY_ATTEMPTS,
     CursorConflict,
     WebhookPullReceiptView,
+    is_exhausted,
 )
 from news_collector.utils.logger import get_logger  # noqa: E402
 
@@ -74,6 +77,7 @@ class PullSummary:
     duplicates: int = 0
     failed: int = 0
     malformed: int = 0
+    exhausted: int = 0
     business_attention: int = 0
     pending: int = 0
     truncated: bool = False
@@ -328,15 +332,48 @@ def _apply_one_claimed(
     return applied
 
 
+def _step_over_exhausted(
+    receipt: WebhookPullReceiptView,
+    db: DatabaseManager,
+    summary: PullSummary,
+) -> bool:
+    """Count and log an exhausted receipt; True when the drain may continue.
+
+    The settled row is re-read because the claim/settle cycle is what writes
+    ``failed`` and the final ``attempts`` count; a row that merely failed to
+    settle (still leased) is not exhausted, so the drain stops instead.
+    """
+    current = db.webhook_pull_receipts.get_receipt(
+        receipt.endpoint_key, receipt.remote_id
+    )
+    if current is None or not is_exhausted(current):
+        return False
+    summary.exhausted += 1
+    logger.warning(
+        "Hosted receipt id={} exhausted its budget of {} attempts "
+        "(last error: {}); skipping it so later receipts can run",
+        receipt.id,
+        MAX_DELIVERY_ATTEMPTS,
+        current.error or "unknown",
+    )
+    return True
+
+
 def _apply_claimed(
     receipts: List[WebhookPullReceiptView],
     db: DatabaseManager,
     summary: PullSummary,
 ) -> bool:
-    """Apply leased rows in order; stop at the first unacknowledged event."""
+    """Apply leased rows in order; stop at the first retryable failure.
+
+    A receipt that has exhausted its delivery attempts can never be applied,
+    so it is reported and stepped over instead of blocking the queue.
+    """
     for receipt in receipts:
         summary.attempted += 1
-        if not _apply_one_claimed(receipt, db, summary):
+        if _apply_one_claimed(receipt, db, summary):
+            continue
+        if not _step_over_exhausted(receipt, db, summary):
             return False
     return True
 
@@ -489,6 +526,7 @@ def _print_summary(summary: PullSummary) -> None:
     print(f"[pull-webhooks] duplicates={summary.duplicates}")
     print(f"[pull-webhooks] failed={summary.failed}")
     print(f"[pull-webhooks] malformed={summary.malformed}")
+    print(f"[pull-webhooks] exhausted={summary.exhausted}")
     print(f"[pull-webhooks] business_attention={summary.business_attention}")
     print(f"[pull-webhooks] pending={summary.pending}")
     print(f"[pull-webhooks] truncated={str(summary.truncated).lower()}")
@@ -538,8 +576,9 @@ def main() -> int:
         db.close()
 
     _print_summary(summary)
-    if summary.failed or summary.malformed:
-        return 1
+    # Exit 1 is reserved for unexpected failures (handled above): malformed
+    # and exhausted receipts are a report, while 2 means work remains
+    # (pending/leased rows, a truncated pass, business attention).
     if summary.pending or summary.truncated or summary.business_attention:
         return 2
     return 0

@@ -47,6 +47,7 @@ from news_collector.enrichment.strategy_optimizer import strategy_optimizer
 from news_collector.infrastructure.run_context import run_context
 from news_collector.observability.enrichment_metrics_store import enrichment_metrics
 from news_collector.utils.logger import get_logger
+from news_collector.utils.security import validate_url_safety
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -255,6 +256,28 @@ class EnrichmentStrategyRouter:
                 source_id or "unknown", "none", "missing_url"
             )
             return {"success": False, "reason": "missing_url", "strategy_used": "none"}
+
+        # SSRF protection (plan 141): screen the candidate URL once, before any
+        # fetch strategy runs. `validate_url_safety` fails closed on unsafe
+        # schemes/hosts, private/loopback/link-local addresses and unresolvable
+        # hostnames.
+        try:
+            validate_url_safety(url)
+        except ValueError:
+            enrichment_metrics.record_failure(
+                source_id or "unknown", "none", "unsafe_url"
+            )
+            self.logger.warning(
+                {
+                    "event": "enrichment.router.unsafe_url",
+                    "details": {
+                        "source_id": source_id,
+                        "url": url,
+                        "reason": "unsafe_url",
+                    },
+                }
+            )
+            return {"success": False, "reason": "unsafe_url", "strategy_used": "none"}
 
         if strategy == "discovery_only":
             return {

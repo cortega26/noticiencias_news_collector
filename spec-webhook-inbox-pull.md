@@ -78,11 +78,22 @@ repository (LAW-B4 allowed exception); no mutation, no processing.
 - Each payload: `parse_webhook_payload` (invalid → `malformed` count, logged
   with the delivery key) then `handle_webhook_event(event, db)` — the same
   function the serving endpoint calls. Outcome counters: `replayed`,
-  `duplicates`, `failed`, `malformed`.
+  `duplicates`, `failed`, `malformed`, `exhausted`.
 - `--dry-run`: resolves and parses, checks the local receipt
   (`db.webhook_receipts.get_receipt`) but writes nothing.
-- Exit 0 on a completed pass (malformed rows are a report, like the
-  reconciler), 1 on an unexpected failure (auth/connection).
+- Ordering: a retryable failure still stops the drain at the oldest
+  unsettled receipt. A receipt that reaches `MAX_DELIVERY_ATTEMPTS` (5)
+  attempts without being acknowledged is *exhausted*: the drain counts it
+  (`exhausted`), logs its id, attempts and last error, steps over it, and
+  keeps applying later receipts in the same pass. Exhaustion is derived
+  from `status='failed'` plus the `attempts` counter — no new status value,
+  no new column, no migration; the raw payload, error and attempts stay in
+  `webhook_pull_receipts` for inspection, while exhausted rows stop being
+  claimable and no longer count as pending work.
+- Exit 0 on a completed pass (malformed and exhausted rows are a report,
+  like the reconciler), 1 on an unexpected failure (auth/connection), 2
+  while work remains (retryable or leased rows, a truncated pass, business
+  attention).
 
 ### Wiring
 
@@ -123,6 +134,9 @@ repository (LAW-B4 allowed exception); no mutation, no processing.
 ## Risks / notes
 
 - Delivery keys make replay safe; the puller must never synthesize payloads.
+- Exhausted receipts are not retried automatically: a contract upgrade that
+  would make their payload parseable again needs a manual re-stage (or a
+  future reconciler sweep, deliberately deferred).
 - Receipt `payload` is exposed to admin-authenticated readers only; it holds
   CI envelope fields (repo, sha, diagnostics), no credentials.
 - The puller's safety cap means a very stale local DB may need two runs

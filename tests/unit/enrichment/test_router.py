@@ -5,6 +5,7 @@ from news_collector.enrichment.host_pacer import HostPacer
 from news_collector.enrichment.router import EnrichmentStrategyRouter
 
 
+@patch("news_collector.enrichment.router.validate_url_safety", MagicMock())
 @patch("news_collector.enrichment.router.enrichment_metrics", MagicMock())
 @patch("news_collector.enrichment.router.strategy_lock_manager", MagicMock())
 @patch("news_collector.enrichment.router.strategy_optimizer", MagicMock())

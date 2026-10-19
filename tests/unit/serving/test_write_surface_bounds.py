@@ -273,6 +273,27 @@ def test_publish_url_accepts_public_url() -> None:
 
 
 # ---------------------------------------------------------------------------
+# _check_webhook_body_size (plan 142)
+# ---------------------------------------------------------------------------
+
+
+def test_webhook_body_size_accepts_normal_payload() -> None:
+    assert (
+        serving_api._check_webhook_body_size(b'{"event": "validation_result"}') is None
+    )
+
+
+def test_webhook_body_size_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(serving_api, "_WEBHOOK_MAX_BODY_BYTES", 16)
+
+    serving_api._check_webhook_body_size(b"x" * 16)
+
+    with pytest.raises(HTTPException) as exc_info:
+        serving_api._check_webhook_body_size(b"x" * 17)
+    assert exc_info.value.status_code == 413
+
+
+# ---------------------------------------------------------------------------
 # is_explicit_development
 # ---------------------------------------------------------------------------
 

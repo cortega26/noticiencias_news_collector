@@ -1149,6 +1149,41 @@ class LifecycleRepository:
                 ).all()
             }
 
+    def count_publication_events_by_type_and_detail(
+        self,
+        event_types: tuple[str, ...],
+        *,
+        detail_key: str,
+        detail_value: str,
+    ) -> dict[str, int]:
+        """Count events of ``event_types`` whose JSON ``details`` carry
+        ``detail_key == detail_value``.
+
+        Portable JSON path via SQLAlchemy subscript + ``as_string()``
+        (``json_extract`` on SQLite, ``->>`` on PostgreSQL, same idiom as
+        ``article_repository``); rows with missing/NULL ``details`` never
+        match. Read aggregate for the dashboard health evidence (plan 149):
+        among ``rejected`` rows, ``details.event == "validation_result"`` is
+        the Content Guard callback payload — release-path rejections carry
+        ``reason``/``failure_class`` and reconciler repairs carry
+        ``source: legacy_projection`` instead, so neither matches.
+        """
+        with self._session() as session:
+            rows = (
+                session.query(
+                    _PublicationEventModel.event_type,
+                    func.count(_PublicationEventModel.id),
+                )
+                .filter(_PublicationEventModel.event_type.in_(event_types))
+                .filter(
+                    _PublicationEventModel.details[detail_key].as_string()
+                    == detail_value
+                )
+                .group_by(_PublicationEventModel.event_type)
+                .all()
+            )
+            return {str(event_type): int(count) for event_type, count in rows}
+
     def latest_publication_event_at(
         self, event_types: tuple[str, ...] | None = None
     ) -> datetime | None:

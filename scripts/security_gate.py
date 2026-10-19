@@ -31,12 +31,30 @@ SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Each entry must include an expiry date so suppressions cannot become permanent.
 PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
-    # 2026-10-12: empty. The protobuf ParseDict/Any-recursion DoS entry
-    # (GHSA-7gcm-g887-7qv7 / PYSEC-2026-1805 / CVE-2026-0994, was expiring
-    # 2026-10-31) was removed after the security-lock sync upgraded semgrep
-    # 1.121.0 -> 1.180.0, which pulls opentelemetry-proto 1.37.0 and
-    # protobuf 6.33.6 (fixed). Verified:
-    # `pip-audit -r requirements-security.lock` -> no known vulnerabilities.
+    # 2026-10-19: one dated exception. GHSA-84m7-p3x7-pcfv affects
+    # mcp==1.29.0, which semgrep 1.180.0 pins exactly (no release through
+    # 1.181.0 lifts the pin), so the fix versions (1.30.0/2.2.0) are
+    # unreachable through the sanctioned lock sync. mcp appears only in
+    # requirements-security.lock (via semgrep), is absent from
+    # requirements.lock and requirements-refinery.lock and ships in no
+    # image, so it is dev-tooling-only. Durable fix: decouple semgrep from
+    # the audited environment (plan 144). Before this entry the allowlist
+    # was empty since 2026-10-12, when the protobuf ParseDict/Any-recursion
+    # DoS entry (GHSA-7gcm-g887-7qv7, was expiring 2026-10-31) was removed
+    # after the security-lock sync upgraded semgrep 1.121.0 -> 1.180.0,
+    # pulling opentelemetry-proto 1.37.0 / protobuf 6.33.6 (fixed).
+    "GHSA-84m7-p3x7-pcfv": {
+        "reason": (
+            "mcp 1.29.0 is dev/security tooling only: semgrep 1.180.0 pins "
+            "mcp==1.29.0 exactly (no release through 1.181.0 lifts it), the "
+            "package is absent from requirements.lock and "
+            "requirements-refinery.lock and from every image, and the "
+            "advisory's fix versions (1.30.0/2.2.0) are unreachable through "
+            "sync_lockfiles.py. Durable fix tracked by plan 144 (decouple "
+            "semgrep from the audited environment)."
+        ),
+        "expires_on": "2026-11-30",
+    },
 }
 
 

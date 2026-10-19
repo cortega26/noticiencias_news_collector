@@ -4,7 +4,16 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
+  pull_request:
+    paths:
+      - news_collector/editorial/categories.py
+      - news_collector/editorial/health_scope.py
+      - news_collector/logic/workflows/publication_identity.py
+      - news_collector/validation/rules.py
 
+
+permissions:
+  contents: read
 
 jobs:
   mutmut:

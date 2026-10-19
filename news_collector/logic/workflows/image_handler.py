@@ -16,9 +16,11 @@ Does NOT own:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import urlparse
 
 from news_collector.editorial.hero_alt import is_boilerplate_alt
 from news_collector.logic.parsers.image_extractor import is_site_logo_url
@@ -26,6 +28,12 @@ from news_collector.logic.workflows.image_briefs import ImageBriefStore, slugify
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("ArticleImageHandler")
+
+# Hosts whose images may be downloaded and published as the hero image.
+# Empty on purpose: a source outlet's lead image is the work of that outlet or
+# its photographer, and the pipeline records no reuse licence for it. Add a host
+# only together with a licence entry in the frontend docs/image-rights-register.md.
+REMOTE_IMAGE_ALLOWLIST: frozenset[str] = frozenset()
 
 CT_TO_EXT: Dict[str, str] = {
     "image/jpeg": ".jpg",
@@ -36,6 +44,13 @@ CT_TO_EXT: Dict[str, str] = {
     "image/gif": ".gif",
     "image/svg+xml": ".svg",
 }
+
+# Plan 142 GUARD: slug allowlist for on-disk asset filenames. Mirrors
+# image_briefs._validate_slug (NC-BE-087 S1): ASCII alphanumerics plus `-`/`_`,
+# starting with an alphanumeric — no `.`, `/`, `\`, or empty. The identity
+# resolver's DB branch can return a preferred slug verbatim, so the writer (not
+# the resolver) owns this enforcement.
+_SAFE_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
 @dataclass
@@ -66,8 +81,18 @@ class ArticleImageHandler:
     Instantiate once per RefineryEngine.
     """
 
-    def __init__(self, image_briefs: ImageBriefStore) -> None:
+    def __init__(
+        self,
+        image_briefs: ImageBriefStore,
+        *,
+        remote_image_hosts: frozenset[str] | None = None,
+    ) -> None:
         self._briefs = image_briefs
+        self._remote_image_hosts = (
+            REMOTE_IMAGE_ALLOWLIST
+            if remote_image_hosts is None
+            else frozenset(host.lower() for host in remote_image_hosts)
+        )
 
     # ------------------------------------------------------------------
     # Public interface
@@ -88,7 +113,8 @@ class ArticleImageHandler:
 
         Priority:
         1. Staged editorial brief (status=editorial_image_ready / resolved)
-        2. HTTP URL → download
+        2. HTTP URL → download, only for allowlisted hosts; any other source
+           image is not reused and the article goes to the editorial image queue
         3. Local (non-http) image path → pass through unchanged
         4. Missing / placeholder → queue brief
 
@@ -143,6 +169,29 @@ class ArticleImageHandler:
             return ImageResolution(resolved=False, queued_brief=True)
 
         if raw_image_url and raw_image_url.startswith("http"):
+            if not self._remote_image_allowed(raw_image_url):
+                logger.warning(
+                    "Source image {} is not reused (host not allowlisted); "
+                    "routing article {} to the editorial image queue.",
+                    raw_image_url,
+                    article_id,
+                )
+                self._queue_brief(
+                    article,
+                    article_id,
+                    image_slug,
+                    "third_party_image_blocked",
+                    existing_brief,
+                )
+                return ImageResolution(
+                    resolved=False,
+                    queued_brief=True,
+                    message=(
+                        "The source image is not reused without a licence: "
+                        "upload an original or licensed hero image in the "
+                        "Images desk and publish again."
+                    ),
+                )
             _dl = download_fn if download_fn is not None else self.download
             local_ref = _dl(raw_image_url, image_slug, target_dir)
             if local_ref:
@@ -185,6 +234,19 @@ class ArticleImageHandler:
         self._queue_brief(article, article_id, image_slug, reason, existing_brief)
         return ImageResolution(resolved=False, queued_brief=True)
 
+    def _remote_image_allowed(self, url: str) -> bool:
+        """True when the URL's host (or a parent domain) is allowlisted.
+
+        Compares the lowercased hostname without a leading ``www.``; the dot
+        in the suffix check keeps ``evilexample.com`` and
+        ``example.com.evil.net`` from matching ``example.com``.
+        """
+        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        return any(
+            host == allowed or host.endswith("." + allowed)
+            for allowed in self._remote_image_hosts
+        )
+
     def download(self, url: str, slug: str, target_dir: Path) -> str | None:
         """
         Download a remote image and save it to the local assets directory.
@@ -199,6 +261,18 @@ class ArticleImageHandler:
 
         url = str(url).strip()
         if not url or not url.startswith("http"):
+            return None
+
+        # Plan 142 GUARD: reject traversal-shaped or otherwise unsafe slugs
+        # before any filesystem effect. The publication flow must keep running
+        # (briefs still queue), so this is a logged None, never a raise.
+        if not _SAFE_SLUG_RE.match(str(slug or "")):
+            logger.warning(
+                "Refusing to save downloaded image: unsafe slug {!r} "
+                "(must match {})",
+                slug,
+                _SAFE_SLUG_RE.pattern,
+            )
             return None
 
         assets_dir = target_dir / "src/assets/images"
@@ -230,6 +304,19 @@ class ArticleImageHandler:
 
             filename = f"{slug}{ext}"
             local_path = assets_dir / filename
+            # Plan 142 GUARD (defense-in-depth): the resolved path must stay
+            # inside the assets directory, mirroring image_briefs.brief_path
+            # and target_repo_writer's NC-BE-015 containment check.
+            try:
+                local_path.resolve().relative_to(assets_dir.resolve())
+            except ValueError:
+                logger.warning(
+                    "Refusing to save downloaded image: slug {!r} resolves "
+                    "outside {}",
+                    slug,
+                    assets_dir,
+                )
+                return None
             local_path.write_bytes(response.content)
             logger.info(
                 "Image saved: {} ({} KB, {})",
@@ -253,11 +340,25 @@ class ArticleImageHandler:
         canonical_date: str,
         preferred_slug: str | None,
     ) -> str:
-        if preferred_slug:
+        if preferred_slug and _SAFE_SLUG_RE.match(preferred_slug):
             return preferred_slug
+        if preferred_slug:
+            logger.warning(
+                "Ignoring unsafe preferred slug {!r} for article {}; using "
+                "the deterministic title slug instead.",
+                preferred_slug,
+                article_id,
+            )
         title = str(article.get("title") or "").strip()
         base_slug = slugify_text(title, fallback=f"article-{article_id}")
-        return f"{canonical_date}-{base_slug}"
+        candidate = f"{canonical_date}-{base_slug}"
+        if not _SAFE_SLUG_RE.match(candidate):
+            # ``slugify_text`` returns its fallback verbatim when the title
+            # slugifies to empty, so an unsafe article id (or an unexpected
+            # canonical_date shape) can reach here — sanitize once more
+            # instead of aborting the image step.
+            candidate = slugify_text(candidate, fallback="article")
+        return candidate
 
     def _resolve_downloaded(
         self,

@@ -167,10 +167,15 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   each hosted page in `webhook_pull_receipts` before advancing the durable
   endpoint cursor in `webhook_pull_cursors`. The cursor proves receipt, not
   application; staged rows keep their payload and retry lease until the local
-  handler succeeds. Application stays in hosted ID order and stops at the
-  first failed event. For an applying run, exit 0 reports no known pending
-  work, 1 reports a fetch, validation, or apply failure, and 2 reports a cap
-  or pending work; dry-run exit 0 means parse-only and makes no acknowledgments.
+  handler succeeds. Application stays in hosted ID order: the drain stops at
+  the first retryable failure and steps over receipts that exhausted their
+  delivery attempts (derived: `status='failed'` with
+  `attempts >= MAX_DELIVERY_ATTEMPTS`, 5 — payload and counter are retained,
+  no extra status value). For an applying run, exit 0 reports a completed
+  pass (malformed and exhausted receipts are a report), 1 reports an
+  unexpected failure resolving the endpoint/token or fetching, and 2 reports
+  remaining work (pending or leased rows, the safety cap, business
+  attention); dry-run exit 0 means parse-only and makes no acknowledgments.
   The endpoint remains read-only and admin-authenticated.
 - admin parity surface (Phase 4): unpublish + bulk reset of published
   content (git-backed, plan-017 semantics), image brief edit + asset
@@ -207,7 +212,7 @@ for that same attempt; a later retry must identify its own PR/content attempt.
 
 - The backend's own parity test (`tests/test_contracts_sync.py`) covers only top-level field names; the full type/constraint/optionality comparison is enforced by the frontend's checker, which backend CI runs in strict mode (`.github/workflows/ci.yml` → `contract-parity` job) and the frontend runs on every push (Content Guard).
 - Frontend validation-failure notifications (`POST /api/v1/webhook/frontend`, `serving/api.py`) depend on `BACKEND_WEBHOOK_URL`/`BACKEND_WEBHOOK_TOKEN` being configured in the frontend repository — they must be set for the failure loop to close.
-- Webhook deliveries are persisted as durable receipts before processing (plan 060 Phase 5a, `webhook_receipts`): the endpoint answers 202 only after the receipt exists, an optional `delivery_id` (or a stable derived key when absent) makes replays idempotent — a duplicate of a processed delivery returns its stored result without reapplying transitions — and a processing exception leaves a `failed` receipt with its error and attempt count. The frontend sender does not yet emit `delivery_id` or bounded retries; the derived key covers that gap until it does.
+- Webhook deliveries are persisted as durable receipts before processing (plan 060 Phase 5a, `webhook_receipts`): the endpoint answers 202 only after the receipt exists, an optional `delivery_id` (or a stable derived key when absent) makes replays idempotent — a duplicate of a processed delivery returns its stored result without reapplying transitions — and a processing exception leaves a `failed` receipt with its error and attempt count. The frontend sender does not yet emit `delivery_id` or bounded retries; the derived key covers that gap until it does. Inbound payloads are bounded before persistence (plan 142): the route rejects raw bodies over 2 MiB with 413, and the envelope caps `diagnostics` (50) and each diagnostic's `errors` (5000 items / 1 MiB serialized) plus the free-form audit fields (`commit_sha` 128, `branch`/`frontend_ref` 255, `run_url` 2048 characters) — all far above what CI sends, so the append-only receipt log cannot be grown without bound by a caller holding the shared key.
 - Publication-attempt transitions are audited (plan 060 Phase 5b, `publication_events`) and restricted to the explicit legal map `PUBLISHING → {PR_CREATED, REJECTED, COMPLETED}`, `PR_CREATED → {REJECTED, COMPLETED}`, terminal states permit nothing; the state change, event, and current-article projection update are written in one transaction. Callbacks match by `publication_attempt_refs` (article ID + PR number + exact-content SHA-256); a validation *pass* appends `check_passed` without changing state.
 - Crash recovery reuses the stored workflow attempt ID and fingerprints the exact Markdown file from the target checkout before recreating or recovering a PR. If the source artifact cannot be read, recovery refuses to create an uncorrelated PR; legacy rows without an ID receive a new recovery ID.
 - Stale `PR_CREATED` attempts are reconciled on demand by `scripts/ops/reconcile_publication_attempts.py` (plan 060 Phase 5b): it replays unprocessed receipts (`received`/`failed`) whose `publication_ids` name a candidate, repairs an attempt whose legacy article is already `completed` **with a real deploy URL** or already `rejected`, and reports an otherwise-stale open PR as actionable. It never creates a pull request and never marks an attempt `COMPLETED` without deploy evidence.

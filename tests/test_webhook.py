@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -361,6 +362,75 @@ def test_webhook_missing_required_fields(api_client: TestClient) -> None:
     payload: dict = {"event": "validation_result"}
     response = api_client.post("/api/v1/webhook/frontend", json=payload)
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Payload bounds (Plan 142)
+# ---------------------------------------------------------------------------
+
+
+def test_webhook_oversize_body_rejected_with_413_before_receipt(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """A body over the route cap is refused before validation or persistence."""
+    from news_collector.serving.api import _WEBHOOK_MAX_BODY_BYTES
+
+    payload = _make_validation_payload("pass")
+    payload["padding"] = "x" * (_WEBHOOK_MAX_BODY_BYTES + 1)
+    body = json.dumps(payload).encode("utf-8")
+
+    with patch.dict(os.environ, {"WEBHOOK_API_KEY": "secret-token"}):
+        response = api_client.post(
+            "/api/v1/webhook/frontend",
+            content=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer secret-token",
+            },
+        )
+
+    assert response.status_code == 413
+    assert db_manager.webhook_receipts.count_receipts_by_status() == {}
+
+
+def test_webhook_over_limit_errors_rejected_with_422(
+    api_client: TestClient,
+) -> None:
+    """Model caps reject an over-limit errors list before persistence."""
+    from news_collector.contracts.webhook import _MAX_DIAGNOSTIC_ERRORS
+
+    payload = _make_validation_payload("fail")
+    payload["diagnostics"][0]["errors"] = [
+        f"error-{i}" for i in range(_MAX_DIAGNOSTIC_ERRORS + 1)
+    ]
+
+    response = api_client.post("/api/v1/webhook/frontend", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_webhook_normal_payload_persisted_in_receipt(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    """An accepted payload is persisted with its diagnostics in the receipt."""
+    from news_collector.contracts.webhook import (
+        compute_delivery_key,
+        parse_webhook_payload,
+    )
+
+    payload = _make_validation_payload("pass")
+
+    response = api_client.post("/api/v1/webhook/frontend", json=payload)
+
+    assert response.status_code == 202
+    receipt = db_manager.webhook_receipts.get_receipt(
+        compute_delivery_key(parse_webhook_payload(payload))
+    )
+    assert receipt is not None
+    assert receipt.event_type == "validation_result"
+    assert receipt.payload["diagnostics"][0]["check"] == "frontmatter-dates"
+    assert receipt.payload["diagnostics"][0]["errors"] == []
+    assert receipt.payload["publication_ids"] == []
 
 
 # ---------------------------------------------------------------------------

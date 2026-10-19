@@ -300,3 +300,79 @@ def test_extract_deploy_url():
         {**_base_payload("publish_complete"), "status": "success", "diagnostics": []}
     )
     assert extract_deploy_url(no_deploy) is None
+
+
+# ---------------------------------------------------------------------------
+# Payload caps (Plan 142)
+# ---------------------------------------------------------------------------
+
+
+def test_diagnostics_count_cap_enforced():
+    payload = _base_payload()
+    payload["diagnostics"] = [
+        {"check": f"check-{i}", "status": "pass"} for i in range(51)
+    ]
+
+    with pytest.raises(ValidationError, match="diagnostics"):
+        ValidationResultEvent.model_validate(payload)
+
+
+def test_diagnostic_errors_bounds_boundary(monkeypatch: pytest.MonkeyPatch):
+    from news_collector.contracts import webhook as webhook_contract
+
+    monkeypatch.setattr(webhook_contract, "_MAX_DIAGNOSTIC_ERRORS", 2)
+    monkeypatch.setattr(webhook_contract, "_MAX_DIAGNOSTIC_ERRORS_BYTES", 64)
+
+    at_limit = _base_payload()
+    at_limit["diagnostics"] = [
+        {"check": "content-guard", "status": "fail", "errors": ["a", "b"]}
+    ]
+    ValidationResultEvent.model_validate(at_limit)
+
+    over_count = _base_payload()
+    over_count["diagnostics"] = [
+        {"check": "content-guard", "status": "fail", "errors": ["a", "b", "c"]}
+    ]
+    with pytest.raises(ValidationError, match="errors"):
+        ValidationResultEvent.model_validate(over_count)
+
+
+def test_diagnostic_errors_serialized_size_cap_enforced(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from news_collector.contracts import webhook as webhook_contract
+
+    monkeypatch.setattr(webhook_contract, "_MAX_DIAGNOSTIC_ERRORS_BYTES", 64)
+
+    payload = _base_payload()
+    payload["diagnostics"] = [
+        {
+            "check": "content-guard",
+            "status": "fail",
+            "errors": [{"file": "a.md", "message": "x" * 128}],
+        }
+    ]
+
+    with pytest.raises(ValidationError, match="serialized"):
+        ValidationResultEvent.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "field,limit",
+    [
+        ("commit_sha", 128),
+        ("branch", 255),
+        ("frontend_ref", 255),
+        ("run_url", 2048),
+    ],
+)
+def test_free_form_audit_fields_are_length_capped(field: str, limit: int):
+    payload = _base_payload()
+
+    payload[field] = "x" * (limit + 1)
+    with pytest.raises(ValidationError, match=field):
+        ValidationResultEvent.model_validate(payload)
+
+    payload[field] = "x" * limit
+    event = ValidationResultEvent.model_validate(payload)
+    assert len(getattr(event, field)) == limit

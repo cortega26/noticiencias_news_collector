@@ -62,6 +62,12 @@ jobs:
           make quality-ci
           make quality-gate
 
+      - name: Audit Dev/Refinery Dependencies (security-dev)
+        run: |
+          # Same shared gate as every other pip-audit leg; the bounded
+          # allowlist entry in scripts/security_gate.py is exercised here.
+          make security-dev
+
       - name: Run Secret Scan (gitleaks)
         run: |
           mkdir -p reports/security
@@ -75,9 +81,22 @@ jobs:
             reports/security/gitleaks.json --severity HIGH \
             --status reports/security/status.json
 
+      - name: Sanitize Secret Scan Report
+        if: always()
+        run: |
+          # The raw report carries matched values (no --redact above) and feeds
+          # the gate step only. Only the sanitized copy is uploaded: Secret/Match
+          # values are replaced, so a leaked value can never be republished via
+          # the artifact on this public repository.
+          .venv/bin/python scripts/sanitize_gitleaks_report.py \
+            reports/security/gitleaks.json \
+            reports/security/gitleaks-sanitized.json
+
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: quality-reports
-          path: reports/security
+          path: |
+            reports/security/gitleaks-sanitized.json
+            reports/security/status.json

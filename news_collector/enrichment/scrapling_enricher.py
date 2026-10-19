@@ -21,6 +21,7 @@ except ImportError:
 
 from news_collector.enrichment.headless_enricher import budget_manager
 from news_collector.utils.logger import get_logger
+from news_collector.utils.security import validate_url_safety
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -75,6 +76,14 @@ class ScraplingEnricher:
             fetch_kwargs["proxy"] = proxy
 
         page = StealthyFetcher.fetch(url, **fetch_kwargs)
+
+        # Post-navigation safety re-check (plan 141): the fetch follows
+        # redirects; validate the URL the browser actually landed on before its
+        # body is used as article content.
+        try:
+            validate_url_safety(page.url)
+        except ValueError as exc:
+            raise ValueError("Unsafe final URL after navigation") from exc
 
         raw_content = (
             page.body
@@ -228,6 +237,15 @@ class ScraplingHttpEnricher:
         start = time.time()
         try:
             page = Fetcher.get(url, timeout=timeout, follow_redirects=True)
+
+            # Post-navigation safety re-check (plan 141): the fetch follows
+            # redirects; validate the URL the client actually landed on before
+            # its body is used as article content.
+            try:
+                validate_url_safety(page.url)
+            except ValueError as exc:
+                raise ValueError("Unsafe final URL after navigation") from exc
+
             text = str(page.get_all_text(separator=" ", strip=True))
             content = " ".join(text.split())
             duration = time.time() - start

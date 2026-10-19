@@ -8,15 +8,29 @@ means ``evidence="none"`` and ``status="unknown"`` — never ``pass``.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from news_collector.contracts.webhook import ValidationResultEvent
+from news_collector.logic.workflows.publication_callbacks import apply_validation_result
+from news_collector.logic.workflows.publication_reconciliation import (
+    PublicationReconciliationWorkflow,
+)
 from news_collector.serving.dashboard_health import build_dashboard_health
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article
 
 NOW = datetime(2026, 9, 25, 12, 0, 0, tzinfo=timezone.utc)
+
+# Content Guard rejection fixtures (mirror the correlated-callback shape of
+# tests/unit/logic/workflows/test_publication_callbacks.py).
+CG_REFINERY_ID = "refinery-dashboard-cg"
+CG_ATTEMPT_ID = "dashboard-cg-attempt"
+CG_PR_NUMBER = 1490
+CG_SHA256 = hashlib.sha256(b"dashboard content guard").hexdigest()
+RELEASE_ATTEMPT_ID = "dashboard-release-attempt"
 
 
 @pytest.fixture()
@@ -230,6 +244,19 @@ class TestValidation:
         assert envelope.validation.status == "pass"
         assert envelope.validation.counts == {"check_passed": 1, "rejected": 0}
 
+    def test_rejected_event_without_details_is_not_attributed(self, db_manager):
+        """Plan 149 item 3: a `rejected` row with no distinguishing details
+        cannot be attributed to a Content Guard verdict."""
+        article_id = _make_article(db_manager)
+        self._event(db_manager, article_id, "rejected")
+
+        envelope = build_dashboard_health(db_manager, now=NOW)
+
+        assert envelope.validation.status == "warning"
+        assert "1 intento(s) rechazado(s) (0 por Content Guard)" in (
+            envelope.validation.detail
+        )
+
     def test_other_event_types_do_not_count_as_validation_evidence(self, db_manager):
         article_id = _make_article(db_manager)
         attempt = _attempt(
@@ -246,3 +273,160 @@ class TestValidation:
 
         assert envelope.validation.status == "unknown"
         assert envelope.validation.evidence == "none"
+
+
+def _content_guard_validation_event(
+    status: str = "fail",
+) -> ValidationResultEvent:
+    """The exact frontend `validation_result` payload (`apply_validation_result`
+    is the real Content Guard callback emitter, plan 149 item 3 Step 6)."""
+    return ValidationResultEvent.model_validate(
+        {
+            "event": "validation_result",
+            "commit_sha": "abc123def",
+            "branch": "publish/dashboard-cg",
+            "status": status,
+            "diagnostics": [],
+            "frontend_ref": "abc123def",
+            "run_url": "https://github.com/cortega26/noticiencias/actions/runs/1",
+            "publication_ids": [CG_REFINERY_ID],
+            "publication_attempt_refs": [
+                {
+                    "refinery_id": CG_REFINERY_ID,
+                    "pull_request_number": CG_PR_NUMBER,
+                    "content_sha256": CG_SHA256,
+                }
+            ],
+        }
+    )
+
+
+def _pr_created_attempt(db_manager: DatabaseManager) -> tuple[int, int]:
+    article_id = _make_article(db_manager, seed="cg")
+    db_manager.mark_article_publishing(
+        article_id,
+        "content/update-dashboard-cg",
+        publication_attempt_id=CG_ATTEMPT_ID,
+    )
+    db_manager.mark_article_published(
+        article_id,
+        f"https://github.com/cortega26/noticiencias/pull/{CG_PR_NUMBER}",
+        CG_REFINERY_ID,
+        publication_attempt_id=CG_ATTEMPT_ID,
+        content_sha256=CG_SHA256,
+    )
+    [attempt] = db_manager.lifecycle.get_publication_attempts_for_article(article_id)
+    assert attempt.state == "PR_CREATED"
+    return article_id, attempt.id
+
+
+class TestValidationAttribution:
+    """Plan 149 item 3: only the Content Guard callback subset of `rejected`
+    rows may be attributed to Content Guard in the sentence. Each test drives
+    the real emitter for its row shape."""
+
+    def test_content_guard_callback_rejection_is_attributed(self, db_manager):
+        _article_id, attempt_id = _pr_created_attempt(db_manager)
+
+        result = apply_validation_result(
+            _content_guard_validation_event("fail"), db_manager
+        )
+
+        assert result["updated"] == 1
+        events = db_manager.lifecycle.get_publication_events_for_attempt(attempt_id)
+        [rejected] = [e for e in events if e.event_type == "rejected"]
+        assert rejected.details["event"] == "validation_result"
+
+        envelope = build_dashboard_health(db_manager, now=NOW)
+
+        assert envelope.validation.status == "warning"
+        assert envelope.validation.counts["rejected"] == 1
+        assert "1 intento(s) rechazado(s) por Content Guard" in (
+            envelope.validation.detail
+        )
+        assert "0 por Content Guard" not in envelope.validation.detail
+
+    def test_release_path_rejection_is_not_attributed(self, db_manager):
+        """`database.release_article_publishing` (pre-PR publish failure)
+        writes `{"reason", "failure_class"}`, never the callback payload."""
+        article_id = _make_article(db_manager, seed="release")
+        db_manager.mark_article_publishing(
+            article_id,
+            "content/update-dashboard-release",
+            publication_attempt_id=RELEASE_ATTEMPT_ID,
+        )
+
+        released = db_manager.release_article_publishing(
+            article_id,
+            reason="frontend render failed",
+            failure_class="frontend_render",
+            publication_attempt_id=RELEASE_ATTEMPT_ID,
+        )
+
+        assert released is True
+        envelope = build_dashboard_health(db_manager, now=NOW)
+        assert envelope.validation.status == "warning"
+        assert envelope.validation.counts["rejected"] == 1
+        assert "1 intento(s) rechazado(s) (0 por Content Guard)" in (
+            envelope.validation.detail
+        )
+
+    def test_legacy_projection_repair_is_not_attributed(self, db_manager):
+        """`publication_reconciliation._reject_from_legacy_evidence` writes
+        `{"reason", "source": "legacy_projection"}` — driven here through the
+        real reconciler."""
+        article_id, attempt_id = _pr_created_attempt(db_manager)
+        with db_manager.get_session() as session:
+            article = session.get(Article, article_id)
+            metadata = dict(article.article_metadata or {})
+            publication = dict(metadata.get("publication") or {})
+            # Deliberately a Content-Guard-sounding legacy reason: the read
+            # model must not treat unproven prose as a Content Guard verdict.
+            publication.update({"state": "REJECTED", "reason": "Content Guard failed"})
+            metadata["publication"] = publication
+            article.article_metadata = metadata
+            article.processing_status = "rejected"
+            session.add(article)
+
+        summary = PublicationReconciliationWorkflow(db_manager).run(
+            stale_minutes=60,
+            now=datetime.now(timezone.utc) + timedelta(hours=2),
+        )
+
+        assert summary.rejected == 1
+        events = db_manager.lifecycle.get_publication_events_for_attempt(attempt_id)
+        assert events[-1].event_type == "rejected"
+        assert events[-1].details["source"] == "legacy_projection"
+
+        envelope = build_dashboard_health(db_manager, now=NOW)
+
+        assert envelope.validation.status == "warning"
+        assert envelope.validation.counts["rejected"] == 1
+        assert "1 intento(s) rechazado(s) (0 por Content Guard)" in (
+            envelope.validation.detail
+        )
+
+    def test_mixed_rejections_report_the_content_guard_breakdown(self, db_manager):
+        _article_id, _attempt_id = _pr_created_attempt(db_manager)
+        apply_validation_result(_content_guard_validation_event("fail"), db_manager)
+
+        release_article_id = _make_article(db_manager, seed="release-mixed")
+        db_manager.mark_article_publishing(
+            release_article_id,
+            "content/update-dashboard-mixed",
+            publication_attempt_id="dashboard-mixed-release-attempt",
+        )
+        db_manager.release_article_publishing(
+            release_article_id,
+            reason="clone failed",
+            failure_class="git_clone",
+            publication_attempt_id="dashboard-mixed-release-attempt",
+        )
+
+        envelope = build_dashboard_health(db_manager, now=NOW)
+
+        assert envelope.validation.status == "warning"
+        assert envelope.validation.counts["rejected"] == 2
+        assert "2 intento(s) rechazado(s) (1 por Content Guard)" in (
+            envelope.validation.detail
+        )

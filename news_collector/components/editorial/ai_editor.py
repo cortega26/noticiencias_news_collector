@@ -2321,9 +2321,20 @@ class EditorAgent:
         print("\n--- STAGE 1: Scientific Translation ---")
         cache_s1 = self._get_cache_path(article_id, EditorialStage.TRANSLATION)
 
-        def _load_translation_cache() -> str:
+        def _load_translation_cache() -> str | None:
             print(f"(Loaded from cache: {cache_s1})")
-            return cache_s1.read_text(encoding="utf-8")
+            cached_translation = cache_s1.read_text(encoding="utf-8")
+            if not _extract_publishable_body(cached_translation):
+                # `Path.write_text` truncates before writing, so a kill or
+                # ENOSPC mid-write leaves a 0-byte (or scaffold-only) file.
+                # Regenerate instead of adapting an empty draft; same
+                # publishable-body rule stage 2 enforces before writing.
+                logger.warning(
+                    "Empty stage1 translation cache ignored (no publishable "
+                    "body); regenerating."
+                )
+                return None
+            return cached_translation
 
         def _persist_translation_cache(text: str) -> None:
             cache_s1.write_text(text, encoding="utf-8")

@@ -46,8 +46,18 @@ def workflow(db_manager, tmp_path):
 
 
 def _write_attempt(dir_path, article_id, **fields):
+    """Seed one attempt artifact. `generated_at` defaults to now — the writer
+    is called while the run row exists, so the file counts as that run's
+    fresh evidence (plan 131 gates merges on freshness); pass
+    `generated_at=...` explicitly to simulate a stale/previous attempt."""
     dir_path.mkdir(parents=True, exist_ok=True)
-    payload = {"article_id": str(article_id), "success": True, "stages": [], **fields}
+    payload = {
+        "article_id": str(article_id),
+        "success": True,
+        "stages": [],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        **fields,
+    }
     (dir_path / f"{article_id}.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
@@ -232,15 +242,17 @@ def test_run_batch_rerun_reuses_canonical_slugs(
     """LAW-B5: retrying the same batch must not mint new identities."""
     monkeypatch.setattr(workflow, "_dispatch_batch", lambda *a, **k: None)
     attempts = tmp_path / "attempts"
-    _write_attempt(attempts, 41, pr_url="https://x/pr/41", final_slug="stable-slug-41")
     calls: list = []
     _fake_batch(monkeypatch, calls, [{"status": "succeeded", "processed_count": 1}])
 
     first = workflow.start_batch([41]).run_id
+    _write_attempt(attempts, 41, pr_url="https://x/pr/41", final_slug="stable-slug-41")
     workflow._run_batch(first, [41])
     # A later attempt file for the same article keeps the same slug
-    # (deterministic identity); the rerun must surface it unchanged.
+    # (deterministic identity); the rerun must surface it unchanged. Each
+    # run's evidence is written during that run (plan 131 freshness gate).
     second = workflow.start_batch([41]).run_id
+    _write_attempt(attempts, 41, pr_url="https://x/pr/41", final_slug="stable-slug-41")
     workflow._run_batch(second, [41])
 
     assert workflow.get_status(first).summary["items"][0]["final_slug"] == (

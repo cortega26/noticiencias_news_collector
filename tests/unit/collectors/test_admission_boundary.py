@@ -100,6 +100,41 @@ def test_valid_article_reaches_duplicate_check_and_save():
     collector.db_manager.save_articles_bulk.assert_called_once()
 
 
+def test_precomputed_existing_urls_are_used_without_a_second_lookup():
+    """Plan 148: when the caller already ran the bulk lookup (the RSS
+    collector does, to filter candidates), the save path must reuse that set
+    instead of recomputing it — same canonicalized-URL membership."""
+    collector = _collector()
+    collector.db_manager.save_articles_bulk.return_value = 1
+
+    saved = collector._filter_and_save_articles(
+        "src-1",
+        [_article_payload()],
+        existing_urls={VALID_URL},
+    )
+
+    assert saved == 0
+    collector.db_manager.articles_exist.assert_not_called()
+    collector.db_manager.save_articles_bulk.assert_not_called()
+
+
+def test_precomputed_existing_urls_still_admit_unknown_urls():
+    """The passed set is membership-only: a URL absent from it is admitted
+    exactly as the fallback lookup would admit it."""
+    collector = _collector()
+    collector.db_manager.save_articles_bulk.return_value = 1
+
+    saved = collector._filter_and_save_articles(
+        "src-1",
+        [_article_payload()],
+        existing_urls={"https://example.com/other"},
+    )
+
+    assert saved == 1
+    collector.db_manager.articles_exist.assert_not_called()
+    collector.db_manager.save_articles_bulk.assert_called_once()
+
+
 def test_summary_only_article_bypasses_content_length_at_the_shared_boundary():
     """The summary_only exception (STOP condition in plan 034) must survive
     centralization: a short-content, summary_only article must still reach

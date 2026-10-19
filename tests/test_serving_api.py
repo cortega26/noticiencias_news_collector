@@ -5,6 +5,7 @@ from typing import Dict, List
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from news_collector.serving import create_app
 from news_collector.serving.api import _decode_cursor, _encode_cursor
@@ -331,6 +332,56 @@ def test_related_articles_returns_not_found_for_unknown_id(api_client: TestClien
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Article not found"
+
+
+def test_related_articles_projects_only_the_serialized_columns(
+    api_client: TestClient, db_manager: DatabaseManager
+):
+    """Plan 148: the related query must select only the columns the response
+    serializes — a full Article hydration would fetch the large
+    content/article_metadata/keywords columns for every row, none of which
+    is ever read. Same statement-counting shape as the perf gate (plan 045)."""
+    statements: List[str] = []
+
+    def _hook(conn, cursor, statement, parameters, context, executemany):
+        statements.append(str(statement))
+
+    engines = []
+    for attr in ("engine", "_engine"):
+        engine = getattr(db_manager, attr, None)
+        if engine is not None and engine not in engines:
+            engines.append(engine)
+    for engine in engines:
+        event.listen(engine, "before_cursor_execute", _hook)
+    try:
+        response = api_client.get("/v1/articles/2/related")
+    finally:
+        for engine in engines:
+            event.remove(engine, "before_cursor_execute", _hook)
+
+    assert response.status_code == 200
+    selects = [stmt for stmt in statements if stmt.strip().lower().startswith("select")]
+    # One SELECT for the cluster lookup, one for the related projection.
+    assert len(selects) == 2, selects
+    related_sql = next(
+        stmt for stmt in selects if "articles.source_name" in stmt.lower()
+    )
+    lowered = related_sql.lower()
+    for large_column in (
+        "articles.content",
+        "articles.article_metadata",
+        "articles.keywords",
+    ):
+        assert large_column not in lowered, related_sql
+    for needed_column in (
+        "articles.id",
+        "articles.title",
+        "articles.source_id",
+        "articles.source_name",
+        "articles.url",
+        "articles.final_score",
+    ):
+        assert needed_column in lowered, related_sql
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 import json
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -53,6 +55,28 @@ class TestRefineryEngine(unittest.TestCase):
     def tearDown(self):
         self.auditor_patch.stop()
         self.git_patch.stop()
+
+    def test_remote_image_hosts_are_forwarded_to_the_image_handler(self):
+        """The engine exposes the image allowlist as an explicit seam (used by
+        the e2e harness); omitting it keeps the module default."""
+        from news_collector.logic.workflows.refinery_engine import RefineryEngine
+
+        engine = RefineryEngine(
+            self.mock_db,
+            self.mock_git,
+            self.mock_editor,
+            self.mock_config,
+            remote_image_hosts=frozenset({"images.example.org"}),
+        )
+
+        self.assertTrue(
+            engine.image_handler._remote_image_allowed(
+                "https://cdn.images.example.org/a.jpg"
+            )
+        )
+        self.assertFalse(
+            engine.image_handler._remote_image_allowed("https://example.net/a.jpg")
+        )
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_records_readability_stage(self, mock_dt_refinery):
@@ -1267,6 +1291,54 @@ class TestRefineryEngineCoverage(unittest.TestCase):
         recorder.assert_called_once()
         self.assertEqual(recorder.call_args.kwargs["attempts"], 0)
         self.assertIsNone(recorder.call_args.kwargs["timeout_seconds"])
+
+    def test_close_releases_the_audit_worker_thread(self):
+        """Plan 149 item 1: without `close()` the single worker stays alive
+        blocked on its queue forever (one per audited publish/batch item)."""
+        finished = threading.Event()
+
+        class _FastAuditor:
+            def audit_article_sync(self, **_kwargs):
+                finished.set()  # proves the in-flight audit was not cut off
+                return {"status": "audit_passed", "reason": "ok", "attempts": 1}
+
+        baseline = threading.active_count()
+        self.engine.auditor = _FastAuditor()
+        with patch.object(self.engine, "_record_audit_status") as recorder:
+            self.engine._schedule_optional_audit(
+                article_id="1",
+                article_numeric_id=1,
+                content="c",
+                source_url="http://x",
+                article_data={},
+            )
+            future = self.engine._last_audit_future
+            self.assertIsNotNone(future)
+            self.engine.close()
+            self.assertTrue(finished.wait(10), "in-flight audit was cut off")
+            future.result(timeout=10)  # drain (the done callback already read it)
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline and (
+                any(t.is_alive() for t in self.engine.executor._threads)
+                or threading.active_count() > baseline
+            ):
+                time.sleep(0.01)
+
+        # `_threads` keeps stopped Thread handles (CPython behaviour), so
+        # liveness — not set emptiness — is the leak signal.
+        self.assertFalse(any(t.is_alive() for t in self.engine.executor._threads))
+        recorder.assert_called_once()
+        self.assertEqual(threading.active_count(), baseline)
+
+    def test_close_is_idempotent_and_safe_without_any_audit_run(self):
+        baseline = threading.active_count()
+        self.assertEqual(self.engine.executor._threads, set())
+
+        self.engine.close()
+        self.engine.close()
+
+        self.assertFalse(any(t.is_alive() for t in self.engine.executor._threads))
+        self.assertEqual(threading.active_count(), baseline)
 
 
 class TestDownloadImageDelegation(unittest.TestCase):
