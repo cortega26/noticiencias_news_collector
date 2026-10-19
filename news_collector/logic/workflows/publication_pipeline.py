@@ -659,278 +659,290 @@ def run_publication_pipeline(  # noqa: C901
     )
     engine.stage_listener = stage_listener
 
-    source_dir = SOURCE_DIR
-    manual_ingest_result = None
-    preferred_export_path = None
-    if export_path:
-        preferred_export_path = Path(export_path).expanduser()
-    if article_url:
-        ingest_service = ManualUrlIngestService(
-            db_manager,
-            export_dir=project_root / "temp" / "manual_ingest",
-        )
-        manual_ingest_result = ingest_service.ingest(article_url)
-        if manual_ingest_result.get("status") != "success":
-            error_result = {
-                "status": "error",
-                "message": manual_ingest_result.get(
-                    "message", "Manual URL ingestion failed."
-                ),
-                "processed_count": 0,
-            }
-            if manual_ingest_result.get("error_code"):
-                error_result["error_code"] = manual_ingest_result["error_code"]
-            return merge_manual_ingest_context(error_result)
-        process_id = str(manual_ingest_result["article_id"])
-        preferred_export_path = Path(manual_ingest_result["export_path"]).expanduser()
-        logger.info(
-            "Manual URL ingest ready for article {} using export {}",
-            process_id,
-            preferred_export_path,
-        )
-    skip_clone = (
-        preferred_export_path is not None
-        and preferred_export_path.exists()
-        and not fetch_only
-    )
-
-    # 1. Clone Source Repo
-    if skip_clone:
-        logger.info(
-            f"Skipping source clone; using provided export path: {preferred_export_path}"
-        )
-    else:
-        try:
-            source_dir = _safe_clone_source_repo(
-                git_handler, config.github.source_repo_url, source_dir
+    try:
+        source_dir = SOURCE_DIR
+        manual_ingest_result = None
+        preferred_export_path = None
+        if export_path:
+            preferred_export_path = Path(export_path).expanduser()
+        if article_url:
+            ingest_service = ManualUrlIngestService(
+                db_manager,
+                export_dir=project_root / "temp" / "manual_ingest",
             )
-        except Exception as e:
-            logger.critical(f"Failed to clone source repo: {e}")
-            return {"status": "error", "message": f"Failed to clone source repo: {e}"}
-
-        logger.info("Source data synced successfully.")
-
-    if fetch_only:
-        logger.info("Fetch-only mode enabled. Exiting.")
-        return {"status": "success", "message": "Source data synced."}
-
-    # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
-    # SKIP if process_id is set (Refine Only Mode) to separate workflows
-    if not process_id:
-        # Pass dry_run
-        run_collector_script(SOURCE_DIR, fast_mode=fast_mode, dry_run=dry_run)
-    else:
-        logger.info(f"Skipping Collector (Refine Only Mode for ID: {process_id})")
-
-    # Manual Injection for Testing
-    data_dir = source_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-
-    # Check if we need to inject a mock file
-    # Only if dev mode is enabled
-    existing_files = list(data_dir.glob("*.md")) + list(data_dir.glob("*.json"))
-    if not existing_files and dev:
-        logger.info("Injecting MOCK article for testing (Dev Mode)...")
-        mock_file = data_dir / "mock_article.md"
-        with open(mock_file, "w", encoding="utf-8") as f:
-            f.write(
-                "# Breakthrough in Fusion Energy\\n\\nScientists at the National Ignition Facility have achieved net energy gain in a fusion reaction for the second time, proving the viability of this localized star power. The experiment produced 3.15 megajoules of energy from 2.05 megajoules of laser energy delivered to the target."
+            manual_ingest_result = ingest_service.ingest(article_url)
+            if manual_ingest_result.get("status") != "success":
+                error_result = {
+                    "status": "error",
+                    "message": manual_ingest_result.get(
+                        "message", "Manual URL ingestion failed."
+                    ),
+                    "processed_count": 0,
+                }
+                if manual_ingest_result.get("error_code"):
+                    error_result["error_code"] = manual_ingest_result["error_code"]
+                return merge_manual_ingest_context(error_result)
+            process_id = str(manual_ingest_result["article_id"])
+            preferred_export_path = Path(
+                manual_ingest_result["export_path"]
+            ).expanduser()
+            logger.info(
+                "Manual URL ingest ready for article {} using export {}",
+                process_id,
+                preferred_export_path,
             )
-        logger.info(f"Created mock file: {mock_file}")
-
-    # Find candidate files (md or json)
-    # Recursively find files
-    articles_to_process = []
-
-    # Check for Collector Export (Primary Source)
-    # 1. Look in Cloned Repo (Cloud Source)
-    CLONED_EXPORT_PATH = source_dir / "data/exports/latest_articles.json"
-
-    # 2. Look in repo-local export path (same runtime root as config.toml)
-    collector_path = project_root
-
-    SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
-
-    selected_export_path = None
-
-    if (
-        (preferred_export_path is not None and preferred_export_path.exists())
-        or CLONED_EXPORT_PATH.exists()
-        or SIBLING_EXPORT_PATH.exists()
-    ):
-        articles_to_process, selected_export_path = _select_export_articles(
-            CLONED_EXPORT_PATH,
-            SIBLING_EXPORT_PATH,
-            db_manager,
-            process_id,
-            preferred_path=preferred_export_path,
+        skip_clone = (
+            preferred_export_path is not None
+            and preferred_export_path.exists()
+            and not fetch_only
         )
-        if selected_export_path:
-            logger.info(f"Using export at {selected_export_path}")
-        logger.info(f"Loaded {len(articles_to_process)} new articles from JSON export.")
 
-    # Fallback / Supplemental: Source Repo Files
-    # Priority: Search ONLY in 'data' directory (standard output location)
-    # We do NOT fallback to root to avoid picking up repo metadata (labels.md, etc)
-    # ONLY load file artifacts if NO export was found OR if we didn't find the requested ID yet
-    if not articles_to_process:  # noqa: SIM102
-        if data_dir.exists():
-            # Files to ignore (exact matches and patterns)
-            IGNORED_FILES = {
-                "README.md",
-                "CHANGELOG.md",
-                "CONTRIBUTING.md",
-                "SECURITY.md",
-                "AGENTS.md",
-                "LICENSE",
-                "CODE_OF_CONDUCT.md",
-                "requirements.txt",
-                "labels.md",
-                "missing.md",
-                "pr_plan.md",
-                "Makefile",
-                "Dockerfile",
-            }
-
-            for ext in ["*.md", "*.json"]:
-                for file_path in data_dir.rglob(ext):
-                    if file_path.name in IGNORED_FILES:
-                        continue
-                    if "test" in file_path.parts:
-                        continue
-
-                    # Filtering Logic
-                    # If process_id is set, we check if filename matches.
-                    # Note: filenames might not be IDs, so this is tricky.
-                    # We will assume process_id can match filename too.
-                    if process_id and process_id not in file_path.name:
-                        continue
-
-                    # Check DB
-                    if db_manager.is_processed(file_path.name) and not process_id:
-                        continue
-
-                    # Read content
-                    try:
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            content = f.read()
-
-                        articles_to_process.append(
-                            {
-                                "title": file_path.name,
-                                "content": content,
-                                "source_name": "File System",
-                                # Use filename as ID for tracking
-                                "id": file_path.name,
-                            }
-                        )
-                    except Exception as e:
-                        logger.error(f"Error reading file {file_path}: {e}")
-
-    logger.info(f"Total candidate content items: {len(articles_to_process)}")
-
-    if not articles_to_process:
-        if process_id:
-            message = (
-                f"No se encontraron artículos para el ID solicitado ({process_id})."
+        # 1. Clone Source Repo
+        if skip_clone:
+            logger.info(
+                f"Skipping source clone; using provided export path: {preferred_export_path}"
             )
         else:
-            message = "No se encontraron artículos para procesar."
-        if selected_export_path:
-            message = f"{message} Export revisado: {selected_export_path}"
-        logger.warning(
-            f"{message} (process_id={process_id}, "
-            f"preferred_export={preferred_export_path}, "
-            f"cloud_export_exists={CLONED_EXPORT_PATH.exists()}, "
-            f"sibling_export_exists={SIBLING_EXPORT_PATH.exists()})"
-        )
-        return {"status": "noop", "message": message, "processed_count": 0}
+            try:
+                source_dir = _safe_clone_source_repo(
+                    git_handler, config.github.source_repo_url, source_dir
+                )
+            except Exception as e:
+                logger.critical(f"Failed to clone source repo: {e}")
+                return {
+                    "status": "error",
+                    "message": f"Failed to clone source repo: {e}",
+                }
 
-    # Update: If process_id is set, we expect EXACTLY 1 item usually, but list is fine.
-    # If NO process_id is set (Bulk Mode), we might want to LIMIT for safety or testing.
-    if not process_id and articles_to_process:
-        # LIMIT FOR BULK MODE: Process only the first items to avoid infinite loops or costs
-        # User requested manual selection anyway, so bulk mode might arguably just process 1 or 5.
-        limit = 5
-        articles_to_process = articles_to_process[:limit]
-        logger.info(f"BULK MODE: Limiting to first {limit} item(s)")
+            logger.info("Source data synced successfully.")
 
-    if not process_new_content and not process_id:
-        logger.info("Auto-processing disabled. New articles saved to inbox.")
-        return {
-            "status": "success",
-            "message": f"{len(articles_to_process)} articles collected. Ready for review.",
-            "processed_count": 0,
-        }
+        if fetch_only:
+            logger.info("Fetch-only mode enabled. Exiting.")
+            return {"status": "success", "message": "Source data synced."}
 
-    last_error = None
-    processed_count = 0
+        # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
+        # SKIP if process_id is set (Refine Only Mode) to separate workflows
+        if not process_id:
+            # Pass dry_run
+            run_collector_script(SOURCE_DIR, fast_mode=fast_mode, dry_run=dry_run)
+        else:
+            logger.info(f"Skipping Collector (Refine Only Mode for ID: {process_id})")
 
-    # Initialize Target Repo (reuse the healthy checkout, else clone it)
-    target_repo_obj = None
-    try:
-        target_repo_obj, _ = _provision_target_repo(
-            git_handler, config.github.target_repo_url, TARGET_DIR
-        )
+        # Manual Injection for Testing
+        data_dir = source_dir / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
 
-        # Configure User
-        with target_repo_obj.config_writer() as git_config:
-            git_config.set_value("user", "name", config.github.user_name)
-            git_config.set_value("user", "email", config.github.user_email)
+        # Check if we need to inject a mock file
+        # Only if dev mode is enabled
+        existing_files = list(data_dir.glob("*.md")) + list(data_dir.glob("*.json"))
+        if not existing_files and dev:
+            logger.info("Injecting MOCK article for testing (Dev Mode)...")
+            mock_file = data_dir / "mock_article.md"
+            with open(mock_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "# Breakthrough in Fusion Energy\\n\\nScientists at the National Ignition Facility have achieved net energy gain in a fusion reaction for the second time, proving the viability of this localized star power. The experiment produced 3.15 megajoules of energy from 2.05 megajoules of laser energy delivered to the target."
+                )
+            logger.info(f"Created mock file: {mock_file}")
 
-    except Exception as e:
-        logger.critical(f"Failed to clone/init target repo: {e}")
-        return {
-            "status": "error",
-            "message": f"Critical Git Error: {e}",
-            "processed_count": 0,
-        }
+        # Find candidate files (md or json)
+        # Recursively find files
+        articles_to_process = []
 
-    try:
-        if articles_to_process:
-            summary = engine.process_articles(
-                articles_to_process, target_repo_obj, TARGET_DIR
+        # Check for Collector Export (Primary Source)
+        # 1. Look in Cloned Repo (Cloud Source)
+        CLONED_EXPORT_PATH = source_dir / "data/exports/latest_articles.json"
+
+        # 2. Look in repo-local export path (same runtime root as config.toml)
+        collector_path = project_root
+
+        SIBLING_EXPORT_PATH = collector_path / "data/exports/latest_articles.json"
+
+        selected_export_path = None
+
+        if (
+            (preferred_export_path is not None and preferred_export_path.exists())
+            or CLONED_EXPORT_PATH.exists()
+            or SIBLING_EXPORT_PATH.exists()
+        ):
+            articles_to_process, selected_export_path = _select_export_articles(
+                CLONED_EXPORT_PATH,
+                SIBLING_EXPORT_PATH,
+                db_manager,
+                process_id,
+                preferred_path=preferred_export_path,
             )
-            processed_count = summary["processed_count"]
-            if summary["errors"]:
-                last_error = summary["errors"][-1]
-                logger.warning(f"Engine reported {len(summary['errors'])} errors.")
-    except Exception as e:
-        logger.error(f"Engine execution failed: {e}")
-        return {
-            "status": "error",
-            "message": f"Engine failed: {e}",
-            "processed_count": 0,
-        }
+            if selected_export_path:
+                logger.info(f"Using export at {selected_export_path}")
+            logger.info(
+                f"Loaded {len(articles_to_process)} new articles from JSON export."
+            )
 
-    except KeyboardInterrupt:
-        logger.warning("\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully...")
-        return {"status": "cancelled", "processed_count": processed_count}
+        # Fallback / Supplemental: Source Repo Files
+        # Priority: Search ONLY in 'data' directory (standard output location)
+        # We do NOT fallback to root to avoid picking up repo metadata (labels.md, etc)
+        # ONLY load file artifacts if NO export was found OR if we didn't find the requested ID yet
+        if not articles_to_process:  # noqa: SIM102
+            if data_dir.exists():
+                # Files to ignore (exact matches and patterns)
+                IGNORED_FILES = {
+                    "README.md",
+                    "CHANGELOG.md",
+                    "CONTRIBUTING.md",
+                    "SECURITY.md",
+                    "AGENTS.md",
+                    "LICENSE",
+                    "CODE_OF_CONDUCT.md",
+                    "requirements.txt",
+                    "labels.md",
+                    "missing.md",
+                    "pr_plan.md",
+                    "Makefile",
+                    "Dockerfile",
+                }
 
-    logger.info("Refinery pass complete.")
+                for ext in ["*.md", "*.json"]:
+                    for file_path in data_dir.rglob(ext):
+                        if file_path.name in IGNORED_FILES:
+                            continue
+                        if "test" in file_path.parts:
+                            continue
 
-    # LLM health of the editing phase (same report as the collection run).
-    from news_collector.observability.llm_run_report import emit_run_report
+                        # Filtering Logic
+                        # If process_id is set, we check if filename matches.
+                        # Note: filenames might not be IDs, so this is tricky.
+                        # We will assume process_id can match filename too.
+                        if process_id and process_id not in file_path.name:
+                            continue
 
-    emit_run_report(emit=logger.info, export_path=None, scope=llm_scope)
+                        # Check DB
+                        if db_manager.is_processed(file_path.name) and not process_id:
+                            continue
 
-    if processed_count == 0 and last_error:
-        message = (
-            last_error.get("message")
-            if isinstance(last_error, dict)
-            else str(last_error)
-        )
-        result = {
-            "status": "error",
-            "message": f"Error procesando artículo: {message}",
-            "processed_count": 0,
-        }
-        if isinstance(last_error, dict) and last_error.get("error_code"):
-            result["error_code"] = last_error["error_code"]
+                        # Read content
+                        try:
+                            with open(file_path, "r", encoding="utf-8") as f:
+                                content = f.read()
+
+                            articles_to_process.append(
+                                {
+                                    "title": file_path.name,
+                                    "content": content,
+                                    "source_name": "File System",
+                                    # Use filename as ID for tracking
+                                    "id": file_path.name,
+                                }
+                            )
+                        except Exception as e:
+                            logger.error(f"Error reading file {file_path}: {e}")
+
+        logger.info(f"Total candidate content items: {len(articles_to_process)}")
+
+        if not articles_to_process:
+            if process_id:
+                message = (
+                    f"No se encontraron artículos para el ID solicitado ({process_id})."
+                )
+            else:
+                message = "No se encontraron artículos para procesar."
+            if selected_export_path:
+                message = f"{message} Export revisado: {selected_export_path}"
+            logger.warning(
+                f"{message} (process_id={process_id}, "
+                f"preferred_export={preferred_export_path}, "
+                f"cloud_export_exists={CLONED_EXPORT_PATH.exists()}, "
+                f"sibling_export_exists={SIBLING_EXPORT_PATH.exists()})"
+            )
+            return {"status": "noop", "message": message, "processed_count": 0}
+
+        # Update: If process_id is set, we expect EXACTLY 1 item usually, but list is fine.
+        # If NO process_id is set (Bulk Mode), we might want to LIMIT for safety or testing.
+        if not process_id and articles_to_process:
+            # LIMIT FOR BULK MODE: Process only the first items to avoid infinite loops or costs
+            # User requested manual selection anyway, so bulk mode might arguably just process 1 or 5.
+            limit = 5
+            articles_to_process = articles_to_process[:limit]
+            logger.info(f"BULK MODE: Limiting to first {limit} item(s)")
+
+        if not process_new_content and not process_id:
+            logger.info("Auto-processing disabled. New articles saved to inbox.")
+            return {
+                "status": "success",
+                "message": f"{len(articles_to_process)} articles collected. Ready for review.",
+                "processed_count": 0,
+            }
+
+        last_error = None
+        processed_count = 0
+
+        # Initialize Target Repo (reuse the healthy checkout, else clone it)
+        target_repo_obj = None
+        try:
+            target_repo_obj, _ = _provision_target_repo(
+                git_handler, config.github.target_repo_url, TARGET_DIR
+            )
+
+            # Configure User
+            with target_repo_obj.config_writer() as git_config:
+                git_config.set_value("user", "name", config.github.user_name)
+                git_config.set_value("user", "email", config.github.user_email)
+
+        except Exception as e:
+            logger.critical(f"Failed to clone/init target repo: {e}")
+            return {
+                "status": "error",
+                "message": f"Critical Git Error: {e}",
+                "processed_count": 0,
+            }
+
+        try:
+            if articles_to_process:
+                summary = engine.process_articles(
+                    articles_to_process, target_repo_obj, TARGET_DIR
+                )
+                processed_count = summary["processed_count"]
+                if summary["errors"]:
+                    last_error = summary["errors"][-1]
+                    logger.warning(f"Engine reported {len(summary['errors'])} errors.")
+        except Exception as e:
+            logger.error(f"Engine execution failed: {e}")
+            return {
+                "status": "error",
+                "message": f"Engine failed: {e}",
+                "processed_count": 0,
+            }
+
+        except KeyboardInterrupt:
+            logger.warning(
+                "\n\nRefinery stopped by user (Ctrl+C). Exiting gracefully..."
+            )
+            return {"status": "cancelled", "processed_count": processed_count}
+
+        logger.info("Refinery pass complete.")
+
+        # LLM health of the editing phase (same report as the collection run).
+        from news_collector.observability.llm_run_report import emit_run_report
+
+        emit_run_report(emit=logger.info, export_path=None, scope=llm_scope)
+
+        if processed_count == 0 and last_error:
+            message = (
+                last_error.get("message")
+                if isinstance(last_error, dict)
+                else str(last_error)
+            )
+            result = {
+                "status": "error",
+                "message": f"Error procesando artículo: {message}",
+                "processed_count": 0,
+            }
+            if isinstance(last_error, dict) and last_error.get("error_code"):
+                result["error_code"] = last_error["error_code"]
+            return merge_manual_ingest_context(result)
+
+        result = {"status": "success", "processed_count": processed_count}
         return merge_manual_ingest_context(result)
-
-    result = {"status": "success", "processed_count": processed_count}
-    return merge_manual_ingest_context(result)
+    finally:
+        engine.close()
 
 
 def run_publication_batch(
