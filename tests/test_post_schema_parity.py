@@ -181,7 +181,9 @@ def test_corpus_inventory_is_fully_classified() -> None:
 @pytest.mark.parametrize("fixture", _VALID_FIXTURES)
 def test_valid_fixture_is_accepted(fixture: str) -> None:
     """The shared corpus valid set is accepted by Pydantic."""
-    AstroPost.model_validate(_load(fixture))
+    post = AstroPost.model_validate(_load(fixture))
+    assert post.title
+    assert post.date is not None
 
 
 def test_additional_property_is_accepted_and_ignored() -> None:
