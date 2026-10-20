@@ -38,6 +38,10 @@ paths = [
   '''^apps/admin/src/lib/api\.ts$''',
   # Plan 171 moved the same token helpers to auth.ts; identical rationale.
   '''^apps/admin/src/lib/auth\.ts$''',
+  # Plan 185 reader-report tests: `idempotency_key` is the report-dedupe
+  # FIELD NAME (trips generic-api-key's "key" match); values are fake
+  # delivery ids, never credentials.
+  '''^tests/unit/storage/test_reader_reports_models\.py$''',
   '''^tests_refinery/test_admin_panel_weights\.py$''',
   '''^docs/RUNBOOK_LOCAL_DEV\.md$''',
   '''^fly-tunnel\.toml$''',
