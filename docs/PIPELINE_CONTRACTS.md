@@ -59,9 +59,11 @@ The render authority is:
   `npm run schema:update`; never edit the artifact by hand.
 - Structural scope only: property names, required fields, enum values, basic
   types, nested object/array shapes, `additionalProperties` (top-level extras
-  allowed; `social` strict), formats, patterns, and bounds. The artifact
-  represents `date` as `oneOf` `date`/`date-time` strings to match this corpus
-  and Pydantic's `Union[date, datetime]`.
+  allowed; `social` strict), formats, patterns, and bounds. The parity test
+  enumerates the only permitted bound differences (Zod safe-integer/item
+  bounds and Pydantic `HttpUrl` length bounds). The artifact represents `date`
+  as `oneOf` `date`/`date-time` strings to match this corpus and Pydantic's
+  `Union[date, datetime]`.
 - Semantic rules that `superRefine` cannot encode are explicit gaps, not
   artifact failures: the five `v2-missing-*` fixtures under
   `../noticiencias/tests/fixtures/publication-contract-corpus/invalid/`
