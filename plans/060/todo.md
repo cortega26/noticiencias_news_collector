@@ -377,7 +377,12 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 - [ ] Fix relative reachability allowlisting; review/delete the 37 findings in
       cohorts; enforce the gate.
-- [ ] Characterize and precompute deterministic related-post top-four results.
+- [x] Characterize and precompute deterministic related-post top-four results.
+      (Delivered: `rankAllRelatedPosts` precomputes once per build with WeakMap
+      caches (tag sets + per-list rankings) and a newest-first tie-break; plan
+      180 adds direct batch characterization — equivalence with the single-post
+      ranking, determinism, top-four cap and cache-key isolation — at frontend
+      f09bbab7. 981 tests, lint/check/build green.)
 - [x] Remove the four verified-unused dependencies/config. (Done 2026-10-20, frontend c5b51165: removed
       `@iconify-json/flat-color-icons` + its unused icon block, `@types/glob`
       and `ts-node`; `astro-embed` was already absent. Lock diff deletions
