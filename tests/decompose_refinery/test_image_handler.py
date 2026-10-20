@@ -206,6 +206,7 @@ class TestResolve:
         brief = MagicMock()
         brief.status = "editorial_image_ready"
         brief.draft_alt_text = "A staged image"
+        brief.image_origin = "ai_generated"
         image_briefs_stub.find_for_article.return_value = brief
         image_briefs_stub.materialize_uploaded_asset.return_value = (
             "~/assets/images/staged.jpg"
@@ -222,6 +223,7 @@ class TestResolve:
         assert result.resolved is True
         assert result.image_url == "~/assets/images/staged.jpg"
         assert result.image_alt == "A staged image"
+        assert result.image_origin == "ai_generated"
         assert result.queued_brief is False
 
     def test_img_05_http_url_downloaded(self, handler, image_briefs_stub, target_dir):

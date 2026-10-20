@@ -1073,6 +1073,12 @@ export interface components {
             draft_alt_text?: string | null;
             /** Generated Prompt */
             generated_prompt?: string | null;
+            /**
+             * Image Origin
+             * @default unknown
+             * @enum {string}
+             */
+            image_origin: "unknown" | "ai_generated" | "licensed" | "original";
             /** News Angle */
             news_angle?: string | null;
             /** Reason */
@@ -1099,6 +1105,8 @@ export interface components {
         AdminImageBriefUpdate: {
             /** Draft Alt Text */
             draft_alt_text?: string | null;
+            /** Image Origin */
+            image_origin?: ("unknown" | "ai_generated" | "licensed" | "original") | null;
             /** News Angle */
             news_angle?: string | null;
             /** Scientific Domain */
@@ -1573,6 +1581,8 @@ export interface components {
             draft_alt_text?: string | null;
             /** File */
             file: string;
+            /** Image Origin */
+            image_origin?: ("unknown" | "ai_generated" | "licensed" | "original") | null;
             /** News Angle */
             news_angle?: string | null;
             /** Scientific Domain */

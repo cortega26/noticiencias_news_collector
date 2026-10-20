@@ -78,6 +78,31 @@ class TestRefineryEngine(unittest.TestCase):
             engine.image_handler._remote_image_allowed("https://example.net/a.jpg")
         )
 
+    def test_image_resolution_carries_the_brief_origin(self):
+        """Plan 169: the publisher receives the brief's provenance."""
+        from news_collector.logic.workflows.image_handler import ImageResolution
+
+        self.engine.image_handler.resolve = MagicMock(
+            return_value=ImageResolution(
+                resolved=True,
+                image_url="~/assets/images/staged.png",
+                image_alt="Descripción",
+                image_origin="ai_generated",
+            )
+        )
+        run = MagicMock()
+        identity = SimpleNamespace(
+            final_slug="2026-01-01-test", is_new=False, canonical_date="2026-01-01"
+        )
+        article = {"title": "Test"}
+
+        resolved = self.engine._resolve_article_image(
+            article, "3724", identity, Path("/tmp"), run
+        )
+
+        self.assertTrue(resolved)
+        self.assertEqual(article["image_origin"], "ai_generated")
+
     def test_image_resolution_failure_names_missing_source_reason(self):
         """Plan 168: a message-less unresolved image still names the cause."""
         from news_collector.logic.workflows.image_handler import ImageResolution

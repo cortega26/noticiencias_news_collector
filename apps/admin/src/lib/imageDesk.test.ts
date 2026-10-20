@@ -26,6 +26,7 @@ const brief: AdminImageBriefItem = {
   updated_at: '2026-10-17T10:00:00+00:00',
   generated_prompt:
     'Escena fotorrealista <script>alert("x")</script> & comillas "dobles".\nSegunda línea.',
+  image_origin: 'unknown',
 };
 
 function mount(item: AdminImageBriefItem): HTMLElement {
@@ -75,5 +76,24 @@ describe('renderImageCard', () => {
     const topic = host.querySelector<HTMLInputElement>('input[data-field="topic"]');
     expect(topic?.getAttribute('data-evil')).toBeNull();
     expect(topic?.value).toBe('x" data-evil="1');
+  });
+
+  it('renders the origin select with every provenance option', () => {
+    const host = mount({ ...brief, image_origin: 'ai_generated' });
+
+    const select = host.querySelector<HTMLSelectElement>('select[data-field="image_origin"]');
+    expect(select?.value).toBe('ai_generated');
+    expect([...(select?.options ?? [])].map((option) => option.textContent)).toEqual([
+      'IA generada',
+      'Licencia',
+      'Original',
+      'Desconocido',
+    ]);
+  });
+
+  it('displays the stored origin on the card', () => {
+    const host = mount({ ...brief, image_origin: 'licensed' });
+
+    expect(host.textContent).toContain('origen Licencia');
   });
 });

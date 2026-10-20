@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+import yaml
 
 from news_collector.components.editorial.editorial_publication_artifact import (
     GeneratedArticleValidationError,
@@ -96,6 +97,7 @@ def _input(**overrides) -> PublicationArtifactInput:
         "metadata_category": None,
         "image_url": "https://example.com/hero.jpg",
         "image_alt": "Descripción",
+        "image_origin": None,
         "source_id": "source-1",
         "source_name": "Fuente",
         "source_url": "https://example.com/article",
@@ -215,3 +217,67 @@ def test_upstream_enrichment_overrides_win() -> None:
     result = run_publication_artifact_stage(data, _hooks())
 
     assert result.frontmatter["why_it_matters"] == ["Override editorial"]
+
+
+def test_ai_generated_alt_gets_the_visible_caption_prefix() -> None:
+    """Plan 169: the frontend renders image_alt as the <figcaption>."""
+    result = run_publication_artifact_stage(
+        _input(image_origin="ai_generated"), _hooks()
+    )
+
+    assert result.frontmatter["image_alt"] == (
+        "Ilustración generada con IA: Descripción"
+    )
+    # Disclosure lives in the caption only — never repeated in the prose.
+    assert "Ilustración generada con IA" not in result.markdown.split("---", 2)[2]
+
+
+def test_ai_generated_alt_prefix_is_idempotent() -> None:
+    result = run_publication_artifact_stage(
+        _input(
+            image_alt="Ilustración generada con IA: Descripción",
+            image_origin="ai_generated",
+        ),
+        _hooks(),
+    )
+
+    assert result.frontmatter["image_alt"] == (
+        "Ilustración generada con IA: Descripción"
+    )
+    assert result.markdown.count("Ilustración generada con IA:") == 1
+
+
+def test_ai_generated_alt_prefix_detection_is_case_insensitive() -> None:
+    result = run_publication_artifact_stage(
+        _input(
+            image_alt="ilustración generada con IA: Descripción",
+            image_origin="ai_generated",
+        ),
+        _hooks(),
+    )
+
+    assert (
+        result.frontmatter["image_alt"].casefold().count("ilustración generada con ia:")
+        == 1
+    )
+
+
+@pytest.mark.parametrize("origin", ["licensed", "original", "unknown", None])
+def test_non_ai_origins_leave_the_alt_untouched(origin: str | None) -> None:
+    result = run_publication_artifact_stage(_input(image_origin=origin), _hooks())
+
+    assert result.frontmatter["image_alt"] == "Descripción"
+    assert "Ilustración generada con IA" not in result.markdown
+
+
+def test_ai_alt_with_colons_serializes_as_valid_quoted_yaml() -> None:
+    """Regression for #312: an unquoted ``: `` breaks the frontmatter."""
+    result = run_publication_artifact_stage(
+        _input(image_origin="ai_generated"), _hooks()
+    )
+
+    frontmatter_block = result.markdown.split("---", 2)[1]
+    parsed = yaml.safe_load(frontmatter_block)
+
+    assert parsed["image_alt"] == "Ilustración generada con IA: Descripción"
+    assert "image_alt: 'Ilustración generada con IA: Descripción'" in result.markdown

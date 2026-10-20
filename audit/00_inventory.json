@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T23:50:36.461004+00:00",
+  "generated_at": "2026-10-20T00:02:55.981482+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -268,6 +268,7 @@
       "167-cross-repo-ci.md",
       "168-image-gate-ux.md",
       "169-ai-image-disclosure.md",
+      "170-category-content-override.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1377,6 +1378,7 @@
     "plans/167-cross-repo-ci.md",
     "plans/168-image-gate-ux.md",
     "plans/169-ai-image-disclosure.md",
+    "plans/170-category-content-override.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

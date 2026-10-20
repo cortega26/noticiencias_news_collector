@@ -220,6 +220,7 @@ export interface AdminImageBriefItem {
   tone: string | null;
   updated_at: string | null;
   generated_prompt: string | null;
+  image_origin: 'unknown' | 'ai_generated' | 'licensed' | 'original';
 }
 
 export interface AdminBulkResetResult {

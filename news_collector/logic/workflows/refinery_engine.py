@@ -688,6 +688,9 @@ class RefineryEngine:
         article["image_url"] = img_resolution.image_url
         if img_resolution.image_alt:
             article["image_alt"] = img_resolution.image_alt
+        # Always overwrite: a reused article dict must never carry a stale
+        # provenance from a previous attempt into this publication.
+        article["image_origin"] = img_resolution.image_origin or "unknown"
 
         if article.get("image_url"):
             article["image_alt"] = publication_safe_image_alt(

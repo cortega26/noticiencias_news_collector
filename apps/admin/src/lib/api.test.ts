@@ -569,12 +569,16 @@ describe('phase 4 parity client', () => {
     setToken('admin-key');
     mockFetchResponse(200, { brief: { status: 'editorial_image_ready' }, asset_path: 'a.png' });
     const file = new File([new Uint8Array([1, 2, 3])], 'hero.png', { type: 'image/png' });
-    const result = await uploadImageBriefAsset('slug-1', file, { draft_alt_text: 'alt' });
+    const result = await uploadImageBriefAsset('slug-1', file, {
+      draft_alt_text: 'alt',
+      image_origin: 'ai_generated',
+    });
     const fetchMock = vi.mocked(fetch);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/v1/admin/images/slug-1/upload');
     expect(init.method).toBe('POST');
     expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get('image_origin')).toBe('ai_generated');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer admin-key');
     expect(result.brief.status).toBe('editorial_image_ready');
   });

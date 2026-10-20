@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from .image_brief import ImageOrigin
+
 
 class AdminArticleListItem(BaseModel):
     """One row of the admin triage queue (explicit projection)."""
@@ -448,6 +450,7 @@ class AdminImageBriefItem(BaseModel):
     tone: Optional[str] = None
     updated_at: Optional[str] = None
     generated_prompt: Optional[str] = None
+    image_origin: ImageOrigin = "unknown"
 
 
 class AdminImageQueueEnvelope(BaseModel):
@@ -490,6 +493,7 @@ class AdminImageBriefUpdate(BaseModel):
     subject_scene: Optional[str] = None
     draft_alt_text: Optional[str] = None
     tone: Optional[str] = None
+    image_origin: Optional[ImageOrigin] = None
 
 
 class AdminImageBriefUploadResult(BaseModel):

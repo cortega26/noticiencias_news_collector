@@ -992,6 +992,17 @@
             ],
             "title": "Generated Prompt"
           },
+          "image_origin": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "ai_generated",
+              "licensed",
+              "original"
+            ],
+            "title": "Image Origin",
+            "type": "string"
+          },
           "news_angle": {
             "anyOf": [
               {
@@ -1087,6 +1098,23 @@
               }
             ],
             "title": "Draft Alt Text"
+          },
+          "image_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unknown",
+                  "ai_generated",
+                  "licensed",
+                  "original"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Origin"
           },
           "news_angle": {
             "anyOf": [
@@ -2281,6 +2309,23 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
+          },
+          "image_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unknown",
+                  "ai_generated",
+                  "licensed",
+                  "original"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Origin"
           },
           "news_angle": {
             "anyOf": [

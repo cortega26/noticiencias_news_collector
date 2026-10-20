@@ -125,7 +125,7 @@ from news_collector.contracts.admin import (
     AdminWebhookReceipt,
     AdminWebhookReceiptEnvelope,
 )
-from news_collector.contracts.image_brief import ImageBriefModel
+from news_collector.contracts.image_brief import ImageBriefModel, ImageOrigin
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
@@ -2614,6 +2614,7 @@ def create_app(  # noqa: C901
                         else None
                     ),
                     generated_prompt=brief.generated_prompt,
+                    image_origin=brief.image_origin,
                 )
                 for brief in briefs
             ]
@@ -2671,6 +2672,7 @@ def create_app(  # noqa: C901
         scientific_domain: Optional[str] = Form(None),
         subject_scene: Optional[str] = Form(None),
         draft_alt_text: Optional[str] = Form(None),
+        image_origin: Optional[ImageOrigin] = Form(None),
         _: None = Depends(verify_admin_token),
     ) -> AdminImageBriefUploadResult:
         """Stage an image asset for a brief (multipart)."""
@@ -2707,6 +2709,7 @@ def create_app(  # noqa: C901
                 news_angle=news_angle or brief.news_angle,
                 scientific_domain=scientific_domain or brief.scientific_domain,
                 subject_scene=subject_scene or brief.subject_scene,
+                image_origin=image_origin,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

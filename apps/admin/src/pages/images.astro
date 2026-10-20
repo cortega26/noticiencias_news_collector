@@ -74,10 +74,14 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 
   function collectFields(card: HTMLElement): Record<string, string> {
     const fields: Record<string, string> = {};
-    card.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
-      const key = input.dataset.field ?? '';
-      if (key) fields[key] = input.value;
-    });
+    card
+      .querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+        'input[data-field], select[data-field]'
+      )
+      .forEach((input) => {
+        const key = input.dataset.field ?? '';
+        if (key) fields[key] = input.value;
+      });
     return fields;
   }
 
