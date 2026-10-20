@@ -267,15 +267,24 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [x] Fail CI on stale OpenAPI/TypeScript artifacts.
       (Delivered by plan 080 Phase 2 — `.github/workflows/ci.yml` →
       `admin-contracts` job runs `make admin-contracts-check`.)
-- [ ] Split frontend structural Zod schema from Astro runtime/date/semantic
-      validation.
-      (Pending, re-checked 2026-09-26: the frontend keeps the full Zod schema
-      inline in `src/content.config.ts`; no schema module/script exists yet.)
-- [ ] Generate neutral JSON Schema with stable Zod 4 APIs and explicit date
-      handling. (Pending; no JSON-Schema generation script in the frontend.)
-- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus. (Pending.)
+- [x] Split frontend structural Zod schema from Astro runtime/date/semantic
+      validation. (Delivered 2026-10-20 by frontend plan 174: the 41-field
+      structural schema lives in `src/schemas/post.ts`; refinements stay in
+      `content.config.ts`; the contract-sync parser follows the module.)
+- [x] Generate neutral JSON Schema with stable Zod 4 APIs and explicit date
+      handling. (Delivered by frontend plan 175 Phase F:
+      `src/schemas/post.schema.json`, deterministic Zod 4 input-mode output,
+      `date` as `oneOf` date/date-time, extras allowed except `social`;
+      `npm run schema:update`.)
+- [ ] Prove Zod/JSON Schema/Pydantic parity on the shared corpus.
+      (Structural parity delivered by plan 175 Phase B: 41/41 properties,
+      required/enums/social, exact allowlists, and the corpus matrix. Open
+      because five v2 requirements remain `superRefine`-only (the JSON Schema
+      accepts, Zod/Pydantic reject) and one corpus fixture is stale; encode
+      them as `if/then` or accept the gaps explicitly.)
 - [ ] Retire the regex parser only after one release window of parity.
-      (Pending; the frontend contract-sync parser is still in use.)
+      (Pending by design; the generated schema + structural parity landed
+      2026-10-20, so the window starts now.)
 
 ### Phase 7 — backend decomposition
 
@@ -332,7 +341,7 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       when a per-stage model report exists. Item stays open only for that
       declaration.)
 - [ ] Split bounded admin route modules after wire characterization.
-      (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
+      (Images pilot landed 2026-10-20 — plan 177 extracted the three image-brief routes + upload helpers into `serving/admin_images.py` behind `build_router(verify_admin_token)` with zero wire/OpenAPI change. Remaining domains: sources, config, analytics, prompts, content, collect/publish. Original note: `serving/` still holds one monolithic
       `api.py` plus `dashboard_health.py`/`webhook_handler.py`.
       Plan 177 pilot landed 2026-10-20: NEW `serving/admin_images.py` owns the
       three image-brief routes and the upload cap/reader behind
