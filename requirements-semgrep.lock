@@ -53,9 +53,9 @@ browserforge==1.2.4 \
     --hash=sha256:05686473793769856ebd3528c69071f5be0e511260993e8b2ba839863711a0c4 \
     --hash=sha256:fb1c14e62ac09de221dcfc73074200269f697596c642cb200ceaab1127a17542
     # via scrapling
-certifi==2026.10.18 \
-    --hash=sha256:73191c47aaa79da394e8fee2dbc2ec827432cab56311122c9e47abf79e390f62 \
-    --hash=sha256:b9995d97b64d0431a5af837d8ca8cd6238104d1f319f04bd93ea43124d6c861e
+certifi==2026.10.19 \
+    --hash=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b \
+    --hash=sha256:035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae
     # via
     #   curl-cffi
     #   httpcore
