@@ -24,6 +24,19 @@ The normalization process follows a strict pipeline:
 - `tags.yml`: **Source of Truth**. Contains semantic aliases (`alias_map`), stop tags, whitelist, and limits.
 - `orthography.yml`: Contains orthographic corrections (`corrections`).
 
+## Category content overrides
+
+Broad source labels (`technology`, `tech`) can hide an article's real domain, so
+`news_collector.editorial.categories.match_content_signals` applies a small,
+curated override before the direct source-category mapping. A domain is applied
+only when the title, summary, or first 2,000 characters of the body match at
+least two distinct signal groups (`strong` and `supporting`), so a single stray
+term never changes the category; first-party editorial sources and specific
+source categories keep their direct mapping. To add a domain, extend
+`CONTENT_CATEGORY_SIGNALS` with accent-folded terms and add positive and
+negative fixtures to `tests/unit/editorial/test_category_resolver.py` — do not
+add a domain without evidence that it is being mislabelled.
+
 ## Usage
 
 ```python
