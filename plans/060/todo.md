@@ -394,14 +394,28 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `@iconify-json/flat-color-icons` + its unused icon block, `@types/glob`
       and `ts-node`; `astro-embed` was already absent. Lock diff deletions
       only; lint/check/build/977 tests green.)
-- [ ] Inventory and migrate live template consumers route by route.
+- [x] Inventory and migrate live template consumers route by route.
+      (Delivered 2026-10-20, frontend 5404b84f: the last live surfaces moved —
+      Layout/MarkdownLayout to `src/layouts/`, Header/Logo/toggles/metadata/
+      analytics/buildHead/seo/Image to `src/components/common/`; the dead
+      PageLayout/LandingLayout and the Image pass-through deleted; 8 Markdown
+      page layout paths, tests, freeze allowlist and active docs updated.
+      **Zero live template consumers remain**; no `ds/common → template`
+      imports. 313/313 HTML hashes, metadata (canonical/OG/JSON-LD) and 17
+      Playwright screenshots at 375/1280 are identical; 987 tests, test:dist,
+      astro check, reachability, freeze and lint green.)
       (Partial 2026-10-20, frontend 48d39eec: `ReportForm` and `SocialShare`
       moved to `common/`, imports and freeze entries updated. Remaining live
       template imports: `BaseLayout` → `layouts/template/Layout` + `Header`;
       and the type-only `seo` import in `utils/images.ts`.)
 - [ ] Supersede two-layer governance only after zero production template
       consumers.
-- [ ] Run full build/dist/audit plus 375px/1280px visual and metadata checks.
+- [x] Run full build/dist/audit plus 375px/1280px visual and metadata checks.
+      (Done 2026-10-20 with plan 183: build 299 pages/313 HTML, `test:dist`
+      no regressions, 987 tests, metadata/canonical/OG/JSON-LD exact match,
+      and 17 Playwright screenshots at 375×812/1280×800 with zero pixel
+      differences. Full accessibility/e2e remains part of the final release
+      gate, not this item.)
 
 ## Wave E — feedback and final simplification
 
