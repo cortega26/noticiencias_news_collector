@@ -42,6 +42,10 @@ paths = [
   # FIELD NAME (trips generic-api-key's "key" match); values are fake
   # delivery ids, never credentials.
   '''^tests/unit/storage/test_reader_reports_models\.py$''',
+  # Plan 186 reconciliation tests: fake bearer-token / fake report-uuid
+  # fixtures (no real Cloudflare credentials anywhere in tests).
+  '''^tests/unit/infrastructure/test_r2_client\.py$''',
+  '''^tests/unit/storage/test_reader_report_repository\.py$''',
   '''^tests_refinery/test_admin_panel_weights\.py$''',
   '''^docs/RUNBOOK_LOCAL_DEV\.md$''',
   '''^fly-tunnel\.toml$''',
