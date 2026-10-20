@@ -378,7 +378,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 - [ ] Fix relative reachability allowlisting; review/delete the 37 findings in
       cohorts; enforce the gate.
 - [ ] Characterize and precompute deterministic related-post top-four results.
-- [ ] Remove the four verified-unused dependencies/config.
+- [x] Remove the four verified-unused dependencies/config. (Done 2026-10-20, frontend c5b51165: removed
+      `@iconify-json/flat-color-icons` + its unused icon block, `@types/glob`
+      and `ts-node`; `astro-embed` was already absent. Lock diff deletions
+      only; lint/check/build/977 tests green.)
 - [ ] Inventory and migrate live template consumers route by route.
 - [ ] Supersede two-layer governance only after zero production template
       consumers.
