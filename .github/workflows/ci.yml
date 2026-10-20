@@ -50,12 +50,16 @@ jobs:
           sparse-checkout: |
             src/content.config.ts
             src/schemas/post.ts
+            src/schemas/post.schema.json
+            tests/fixtures/publication-contract-corpus/
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
-          mkdir -p ../noticiencias/src/schemas
+          mkdir -p ../noticiencias/src/schemas ../noticiencias/tests/fixtures/publication-contract-corpus
           cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
           cp .tmp/frontend-schema/src/schemas/post.ts ../noticiencias/src/schemas/post.ts
+          cp .tmp/frontend-schema/src/schemas/post.schema.json ../noticiencias/src/schemas/post.schema.json
+          cp -R .tmp/frontend-schema/tests/fixtures/publication-contract-corpus/. ../noticiencias/tests/fixtures/publication-contract-corpus/
           rm -rf .tmp/frontend-schema
       - name: Type check and unit coverage
         env:
@@ -176,9 +180,9 @@ jobs:
         with:
           cache-key: ${{ hashFiles('requirements.lock', 'requirements-security.lock', 'Makefile', '.pre-commit-config.yaml') }}
       # Sparse-checkout of the front-end repo so that test_contracts_sync.py
-      # can validate cross-repo schema field parity (see docs/PIPELINE_CONTRACTS.md).
-      # The content config and its structural schema module are fetched; no Node
-      # toolchain is installed.
+      # can validate cross-repo schema field parity (see docs/PIPELINE_CONTRACTS.md)
+      # and test_post_schema_parity.py can compare the generated JSON Schema
+      # artifact and shared corpus (plan 175). No Node toolchain is installed.
       # Note: actions/checkout no longer supports path outside the repo checkout
       # directory, so we use a subdirectory instead of ../noticiencias.
       - name: Checkout front-end schema (sparse)
@@ -189,12 +193,16 @@ jobs:
           sparse-checkout: |
             src/content.config.ts
             src/schemas/post.ts
+            src/schemas/post.schema.json
+            tests/fixtures/publication-contract-corpus/
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
-          mkdir -p ../noticiencias/src/schemas
+          mkdir -p ../noticiencias/src/schemas ../noticiencias/tests/fixtures/publication-contract-corpus
           cp .tmp/frontend-schema/src/content.config.ts ../noticiencias/src/content.config.ts
           cp .tmp/frontend-schema/src/schemas/post.ts ../noticiencias/src/schemas/post.ts
+          cp .tmp/frontend-schema/src/schemas/post.schema.json ../noticiencias/src/schemas/post.schema.json
+          cp -R .tmp/frontend-schema/tests/fixtures/publication-contract-corpus/. ../noticiencias/tests/fixtures/publication-contract-corpus/
           rm -rf .tmp/frontend-schema
       - name: Run unit tests
         env:
