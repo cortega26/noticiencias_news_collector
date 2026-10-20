@@ -32,6 +32,13 @@ NEW_LIFECYCLE_TABLES = [
     "publication_events",
 ]
 
+# Plan 185 reader-report tables.
+READER_REPORT_TABLES = [
+    "reader_reports",
+    "reader_report_contacts",
+    "reader_report_decisions",
+]
+
 
 def _create_legacy_sources_table(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -255,7 +262,8 @@ ALL_REVISIONS = [
     "84cf98a379c1",  # extend_workflow_runs_durable_dispatch
     "e3f168a66d38",  # workflow_runs_one_active_publication
     "f2a9c1d4e6b7",  # add_webhook_receipts
-    "c6d1a4e8f203",  # add_webhook_pull_state (head)
+    "c6d1a4e8f203",  # add_webhook_pull_state
+    "e7f1a2b3c4d5",  # add_reader_reports (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -273,6 +281,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "e3f168a66d38",
     "f2a9c1d4e6b7",
     "c6d1a4e8f203",
+    "e7f1a2b3c4d5",
 ]
 
 
@@ -768,6 +777,117 @@ def test_new_lifecycle_tables_schema_parity(tmp_path: Path) -> None:
     finally:
         fresh_engine.dispose()
         migrated_engine.dispose()
+
+
+def test_reader_report_tables_schema_parity(tmp_path: Path) -> None:
+    """Fresh create_all and legacy-stamp-then-upgrade-head must produce the
+    same reader-report schema (plan 185), like the lifecycle parity test."""
+    from alembic import command
+    from alembic.config import Config
+
+    fresh_db_path = tmp_path / "reader_fresh.db"
+    fresh_mgr = DatabaseManager(
+        database_config={"type": "sqlite", "path": fresh_db_path}
+    )
+    fresh_mgr.close()
+
+    migrated_db_path = tmp_path / "reader_migrated.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config = {"type": "sqlite", "path": migrated_db_path}
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        migrated_mgr = DatabaseManager(database_config=test_db_config)
+        migrated_mgr.close()
+        command.stamp(alembic_cfg, "cb486d1d980d")
+        command.upgrade(alembic_cfg, "head")
+
+    from sqlalchemy import create_engine
+
+    fresh_engine = create_engine(f"sqlite:///{fresh_db_path}")
+    migrated_engine = create_engine(f"sqlite:///{migrated_db_path}")
+    try:
+        fresh_inspector = sqla_inspect(fresh_engine)
+        migrated_inspector = sqla_inspect(migrated_engine)
+        for table in READER_REPORT_TABLES:
+            fresh_snapshot = _table_schema_snapshot(fresh_inspector, table)
+            migrated_snapshot = _table_schema_snapshot(migrated_inspector, table)
+            assert fresh_snapshot == migrated_snapshot, (
+                f"Schema drift on '{table}' between create_all and "
+                f"alembic upgrade head: {fresh_snapshot} != {migrated_snapshot}"
+            )
+    finally:
+        fresh_engine.dispose()
+        migrated_engine.dispose()
+
+
+def test_reader_report_vocabulary_constants_match_models() -> None:
+    """The migration hand-copies the report/decision vocabularies from
+    models.py (Alembic revisions can't import application models)."""
+    import importlib.util
+
+    from news_collector.storage import models
+
+    module_path = ROOT / "alembic" / "versions" / "e7f1a2b3c4d5_add_reader_reports.py"
+    spec = importlib.util.spec_from_file_location("e7f1a2b3c4d5_migration", module_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    assert (
+        models.READER_REPORT_STATUS_VALUES == migration.READER_REPORT_STATUS_VALUES
+    ), "READER_REPORT_STATUS_VALUES diverged between models.py and e7f1a2b3c4d5"
+    assert (
+        models.READER_RESOLUTION_STATUS_VALUES
+        == migration.READER_RESOLUTION_STATUS_VALUES
+    ), "READER_RESOLUTION_STATUS_VALUES diverged between models.py and e7f1a2b3c4d5"
+    assert (
+        models.READER_DECISION_VALUES == migration.READER_DECISION_VALUES
+    ), "READER_DECISION_VALUES diverged between models.py and e7f1a2b3c4d5"
+
+
+def test_reader_report_migration_downgrade_removes_tables(tmp_path: Path) -> None:
+    """e7f1a2b3c4d5's downgrade must drop the three tables and re-upgrade
+    cleanly on SQLite."""
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "reader_roundtrip.db"
+    alembic_cfg = Config(str(ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(ROOT / "alembic"))
+    test_db_config = {"type": "sqlite", "path": db_path}
+
+    with patch.dict(app_config.DATABASE_CONFIG, test_db_config, clear=True):
+        mgr = DatabaseManager(database_config=test_db_config)
+        try:
+            with mgr.engine.connect() as connection:
+                tables = set(sqla_inspect(connection).get_table_names())
+                assert set(READER_REPORT_TABLES) <= tables
+        finally:
+            mgr.close()
+
+        command.stamp(alembic_cfg, "head")
+        command.downgrade(alembic_cfg, "c6d1a4e8f203")
+
+        conn = sqlite3.connect(db_path)
+        try:
+            tables = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+        finally:
+            conn.close()
+        assert not (set(READER_REPORT_TABLES) & tables)
+
+        command.upgrade(alembic_cfg, "head")
+
+    mgr = DatabaseManager(database_config={"type": "sqlite", "path": db_path})
+    try:
+        with mgr.engine.connect() as connection:
+            tables = set(sqla_inspect(connection).get_table_names())
+        assert set(READER_REPORT_TABLES) <= tables
+    finally:
+        mgr.close()
 
 
 def test_workflow_runs_one_active_collection_partial_unique_index_raises(

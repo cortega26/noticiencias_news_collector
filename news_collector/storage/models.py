@@ -1038,6 +1038,193 @@ class WebhookPullReceipt(Base):
     )
 
 
+READER_REPORT_STATUS_VALUES = (
+    "new",
+    "triaged",
+    "accepted",
+    "rejected",
+    "duplicate",
+    "no_action",
+)
+_READER_REPORT_STATUS_CHECK = "status IN ({})".format(
+    ", ".join(f"'{value}'" for value in READER_REPORT_STATUS_VALUES)
+)
+
+READER_RESOLUTION_STATUS_VALUES = ("unresolved", "resolved", "ambiguous")
+_READER_RESOLUTION_STATUS_CHECK = "resolution_status IN ({})".format(
+    ", ".join(f"'{value}'" for value in READER_RESOLUTION_STATUS_VALUES)
+)
+
+READER_DECISION_VALUES = ("accepted", "rejected", "duplicate", "no_action")
+_READER_DECISION_CHECK = "decision IN ({})".format(
+    ", ".join(f"'{value}'" for value in READER_DECISION_VALUES)
+)
+
+
+class ReaderReport(Base):
+    """One reader-submitted report (plan 185).
+
+    Contact data is deliberately *not* stored here: it lives only in
+    :class:`ReaderReportContact`, so deleting/purging contact details leaves
+    the report body and editorial history intact. Identity fields
+    (``resolution_status``/``resolved_refinery_id``/``resolved_content_sha256``)
+    are server-resolved, never reader-supplied.
+    """
+
+    __tablename__ = "reader_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Intake delivery key/hash — a replay of the same delivery must not
+    # create a second report.
+    idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    problem_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    article_url: Mapped[str | None] = mapped_column(String(2000))
+    description: Mapped[str | None] = mapped_column(Text)
+    content_snippet: Mapped[str | None] = mapped_column(Text)
+    evidence_url: Mapped[str | None] = mapped_column(String(2000))
+    tech_browser: Mapped[str | None] = mapped_column(String(200))
+    tech_os: Mapped[str | None] = mapped_column(String(200))
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
+    resolution_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="unresolved"
+    )
+    resolved_refinery_id: Mapped[str | None] = mapped_column(String(100))
+    resolved_content_sha256: Mapped[str | None] = mapped_column(String(64))
+    resolution_reason: Mapped[str | None] = mapped_column(String(200))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    # Set when the contact row is purged; the report itself stays.
+    contact_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    contact = relationship(
+        "ReaderReportContact",
+        back_populates="report",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    decisions = relationship(
+        "ReaderReportDecision",
+        back_populates="report",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        CheckConstraint(_READER_REPORT_STATUS_CHECK, name="ck_reader_reports_status"),
+        CheckConstraint(
+            _READER_RESOLUTION_STATUS_CHECK,
+            name="ck_reader_reports_resolution_status",
+        ),
+        Index(
+            "uq_reader_reports_idempotency_key",
+            "idempotency_key",
+            unique=True,
+        ),
+        Index("ix_reader_reports_status", "status"),
+        Index("ix_reader_reports_resolution_status", "resolution_status"),
+        Index(
+            "ix_reader_reports_resolved_refinery_id",
+            "resolved_refinery_id",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<ReaderReport(id={self.id}, problem_type='{self.problem_type}', "
+            f"status='{self.status}', resolution_status='{self.resolution_status}')>"
+        )
+
+
+class ReaderReportContact(Base):
+    """Private contact channel for one report — never duplicated on the report.
+
+    One row per report (unique ``report_id``). Purging contact data means
+    deleting this row (and stamping ``ReaderReport.contact_purged_at``);
+    ``email`` must never be copied into logs, decisions, or the report body.
+    """
+
+    __tablename__ = "reader_report_contacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("reader_reports.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    report = relationship("ReaderReport", back_populates="contact")
+
+    __table_args__ = (
+        Index(
+            "uq_reader_report_contacts_report_id",
+            "report_id",
+            unique=True,
+        ),
+    )
+
+    def __repr__(self):
+        return f"<ReaderReportContact(id={self.id}, report_id={self.report_id})>"
+
+
+class ReaderReportDecision(Base):
+    """One editorial decision/closure record for a reader report."""
+
+    __tablename__ = "reader_report_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("reader_reports.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    actor: Mapped[str] = mapped_column(String(200), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    corrected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    correction_summary: Mapped[str | None] = mapped_column(Text)
+    publication_ref: Mapped[str | None] = mapped_column(String(200))
+    deploy_evidence: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    report = relationship("ReaderReport", back_populates="decisions")
+
+    __table_args__ = (
+        CheckConstraint(
+            _READER_DECISION_CHECK, name="ck_reader_report_decisions_decision"
+        ),
+        Index("ix_reader_report_decisions_report_id", "report_id"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<ReaderReportDecision(id={self.id}, report_id={self.report_id}, "
+            f"decision='{self.decision}')>"
+        )
+
+
 # Funciones de utilidad para trabajar con los modelos
 # ===================================================
 
