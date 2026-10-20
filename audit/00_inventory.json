@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T18:43:36.455754+00:00",
+  "generated_at": "2026-10-20T19:12:27.725164+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -282,6 +282,7 @@
       "182-template-leaf-surfaces.md",
       "183-template-base-layout-migration.md",
       "184-retire-two-ui-layers.md",
+      "185-reader-reports-foundation.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1406,6 +1407,7 @@
     "plans/182-template-leaf-surfaces.md",
     "plans/183-template-base-layout-migration.md",
     "plans/184-retire-two-ui-layers.md",
+    "plans/185-reader-reports-foundation.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
