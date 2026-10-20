@@ -253,9 +253,9 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       committed `apps/admin/openapi.json` + generated TS, `admin-contracts` CI job.)
 - [ ] Pin `openapi-typescript`/`openapi-fetch`; generate and adopt admin client
       endpoint by endpoint.
-      (Partial, re-checked 2026-09-26: `openapi-typescript` is pinned (7.13.0)
-      and the generated TS is consumed; `openapi-fetch` is not a dependency and
-      no endpoint has been migrated to it yet.)
+      (Pilot delivered 2026-10-19: both are pinned (`openapi-typescript` 7.13.0,
+      `openapi-fetch` 0.17.0) and `getArticle` runs on the typed client;
+      remaining endpoints pending.)
 - [x] Fail CI on stale OpenAPI/TypeScript artifacts.
       (Delivered by plan 080 Phase 2 — `.github/workflows/ci.yml` →
       `admin-contracts` job runs `make admin-contracts-check`.)

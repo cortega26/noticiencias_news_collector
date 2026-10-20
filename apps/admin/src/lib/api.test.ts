@@ -282,6 +282,165 @@ describe('structured API errors', () => {
   });
 });
 
+describe('getArticle (openapi-fetch pilot)', () => {
+  it('requests the typed path and sends the Bearer token', async () => {
+    setToken('admin-key');
+    mockFetchResponse(200, { id: 1, title: 'x' });
+
+    const result = await getArticle(1);
+
+    expect(result.id).toBe(1);
+    const [request] = vi.mocked(fetch).mock.calls[0] as [Request];
+    expect(new URL(request.url).pathname).toBe('/v1/admin/articles/1');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+  });
+
+  it('reads the token at request time, not when the client is created', async () => {
+    const fetchSpy = vi.fn().mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ id: 1 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    setToken('first-key');
+    await getArticle(1);
+    setToken('second-key');
+    await getArticle(1);
+
+    const requests = fetchSpy.mock.calls.map(([request]) => request as Request);
+    expect(requests[0].headers.get('Authorization')).toBe('Bearer first-key');
+    expect(requests[1].headers.get('Authorization')).toBe('Bearer second-key');
+  });
+
+  it('throws AuthError on 401', async () => {
+    mockFetchResponse(401, { detail: 'Missing Authorization header' });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(AuthError);
+    expect((err as Error).message).toBe('Authentication required');
+  });
+
+  it('throws AuthError on 403', async () => {
+    mockFetchResponse(403, { detail: 'Invalid admin API key' });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(AuthError);
+    expect((err as Error).message).toBe('Authentication required');
+  });
+
+  it('throws NotFoundError on 404', async () => {
+    mockFetchResponse(404, { detail: 'Article not found' });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect((err as Error).message).toBe('Not found');
+  });
+
+  it('throws ValidationError carrying the 422 detail', async () => {
+    mockFetchResponse(422, { detail: "Invalid article id 'x'" });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as Error).message).toBe("Invalid article id 'x'");
+  });
+
+  it('keeps the default ValidationError message for an empty 422', async () => {
+    mockFetchRawResponse(422, '');
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as Error).message).toBe('Invalid request');
+  });
+
+  it('throws ConflictError carrying the parsed 409 body', async () => {
+    mockFetchResponse(409, { run_id: '5', detail: 'already running' });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).body).toEqual({ run_id: '5', detail: 'already running' });
+    expect((err as Error).message).toBe('A conflicting operation is already in progress');
+  });
+
+  it('throws NetworkError when fetch rejects', async () => {
+    mockFetchReject();
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(NetworkError);
+    expect((err as Error).message).toContain('make admin');
+  });
+
+  it.each([502, 503, 504])(
+    'maps an unstructured gateway %i to NetworkError naming the fix',
+    async (status) => {
+      mockFetchRawResponse(status, '<html><body>Bad Gateway</body></html>', 'text/html');
+
+      const err = await getArticle(1).catch((e) => e);
+
+      expect(err).toBeInstanceOf(NetworkError);
+      expect((err as Error).message).toContain(`HTTP ${status}`);
+      expect((err as Error).message).toContain('make admin');
+    }
+  );
+
+  it('carries the structured 503 capability body as ApiError', async () => {
+    mockFetchResponse(503, {
+      detail:
+        'Published content is unavailable in this deployment. This route requires the local admin stack.',
+      error_code: 'published_content_unavailable',
+    });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).not.toBeInstanceOf(NetworkError);
+    expect((err as ApiError).status).toBe(503);
+    expect((err as ApiError).errorCode).toBe('published_content_unavailable');
+    expect((err as ApiError).detail).toContain('requires the local admin stack');
+  });
+
+  it('parses a structured 503 body whose content-type is not JSON', async () => {
+    mockFetchRawResponse(
+      503,
+      JSON.stringify({ detail: 'capability missing', error_code: 'published_content_unavailable' })
+    );
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).errorCode).toBe('published_content_unavailable');
+  });
+
+  it('throws ApiError for a structured 500', async () => {
+    mockFetchResponse(500, { detail: 'boom' });
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(500);
+    expect((err as ApiError).detail).toBe('boom');
+  });
+
+  it('throws the generic HTTP error for an unstructured 500', async () => {
+    mockFetchRawResponse(500, 'oops', 'text/plain');
+
+    const err = await getArticle(1).catch((e) => e);
+
+    expect(err).not.toBeInstanceOf(ApiError);
+    expect(err).not.toBeInstanceOf(NetworkError);
+    expect((err as Error).message).toBe('HTTP 500');
+  });
+});
+
 describe('mutation endpoints', () => {
   it('rejectArticle POSTs the reason', async () => {
     setToken('admin-key');
@@ -346,13 +505,6 @@ describe('mutation endpoints', () => {
 });
 
 describe('read endpoints', () => {
-  it('getArticle requests the detail path', async () => {
-    mockFetchResponse(200, { id: 1, title: 'x' });
-    await getArticle(1);
-    const fetchMock = vi.mocked(fetch);
-    expect(fetchMock.mock.calls[0][0]).toBe('/v1/admin/articles/1');
-  });
-
   it('getSourceHealth / getAnalytics / getConfig hit their paths', async () => {
     const paths: string[] = [];
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {

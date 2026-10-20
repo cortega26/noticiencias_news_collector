@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T02:05:03.234531+00:00",
+  "generated_at": "2026-10-20T02:16:37.199017+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -269,6 +269,7 @@
       "168-image-gate-ux.md",
       "169-ai-image-disclosure.md",
       "170-category-content-override.md",
+      "171-openapi-fetch-pilot.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1379,6 +1380,7 @@
     "plans/168-image-gate-ux.md",
     "plans/169-ai-image-disclosure.md",
     "plans/170-category-content-override.md",
+    "plans/171-openapi-fetch-pilot.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

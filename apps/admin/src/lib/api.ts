@@ -28,6 +28,9 @@
  * to `apps/admin/.env` — that file is a local seed, not a vault.
  */
 
+import { getToken } from './auth';
+import { NetworkError, mapOpenApiError, throwHttpError } from './errors';
+import { API_BASE, client } from './openapiClient';
 import type {
   AdminAnalyticsEnvelope,
   AdminArticleDetail,
@@ -51,43 +54,15 @@ import type {
   ArticleStatus,
 } from './types';
 
-const TOKEN_KEY = 'refinery_admin_token';
-
-const ENV_TOKEN: string | null =
-  (import.meta.env.PUBLIC_ADMIN_API_KEY as string | undefined)?.trim() || null;
-
-/**
- * True when the local dev server should skip auth entirely (no gate, no Bearer
- * header). Only in `astro dev` and only when no key was explicitly configured.
- */
-export const AUTH_BYPASS: boolean = import.meta.env.MODE === 'development' && ENV_TOKEN === null;
-
-export function getToken(): string | null {
-  if (AUTH_BYPASS) return null;
-  try {
-    const stored = localStorage.getItem(TOKEN_KEY);
-    if (stored) return stored;
-  } catch {
-    /* localStorage unavailable (SSR, privacy mode) — fall through to env */
-  }
-  return ENV_TOKEN;
-}
-
-export function setToken(token: string): void {
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-  } catch {
-    /* localStorage unavailable — token stays in memory for this page only */
-  }
-}
-
-export function clearToken(): void {
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    /* nothing to clear */
-  }
-}
+export { AUTH_BYPASS, clearToken, getToken, setToken } from './auth';
+export {
+  ApiError,
+  AuthError,
+  ConflictError,
+  NetworkError,
+  NotFoundError,
+  ValidationError,
+} from './errors';
 
 /**
  * Reveal the AuthGate overlay (rendered by AuthGate.astro) instead of
@@ -97,114 +72,6 @@ export function clearToken(): void {
 export function showAuthGate(): void {
   const gate = document.getElementById('auth-gate');
   if (gate) gate.classList.remove('hidden');
-}
-
-export class AuthError extends Error {
-  constructor(message = 'Authentication required') {
-    super(message);
-    this.name = 'AuthError';
-  }
-}
-
-export class NotFoundError extends Error {
-  constructor(message = 'Not found') {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
-
-export class ValidationError extends Error {
-  constructor(message = 'Invalid request') {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}
-
-/**
- * The serving API could not be reached: `fetch` rejected (DNS/connection
- * refused/CORS) or the dev proxy / a deployment gateway returned 502/503/504
- * because nothing healthy is listening behind it. Almost always "the API is
- * not running" in local dev.
- *
- * A 502/503/504 *with* a structured body is not this class: see
- * {@link ApiError} (e.g. the published-content capability 503, plan 151).
- */
-export class NetworkError extends Error {
-  constructor(message = 'Cannot reach the serving API — is it running? Try `make admin`.') {
-    super(message);
-    this.name = 'NetworkError';
-  }
-}
-
-/** The machine-readable error fields the serving API returns on 4xx/5xx. */
-interface StructuredErrorBody {
-  detail: string | undefined;
-  errorCode: string | undefined;
-}
-
-/**
- * A non-2xx response whose body carried a structured `detail` and/or
- * `error_code` (for example the 503 `published_content_unavailable` from the
- * published-content routes). Unlike {@link NetworkError}, the API answered:
- * the operator needs the reason it gave, not advice to debug the network.
- *
- * The message is the body's `detail` when present so logs and the generic
- * error UI stay informative; `status`, `errorCode` and `detail` are exposed
- * for callers that want to render the reason specifically.
- */
-export class ApiError extends Error {
-  readonly status: number;
-  readonly errorCode: string | undefined;
-  readonly detail: string | undefined;
-
-  constructor(status: number, body: StructuredErrorBody) {
-    super(body.detail ?? `HTTP ${status}`);
-    this.name = 'ApiError';
-    this.status = status;
-    this.errorCode = body.errorCode;
-    this.detail = body.detail;
-  }
-}
-
-/**
- * Thrown on 409 (currently only `/v1/admin/collect`: a collection run is
- * already queued/running). Carries the parsed response body — which is
- * shaped like `AdminCollectStarted` and names the existing run's id — so
- * callers can surface it instead of a bare "HTTP 409".
- */
-export class ConflictError<T = unknown> extends Error {
-  readonly body: T;
-  constructor(body: T, message = 'Conflict') {
-    super(message);
-    this.name = 'ConflictError';
-    this.body = body;
-  }
-}
-
-const API_BASE: string = (import.meta.env.PUBLIC_ADMIN_API_BASE as string) ?? '';
-
-/**
- * Read a structured error body without assuming one is present: an empty,
- * non-JSON, or differently-shaped body yields `null` and the caller keeps the
- * previous generic handling. `content-type` is deliberately not trusted — it
- * may be absent or wrong (proxies, test doubles) — so the body is attempted
- * as JSON and only a `detail`/`error_code` object is accepted.
- */
-async function readStructuredError(response: Response): Promise<StructuredErrorBody | null> {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    return null;
-  }
-  if (body === null || typeof body !== 'object' || Array.isArray(body)) return null;
-
-  const record = body as Record<string, unknown>;
-  const detail = typeof record.detail === 'string' && record.detail ? record.detail : undefined;
-  const errorCode =
-    typeof record.error_code === 'string' && record.error_code ? record.error_code : undefined;
-  if (!detail && !errorCode) return null;
-  return { detail, errorCode };
 }
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -226,38 +93,8 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new NetworkError();
   }
 
-  if (response.status === 401 || response.status === 403) {
-    throw new AuthError();
-  }
-  if (response.status === 404) {
-    throw new NotFoundError();
-  }
-  if (response.status === 422) {
-    const body = (await response.json().catch(() => ({}))) as {
-      detail?: string;
-    };
-    throw new ValidationError(body.detail ?? 'Invalid request');
-  }
-  if (response.status === 409) {
-    const body = await response.json().catch(() => ({}));
-    throw new ConflictError(body, 'A conflicting operation is already in progress');
-  }
-  // 502/503/504 normally come from the dev proxy or a deployment gateway
-  // saying nothing healthy answered on :8000 — but the app itself also
-  // answers 503 with a structured `error_code` when a capability is missing
-  // (published content, plan 151). Carry that reason instead of blaming the
-  // network.
-  if (response.status === 502 || response.status === 503 || response.status === 504) {
-    const body = await readStructuredError(response);
-    if (body) throw new ApiError(response.status, body);
-    throw new NetworkError(
-      `Cannot reach the serving API (HTTP ${response.status}) — is it running? Try \`make admin\`.`
-    );
-  }
   if (!response.ok) {
-    const body = await readStructuredError(response);
-    if (body) throw new ApiError(response.status, body);
-    throw new Error(`HTTP ${response.status}`);
+    await throwHttpError(response);
   }
   return (await response.json()) as T;
 }
@@ -272,8 +109,15 @@ export function listArticles(
   return apiFetch<AdminArticleListEnvelope>(`/v1/admin/articles?${params}`);
 }
 
-export function getArticle(id: number): Promise<AdminArticleDetail> {
-  return apiFetch<AdminArticleDetail>(`/v1/admin/articles/${id}`);
+export async function getArticle(id: number): Promise<AdminArticleDetail> {
+  const { data, error, response } = await client.GET('/v1/admin/articles/{article_id}', {
+    params: { path: { article_id: id } },
+  });
+  if (error) throw mapOpenApiError(error, response);
+  // The generated schema is looser than the handwritten contract (for example
+  // `source` is `Record<string, unknown>` instead of `{id, name}`); the wire
+  // shape is the same `AdminArticleDetail` from `news_collector/contracts/admin.py`.
+  return data as unknown as AdminArticleDetail;
 }
 
 export function getSourceHealth(): Promise<AdminSourceHealthEnvelope> {
