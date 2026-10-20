@@ -31,6 +31,7 @@
 import { getToken } from './auth';
 import { NetworkError, mapOpenApiError, throwHttpError } from './errors';
 import { API_BASE, client } from './openapiClient';
+import type { components } from './generated/api';
 import type {
   AdminAnalyticsEnvelope,
   AdminArticleDetail,
@@ -114,6 +115,26 @@ async function readContract<T>(
   return data as T;
 }
 
+/**
+ * Run a typed JSON mutation and narrow the generated payload to the
+ * hand-written contract, exactly like {@link readContract}. The generated
+ * schemas mark server-defaulted fields optional (for example
+ * `AdminBulkResetResult.failed`), while the runtime wire is the `Admin*` model
+ * from `news_collector/contracts/admin.py`.
+ *
+ * The client's `onResponse` middleware throws the shared error taxonomy first
+ * (409 → `ConflictError` with the parsed body, 422 → `ValidationError`,
+ * 401/403 → `AuthError`), so the `error` branch is a defensive fallback for
+ * any request configured without that middleware.
+ */
+async function mutationContract<T>(
+  request: Promise<{ data?: unknown; error?: unknown; response: Response }>
+): Promise<T> {
+  const { data, error, response } = await request;
+  if (error) throw mapOpenApiError(error, response);
+  return data as T;
+}
+
 export function listArticles(
   status: ArticleStatus,
   cursor?: string | null,
@@ -157,10 +178,12 @@ export function getConfig(): Promise<AdminConfigSnapshot> {
 }
 
 export function rejectArticle(id: number, reason = ''): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/articles/${id}/reject`, {
-    method: 'POST',
-    body: JSON.stringify({ reason }),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/articles/{article_id}/reject', {
+      params: { path: { article_id: id } },
+      body: { reason },
+    })
+  );
 }
 
 export function updateAuditStatus(
@@ -168,17 +191,18 @@ export function updateAuditStatus(
   auditStatus: string,
   reason = ''
 ): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/articles/${id}/audit-status`, {
-    method: 'POST',
-    body: JSON.stringify({ audit_status: auditStatus, reason }),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/articles/{article_id}/audit-status', {
+      params: { path: { article_id: id } },
+      body: { audit_status: auditStatus, reason },
+    })
+  );
 }
 
 export function startCollect(dryRun = false): Promise<AdminCollectStarted> {
-  return apiFetch<AdminCollectStarted>('/v1/admin/collect', {
-    method: 'POST',
-    body: JSON.stringify({ dry_run: dryRun }),
-  });
+  return mutationContract<AdminCollectStarted>(
+    client.POST('/v1/admin/collect', { body: { dry_run: dryRun } })
+  );
 }
 
 export function getCollectStatus(runId?: string): Promise<AdminCollectStatus> {
@@ -201,13 +225,14 @@ export function startPublish(opts: {
   articleId?: number;
   articleUrl?: string;
 }): Promise<AdminPublishStarted> {
-  return apiFetch<AdminPublishStarted>('/v1/admin/publish', {
-    method: 'POST',
-    body: JSON.stringify({
-      article_id: opts.articleId ?? null,
-      article_url: opts.articleUrl ?? null,
-    }),
-  });
+  return mutationContract<AdminPublishStarted>(
+    client.POST('/v1/admin/publish', {
+      body: {
+        article_id: opts.articleId ?? null,
+        article_url: opts.articleUrl ?? null,
+      },
+    })
+  );
 }
 
 export function getPublishStatus(runId?: string): Promise<AdminPublishStatus> {
@@ -227,17 +252,20 @@ export function getPublishStatus(runId?: string): Promise<AdminPublishStatus> {
  * outcome in the run summary. 409 → ConflictError; 422 → ValidationError.
  */
 export function startPublishBatch(articleIds: number[]): Promise<AdminPublishBatchStarted> {
-  return apiFetch<AdminPublishBatchStarted>('/v1/admin/publish/batch', {
-    method: 'POST',
-    body: JSON.stringify({ article_ids: articleIds }),
-  });
+  return mutationContract<AdminPublishBatchStarted>(
+    client.POST('/v1/admin/publish/batch', { body: { article_ids: articleIds } })
+  );
 }
 
 export function reprocessArticle(id: number): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/articles/${id}/reprocess`, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/articles/{article_id}/reprocess', {
+      params: { path: { article_id: id } },
+      // The generated spec declares no request body; the existing wire sends
+      // `{}`, so cast only the body and keep the bytes identical.
+      body: {} as never,
+    })
+  );
 }
 
 export function listSources(): Promise<{ sources: AdminSourceListItem[] }> {
@@ -245,24 +273,27 @@ export function listSources(): Promise<{ sources: AdminSourceListItem[] }> {
 }
 
 export function toggleSource(sourceId: string, active: boolean): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/sources/${encodeURIComponent(sourceId)}/toggle`, {
-    method: 'POST',
-    body: JSON.stringify({ active }),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/sources/{source_id}/toggle', {
+      params: { path: { source_id: sourceId } },
+      body: { active },
+    })
+  );
 }
 
 export function resetSourceCircuit(sourceId: string): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/sources/${encodeURIComponent(sourceId)}/reset`, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/sources/{source_id}/reset', {
+      params: { path: { source_id: sourceId } },
+      // The generated spec declares no request body; the existing wire sends
+      // `{}`, so cast only the body and keep the bytes identical.
+      body: {} as never,
+    })
+  );
 }
 
 export function saveConfig(patch: Record<string, unknown>): Promise<AdminConfigSnapshot> {
-  return apiFetch<AdminConfigSnapshot>('/v1/admin/config', {
-    method: 'POST',
-    body: JSON.stringify(patch),
-  });
+  return mutationContract<AdminConfigSnapshot>(client.POST('/v1/admin/config', { body: patch }));
 }
 
 export function getPrompts(): Promise<AdminPromptsEnvelope> {
@@ -272,10 +303,9 @@ export function getPrompts(): Promise<AdminPromptsEnvelope> {
 export function savePrompts(
   prompts: Record<string, Record<string, unknown>>
 ): Promise<AdminPromptsEnvelope> {
-  return apiFetch<AdminPromptsEnvelope>('/v1/admin/prompts', {
-    method: 'POST',
-    body: JSON.stringify({ prompts }),
-  });
+  return mutationContract<AdminPromptsEnvelope>(
+    client.POST('/v1/admin/prompts', { body: { prompts } })
+  );
 }
 
 export function getContent(): Promise<AdminContentEnvelope> {
@@ -293,28 +323,40 @@ export function getImageQueue(): Promise<{ briefs: AdminImageBriefItem[] }> {
 }
 
 export function unpublishArticle(refineryId: string): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/content/${encodeURIComponent(refineryId)}`, {
-    method: 'DELETE',
-  });
+  return mutationContract<AdminMutationResult>(
+    client.DELETE('/v1/admin/content/{refinery_id}', {
+      params: { path: { refinery_id: refineryId } },
+    })
+  );
 }
 
 export function bulkResetContent(refineryIds: string[]): Promise<AdminBulkResetResult> {
-  return apiFetch<AdminBulkResetResult>('/v1/admin/content/bulk-reset', {
-    method: 'POST',
-    body: JSON.stringify({ refinery_ids: refineryIds }),
-  });
+  return mutationContract<AdminBulkResetResult>(
+    client.POST('/v1/admin/content/bulk-reset', { body: { refinery_ids: refineryIds } })
+  );
 }
 
 export function updateImageBrief(
   slug: string,
   fields: Record<string, string>
 ): Promise<AdminImageBriefUploadResult> {
-  return apiFetch<AdminImageBriefUploadResult>(`/v1/admin/images/${encodeURIComponent(slug)}`, {
-    method: 'PUT',
-    body: JSON.stringify(fields),
-  });
+  return mutationContract<AdminImageBriefUploadResult>(
+    client.PUT('/v1/admin/images/{slug}', {
+      params: { path: { slug } },
+      // The generated schema lists the brief's editable fields as a closed
+      // shape, while this function accepts an arbitrary string map. Cast only
+      // the body so every caller field reaches the wire unchanged.
+      body: fields as unknown as components['schemas']['AdminImageBriefUpdate'],
+    })
+  );
 }
 
+/**
+ * The one deliberate exception to the typed client: this endpoint sends
+ * `multipart/form-data` (a `File` part plus optional text fields). `apiFetch`
+ * already serializes that wire correctly, so it stays on the hand-written
+ * client until a FormData-aware typed serializer is scoped.
+ */
 export function uploadImageBriefAsset(
   slug: string,
   file: File,
@@ -332,14 +374,20 @@ export function uploadImageBriefAsset(
 }
 
 export function deleteSource(sourceId: string): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>(`/v1/admin/sources/${encodeURIComponent(sourceId)}`, {
-    method: 'DELETE',
-  });
+  return mutationContract<AdminMutationResult>(
+    client.DELETE('/v1/admin/sources/{source_id}', {
+      params: { path: { source_id: sourceId } },
+    })
+  );
 }
 
 export function upsertSource(payload: AdminSourceUpsertPayload): Promise<AdminMutationResult> {
-  return apiFetch<AdminMutationResult>('/v1/admin/sources', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  return mutationContract<AdminMutationResult>(
+    client.POST('/v1/admin/sources', {
+      // The editor payload keeps category/update_frequency/group as free-form
+      // strings; the generated schema narrows them to their allowed literals.
+      // Cast only the body so the wire stays exactly the caller's object.
+      body: payload as unknown as components['schemas']['AdminSourceUpsert'],
+    })
+  );
 }

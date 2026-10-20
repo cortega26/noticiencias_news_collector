@@ -257,7 +257,13 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       `openapi-fetch` 0.17.0) and `getArticle` runs on the typed client. Plan 172
       migrated the remaining read-only GETs — source health, analytics, config,
       sources, prompts, content, image queue, quality, collect/publish status,
-      and the article list; mutations remain on `apiFetch`.)
+      and the article list. Plan 173 migrated every JSON mutation — reject,
+      audit-status, collect, publish (single and batch), reprocess, source
+      toggle/reset/upsert/delete, config/prompts save, bulk reset, image-brief
+      update, and unpublish — preserving the byte-identical wire bodies and the
+      409/422/401 taxonomy. `uploadImageBriefAsset` remains on `apiFetch` as the
+      documented multipart exception (FormData body), so this checkbox stays
+      open until that endpoint is migrated.)
 - [x] Fail CI on stale OpenAPI/TypeScript artifacts.
       (Delivered by plan 080 Phase 2 — `.github/workflows/ci.yml` →
       `admin-contracts` job runs `make admin-contracts-check`.)
