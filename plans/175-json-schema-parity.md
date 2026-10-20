@@ -37,8 +37,11 @@ line-based parser.
   `extra="forbid"` (extras are accepted and ignored), matching Zod's default
   stripping. The JSON Schema should therefore **allow** additional properties
   (default) and the extra-property edge case must pass everywhere.
-- `jsonschema` is available in the backend venv; Ajv 8.20.0 + ajv-formats
-  3.0.1 are the pinned frontend dev deps for the test (no runtime impact).
+- `jsonschema` is **not** in the backend venv (and adding it needs a lock change).
+  Phase B therefore proves the artifact↔Pydantic contract **structurally**; the
+  artifact↔corpus validation is already proven in the frontend with Ajv 8.20.0 +
+  ajv-formats 3.0.1. The three layers are covered transitively and the known
+  semantic gaps are explicit.
 - The frontend has no node_modules in the main checkout; use `npm ci`.
 
 ## Phase F — frontend (PR first)
@@ -86,39 +89,60 @@ unrepresentable node); if a valid fixture cannot be made to pass both Zod and
 the JSON Schema without changing the schema; if a date representation cannot
 match the corpus and Pydantic.
 
-## Phase B — backend (PR second)
+## Phase B — backend (PR second, amended 2026-10-20)
 
 **Branch**: `advisor/175-schema-parity`. Base: current `main` after F merges.
+**Do not add `jsonschema`** (absent from the venv; a lock change is out of
+scope). Prove the artifact↔Pydantic contract structurally; the artifact↔corpus
+validation lives in the frontend Ajv tests (merged), so the three layers are
+covered transitively.
 
 1. Add `tests/test_post_schema_parity.py`:
-   - Resolve `../noticiencias/src/schemas/post.schema.json` and the corpus;
-     `pytest.skip` when the frontend is absent (CI checks out the frontend for
-     the contract gate — verify the path/step and say so).
-   - Load the JSON Schema with `jsonschema.Draft202012Validator` (formats: use
-     `FormatChecker` if available; otherwise assert the date pattern manually).
-   - For every valid fixture: `AstroPost.model_validate` passes **and** the
-     JSON Schema validates it. For every invalid fixture: Pydantic raises
-     `ValidationError` **and** the JSON Schema rejects it. Report any
-     disagreement with the fixture path (this is the parity assertion).
-   - Date formats: substitute each string into v2 and assert both pass.
-   - Structural check: `AstroPost.model_json_schema()` top-level property names
-     and required set match the JSON Schema's; allowed, explicitly listed
-     differences (date union representation, descriptions/metadata,
-     `additionalProperties`) must be asserted, not silently ignored.
-   - Document cross-field invariants that JSON Schema does not encode; assert
-     they are covered by existing Zod/Pydantic tests (add a focused assertion
-     if the corpus lacks one).
-2. `docs/PIPELINE_CONTRACTS.md`: one short section on the generated JSON
-   Schema, its source of truth (`src/schemas/post.ts`), the regeneration
-   command, and the known representation limits (cross-field refinements).
-3. Gates: `make test`, `make test-contracts`, `make test-boundaries`,
+   - Resolve `../noticiencias/src/schemas/post.schema.json` and
+     `../noticiencias/tests/fixtures/publication-contract-corpus/`; skip when
+     the frontend is absent **unless** `CI_EXPECTED_FRONTEND_SCHEMA` is set
+     (then fail closed).
+   - **Expectation matrix** (do not use a generic "all invalid reject" loop):
+     | fixture | Pydantic `AstroPost` | JSON Schema (frontend Ajv, merged) |
+     |---|---|---|
+     | valid/v1-complete, valid/v2-complete, defaults, additional-property-stripped | accept | accept |
+     | invalid/v2-empty-summary-points, invalid/v2-too-many-summary-points | reject | reject (structural) |
+     | invalid/v2-missing-{summary-points,glossary,fact-check,confidence,sources} | reject | accept (superRefine semantic gaps) |
+     | invalid/v2-missing-why-it-matters | accept | accept (stale corpus label, P0-06/DEC-003) |
+     | edge date-formats (3 values) | accept | accept |
+     | edge source-objects (2 items) | accept | accept |
+     | derived `2026-08-12T00:00:00Z` | accept | accept |
+     | `2026-13-40`, `not-a-date`, `2026-02-30` | reject | reject |
+     | `ftp://` sources[].url | reject | accept (format: uri; named divergence) |
+     Assert each row with the fixture name; the semantic-gap rows assert the
+     **divergence itself** (schema accepts, Pydantic rejects) and reference the
+     frontend test that pins it. Never mark a semantic gap as a failure of the
+     contract.
+   - **Structural parity**: `AstroPost.model_json_schema()` vs the artifact:
+     property names, required set, enum sets, basic types, `social`
+     `additionalProperties: false`, top-level extras allowed. Allowlist only:
+     date `anyOf`/`oneOf`, descriptions/titles/defaults, Zod numeric bounds,
+     and the Pydantic before-validator null nuance. Assert the allowlist is
+     explicit and the lists are otherwise empty.
+   - Do **not** try to validate the JSON Schema with Python (no `jsonschema`).
+2. `.github/workflows/ci.yml`: the unit/type jobs (both `type` and `test`)
+   already fetch `src/content.config.ts` + `src/schemas/post.ts`; add
+   `src/schemas/post.schema.json` and
+   `tests/fixtures/publication-contract-corpus/` to their sparse checkouts and
+   copy them to `../noticiencias/src/schemas/` and
+   `../noticiencias/tests/fixtures/publication-contract-corpus/` (mkdir -p).
+   Keep `CI_EXPECTED_FRONTEND_SCHEMA: "1"`.
+3. `docs/PIPELINE_CONTRACTS.md`: short section (source of truth, regeneration
+   command `npm run schema:update`, structural scope, the semantic gap list).
+4. Gates: `make test`, `make test-contracts`, `make test-boundaries`,
    `make lint`, `make type` (committed), `make docs-check`,
    `make inventory-refresh && make inventory-check`, `make plans-ledger-check`.
+   Simulate the CI layout with only the copied frontend files; present → green,
+   missing → fail closed.
 
-**STOP** if a corpus fixture disagrees between Pydantic and the JSON Schema in
-a way that requires changing the contract (report the fixture and values); if
-the frontend artifact is missing in CI; if the structural comparison needs a
-broad allowlist (report it).
+**STOP** if a corpus fixture disagrees structurally (not one of the listed
+semantic gaps); if the structural comparison needs a broad allowlist; if the
+frontend artifact is missing in CI.
 
 ## Done criteria
 
