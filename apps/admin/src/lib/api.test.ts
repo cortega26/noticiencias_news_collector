@@ -503,8 +503,9 @@ describe('mutation endpoints (openapi-fetch)', () => {
       updated: 1,
     });
 
-    await updateAuditStatus(7, 'failed', 'low signal');
+    const result = await updateAuditStatus(7, 'failed', 'low signal');
 
+    expect(result.status).toBe('ok');
     const request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/articles/7/audit-status');
     expect(request.method).toBe('POST');
@@ -771,8 +772,9 @@ describe('phase 3 operational client', () => {
     setToken('admin-key');
     mockFetchResponse(202, { run_id: '8', status: 'queued', detail: 'Publication started.' });
 
-    await startPublish({ articleUrl: 'https://example.com/x' });
+    const started = await startPublish({ articleUrl: 'https://example.com/x' });
 
+    expect(started.run_id).toBe('8');
     const request = requestAt();
     expect(request.method).toBe('POST');
     expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
@@ -823,7 +825,8 @@ describe('phase 3 operational client', () => {
     setToken('admin-key');
 
     mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await reprocessArticle(5);
+    const reprocessed = await reprocessArticle(5);
+    expect(reprocessed.updated).toBe(1);
     let request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/articles/5/reprocess');
     expect(request.method).toBe('POST');
@@ -831,7 +834,8 @@ describe('phase 3 operational client', () => {
     expect(await request.text()).toBe('{}');
 
     mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await toggleSource('nature', false);
+    const toggled = await toggleSource('nature', false);
+    expect(toggled.updated).toBe(1);
     request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/sources/nature/toggle');
     expect(request.method).toBe('POST');
@@ -839,7 +843,8 @@ describe('phase 3 operational client', () => {
     expect(await request.text()).toBe('{"active":false}');
 
     mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await resetSourceCircuit('nature');
+    const reset = await resetSourceCircuit('nature');
+    expect(reset.updated).toBe(1);
     request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/sources/nature/reset');
     expect(request.method).toBe('POST');
@@ -848,6 +853,7 @@ describe('phase 3 operational client', () => {
   });
 
   it('saveConfig / getPrompts / savePrompts / getContent / getImageQueue hit paths', async () => {
+    setToken('admin-key');
     const requests: Request[] = [];
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       requests.push(input as Request);
@@ -871,7 +877,11 @@ describe('phase 3 operational client', () => {
       '/v1/admin/content',
       '/v1/admin/images',
     ]);
+    expect(requests[0].method).toBe('POST');
+    expect(requests[0].headers.get('Authorization')).toBe('Bearer admin-key');
     expect(await requests[0].text()).toBe('{"github":{"target_repo_url":"x"},"debug":true}');
+    expect(requests[2].method).toBe('POST');
+    expect(requests[2].headers.get('Authorization')).toBe('Bearer admin-key');
     expect(await requests[2].text()).toBe('{"prompts":{"editor":{"system":"y"}}}');
   });
 
@@ -918,7 +928,8 @@ describe('phase 4 parity client', () => {
   it('unpublishArticle DELETEs the content path', async () => {
     setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'Unpublished x', updated: 1 });
-    await unpublishArticle('2026-01-01-x');
+    const result = await unpublishArticle('2026-01-01-x');
+    expect(result.status).toBe('ok');
     const request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/content/2026-01-01-x');
     expect(request.method).toBe('DELETE');
@@ -979,7 +990,8 @@ describe('phase 4 parity client', () => {
   it('deleteSource DELETEs the source path', async () => {
     setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'deleted', updated: 1 });
-    await deleteSource('source-1');
+    const result = await deleteSource('source-1');
+    expect(result.status).toBe('ok');
     const request = requestAt();
     expect(new URL(request.url).pathname).toBe('/v1/admin/sources/source-1');
     expect(request.method).toBe('DELETE');
