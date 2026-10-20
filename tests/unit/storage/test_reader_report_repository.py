@@ -9,6 +9,7 @@ preserved and the email never copied onto the report row.
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -241,6 +242,110 @@ class TestIdempotentUpsert:
         with db_manager.SessionLocal() as session:
             assert report_exists(session, idempotency_key=KEY) is True
             assert report_exists(session, idempotency_key="not-stored-key") is False
+
+
+def _force_flush_race(session) -> None:
+    """Force the true SELECT->INSERT race window on ``session``.
+
+    Production reaches it when another reconciler's INSERT commits between
+    this session's SELECT and flush. Both halves are simulated here: the
+    FIRST ``execute`` misses the winner (it was not committed yet) and the
+    FIRST ``flush`` raises the unique-index IntegrityError; everything after
+    the raise (rollback, winner replay) runs for real.
+    """
+    selects = 0
+    original = session.execute
+
+    class _NoWinner:
+        @staticmethod
+        def scalar_one_or_none() -> Optional[object]:
+            return None
+
+    def _racing_execute(*args, **kwargs):
+        nonlocal selects
+        selects += 1
+        if selects == 1:
+            return _NoWinner()
+        return original(*args, **kwargs)
+
+    session.execute = _racing_execute  # type: ignore[method-assign]
+
+    flushes = 0
+    original_flush = session.flush
+
+    def _racing_flush(*args, **kwargs):
+        nonlocal flushes
+        flushes += 1
+        if flushes == 1:
+            raise IntegrityError(
+                "INSERT INTO reader_reports (...)",
+                [],
+                sqlite3.IntegrityError(
+                    "UNIQUE constraint failed: reader_reports.idempotency_key"
+                ),
+            )
+        return original_flush(*args, **kwargs)
+
+    session.flush = _racing_flush  # type: ignore[method-assign]
+
+
+class TestConcurrentFlushRace:
+    def test_flush_integrity_error_replays_winner_as_duplicate(
+        self, db_manager: DatabaseManager
+    ) -> None:
+        """Unique index beats our INSERT: rollback, replay, count a duplicate."""
+        with db_manager.SessionLocal() as session:
+            concurrent = ReaderReport(
+                idempotency_key=KEY, status="new", problem_type="technical_site"
+            )
+            session.add(concurrent)
+            session.commit()
+            winner_id = int(concurrent.id)
+
+        with db_manager.SessionLocal() as session:
+            _force_flush_race(session)
+            report, created = upsert_reader_report(
+                session,
+                idempotency_key=KEY,
+                payload=_payload(),
+                submitted_at=NOW,
+                identity=RESOLVED,
+                reporter_email="late@example.com",
+            )
+            session.commit()
+
+            assert created is False
+            assert int(report.id) == winner_id
+
+        with db_manager.SessionLocal() as session:
+            # Our losing INSERT is gone; only the concurrent winner remains,
+            # untouched (first-seen body wins), and no contact row appeared.
+            assert _count(session, ReaderReport) == 1
+            assert _count(session, ReaderReportContact) == 0
+            victor = session.get(ReaderReport, winner_id)
+            assert victor is not None
+            assert victor.problem_type == "technical_site"
+            assert victor.resolution_status == "unresolved"
+
+    def test_flush_integrity_error_raises_when_no_winner_to_replay(
+        self, db_manager: DatabaseManager
+    ) -> None:
+        """Rollback finds no winner: the integrity failure is re-raised."""
+        with db_manager.SessionLocal() as session:
+            _force_flush_race(session)
+            with pytest.raises(IntegrityError):
+                upsert_reader_report(
+                    session,
+                    idempotency_key=KEY,
+                    payload=_payload(),
+                    submitted_at=NOW,
+                    identity=RESOLVED,
+                    reporter_email="reader@example.com",
+                )
+
+        with db_manager.SessionLocal() as session:
+            assert _count(session, ReaderReport) == 0
+            assert _count(session, ReaderReportContact) == 0
 
 
 class TestCascade:
