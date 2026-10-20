@@ -2715,7 +2715,7 @@ def test_admin_image_brief_upload_oversize_413(
     api_client: TestClient, tmp_path, monkeypatch
 ) -> None:
     from news_collector.logic.workflows.image_briefs import ImageBriefStore
-    from news_collector.serving import api as serving_api
+    from news_collector.serving import admin_images as serving_admin_images
 
     store = ImageBriefStore(tmp_path)
     store.save_brief(_make_brief("brief-big"))
@@ -2723,7 +2723,7 @@ def test_admin_image_brief_upload_oversize_413(
         "news_collector.logic.workflows.image_briefs.ImageBriefStore",
         lambda *a: store,
     )
-    monkeypatch.setattr(serving_api, "MAX_UPLOAD_BYTES", 16)
+    monkeypatch.setattr(serving_admin_images, "MAX_UPLOAD_BYTES", 16)
 
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.post(
@@ -2742,7 +2742,7 @@ def test_read_upload_capped_rejects_over_cap() -> None:
     from fastapi import UploadFile
     from fastapi.exceptions import HTTPException
 
-    from news_collector.serving.api import _read_upload_capped
+    from news_collector.serving.admin_images import _read_upload_capped
 
     small = UploadFile(file=io.BytesIO(b"abc"), filename="hero.png")
     assert _read_upload_capped(small, cap_bytes=16) == b"abc"
