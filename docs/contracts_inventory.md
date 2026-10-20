@@ -181,7 +181,19 @@ For contract shapes and failure semantics, see
   `tests/unit/contracts/test_adapter_collector_payload.py`,
   `tests/unit/contracts/test_boundary_contract_extras_rejected.py`
 
-### 19. Package surface
+### 19. Reader reports
+
+- **Module**: `contracts/reader_reports.py`
+- **Contracts**: `ReaderReportPayload`, `ReportIdentity`; types
+  `ReaderProblemType`, `ReaderReportStatus`, `ReaderResolutionStatus`; function
+  `is_noticiencias_host`
+- **Status**: Enforced at the boundary. Payload mirrors the frontend Worker's six
+  problem types, length caps, `noticiencias.com` host rule and optional email.
+  `ReportIdentity` is the read-only resolver's typed outcome (no API yet).
+- **Tests**: `tests/unit/contracts/test_reader_reports_contract.py`,
+  `tests/unit/logic/workflows/test_reader_reports_resolver.py`
+
+### 20. Package surface
 
 - **Modules**: `contracts/__init__.py` (re-exports `__all__`), `contracts/_constants.py`
   (`SCHEMA_VERSION`, `MANIFEST_FILENAME`)
