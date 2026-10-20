@@ -475,7 +475,7 @@ describe('getArticle (openapi-fetch pilot)', () => {
   });
 });
 
-describe('mutation endpoints', () => {
+describe('mutation endpoints (openapi-fetch)', () => {
   it('rejectArticle POSTs the reason', async () => {
     setToken('admin-key');
     mockFetchResponse(200, {
@@ -487,13 +487,12 @@ describe('mutation endpoints', () => {
     const result = await rejectArticle(1, 'duplicate');
 
     expect(result.status).toBe('ok');
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/articles/1/reject');
-    expect((init as RequestInit).method).toBe('POST');
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
-      reason: 'duplicate',
-    });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/articles/1/reject');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(request.headers.get('Content-Type')).toBe('application/json');
+    expect(await request.text()).toBe('{"reason":"duplicate"}');
   });
 
   it('updateAuditStatus POSTs audit_status', async () => {
@@ -504,15 +503,14 @@ describe('mutation endpoints', () => {
       updated: 1,
     });
 
-    await updateAuditStatus(7, 'failed', 'low signal');
+    const result = await updateAuditStatus(7, 'failed', 'low signal');
 
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/articles/7/audit-status');
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
-      audit_status: 'failed',
-      reason: 'low signal',
-    });
+    expect(result.status).toBe('ok');
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/articles/7/audit-status');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"audit_status":"failed","reason":"low signal"}');
   });
 
   it('startPublishBatch POSTs article_ids', async () => {
@@ -528,13 +526,11 @@ describe('mutation endpoints', () => {
 
     expect(result.run_id).toBe('9');
     expect(result.accepted_ids).toEqual([3, 7]);
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/publish/batch');
-    expect((init as RequestInit).method).toBe('POST');
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
-      article_ids: [3, 7],
-    });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/publish/batch');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"article_ids":[3,7]}');
   });
 });
 
@@ -711,7 +707,7 @@ describe('read endpoints (openapi-fetch)', () => {
 describe('phase 3 operational client', () => {
   it('startCollect POSTs dry_run', async () => {
     setToken('admin-key');
-    mockFetchResponse(200, {
+    mockFetchResponse(202, {
       run_id: 'collect-1',
       status: 'queued',
       detail: 'Collection started (dry-run)',
@@ -720,10 +716,11 @@ describe('phase 3 operational client', () => {
     const started = await startCollect(true);
 
     expect(started.run_id).toBe('collect-1');
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/collect');
-    expect(JSON.parse(String(init.body))).toEqual({ dry_run: true });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/collect');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"dry_run":true}');
   });
 
   it("startCollect throws ConflictError with the existing run's body on 409", async () => {
@@ -758,29 +755,30 @@ describe('phase 3 operational client', () => {
   });
 
   it('startPublish POSTs article_id (url null)', async () => {
+    setToken('admin-key');
     mockFetchResponse(202, { run_id: '7', status: 'queued', detail: 'Publication started.' });
 
-    await startPublish({ articleId: 42 });
+    const started = await startPublish({ articleId: 42 });
 
-    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/publish');
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(String(init.body))).toEqual({
-      article_id: 42,
-      article_url: null,
-    });
+    expect(started.run_id).toBe('7');
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/publish');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"article_id":42,"article_url":null}');
   });
 
   it('startPublish POSTs article_url (id null)', async () => {
+    setToken('admin-key');
     mockFetchResponse(202, { run_id: '8', status: 'queued', detail: 'Publication started.' });
 
-    await startPublish({ articleUrl: 'https://example.com/x' });
+    const started = await startPublish({ articleUrl: 'https://example.com/x' });
 
-    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({
-      article_id: null,
-      article_url: 'https://example.com/x',
-    });
+    expect(started.run_id).toBe('8');
+    const request = requestAt();
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"article_id":null,"article_url":"https://example.com/x"}');
   });
 
   it('startPublish surfaces a 409 as ConflictError carrying the active run id', async () => {
@@ -824,27 +822,41 @@ describe('phase 3 operational client', () => {
   });
 
   it('reprocessArticle / toggleSource / resetSourceCircuit POST correctly', async () => {
-    mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await reprocessArticle(5);
-    let fetchMock = vi.mocked(fetch);
-    expect(String(fetchMock.mock.calls[0][0])).toBe('/v1/admin/articles/5/reprocess');
+    setToken('admin-key');
 
     mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await toggleSource('nature', false);
-    fetchMock = vi.mocked(fetch);
-    expect(String(fetchMock.mock.calls[0][0])).toBe('/v1/admin/sources/nature/toggle');
+    const reprocessed = await reprocessArticle(5);
+    expect(reprocessed.updated).toBe(1);
+    let request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/articles/5/reprocess');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{}');
 
     mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
-    await resetSourceCircuit('nature');
-    fetchMock = vi.mocked(fetch);
-    expect(String(fetchMock.mock.calls[0][0])).toBe('/v1/admin/sources/nature/reset');
+    const toggled = await toggleSource('nature', false);
+    expect(toggled.updated).toBe(1);
+    request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/sources/nature/toggle');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"active":false}');
+
+    mockFetchResponse(200, { status: 'ok', detail: 'ok', updated: 1 });
+    const reset = await resetSourceCircuit('nature');
+    expect(reset.updated).toBe(1);
+    request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/sources/nature/reset');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{}');
   });
 
   it('saveConfig / getPrompts / savePrompts / getContent / getImageQueue hit paths', async () => {
-    const paths: string[] = [];
+    setToken('admin-key');
+    const requests: Request[] = [];
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
-      // Mutations still pass a string; typed GETs pass a Request.
-      paths.push(input instanceof Request ? new URL(input.url).pathname : String(input));
+      requests.push(input as Request);
       return new Response('{}', {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -852,51 +864,109 @@ describe('phase 3 operational client', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
 
-    await saveConfig({ github: { target_repo_url: 'x' } });
+    await saveConfig({ github: { target_repo_url: 'x' }, debug: true });
     await getPrompts();
     await savePrompts({ editor: { system: 'y' } });
     await getContent();
     await getImageQueue();
 
-    expect(paths).toContain('/v1/admin/config');
-    expect(paths).toContain('/v1/admin/prompts');
-    expect(paths).toContain('/v1/admin/content');
-    expect(paths).toContain('/v1/admin/images');
+    expect(requests.map((request) => new URL(request.url).pathname)).toEqual([
+      '/v1/admin/config',
+      '/v1/admin/prompts',
+      '/v1/admin/prompts',
+      '/v1/admin/content',
+      '/v1/admin/images',
+    ]);
+    expect(requests[0].method).toBe('POST');
+    expect(requests[0].headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await requests[0].text()).toBe('{"github":{"target_repo_url":"x"},"debug":true}');
+    expect(requests[2].method).toBe('POST');
+    expect(requests[2].headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await requests[2].text()).toBe('{"prompts":{"editor":{"system":"y"}}}');
+  });
+
+  it.each([
+    ['startCollect', () => startCollect(false)],
+    ['startPublish', () => startPublish({ articleId: 1 })],
+    ['startPublishBatch', () => startPublishBatch([1])],
+  ])('%s maps 422 to ValidationError carrying the detail', async (_name, call) => {
+    mockFetchResponse(422, { detail: 'invalid run request' });
+
+    const err = await call().catch((e) => e);
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as Error).message).toBe('invalid run request');
+  });
+
+  it('startPublishBatch 409 carries the parsed active-run body', async () => {
+    mockFetchResponse(409, {
+      run_id: '9',
+      status: 'running',
+      detail: 'A publication run is already queued or running.',
+      accepted_ids: [1],
+    });
+
+    const err = await startPublishBatch([1]).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).body).toEqual({
+      run_id: '9',
+      status: 'running',
+      detail: 'A publication run is already queued or running.',
+      accepted_ids: [1],
+    });
+  });
+
+  it('a mutation 401 still maps to AuthError', async () => {
+    mockFetchResponse(401, { detail: 'Missing Authorization header' });
+
+    await expect(rejectArticle(1)).rejects.toBeInstanceOf(AuthError);
   });
 });
 
 describe('phase 4 parity client', () => {
   it('unpublishArticle DELETEs the content path', async () => {
+    setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'Unpublished x', updated: 1 });
-    await unpublishArticle('2026-01-01-x');
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/content/2026-01-01-x');
-    expect(init.method).toBe('DELETE');
+    const result = await unpublishArticle('2026-01-01-x');
+    expect(result.status).toBe('ok');
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/content/2026-01-01-x');
+    expect(request.method).toBe('DELETE');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(request.headers.get('Content-Type')).toBeNull();
+    expect(await request.text()).toBe('');
   });
 
   it('bulkResetContent POSTs refinery ids', async () => {
+    setToken('admin-key');
     mockFetchResponse(200, {
       succeeded: ['a'],
       failed: [{ refinery_id: 'b', error: 'nope' }],
       summary: '1 succeeded, 1 failed',
     });
     const result = await bulkResetContent(['a', 'b']);
-    const fetchMock = vi.mocked(fetch);
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({
-      refinery_ids: ['a', 'b'],
-    });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/content/bulk-reset');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"refinery_ids":["a","b"]}');
     expect(result.succeeded).toEqual(['a']);
   });
 
   it('updateImageBrief PUTs fields', async () => {
+    setToken('admin-key');
     mockFetchResponse(200, { brief: { topic: 'x' }, asset_path: '' });
-    await updateImageBrief('slug-1', { topic: 'x' });
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/images/slug-1');
-    expect(init.method).toBe('PUT');
+    const result = await updateImageBrief('slug-1', {
+      topic: 'x',
+      image_origin: 'ai_generated',
+    });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/images/slug-1');
+    expect(request.method).toBe('PUT');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe('{"topic":"x","image_origin":"ai_generated"}');
+    expect(result.asset_path).toBe('');
   });
 
   it('uploadImageBriefAsset uses FormData without JSON content-type', async () => {
@@ -918,10 +988,22 @@ describe('phase 4 parity client', () => {
   });
 
   it('deleteSource DELETEs the source path', async () => {
+    setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'deleted', updated: 1 });
-    await deleteSource('source-1');
-    const fetchMock = vi.mocked(fetch);
-    expect(String(fetchMock.mock.calls[0][0])).toBe('/v1/admin/sources/source-1');
+    const result = await deleteSource('source-1');
+    expect(result.status).toBe('ok');
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/sources/source-1');
+    expect(request.method).toBe('DELETE');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(request.headers.get('Content-Type')).toBeNull();
+    expect(await request.text()).toBe('');
+  });
+
+  it('encodes path parameters like the previous client', async () => {
+    mockFetchResponse(200, { status: 'ok', detail: 'deleted', updated: 1 });
+    await deleteSource('source/1');
+    expect(new URL(requestAt().url).pathname).toBe('/v1/admin/sources/source%2F1');
   });
 });
 
@@ -930,7 +1012,7 @@ describe('phase 4 addendum: source editor client', () => {
     setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'Source new_source created', updated: 1 });
 
-    const result = await upsertSource({
+    const payload = {
       source_id: 'new_source',
       name: 'New Source',
       url: 'https://example.com/feed',
@@ -938,17 +1020,14 @@ describe('phase 4 addendum: source editor client', () => {
       category: 'science',
       update_frequency: 'daily',
       group: 'CUSTOM',
-    });
+    } as const;
+    const result = await upsertSource(payload);
 
     expect(result.status).toBe('ok');
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/v1/admin/sources');
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(String(init.body))).toMatchObject({
-      source_id: 'new_source',
-      name: 'New Source',
-      credibility_score: 0.7,
-    });
+    const request = requestAt();
+    expect(new URL(request.url).pathname).toBe('/v1/admin/sources');
+    expect(request.method).toBe('POST');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
+    expect(await request.text()).toBe(JSON.stringify(payload));
   });
 });

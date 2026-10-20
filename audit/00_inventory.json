@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T03:30:35.920574+00:00",
+  "generated_at": "2026-10-20T03:41:23.827207+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -271,6 +271,7 @@
       "170-category-content-override.md",
       "171-openapi-fetch-pilot.md",
       "172-openapi-fetch-reads.md",
+      "173-openapi-fetch-mutations.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1383,6 +1384,7 @@
     "plans/170-category-content-override.md",
     "plans/171-openapi-fetch-pilot.md",
     "plans/172-openapi-fetch-reads.md",
+    "plans/173-openapi-fetch-mutations.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

@@ -1,9 +1,8 @@
 /**
- * Typed `openapi-fetch` client for the admin API (plan 171 pilot).
+ * Typed `openapi-fetch` client for the admin API.
  *
- * This client is being adopted endpoint by endpoint. The hand-written
- * `apiFetch` in `api.ts` remains the default; `getArticle` is the only call
- * routed through here so far.
+ * All reads (plan 172) and JSON mutations (plan 173) use this client; the
+ * multipart image upload is the only remaining `apiFetch` call in `api.ts`.
  *
  * The middleware reproduces the error taxonomy of `apiFetch` exactly:
  * 401/403 → AuthError, 404 → NotFoundError, 422 → ValidationError,
