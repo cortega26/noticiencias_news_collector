@@ -263,6 +263,7 @@ also_copy = ["news_collector", "noticiencias", "apps", "tests", "scripts", "conf
 
 [tool.ruff.lint.per-file-ignores]
 "news_collector/serving/api.py" = ["B008"]
+"news_collector/serving/admin_images.py" = ["B008"]
 "tests/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I", "UP", "N"]
 "scripts/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I"]
 "tools/*" = ["E", "F", "W", "S", "C", "SIM", "B", "I"]

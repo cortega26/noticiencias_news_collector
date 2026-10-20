@@ -56,14 +56,11 @@ from dateutil import parser as date_parser
 from fastapi import (
     Depends,
     FastAPI,
-    File,
-    Form,
     Header,
     HTTPException,
     Query,
     Request,
     Response,
-    UploadFile,
     status,
 )
 from fastapi.responses import JSONResponse
@@ -98,10 +95,6 @@ from news_collector.contracts.admin import (
     AdminConfigSnapshot,
     AdminContentEnvelope,
     AdminDashboardHealthEnvelope,
-    AdminImageBriefItem,
-    AdminImageBriefUpdate,
-    AdminImageBriefUploadResult,
-    AdminImageQueueEnvelope,
     AdminMutationResult,
     AdminPromptsEnvelope,
     AdminPublishBatchRequest,
@@ -125,7 +118,6 @@ from news_collector.contracts.admin import (
     AdminWebhookReceipt,
     AdminWebhookReceiptEnvelope,
 )
-from news_collector.contracts.image_brief import ImageBriefModel, ImageOrigin
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
@@ -134,6 +126,7 @@ from news_collector.logic.workflows.source_catalog_workflow import (
     SourceCatalogMutationRejected,
     SourceCatalogWorkflow,
 )
+from news_collector.serving.admin_images import build_router
 from news_collector.serving.dashboard_health import build_dashboard_health
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog, WorkflowRun
@@ -261,12 +254,6 @@ def _merge_circuit_into_health_record(
     return merged
 
 
-# NC-BE-087 S2: ceiling for admin image-brief uploads — generous above any
-# GUI-produced hero image. Overridable in tests via monkeypatch.
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-_UPLOAD_CHUNK_BYTES = 1024 * 1024
-
-
 # Plan 151: the three published-content routes (GET /v1/admin/content,
 # DELETE /v1/admin/content/{refinery_id}, POST /v1/admin/content/bulk-reset)
 # read the frontend repository through GitPython. That is a *local-admin*
@@ -342,21 +329,6 @@ def _published_content_missing_requirement(
         # No working tree yet: the module clones one on demand.
         return None
     return "a configured frontend repository"
-
-
-def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
-    """Read an upload in chunks, rejecting bodies over *cap_bytes* (413)."""
-    chunks: list[bytes] = []
-    total = 0
-    while True:
-        chunk = upload.file.read(_UPLOAD_CHUNK_BYTES)
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > cap_bytes:
-            raise HTTPException(status_code=413, detail="File upload too large")
-        chunks.append(chunk)
-    return b"".join(chunks)
 
 
 # processing_status values the admin triage queue can filter by. Must stay a
@@ -2587,136 +2559,8 @@ def create_app(  # noqa: C901
             ],
         )
 
-    @app.get("/v1/admin/images", response_model=AdminImageQueueEnvelope)
-    def admin_image_queue(
-        _: None = Depends(verify_admin_token),
-    ) -> AdminImageQueueEnvelope:
-        from news_collector.logic.workflows.image_briefs import ImageBriefStore
-
-        store = ImageBriefStore(Path("data"))
-        briefs = store.list_briefs()
-        return AdminImageQueueEnvelope(
-            briefs=[
-                AdminImageBriefItem(
-                    slug=brief.slug,
-                    article_id=brief.article_id,
-                    status=brief.status,
-                    reason=brief.reason,
-                    topic=brief.topic,
-                    news_angle=brief.news_angle,
-                    scientific_domain=brief.scientific_domain,
-                    subject_scene=brief.subject_scene,
-                    draft_alt_text=brief.draft_alt_text,
-                    tone=brief.tone,
-                    updated_at=(
-                        brief.updated_at.isoformat()
-                        if getattr(brief, "updated_at", None)
-                        else None
-                    ),
-                    generated_prompt=brief.generated_prompt,
-                    image_origin=brief.image_origin,
-                )
-                for brief in briefs
-            ]
-        )
-
-    @app.put(
-        "/v1/admin/images/{slug}",
-        response_model=AdminImageBriefUploadResult,
-    )
-    def admin_update_image_brief(
-        slug: str,
-        payload: AdminImageBriefUpdate,
-        _: None = Depends(verify_admin_token),
-    ) -> AdminImageBriefUploadResult:
-        """Edit an image brief's editable fields (no asset upload)."""
-        from news_collector.logic.workflows.image_briefs import ImageBriefStore
-
-        store = ImageBriefStore(Path("data"))
-        try:
-            brief = store.load_brief(slug)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        if brief is None:
-            raise HTTPException(status_code=404, detail="Brief not found")
-
-        updates = payload.model_dump(exclude_none=True)
-        if not updates:
-            raise HTTPException(status_code=422, detail="No editable fields provided")
-        updated = brief.model_copy(
-            update={**updates, "updated_at": datetime.now(timezone.utc)}
-        )
-        try:
-            updated = ImageBriefModel.model_validate(updated.model_dump())
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        try:
-            store.save_brief(updated)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return AdminImageBriefUploadResult(
-            brief=updated.model_dump(mode="json"),
-            asset_path=updated.uploaded_asset_path or "",
-        )
-
-    @app.post(
-        "/v1/admin/images/{slug}/upload",
-        response_model=AdminImageBriefUploadResult,
-    )
-    def admin_upload_image_brief(
-        slug: str,
-        request: Request,
-        file: UploadFile = File(...),
-        topic: Optional[str] = Form(None),
-        news_angle: Optional[str] = Form(None),
-        scientific_domain: Optional[str] = Form(None),
-        subject_scene: Optional[str] = Form(None),
-        draft_alt_text: Optional[str] = Form(None),
-        image_origin: Optional[ImageOrigin] = Form(None),
-        _: None = Depends(verify_admin_token),
-    ) -> AdminImageBriefUploadResult:
-        """Stage an image asset for a brief (multipart)."""
-        from news_collector.logic.workflows.image_briefs import ImageBriefStore
-
-        # NC-BE-087 S2: early reject when the declared body already exceeds
-        # the cap, before touching the store or reading the stream.
-        declared_length = request.headers.get("content-length")
-        if (
-            declared_length
-            and declared_length.isdigit()
-            and int(declared_length) > MAX_UPLOAD_BYTES
-        ):
-            raise HTTPException(status_code=413, detail="File upload too large")
-
-        store = ImageBriefStore(Path("data"))
-        try:
-            brief = store.load_brief(slug)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        if brief is None:
-            raise HTTPException(status_code=404, detail="Brief not found")
-
-        content = _read_upload_capped(file, cap_bytes=MAX_UPLOAD_BYTES)
-        if not content:
-            raise HTTPException(status_code=422, detail="Empty file upload")
-        try:
-            updated = store.stage_upload(
-                brief=brief,
-                filename=file.filename or f"{slug}.png",
-                content=content,
-                draft_alt_text=draft_alt_text or brief.draft_alt_text,
-                topic=topic or brief.topic,
-                news_angle=news_angle or brief.news_angle,
-                scientific_domain=scientific_domain or brief.scientific_domain,
-                subject_scene=subject_scene or brief.subject_scene,
-                image_origin=image_origin,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return AdminImageBriefUploadResult(
-            brief=updated.model_dump(mode="json"),
-            asset_path=updated.uploaded_asset_path or "",
-        )
+    # Plan 177: the image-brief routes live in their own bounded router.
+    app.include_router(build_router(verify_admin_token))
 
     @app.delete(
         "/v1/admin/content/{refinery_id}",

@@ -333,7 +333,13 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       declaration.)
 - [ ] Split bounded admin route modules after wire characterization.
       (Pending, re-checked 2026-09-26: `serving/` still holds one monolithic
-      `api.py` plus `dashboard_health.py`/`webhook_handler.py`.)
+      `api.py` plus `dashboard_health.py`/`webhook_handler.py`.
+      Plan 177 pilot landed 2026-10-20: NEW `serving/admin_images.py` owns the
+      three image-brief routes and the upload cap/reader behind
+      `build_router(verify_admin_token)`, mounted by `create_app` at the same
+      registration position; `apps/admin/openapi.json` and the generated TS
+      stayed byte-identical (`make admin-contracts-check`). The item stays
+      open for the remaining domains — sources, config, analytics, etc.)
 - [ ] Prove no unapproved Markdown, policy, branch/PR, or API drift. (Pending.)
 
 ## Wave D — assets and frontend growth

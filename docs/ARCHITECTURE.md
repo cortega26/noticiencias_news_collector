@@ -99,6 +99,13 @@ Specific rules:
 1. `news_collector/serving/api.py` exposes read-oriented ranked article endpoints.
 2. Query parameters are validated with Pydantic models.
 3. Pagination is cursor-based and deterministic by score, collected timestamp, and ID.
+4. Plan 177 / 060 Phase 7: admin routes are extracted by bounded domain as
+   routers. `serving/admin_images.py` is the first — it owns the three
+   image-brief routes and their upload helpers, and exposes
+   `build_router(verify_admin_token)`; `create_app` mounts it with
+   `app.include_router(...)`. The factory parameter avoids an
+   `api.py` ↔ router import cycle, and future splits (sources, config,
+   analytics) should follow the same shape with no wire change.
 
 ## Contract Boundaries That Matter Most
 
