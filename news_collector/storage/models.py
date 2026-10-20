@@ -1079,6 +1079,13 @@ class ReaderReport(Base):
     # create a second report.
     idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
 
+    # When the reader submitted the report (Worker record ``submitted_at``),
+    # distinct from ``created_at`` (reconciliation time). Plan 186.
+    submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     problem_type: Mapped[str] = mapped_column(String(40), nullable=False)
     article_url: Mapped[str | None] = mapped_column(String(2000))
     description: Mapped[str | None] = mapped_column(Text)

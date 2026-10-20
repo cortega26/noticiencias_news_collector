@@ -1,15 +1,19 @@
-"""Typed contracts for reader-submitted reports (plan 185).
+"""Typed contracts for reader-submitted reports (plans 185/186).
 
 These shapes mirror the frontend Worker's report contract
 (``workers/src/utils/validate.ts`` in the frontend repo) at the backend
 boundary: the same six problem types, the same per-field length caps, the
 same ``noticiencias.com`` / ``*.noticiencias.com`` host rule, and an optional
-reporter email. Pure Pydantic — no I/O, no storage imports (LAW-B1).
+reporter email. Pure Pydantic/dataclasses — no I/O, no storage imports
+(LAW-B1). Plan 186 adds the reconciliation outcome shapes shared by the R2
+reader, the pure logic, the repository, and the operator script.
 """
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Optional
 from urllib.parse import SplitResult, urlsplit
 
@@ -185,3 +189,125 @@ class ReportIdentity(BaseModel):
     reason: str = Field(min_length=1, max_length=200)
 
     model_config = ConfigDict(extra="forbid")
+
+
+# =============================================================================
+# Reconciliation shapes (plan 186)
+#
+# Internal, cross-module outcomes shared by the R2 reader (infrastructure),
+# the pure reconciliation logic (logic/workflows), the repository (storage),
+# and the operator script. Frozen dataclasses with a stable scope — not wire
+# payloads — so they stay outside the sync-and-mirror contract family.
+# =============================================================================
+
+PersistStatus = Literal["created", "duplicate", "db_failed"]
+
+
+@dataclass(frozen=True)
+class R2KeyPage:
+    """One page of R2 object keys from the Cloudflare REST listing.
+
+    ``next_cursor`` is the opaque cursor for the next page, or ``None``
+    when the listing is exhausted.
+    """
+
+    keys: tuple[str, ...]
+    next_cursor: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ValidReportIntake:
+    """A Worker R2 record that parsed cleanly against the 185 contract.
+
+    ``idempotency_key`` is the canonical form of the Worker record ``id``
+    (UUID rendered lowercase-hyphenated); ``payload`` is the validated
+    body; ``submitted_at`` is UTC-normalized. ``environment`` and
+    ``user_agent`` are carried for diagnostics — the ``reader_reports``
+    row has no columns for them, so persistence ignores them by design.
+    """
+
+    key: str
+    idempotency_key: str
+    payload: ReaderReportPayload
+    submitted_at: datetime
+    environment: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class InvalidReportIntake:
+    """A Worker R2 record that did not parse — counted, never silently dropped.
+
+    ``reason`` is a stable machine string (e.g. ``invalid_json``,
+    ``unknown_field:<name>``, ``invalid_submitted_at``); ``detail`` is a
+    short human suffix. A record shape the backend does not recognize is
+    an *invalid outcome*, not a parse hack.
+    """
+
+    key: str
+    reason: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class PersistOutcome:
+    """Result of persisting one valid intake to ``reader_reports``."""
+
+    status: PersistStatus
+    reason: Optional[str] = None
+
+
+OutcomeStatus = Literal[
+    "created",
+    "duplicate",
+    "invalid",
+    "skipped",
+    "fetch_failed",
+    "persist_failed",
+]
+
+
+@dataclass(frozen=True)
+class ReportOutcome:
+    """Per-object reconciliation result (LAW-B6: every item is an outcome)."""
+
+    key: str
+    status: OutcomeStatus
+    idempotency_key: Optional[str] = None
+    reason: Optional[str] = None
+
+
+@dataclass
+class ReconciliationSummary:
+    """Typed run summary (mutable accumulator, like ``PullSummary``).
+
+    ``listed`` = keys seen on pages; ``fetched`` = objects pulled; the
+    outcome counters partition ``fetched`` (+ ``skipped``). ``fatal`` is
+    set (with a reason) when the listing itself failed — per-object
+    failures never set it, the run continues.
+    """
+
+    listed: int = 0
+    fetched: int = 0
+    created: int = 0
+    duplicates: int = 0
+    invalid: int = 0
+    skipped: int = 0
+    fetch_failed: int = 0
+    persist_failed: int = 0
+    truncated: bool = False
+    fatal: Optional[str] = None
+    outcomes: tuple[ReportOutcome, ...] = ()
+
+    @property
+    def processed(self) -> int:
+        return sum(
+            (
+                self.created,
+                self.duplicates,
+                self.invalid,
+                self.skipped,
+                self.fetch_failed,
+                self.persist_failed,
+            )
+        )

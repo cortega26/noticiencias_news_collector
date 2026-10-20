@@ -23,7 +23,7 @@ from news_collector.storage.migration_guard import (
 )
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAD_REVISION = "e7f1a2b3c4d5"
+HEAD_REVISION = "d2e3f4a5b6c7"
 BEHIND_REVISION = "a54ba7f7dabb"
 
 
