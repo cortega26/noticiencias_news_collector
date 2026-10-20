@@ -51,6 +51,36 @@ The render authority is:
 
 - `../noticiencias/src/content.config.ts`
 
+### Generated JSON Schema Artifact (plan 175)
+
+- Source of truth: `../noticiencias/src/schemas/post.schema.json`, generated
+  from `postStructuralSchema` in `../noticiencias/src/schemas/post.ts` with Zod
+  4's `z.toJSONSchema` (JSON Schema 2020-12). Regenerate with
+  `npm run schema:update`; never edit the artifact by hand.
+- Structural scope only: property names, required fields, enum values, basic
+  types, nested object/array shapes, `additionalProperties` (top-level extras
+  allowed; `social` strict), formats, patterns, and bounds. The parity test
+  enumerates the only permitted bound differences (Zod safe-integer/item
+  bounds and Pydantic `HttpUrl` length bounds). The artifact represents `date`
+  as `oneOf` `date`/`date-time` strings to match this corpus and Pydantic's
+  `Union[date, datetime]`.
+- Semantic rules that `superRefine` cannot encode are explicit gaps, not
+  artifact failures: the five `v2-missing-*` fixtures under
+  `../noticiencias/tests/fixtures/publication-contract-corpus/invalid/`
+  (summary-points, glossary, fact-check, confidence, sources) pass the artifact
+  and are rejected by Pydantic and the full frontend schema. The
+  `v2-missing-why-it-matters` fixture there is a frozen stale label that is
+  valid on both sides (P0-06/DEC-003). `format: "uri"` accepts the `ftp://`
+  source-URL case that Pydantic's `HttpUrl` rejects, and calendar invalid dates
+  are rejected by both.
+- Coverage is transitive: `tests/test_post_schema_parity.py` compares the
+  artifact with `AstroPost.model_json_schema()` structurally (no `jsonschema`
+  dependency), while `../noticiencias/tests/post-json-schema.test.ts` validates
+  the shared corpus against the artifact with Ajv and against Zod. CI's `type`
+  and `test` jobs sparse-checkout and copy the artifact plus
+  `../noticiencias/tests/fixtures/publication-contract-corpus/` next to the
+  schema module.
+
 ### Current Publication Path
 
 - output directory: `src/content/posts/` in the target frontend repo

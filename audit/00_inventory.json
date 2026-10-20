@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T12:08:14.065264+00:00",
+  "generated_at": "2026-10-20T12:42:17.809169+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -475,6 +475,7 @@
       "test_nvidia_routing_fix.py",
       "test_ollama_fix.py",
       "test_policy_integrity.py",
+      "test_post_schema_parity.py",
       "test_public_entrypoints.py",
       "test_python_version_requirement.py",
       "test_quality_contract.py",
