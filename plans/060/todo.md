@@ -443,7 +443,15 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       **only** in `reader_report_contacts`, never copied to reports/logs/
       decisions; `contact_purged_at` stamp ready. The purge/delete service and
       its tests are still pending.)
-- [ ] Reconcile Worker intake idempotently into backend report/decision records.
+- [x] Reconcile Worker intake idempotently into backend report/decision records.
+      (Delivered 2026-10-20, backend `fb2e77f1`: R2 pulls via a Cloudflare-REST
+      reader, strict Worker-record interpretation through the 185 contract,
+      idempotency key = the Worker UUID with engine-proven N-runs→1-row (both
+      SELECT and IntegrityError-replay race paths), identity stamped by the
+      185 resolver, `--dry-run` operator script with typed exits 0/1/2.
+      Cloudflare credentials are env-only placeholders — first prod pass must
+      provision the token and run dry. Reports only; decision-record
+      reconciliation lands with the admin slice (187).)
 - [ ] Add legal admin triage/decision/correction/closure transitions.
 - [ ] Link correction publication and deploy evidence before closure.
 - [ ] Pass lifecycle, idempotency, abuse, privacy, and publication tests.
