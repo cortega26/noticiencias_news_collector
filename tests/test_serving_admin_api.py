@@ -1971,6 +1971,7 @@ def test_admin_images_queue_reads_briefs(
         assert row["generated_prompt"] == (
             "Genera una imagen de un laboratorio moderno con un hallazgo medico."
         )
+        assert row["image_origin"] == "unknown"
 
 
 def test_admin_config_save_roundtrip_and_secret_drop(
@@ -2534,14 +2535,16 @@ def test_admin_image_brief_update_roundtrip(
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.put(
             "/v1/admin/images/brief-update",
-            json={"topic": "nuevo tema"},
+            json={"topic": "nuevo tema", "image_origin": "licensed"},
             headers=_admin_headers(),
         )
         assert response.status_code == 200
         assert response.json()["brief"]["topic"] == "nuevo tema"
+        assert response.json()["brief"]["image_origin"] == "licensed"
 
     reloaded = store.load_brief("brief-update")
     assert reloaded.topic == "nuevo tema"
+    assert reloaded.image_origin == "licensed"
 
 
 def test_admin_image_brief_update_unknown_404(
@@ -2591,6 +2594,55 @@ def test_admin_image_brief_upload_stages_asset(
     staged = store.load_brief("brief-upload")
     assert staged.status == "editorial_image_ready"
     assert staged.uploaded_asset_path
+
+
+def test_admin_image_brief_upload_persists_image_origin(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    """Plan 169: the desk sends `image_origin` with the upload."""
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-origin"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/images/brief-origin/upload",
+            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            data={"image_origin": "ai_generated"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        assert response.json()["brief"]["image_origin"] == "ai_generated"
+
+    assert store.load_brief("brief-origin").image_origin == "ai_generated"
+
+
+def test_admin_image_brief_upload_rejects_invalid_origin_422(
+    api_client: TestClient, tmp_path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    store = ImageBriefStore(tmp_path)
+    store.save_brief(_make_brief("brief-origin-bad"))
+    monkeypatch.setattr(
+        "news_collector.logic.workflows.image_briefs.ImageBriefStore",
+        lambda *a: store,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/images/brief-origin-bad/upload",
+            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            data={"image_origin": "scraped"},
+            headers=_admin_headers(),
+        )
+
+    assert response.status_code == 422
 
 
 def test_admin_image_brief_traversal_slug_422(

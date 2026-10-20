@@ -71,6 +71,15 @@ image (for example a URL publish, or a brief changed mid-flight), the run error
 names the reason (`missing_source_image`, `third_party_image_blocked`,
 `image_download_failed`, `placeholder_image_debt`).
 
+Image provenance is recorded on the brief at upload (`image_origin`:
+`ai_generated`, `licensed`, `original` or `unknown`) and shown in the Images
+desk. Publishing an `ai_generated` brief prefixes the stored alt text exactly
+once with `Ilustración generada con IA: `; the frontend renders `image_alt` as
+the visible `<figcaption>`, so the label appears under the hero image without a
+new caption field or a body note. Other origins leave the alt untouched, the
+prefix is never duplicated, and existing posts are not rewritten — the label is
+applied only when an article is published.
+
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
 The target artifact is Markdown under `src/content/posts/<canonical-slug>.md`

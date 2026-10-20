@@ -30,6 +30,7 @@ class EditorialInput:
     content_mode: str
     image_url: Optional[str]
     image_alt: Optional[str]
+    image_origin: Optional[str]
     source_id: Optional[str]
     source_name: Optional[str]
     source_url: Optional[str]
@@ -88,6 +89,7 @@ class EditorialInput:
             content_mode=content_mode or "full_text",
             image_url=raw.get("image_url"),
             image_alt=raw.get("image_alt"),
+            image_origin=raw.get("image_origin"),
             source_id=raw.get("source_id"),
             source_name=raw.get("source_name"),
             source_url=cls._source_url(raw, metadata),
@@ -107,6 +109,7 @@ class EditorialInput:
             content_mode="full_text",
             image_url=None,
             image_alt=None,
+            image_origin=None,
             source_id=None,
             source_name=None,
             source_url=None,

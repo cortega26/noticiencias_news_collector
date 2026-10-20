@@ -60,6 +60,9 @@ class ImageResolution:
     resolved: bool
     image_url: str | None = None
     image_alt: str | None = None
+    # Provenance of the resolved asset when it comes from an editorial brief
+    # (plan 169); source downloads/local paths carry no brief origin.
+    image_origin: str | None = None
     queued_brief: bool = False
     message: str | None = None
     reason: str | None = None
@@ -144,6 +147,7 @@ class ArticleImageHandler:
                     existing_brief.draft_alt_text if existing_brief else None,
                     article.get("title", article_id),
                 ),
+                image_origin=(existing_brief.image_origin if existing_brief else None),
                 queued_brief=False,
             )
 

@@ -2278,6 +2278,7 @@ class EditorAgent:
         content_mode = editorial.content_mode
         image_url = editorial.image_url
         image_alt = editorial.image_alt
+        image_origin = editorial.image_origin
         source_id = editorial.source_id
         source_name = editorial.source_name
         source_url = editorial.source_url
@@ -2699,6 +2700,7 @@ class EditorAgent:
                 metadata_category=metadata_category,
                 image_url=image_url,
                 image_alt=image_alt,
+                image_origin=image_origin,
                 source_id=source_id,
                 source_name=source_name,
                 source_url=source_url,

@@ -31,6 +31,8 @@ ImageBriefReason = Literal[
     "missing_alt_text",
     "third_party_image_blocked",
 ]
+ImageOrigin = Literal["unknown", "ai_generated", "licensed", "original"]
+IMAGE_ORIGIN_VALUES = ("unknown", "ai_generated", "licensed", "original")
 
 
 class ImageBriefModel(BaseModel):
@@ -50,6 +52,9 @@ class ImageBriefModel(BaseModel):
     prompt_version: str = Field(default=IMAGE_PROMPT_VERSION, min_length=3)
     generated_prompt: str = Field(min_length=50)
     uploaded_asset_path: str | None = None
+    # Provenance recorded at upload; `unknown` keeps legacy sidecars loadable.
+    # `ai_generated` drives the visible alt/caption disclosure (plan 169).
+    image_origin: ImageOrigin = "unknown"
     updated_at: datetime
 
     model_config = ConfigDict(extra="forbid")

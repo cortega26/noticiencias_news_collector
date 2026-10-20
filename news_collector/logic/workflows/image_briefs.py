@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from news_collector.contracts import IMAGE_PROMPT_VERSION, ImageBriefModel
+from news_collector.contracts.image_brief import IMAGE_ORIGIN_VALUES
 from news_collector.utils.slug import slugify
 
 PROMPT_TEMPLATE_PATH = (
@@ -242,6 +243,7 @@ class ImageBriefStore:
             tone=tone,
         )
         uploaded_asset_path = existing.uploaded_asset_path if existing else None
+        image_origin = existing.image_origin if existing else "unknown"
         status: Literal["editorial_image_ready", "needs_editorial_image"] = (
             "editorial_image_ready" if uploaded_asset_path else "needs_editorial_image"
         )
@@ -264,6 +266,7 @@ class ImageBriefStore:
             prompt_version=IMAGE_PROMPT_VERSION,
             generated_prompt=prompt,
             uploaded_asset_path=uploaded_asset_path,
+            image_origin=image_origin,
             updated_at=datetime.now(timezone.utc),
         )
 
@@ -286,8 +289,11 @@ class ImageBriefStore:
         news_angle: str,
         scientific_domain: str,
         subject_scene: str,
+        image_origin: str | None = None,
     ) -> ImageBriefModel:
         _validate_slug(brief.slug)
+        if image_origin is not None and image_origin not in IMAGE_ORIGIN_VALUES:
+            raise ValueError(f"Invalid image origin: {image_origin!r}")
         raw_ext = Path(filename).suffix.lower()
         if raw_ext not in _ALLOWED_UPLOAD_EXTENSIONS:
             raise ValueError(f"Disallowed image upload extension: {raw_ext!r}")
@@ -314,6 +320,9 @@ class ImageBriefStore:
                 "news_angle": news_angle.strip(),
                 "scientific_domain": scientific_domain.strip(),
                 "subject_scene": subject_scene.strip(),
+                "image_origin": (
+                    image_origin if image_origin is not None else brief.image_origin
+                ),
                 "generated_prompt": self.prompt_template.format(
                     topic=topic.strip(),
                     news_angle=news_angle.strip(),

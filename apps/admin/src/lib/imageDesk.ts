@@ -12,6 +12,24 @@ export function escapeHtml(value: unknown): string {
 }
 
 /**
+ * Provenance options for the Images desk. Order is the operator-facing order
+ * from plan 169; `ai_generated` drives the visible AI label on publication.
+ */
+export const IMAGE_ORIGIN_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'ai_generated', label: 'IA generada' },
+  { value: 'licensed', label: 'Licencia' },
+  { value: 'original', label: 'Original' },
+  { value: 'unknown', label: 'Desconocido' },
+];
+
+export function imageOriginLabel(value: string | null | undefined): string {
+  return (
+    IMAGE_ORIGIN_OPTIONS.find((option) => option.value === (value ?? 'unknown'))?.label ??
+    'Desconocido'
+  );
+}
+
+/**
  * Render one Images-desk card.
  *
  * Every interpolated value is escaped. The generated prompt lives in a
@@ -21,6 +39,11 @@ export function escapeHtml(value: unknown): string {
  */
 export function renderImageCard(b: AdminImageBriefItem): string {
   const prompt = (b.generated_prompt ?? '').trim();
+  const origin = b.image_origin ?? 'unknown';
+  const originOptions = IMAGE_ORIGIN_OPTIONS.map(
+    (option) =>
+      `<option value="${option.value}"${option.value === origin ? ' selected' : ''}>${option.label}</option>`
+  ).join('');
   return `
     <div class="card p-4" data-slug="${escapeHtml(b.slug)}">
       <div class="mb-2 flex items-center justify-between">
@@ -29,7 +52,7 @@ export function renderImageCard(b: AdminImageBriefItem): string {
       </div>
       <div class="font-mono text-xs text-amber-400">${escapeHtml(b.slug)}</div>
       <div class="mt-1 text-sm font-medium text-ink-100">${escapeHtml(b.topic)}</div>
-      <div class="mt-2 font-mono text-[11px] text-ink-400">artículo ${escapeHtml(b.article_id)} · ${escapeHtml(b.reason)}</div>
+      <div class="mt-2 font-mono text-[11px] text-ink-400">artículo ${escapeHtml(b.article_id)} · ${escapeHtml(b.reason)} · origen ${escapeHtml(imageOriginLabel(origin))}</div>
 
       ${
         prompt
@@ -56,6 +79,10 @@ export function renderImageCard(b: AdminImageBriefItem): string {
         <label class="block">
           <span class="data-label block mb-1">TEXTO ALT</span>
           <input data-field="draft_alt_text" value="${escapeHtml(b.draft_alt_text ?? '')}" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none" />
+        </label>
+        <label class="block">
+          <span class="data-label block mb-1">ORIGEN</span>
+          <select data-field="image_origin" class="w-full rounded border border-ink-700 bg-ink-900 px-2.5 py-1.5 font-mono text-xs text-ink-100 focus:border-amber-500 outline-none">${originOptions}</select>
         </label>
         <div class="flex flex-wrap gap-2">
           <button class="btn-ghost !px-2.5 !py-1 text-xs" data-save="${escapeHtml(b.slug)}" type="button">Guardar cambios</button>

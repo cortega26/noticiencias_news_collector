@@ -38,6 +38,12 @@ from news_collector.utils.logger import get_logger
 # byte-identical after the move (plan 060 Phase 7c-4).
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
 
+# Plan 169: the frontend renders `image_alt` as the visible `<figcaption>`
+# (PostLayout.astro), so the alt prefix IS the AI disclosure — no body note and
+# no new cross-repo contract field. Keep the wording stable: it is the label
+# readers see under the hero image.
+AI_IMAGE_ALT_PREFIX = "Ilustración generada con IA: "
+
 
 class GeneratedArticleValidationError(ValueError):
     """Raised when the generated article body is not publishable."""
@@ -97,6 +103,7 @@ class PublicationArtifactInput:
     metadata_category: str | None
     image_url: str | None
     image_alt: str | None
+    image_origin: str | None
     source_id: str | None
     source_name: str | None
     source_url: str | None
@@ -231,6 +238,25 @@ def _base_frontmatter(
     }
 
 
+def apply_ai_image_disclosure(
+    image_alt: str | None, image_origin: str | None
+) -> str | None:
+    """Prefix the visible caption of an AI-generated hero image.
+
+    The frontend renders `image_alt` as the `<figcaption>` under the hero, so
+    the prefix is the reader-facing disclosure. Only `ai_generated` briefs are
+    labeled; every other origin (and a missing alt) is returned unchanged.
+
+    Idempotent: a value that already starts with the prefix (case-insensitive)
+    is returned untouched, so reprocessing a post cannot stack labels.
+    """
+    if not image_alt or image_origin != "ai_generated":
+        return image_alt
+    if image_alt.casefold().startswith(AI_IMAGE_ALT_PREFIX.casefold()):
+        return image_alt
+    return f"{AI_IMAGE_ALT_PREFIX}{image_alt}"
+
+
 def _apply_media_frontmatter(
     model_dict: dict[str, Any],
     data: PublicationArtifactInput,
@@ -247,7 +273,15 @@ def _apply_media_frontmatter(
     if resolved_alt and resolved_alt != (previous_alt or "").strip():
         logger.info("Hero alt recomputed with the Spanish headline.")
     if resolved_alt:
-        model_dict["image_alt"] = resolved_alt
+        if data.image_origin == "ai_generated":
+            logger.info(
+                "Applying AI image disclosure to the visible caption "
+                "(image_origin=ai_generated, article={}).",
+                data.article_id,
+            )
+        model_dict["image_alt"] = apply_ai_image_disclosure(
+            resolved_alt, data.image_origin
+        )
     if data.source_url:
         model_dict["source_url"] = data.source_url
 
