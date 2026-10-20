@@ -375,8 +375,15 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 > top-four; no record of the four unused dependencies being removed; template
 > migration and two-layer-governance supersession not started.
 
-- [ ] Fix relative reachability allowlisting; review/delete the 37 findings in
-      cohorts; enforce the gate.
+- [x] Fix relative reachability allowlisting; review/delete the 37 findings in
+      small cohorts, prove no MDX/dynamic consumer, delete only genuinely
+      dead components, and then wire the checker into CI. (Delivered 2026-10-20,
+      frontend b7e5ae36: allowlist normalized to repo-relative POSIX paths + a
+      6-test CLI suite; **27 dead components deleted** — 23 `template/**`
+      AstroWind leftovers and 4 unused `ds/**` primitives — each with a
+      static/dynamic/MDX/type no-consumer proof; `check:reachability` runs in
+      `npm run lint` and the frontend validate job; 987 tests, build 299 pages,
+      checker exit 0. The only build diff is the expected dead-CSS shrink.)
 - [x] Characterize and precompute deterministic related-post top-four results.
       (Delivered: `rankAllRelatedPosts` precomputes once per build with WeakMap
       caches (tag sets + per-list rankings) and a newest-first tie-break; plan
