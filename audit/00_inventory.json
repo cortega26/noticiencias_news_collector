@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T17:14:20.056148+00:00",
+  "generated_at": "2026-10-20T18:03:33.355534+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -280,6 +280,7 @@
       "180-related-batch-characterization.md",
       "181-reachability-prune.md",
       "182-template-leaf-surfaces.md",
+      "183-template-base-layout-migration.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1402,6 +1403,7 @@
     "plans/180-related-batch-characterization.md",
     "plans/181-reachability-prune.md",
     "plans/182-template-leaf-surfaces.md",
+    "plans/183-template-base-layout-migration.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
