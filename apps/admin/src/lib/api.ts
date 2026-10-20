@@ -99,14 +99,38 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
+/**
+ * Run a typed GET and narrow the generated payload to the hand-written
+ * contract. The generated schemas mark server-defaulted fields optional and
+ * widen some nested records (`source`, list envelopes); the runtime wire shape
+ * is still the `Admin*` model from `news_collector/contracts/admin.py`. This is
+ * the same narrow cast `getArticle` uses — never `any`.
+ */
+async function readContract<T>(
+  request: Promise<{ data?: unknown; error?: unknown; response: Response }>
+): Promise<T> {
+  const { data, error, response } = await request;
+  if (error) throw mapOpenApiError(error, response);
+  return data as T;
+}
+
 export function listArticles(
   status: ArticleStatus,
   cursor?: string | null,
   pageSize = 20
 ): Promise<AdminArticleListEnvelope> {
-  const params = new URLSearchParams({ status, page_size: String(pageSize) });
-  if (cursor) params.set('cursor', cursor);
-  return apiFetch<AdminArticleListEnvelope>(`/v1/admin/articles?${params}`);
+  return readContract<AdminArticleListEnvelope>(
+    client.GET('/v1/admin/articles', {
+      params: {
+        query: {
+          status,
+          page_size: pageSize,
+          // `apiFetch` omitted an empty cursor; keep that wire behavior.
+          cursor: cursor || undefined,
+        },
+      },
+    })
+  );
 }
 
 export async function getArticle(id: number): Promise<AdminArticleDetail> {
@@ -121,15 +145,15 @@ export async function getArticle(id: number): Promise<AdminArticleDetail> {
 }
 
 export function getSourceHealth(): Promise<AdminSourceHealthEnvelope> {
-  return apiFetch<AdminSourceHealthEnvelope>(`/v1/admin/sources/health`);
+  return readContract<AdminSourceHealthEnvelope>(client.GET('/v1/admin/sources/health'));
 }
 
 export function getAnalytics(): Promise<AdminAnalyticsEnvelope> {
-  return apiFetch<AdminAnalyticsEnvelope>(`/v1/admin/analytics`);
+  return readContract<AdminAnalyticsEnvelope>(client.GET('/v1/admin/analytics'));
 }
 
 export function getConfig(): Promise<AdminConfigSnapshot> {
-  return apiFetch<AdminConfigSnapshot>(`/v1/admin/config`);
+  return readContract<AdminConfigSnapshot>(client.GET('/v1/admin/config'));
 }
 
 export function rejectArticle(id: number, reason = ''): Promise<AdminMutationResult> {
@@ -158,8 +182,14 @@ export function startCollect(dryRun = false): Promise<AdminCollectStarted> {
 }
 
 export function getCollectStatus(runId?: string): Promise<AdminCollectStatus> {
-  const q = runId ? `?run_id=${encodeURIComponent(runId)}` : '';
-  return apiFetch<AdminCollectStatus>(`/v1/admin/collect/status${q}`);
+  return readContract<AdminCollectStatus>(
+    client.GET('/v1/admin/collect/status', {
+      params: {
+        // `apiFetch` omitted an empty run_id; keep that wire behavior.
+        query: { run_id: runId || undefined },
+      },
+    })
+  );
 }
 
 /**
@@ -181,8 +211,14 @@ export function startPublish(opts: {
 }
 
 export function getPublishStatus(runId?: string): Promise<AdminPublishStatus> {
-  const q = runId ? `?run_id=${encodeURIComponent(runId)}` : '';
-  return apiFetch<AdminPublishStatus>(`/v1/admin/publish/status${q}`);
+  return readContract<AdminPublishStatus>(
+    client.GET('/v1/admin/publish/status', {
+      params: {
+        // `apiFetch` omitted an empty run_id; keep that wire behavior.
+        query: { run_id: runId || undefined },
+      },
+    })
+  );
 }
 
 /**
@@ -205,7 +241,7 @@ export function reprocessArticle(id: number): Promise<AdminMutationResult> {
 }
 
 export function listSources(): Promise<{ sources: AdminSourceListItem[] }> {
-  return apiFetch<{ sources: AdminSourceListItem[] }>('/v1/admin/sources');
+  return readContract<{ sources: AdminSourceListItem[] }>(client.GET('/v1/admin/sources'));
 }
 
 export function toggleSource(sourceId: string, active: boolean): Promise<AdminMutationResult> {
@@ -230,7 +266,7 @@ export function saveConfig(patch: Record<string, unknown>): Promise<AdminConfigS
 }
 
 export function getPrompts(): Promise<AdminPromptsEnvelope> {
-  return apiFetch<AdminPromptsEnvelope>('/v1/admin/prompts');
+  return readContract<AdminPromptsEnvelope>(client.GET('/v1/admin/prompts'));
 }
 
 export function savePrompts(
@@ -243,17 +279,17 @@ export function savePrompts(
 }
 
 export function getContent(): Promise<AdminContentEnvelope> {
-  return apiFetch<AdminContentEnvelope>('/v1/admin/content');
+  return readContract<AdminContentEnvelope>(client.GET('/v1/admin/content'));
 }
 
 export function getQualityRecent(limit = 20): Promise<AdminQualityRecentEnvelope> {
-  return apiFetch<AdminQualityRecentEnvelope>(
-    `/v1/admin/quality/recent?limit=${encodeURIComponent(String(limit))}`
+  return readContract<AdminQualityRecentEnvelope>(
+    client.GET('/v1/admin/quality/recent', { params: { query: { limit } } })
   );
 }
 
 export function getImageQueue(): Promise<{ briefs: AdminImageBriefItem[] }> {
-  return apiFetch<{ briefs: AdminImageBriefItem[] }>('/v1/admin/images');
+  return readContract<{ briefs: AdminImageBriefItem[] }>(client.GET('/v1/admin/images'));
 }
 
 export function unpublishArticle(refineryId: string): Promise<AdminMutationResult> {

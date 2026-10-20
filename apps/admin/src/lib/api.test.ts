@@ -21,9 +21,11 @@ import {
   getContent,
   getImageQueue,
   getPrompts,
+  getQualityRecent,
   getSourceHealth,
   getToken,
   listArticles,
+  listSources,
   rejectArticle,
   bulkResetContent,
   deleteSource,
@@ -125,6 +127,27 @@ function mockFetchRawResponse(status: number, body: string, contentType?: string
   );
 }
 
+/** Capture the `Request` objects the typed client sends (openapi-fetch uses Request). */
+function mockFetchCapture(body: unknown): Request[] {
+  const requests: Request[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      requests.push(input as Request);
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    })
+  );
+  return requests;
+}
+
+function requestAt(index = 0): Request {
+  const [request] = vi.mocked(fetch).mock.calls[index] as [Request];
+  return request;
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -158,21 +181,34 @@ describe('listArticles', () => {
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0].title).toBe('CRISPR gene therapy milestone');
-    const fetchMock = vi.mocked(fetch);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('status=pending');
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer admin-key');
+    const request = requestAt();
+    const url = new URL(request.url);
+    expect(url.pathname).toBe('/v1/admin/articles');
+    expect(url.search).toBe('?status=pending&page_size=20');
+    expect(request.method).toBe('GET');
+    expect(request.headers.get('Authorization')).toBe('Bearer admin-key');
   });
 
-  it('appends the cursor when provided', async () => {
+  it('appends the cursor when provided, preserving page_size and order', async () => {
+    setToken('admin-key');
+    mockFetchResponse(200, envelope);
+    // Server-issued cursors are urlsafe base64; these are the characters a
+    // real cursor can carry.
+    const cursor = 'eyJpZCI6MX0=';
+
+    await listArticles('pending', cursor, 50);
+
+    const url = new URL(requestAt().url);
+    expect(url.search).toBe(`?status=pending&page_size=50&cursor=${encodeURIComponent(cursor)}`);
+  });
+
+  it('omits an empty cursor like the previous client', async () => {
     setToken('admin-key');
     mockFetchResponse(200, envelope);
 
-    await listArticles('pending', 'abc123');
+    await listArticles('pending', '');
 
-    const fetchMock = vi.mocked(fetch);
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('cursor=abc123');
+    expect(new URL(requestAt().url).search).toBe('?status=pending&page_size=20');
   });
 
   it("passes the virtual 'publishable' filter through as a status", async () => {
@@ -181,9 +217,7 @@ describe('listArticles', () => {
 
     await listArticles('publishable');
 
-    const fetchMock = vi.mocked(fetch);
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('status=publishable');
+    expect(new URL(requestAt().url).search).toBe('?status=publishable&page_size=20');
   });
 
   it('throws AuthError on 401', async () => {
@@ -504,25 +538,173 @@ describe('mutation endpoints', () => {
   });
 });
 
-describe('read endpoints', () => {
-  it('getSourceHealth / getAnalytics / getConfig hit their paths', async () => {
-    const paths: string[] = [];
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
-      paths.push(String(input));
-      return new Response('{}', {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
+describe('read endpoints (openapi-fetch)', () => {
+  const qualityBody = {
+    runs: [],
+    aggregate: {
+      count: 0,
+      succeeded: 0,
+      failed: 0,
+      with_readability: 0,
+      avg_suitability: null,
+    },
+    meta: { generated_at: '2026-10-19T00:00:00Z' },
+  };
 
-    await getSourceHealth();
-    await getAnalytics();
-    await getConfig();
+  const readCases: Array<{
+    name: string;
+    call: () => Promise<unknown>;
+    path: string;
+    search: string;
+    body: unknown;
+  }> = [
+    {
+      name: 'getSourceHealth',
+      call: () => getSourceHealth(),
+      path: '/v1/admin/sources/health',
+      search: '',
+      body: { sources: [{ source_id: 'nature', consecutive_failures: 0 }] },
+    },
+    {
+      name: 'getAnalytics',
+      call: () => getAnalytics(),
+      path: '/v1/admin/analytics',
+      search: '',
+      body: {
+        stats: [],
+        total_articles: 3,
+        source_perf: [],
+        avg_score_overall: 0.5,
+        dist: {},
+        cats: [],
+        top_sources: [],
+        as_of: '2026-10-19T00:00:00Z',
+      },
+    },
+    {
+      name: 'getConfig',
+      call: () => getConfig(),
+      path: '/v1/admin/config',
+      search: '',
+      body: {
+        environment: 'test',
+        debug: false,
+        timezone: 'UTC',
+        github: {},
+        ollama: {},
+        scoring: {},
+        sources: [],
+      },
+    },
+    {
+      name: 'listSources',
+      call: () => listSources(),
+      path: '/v1/admin/sources',
+      search: '',
+      body: { sources: [{ source_id: 'nature', name: 'Nature', is_active: true }] },
+    },
+    {
+      name: 'getPrompts',
+      call: () => getPrompts(),
+      path: '/v1/admin/prompts',
+      search: '',
+      body: { prompts: { editor: { system: 'x' } } },
+    },
+    {
+      name: 'getContent',
+      call: () => getContent(),
+      path: '/v1/admin/content',
+      search: '',
+      body: {
+        source_label: 'local',
+        freshness_label: 'fresh',
+        articles: [{ file_name: 'a.md', title: 'A' }],
+      },
+    },
+    {
+      name: 'getImageQueue',
+      call: () => getImageQueue(),
+      path: '/v1/admin/images',
+      search: '',
+      body: {
+        briefs: [
+          {
+            slug: 'slug-1',
+            article_id: '1',
+            status: 'pending',
+            reason: 'missing',
+            topic: 'science',
+            image_origin: 'unknown',
+          },
+        ],
+      },
+    },
+    {
+      name: 'getQualityRecent (default limit)',
+      call: () => getQualityRecent(),
+      path: '/v1/admin/quality/recent',
+      search: '?limit=20',
+      body: qualityBody,
+    },
+    {
+      name: 'getQualityRecent (explicit limit)',
+      call: () => getQualityRecent(5),
+      path: '/v1/admin/quality/recent',
+      search: '?limit=5',
+      body: qualityBody,
+    },
+    {
+      name: 'getCollectStatus',
+      call: () => getCollectStatus('collect/1'),
+      path: '/v1/admin/collect/status',
+      search: `?run_id=${encodeURIComponent('collect/1')}`,
+      body: { run_id: 'collect/1', status: 'running', active: true },
+    },
+    {
+      name: 'getPublishStatus',
+      call: () => getPublishStatus('7'),
+      path: '/v1/admin/publish/status',
+      search: '?run_id=7',
+      body: {
+        run_id: '7',
+        status: 'succeeded',
+        active: false,
+        pr_url: 'https://github.com/x/y/pull/9',
+      },
+    },
+    {
+      name: 'listArticles',
+      call: () => listArticles('pending'),
+      path: '/v1/admin/articles',
+      search: '?status=pending&page_size=20',
+      body: envelope,
+    },
+  ];
 
-    expect(paths).toContain('/v1/admin/sources/health');
-    expect(paths).toContain('/v1/admin/analytics');
-    expect(paths).toContain('/v1/admin/config');
+  it.each(readCases)(
+    '$name sends the documented wire request and parses the body',
+    async (testCase) => {
+      setToken('admin-key');
+      const requests = mockFetchCapture(testCase.body);
+
+      const result = await testCase.call();
+
+      expect(requests).toHaveLength(1);
+      const url = new URL(requests[0].url);
+      expect(url.pathname).toBe(testCase.path);
+      expect(url.search).toBe(testCase.search);
+      expect(requests[0].method).toBe('GET');
+      expect(requests[0].headers.get('Authorization')).toBe('Bearer admin-key');
+      expect(result).toEqual(testCase.body);
+    }
+  );
+
+  it('omits an empty run_id like the previous client', async () => {
+    const requests = mockFetchCapture({});
+
+    await getCollectStatus('');
+
+    expect(new URL(requests[0].url).search).toBe('');
   });
 });
 
@@ -570,10 +752,9 @@ describe('phase 3 operational client', () => {
 
     await getCollectStatus('collect-1');
 
-    const fetchMock = vi.mocked(fetch);
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
-      '/v1/admin/collect/status?run_id=collect-1'
-    );
+    const url = new URL(requestAt().url);
+    expect(url.pathname).toBe('/v1/admin/collect/status');
+    expect(url.search).toBe('?run_id=collect-1');
   });
 
   it('startPublish POSTs article_id (url null)', async () => {
@@ -636,9 +817,9 @@ describe('phase 3 operational client', () => {
 
     const st = await getPublishStatus('7');
 
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain(
-      '/v1/admin/publish/status?run_id=7'
-    );
+    const url = new URL(requestAt().url);
+    expect(url.pathname).toBe('/v1/admin/publish/status');
+    expect(url.search).toBe('?run_id=7');
     expect(st.pr_url).toBe('https://github.com/x/y/pull/9');
   });
 
@@ -662,7 +843,8 @@ describe('phase 3 operational client', () => {
   it('saveConfig / getPrompts / savePrompts / getContent / getImageQueue hit paths', async () => {
     const paths: string[] = [];
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
-      paths.push(String(input));
+      // Mutations still pass a string; typed GETs pass a Request.
+      paths.push(input instanceof Request ? new URL(input.url).pathname : String(input));
       return new Response('{}', {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
