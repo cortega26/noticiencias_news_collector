@@ -369,11 +369,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 9 — frontend growth and UI convergence
 
-> Status re-checked 2026-09-26: the reachability checker exists but no
-> allowlist file or CI/package wiring was found (gate not enforced); related
-> posts have a ranking helper (`src/utils/related.ts`) but no precomputed
-> top-four; no record of the four unused dependencies being removed; template
-> migration and two-layer-governance supersession not started.
+> **Phase 9 complete 2026-10-20**: reachability pruned and enforced (181);
+> related-post batch characterized (180); unused deps removed (179); template
+> layer fully migrated and retired with ADR-0014 (182/183/184); build/dist/
+> metadata/375–1280 visual proof recorded in plan 183.
 
 - [x] Fix relative reachability allowlisting; review/delete the 37 findings in
       small cohorts, prove no MDX/dynamic consumer, delete only genuinely
@@ -408,8 +407,13 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       moved to `common/`, imports and freeze entries updated. Remaining live
       template imports: `BaseLayout` → `layouts/template/Layout` + `Header`;
       and the type-only `seo` import in `utils/images.ts`.)
-- [ ] Supersede two-layer governance only after zero production template
-      consumers.
+- [x] Supersede two-layer governance only after zero production template
+      consumers. (Done 2026-10-20, frontend 8be56b31: ADR-0014 supersedes ADR-0002 —
+      one supported structure (`ds` primitives, `common` site fragments,
+      `layouts` chrome); the retired paths must not be recreated. AGENTS/
+      ARCHITECTURE updated, the freeze script/package step and doc-drift hints
+      removed, the empty dirs deleted, and the ds-no-template test replaced by
+      a tombstone regression. lint/check/build/987 tests/test:dist/validate green.)
 - [x] Run full build/dist/audit plus 375px/1280px visual and metadata checks.
       (Done 2026-10-20 with plan 183: build 299 pages/313 HTML, `test:dist`
       no regressions, 987 tests, metadata/canonical/OG/JSON-LD exact match,
