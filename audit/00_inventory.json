@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T14:26:23.628089+00:00",
+  "generated_at": "2026-10-20T14:56:14.341274+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -276,6 +276,7 @@
       "175-json-schema-parity.md",
       "176-contract-test-resolver.md",
       "177-admin-images-router.md",
+      "179-unused-frontend-deps.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1394,6 +1395,7 @@
     "plans/175-json-schema-parity.md",
     "plans/176-contract-test-resolver.md",
     "plans/177-admin-images-router.md",
+    "plans/179-unused-frontend-deps.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
