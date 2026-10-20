@@ -395,6 +395,10 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       and `ts-node`; `astro-embed` was already absent. Lock diff deletions
       only; lint/check/build/977 tests green.)
 - [ ] Inventory and migrate live template consumers route by route.
+      (Partial 2026-10-20, frontend 48d39eec: `ReportForm` and `SocialShare`
+      moved to `common/`, imports and freeze entries updated. Remaining live
+      template imports: `BaseLayout` → `layouts/template/Layout` + `Header`;
+      and the type-only `seo` import in `utils/images.ts`.)
 - [ ] Supersede two-layer governance only after zero production template
       consumers.
 - [ ] Run full build/dist/audit plus 375px/1280px visual and metadata checks.
