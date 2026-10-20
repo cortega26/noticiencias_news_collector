@@ -425,12 +425,24 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
 
 ### Phase 10 — reader correction lifecycle
 
-> Not started (re-checked 2026-09-26: no reader-report/correction tables or
-> decision records exist in the backend; the frontend Worker report intake
-> exists from plan 023 but nothing reconciles it into backend records yet).
+> In progress 2026-10-20: foundation landed via plan 185 (backend `51d01787`) —
+> report payload contract, `reader_reports` + separated contact table +
+> decisions tables with migration `e7f1a2b3c4d5`, and a read-only identity
+> resolver, all tested (81 new tests). Reconciliation of the Worker intake into
+> these records comes next (186); decisions/evidence/privacy paths follow.
 
-- [ ] Resolve refinery/content revision identity server-side.
+- [x] Resolve refinery/content revision identity server-side. (Delivered
+      2026-10-20, backend `51d01787`: `normalize_published_url` +
+      `resolve_report_identity` in `logic/workflows/reader_reports.py` — match
+      against `Article.published_url` under a small variant set, typed
+      `unresolved`/`ambiguous` outcomes, content revision from the
+      `publication_content_fingerprint` stage with `article.content_hash`
+      fallback; consumed by the reconciliation slice next.)
 - [ ] Separate and delete contact data according to the privacy contract.
+      (Schema half delivered 2026-10-20, backend `51d01787`: contact data lives
+      **only** in `reader_report_contacts`, never copied to reports/logs/
+      decisions; `contact_purged_at` stamp ready. The purge/delete service and
+      its tests are still pending.)
 - [ ] Reconcile Worker intake idempotently into backend report/decision records.
 - [ ] Add legal admin triage/decision/correction/closure transitions.
 - [ ] Link correction publication and deploy evidence before closure.
