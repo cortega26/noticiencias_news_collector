@@ -1843,6 +1843,630 @@
         "title": "AdminQualityStageItem",
         "type": "object"
       },
+      "AdminReaderReportDecisionResult": {
+        "description": "Response of ``POST /v1/admin/reader-reports/{id}/decisions``.\n\n``report`` is the post-decision state (status, decision history, and\nthe conditional reporter email); ``action`` echoes the request kind;\n``replayed`` marks an exact-duplicate payload matched against an\nexisting decision row (no row inserted) — its id is\n``replayed_decision_id``; ``inserted_decision_id`` is the new audit\nrow when one was appended (``None`` for triage actions).",
+        "properties": {
+          "action": {
+            "enum": [
+              "triage",
+              "decision"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "inserted_decision_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inserted Decision Id"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "replayed_decision_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replayed Decision Id"
+          },
+          "report": {
+            "$ref": "#/components/schemas/AdminReaderReportDetail"
+          }
+        },
+        "required": [
+          "report",
+          "action"
+        ],
+        "title": "AdminReaderReportDecisionResult",
+        "type": "object"
+      },
+      "AdminReaderReportDetail": {
+        "description": "Full report + append-only decision history.\n\nPrivacy contract (plan 185 law, mirrored across\n``storage/models.py`` and ``storage/reader_report_repository.py``):\n``reporter_email`` is populated ONLY when a ``reader_report_contacts``\nrow exists for this report AND ``contact_purged_at IS NULL``. After a\npurge the email never leaves the backend through this endpoint — the\nreport body and decisions stay. The list endpoint carries no email\nfield under any circumstance.",
+        "properties": {
+          "article_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Url"
+          },
+          "contact_purged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Purged At"
+          },
+          "content_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Snippet"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "decision_count": {
+            "default": 0,
+            "title": "Decision Count",
+            "type": "integer"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/ReaderReportDecisionItem"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "latest_decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReaderReportDecisionItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "problem_type": {
+            "enum": [
+              "content_factual",
+              "content_source",
+              "content_interpretation",
+              "content_translation",
+              "technical_site",
+              "technical_visual"
+            ],
+            "title": "Problem Type",
+            "type": "string"
+          },
+          "reporter_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter Email"
+          },
+          "resolution_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Reason"
+          },
+          "resolution_status": {
+            "enum": [
+              "unresolved",
+              "resolved",
+              "ambiguous"
+            ],
+            "title": "Resolution Status",
+            "type": "string"
+          },
+          "resolved_content_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Content Sha256"
+          },
+          "resolved_refinery_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Refinery Id"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "triaged",
+              "accepted",
+              "rejected",
+              "duplicate",
+              "no_action"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "tech_browser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tech Browser"
+          },
+          "tech_os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tech Os"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "resolution_status",
+          "problem_type"
+        ],
+        "title": "AdminReaderReportDetail",
+        "type": "object"
+      },
+      "AdminReaderReportEnvelope": {
+        "description": "Typed list envelope for ``GET /v1/admin/reader-reports``.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminReaderReportItem"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/AdminReaderReportFilters"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/AdminReaderReportPagination"
+          }
+        },
+        "required": [
+          "data",
+          "pagination",
+          "filters",
+          "meta"
+        ],
+        "title": "AdminReaderReportEnvelope",
+        "type": "object"
+      },
+      "AdminReaderReportFilters": {
+        "description": "Echo of the applied list filters (typed, no bare dicts).",
+        "properties": {
+          "problem_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "content_factual",
+                  "content_source",
+                  "content_interpretation",
+                  "content_translation",
+                  "technical_site",
+                  "technical_visual"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "default": "all",
+            "title": "Problem Type"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unresolved",
+                  "resolved",
+                  "ambiguous"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "default": "all",
+            "title": "Resolution"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new",
+                  "triaged",
+                  "accepted",
+                  "rejected",
+                  "duplicate",
+                  "no_action"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ],
+            "default": "all",
+            "title": "Status"
+          }
+        },
+        "title": "AdminReaderReportFilters",
+        "type": "object"
+      },
+      "AdminReaderReportItem": {
+        "description": "One report row for admin lists — contact data NEVER included.\n\nPrivacy law (plan 185): contact lives solely in\n``reader_report_contacts``; the list item has no reporter email field\nat all, so no filter/pagination bug can leak it. Decision history is\nreferenced in a bounded way (count + latest row); the full history\nbelongs to the detail endpoint.",
+        "properties": {
+          "article_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Url"
+          },
+          "contact_purged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Purged At"
+          },
+          "content_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Snippet"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "decision_count": {
+            "default": 0,
+            "title": "Decision Count",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "latest_decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReaderReportDecisionItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "problem_type": {
+            "enum": [
+              "content_factual",
+              "content_source",
+              "content_interpretation",
+              "content_translation",
+              "technical_site",
+              "technical_visual"
+            ],
+            "title": "Problem Type",
+            "type": "string"
+          },
+          "resolution_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Reason"
+          },
+          "resolution_status": {
+            "enum": [
+              "unresolved",
+              "resolved",
+              "ambiguous"
+            ],
+            "title": "Resolution Status",
+            "type": "string"
+          },
+          "resolved_content_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Content Sha256"
+          },
+          "resolved_refinery_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Refinery Id"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "triaged",
+              "accepted",
+              "rejected",
+              "duplicate",
+              "no_action"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "tech_browser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tech Browser"
+          },
+          "tech_os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tech Os"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "resolution_status",
+          "problem_type"
+        ],
+        "title": "AdminReaderReportItem",
+        "type": "object"
+      },
+      "AdminReaderReportPagination": {
+        "description": "Stable descending cursor pagination (created_at, id), article style.",
+        "properties": {
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page_size",
+          "returned"
+        ],
+        "title": "AdminReaderReportPagination",
+        "type": "object"
+      },
       "AdminRejectRequest": {
         "description": "Body for rejecting a named publication attempt.",
         "properties": {
@@ -2426,6 +3050,127 @@
         "title": "PaginationResponse",
         "type": "object"
       },
+      "ReaderReportDecisionItem": {
+        "description": "One persisted decision row, as the admin surface shows it.\n\n``publication_ref``/``deploy_evidence`` exist on the table for plan\n188's closure flow; the 187 surface never writes them, so they are\nalways ``None`` here.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "corrected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected At"
+          },
+          "correction_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Summary"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected",
+              "duplicate",
+              "no_action"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "deploy_evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deploy Evidence"
+          },
+          "duplicate_of_report_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Of Report Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "publication_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Ref"
+          }
+        },
+        "required": [
+          "id",
+          "decision",
+          "actor"
+        ],
+        "title": "ReaderReportDecisionItem",
+        "type": "object"
+      },
       "RelatedArticleResponse": {
         "properties": {
           "id": {
@@ -2481,6 +3226,92 @@
           "name"
         ],
         "title": "RelatedSourceResponse",
+        "type": "object"
+      },
+      "ReportDecisionRequest": {
+        "additionalProperties": false,
+        "description": "One admin action against one reader report (plan 187).\n\n``kind`` picks the action family:\n\n- ``triage`` — notes-only queue maneuver; moves ``new → triaged`` and\n  is refused in every other current state. Triage appends NO decision\n  row: ``reader_report_decisions.decision`` is CHECK-constrained to\n  the four final kinds (plan 185 schema; extending it requires a table\n  rebuild, out of plan 187's one-column scope). The triage's own\n  audit is the report's ``status``/``updated_at``.\n- ``decision`` — requires ``decision`` and the per-kind evidence\n  below; appends an audit row and sets the report status to the\n  decision kind.\n\nCross-field legality is owned by the pure rules module\n(``logic/workflows/report_decisions.plan_decision``), not here: this\nmodel validates only field shapes. ``notes`` is REQUIRED for every\naction (audit discipline — no anonymous write). ``corrected_at`` /\n``correction_summary`` belong to ``accepted``; publication/deploy\nevidence remains plan 188's concern and is intentionally absent.",
+        "properties": {
+          "actor": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
+          "corrected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected At"
+          },
+          "correction_summary": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Summary"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "accepted",
+                  "rejected",
+                  "duplicate",
+                  "no_action"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "duplicate_of_report_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Of Report Id"
+          },
+          "kind": {
+            "default": "decision",
+            "enum": [
+              "triage",
+              "decision"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "notes"
+        ],
+        "title": "ReportDecisionRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -4012,6 +4843,246 @@
           }
         },
         "summary": "Admin Quality Recent"
+      }
+    },
+    "/v1/admin/reader-reports": {
+      "get": {
+        "description": "Bounded, cursor-paginated report queue.\n\nAnti-leak note: the envelope's items carry no contact data and\nno email field exists on the item contract (plan 185 privacy\nlaw); the conditional email lives only on the detail endpoint.",
+        "operationId": "admin_list_reader_reports_v1_admin_reader_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resolution",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Resolution",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "problem_type",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Problem Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReaderReportEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin List Reader Reports"
+      }
+    },
+    "/v1/admin/reader-reports/{report_id}": {
+      "get": {
+        "description": "Full report + audit history + conditional reporter email.\n\nPrivacy contract: ``reporter_email`` is included ONLY when a\ncontact row exists AND ``contact_purged_at IS NULL`` (plan 185\nlaw; the email is purged by deleting the contact row and\nstamping ``contact_purged_at`` — the report body and decisions\nstay). The list endpoint carries no email under any condition.",
+        "operationId": "admin_reader_report_detail_v1_admin_reader_reports__report_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReaderReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Reader Report Detail"
+      }
+    },
+    "/v1/admin/reader-reports/{report_id}/decisions": {
+      "post": {
+        "description": "Record one triage/decision action on one reader report.\n\nLegality comes from ``plan_decision`` (pure rules; reasons, not\nprose), persistence from ``apply_report_decision`` (CAS + audit\nrow, one transaction). Idempotency: the repository matches an\nexact-duplicate pending decision payload BEFORE inserting — the\nresponse then carries the current state with\n``X-Reader-Report-Decision: replayed`` and no second audit row;\nchanged payloads (re-decisions) append new rows while the report\nis not closed. ``closed`` is unreachable here: the rules refuse\nit and no transition writes it (plan 188 owns closure).\n\nThe returned ``report.reporter_email`` follows the same privacy\ncontract as the detail endpoint (only when a contact row exists\nAND ``contact_purged_at IS NULL``).",
+        "operationId": "admin_decide_reader_report_v1_admin_reader_reports__report_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReaderReportDecisionResult"
+                }
+              }
+            },
+            "description": "Decision state (append or exact-duplicate replay) with the post-decision report.",
+            "headers": {
+              "X-Reader-Report-Decision": {
+                "description": "Whether the request appended a new audit row (``applied``), matched an existing identical row (``replayed`` — no row added), or recorded a triage status change (``triaged``).",
+                "schema": {
+                  "enum": [
+                    "applied",
+                    "replayed",
+                    "triaged"
+                  ],
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Decide Reader Report"
       }
     },
     "/v1/admin/sources": {
