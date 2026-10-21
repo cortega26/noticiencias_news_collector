@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import List, Literal, NamedTuple
 
 from news_collector.config.settings import get_runtime_config
+from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
+
+logger = get_logger().create_module_logger(__name__)
 
 # --- Data Structures ---
 
@@ -207,5 +211,13 @@ class ActivityMonitor:
 
             # Return last `limit`
             return agged[-limit:]
-        except Exception:
+        except Exception as err:
+            warn_once(
+                logger,
+                "activity-monitor-read",
+                "Could not read recent activity ({}: {}); the activity panel "
+                "will be empty",
+                err.__class__.__name__,
+                err,
+            )
             return []

@@ -3,6 +3,11 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
+
+logger = get_logger().create_module_logger(__name__)
+
 
 class ScholarlyMetadataEnricher:
     """
@@ -62,7 +67,16 @@ class ScholarlyMetadataEnricher:
                     return {str(key): value for key, value in message.items()}
                 return {}
             return None
-        except Exception:
+        except Exception as err:
+            warn_once(
+                logger,
+                f"scholarly-fetch:{err.__class__.__name__}",
+                "Crossref lookup failed for {} ({}: {}); metadata skipped. "
+                "Further failures of this kind are not repeated",
+                doi,
+                err.__class__.__name__,
+                err,
+            )
             return None
 
     def format_content(
