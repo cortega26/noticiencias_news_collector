@@ -264,7 +264,8 @@ ALL_REVISIONS = [
     "f2a9c1d4e6b7",  # add_webhook_receipts
     "c6d1a4e8f203",  # add_webhook_pull_state
     "e7f1a2b3c4d5",  # add_reader_reports
-    "d2e3f4a5b6c7",  # add_reader_reports_submitted_at (head)
+    "d2e3f4a5b6c7",  # add_reader_reports_submitted_at
+    "e5002f042c48",  # add_reader_report_decisions_duplicate_of (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -284,6 +285,7 @@ REVISIONS_WITH_SUPPORTED_DOWNGRADE = [
     "c6d1a4e8f203",
     "e7f1a2b3c4d5",
     "d2e3f4a5b6c7",
+    "e5002f042c48",
 ]
 
 

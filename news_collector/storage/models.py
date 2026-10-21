@@ -1215,6 +1215,12 @@ class ReaderReportDecision(Base):
         nullable=False,
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Plan 187: set by a ``duplicate`` decision; plain integer, NO FK —
+    # the engine never deletes reports (audit tables outlive them), and
+    # cascade semantics are deliberately out of plan 187's one-column
+    # scope (referential integrity is enforced by the repository's
+    # existence check before the row is written).
+    duplicate_of_report_id: Mapped[int | None] = mapped_column(Integer)
 
     report = relationship("ReaderReport", back_populates="decisions")
 
