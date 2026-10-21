@@ -362,7 +362,13 @@ class HtmlCollector(BaseCollector):
                 ]
             )
             return text
-        except Exception:
+        except Exception as err:
+            self.module_logger.warning(
+                "Article body fetch failed for {} ({}: {})",
+                url,
+                err.__class__.__name__,
+                err,
+            )
             return None
 
     def _body_over_limit(self, response: httpx.Response, source_id: str) -> bool:
@@ -523,6 +529,12 @@ class HtmlCollector(BaseCollector):
                         if attempt < max_retries - 1:
                             await self._backoff_sleep_async(attempt)
                             continue
+                        self._emit_log(
+                            "warning",
+                            "collector.fetch.network_failure",
+                            source_id=source_id,
+                            details={"attempts": max_retries},
+                        )
                         return None, None
 
         except Exception as e:

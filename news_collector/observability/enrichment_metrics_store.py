@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from news_collector.infrastructure.run_context import run_context
 from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -839,7 +840,15 @@ class ProductionReadonlyStore:
                 result = {row[0]: dict(zip(cols, row, strict=False)) for row in rows}
                 cur.close()
                 return result
-            except Exception:
+            except Exception as err:
+                warn_once(
+                    logger,
+                    "enrichment-metrics-read",
+                    "Could not read enrichment metrics ({}: {}); returning no data "
+                    "and resetting the connection",
+                    err.__class__.__name__,
+                    err,
+                )
                 self._reset_connection()
                 return {}
 

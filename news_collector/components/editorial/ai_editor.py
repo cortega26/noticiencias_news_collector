@@ -11,6 +11,7 @@ from news_collector.infrastructure.llm.factory import get_provider
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_model_map
 from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
 
 # Use the centralized logger factory
 logger = get_logger().create_module_logger("components.editorial.ai_editor")
@@ -725,8 +726,16 @@ class EditorAgent:
                 data_dir = paths.get("data_dir", "./data")
             else:
                 data_dir = getattr(paths, "data_dir", "./data")
-        except Exception:
+        except Exception as err:
             # Fallbacks if config is unavailable early in boot
+            warn_once(
+                logger,
+                "ai-editor-config",
+                "AIEditor config unavailable ({}: {}); using built-in defaults "
+                "(min_content_length=750, max_headline_retries=2, data_dir=./data)",
+                err.__class__.__name__,
+                err,
+            )
             self.min_content_length = 750
             self.max_headline_retries = 2
             data_dir = "./data"

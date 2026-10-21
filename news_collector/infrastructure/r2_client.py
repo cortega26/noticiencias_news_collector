@@ -43,6 +43,7 @@ from news_collector.infrastructure.requests_client import (
     _redact_headers,
 )
 from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
 
 logger = get_logger().create_module_logger(__name__)
 
@@ -120,7 +121,15 @@ def _read_env(name: str, environ: Optional[Dict[str, str]] = None) -> Optional[s
         from noticiencias.config_manager import load_env_overrides
 
         return str(load_env_overrides().get(name, "")).strip() or None
-    except Exception:  # noqa: BLE001 - a broken .env must not break resolution
+    except Exception as err:  # noqa: BLE001 - a broken .env must not break resolution
+        warn_once(
+            logger,
+            f"r2-env-read:{name}",
+            "Could not read .env while resolving {} ({}: {}); treating it as unset",
+            name,
+            err.__class__.__name__,
+            err,
+        )
         return None
 
 

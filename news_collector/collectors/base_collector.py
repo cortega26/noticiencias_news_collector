@@ -37,6 +37,7 @@ from news_collector.observability.enrichment_metrics_store import enrichment_met
 from news_collector.storage.database import get_database_manager
 from news_collector.utils.datetime_utils import assume_utc
 from news_collector.utils.logger import get_logger
+from news_collector.utils.warn_once import warn_once
 
 # Batch size for enrichment_metrics writes during a collection cycle (plan
 # 038, Step 3). 1000 events at this size commit at most 25 times. Only
@@ -597,13 +598,29 @@ class BaseCollector(ABC):
                 headers={"User-Agent": cfg.collection_config["user_agent"]},
                 follow_redirects=True,
             )
-            if resp.status_code >= 400:
+            if resp.status_code >= 500:
+                warn_once(
+                    self.module_logger,
+                    f"robots-5xx:{domain}",
+                    "robots.txt for {} answered {}; proceeding as allowed (fail-open)",
+                    domain,
+                    resp.status_code,
+                )
+            if resp.status_code >= 400:  # 4xx: no robots.txt, everything allowed
                 return None
             rp = robotparser.RobotFileParser()
             rp.parse(resp.text.splitlines())
             self._robots_cache[domain] = (now, rp)
             return rp
-        except Exception:
+        except Exception as err:
+            warn_once(
+                self.module_logger,
+                f"robots-fetch:{domain}",
+                "robots.txt for {} unreachable ({}: {}); proceeding as allowed (fail-open)",
+                domain,
+                err.__class__.__name__,
+                err,
+            )
             return None
 
     def _respect_robots(self, url: str) -> Tuple[bool, Optional[float]]:
@@ -618,7 +635,16 @@ class BaseCollector(ABC):
             ua = cfg.collection_config["user_agent"]
             try:
                 allowed = rp.can_fetch(ua, url)
-            except Exception:
+            except Exception as err:
+                warn_once(
+                    self.module_logger,
+                    f"robots-can-fetch:{domain}",
+                    "robots.txt rules for {} could not be evaluated ({}: {}); "
+                    "proceeding as allowed (fail-open)",
+                    domain,
+                    err.__class__.__name__,
+                    err,
+                )
                 allowed = True
             try:
                 delay = rp.crawl_delay(ua)
@@ -634,8 +660,16 @@ class BaseCollector(ABC):
             else:
                 parsed_delay = None
             return (allowed, parsed_delay)
-        except Exception:
+        except Exception as err:
             # Fail open if URL parsing fails
+            warn_once(
+                self.module_logger,
+                f"robots-parse:{err.__class__.__name__}",
+                "robots check failed for {} ({}: {}); proceeding as allowed (fail-open)",
+                url,
+                err.__class__.__name__,
+                err,
+            )
             return (True, None)
 
     # Per-domain rate limiting with robots.txt crawl-delay

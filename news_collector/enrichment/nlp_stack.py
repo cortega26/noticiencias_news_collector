@@ -17,7 +17,9 @@ from typing import (
 )
 
 from news_collector.utils.dedupe import sha256_hex
+from news_collector.utils.logger import get_logger
 from news_collector.utils.text_cleaner import normalize_text
+from news_collector.utils.warn_once import warn_once
 
 try:  # pragma: no cover - optional dependency
     import spacy
@@ -30,6 +32,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only import
 else:
     Language = Any
     EntityRuler = Any
+
+logger = get_logger().create_module_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -188,7 +192,16 @@ class ConfigurableNLPStack:
         patterns = self._resolve_entity_patterns(language)
         try:
             nlp = spacy.blank(language)
-        except Exception:  # pragma: no cover - spaCy may not support language
+        except Exception as err:  # spaCy may not support the language
+            warn_once(
+                logger,
+                f"spacy-blank:{language}",
+                "spaCy cannot build a blank model for '{}' ({}: {}); entity "
+                "extraction is off for that language",
+                language,
+                err.__class__.__name__,
+                err,
+            )
             return None
         if patterns and EntityRuler is not None:
             ruler = nlp.add_pipe("entity_ruler")
