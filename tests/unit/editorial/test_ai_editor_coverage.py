@@ -113,7 +113,7 @@ _LONG_BODY = (
 )
 
 _VALID_ENRICHMENT_FIELDS: dict[str, object] = {
-    "summary_points": ["Punto resumido"],
+    "summary_points": ["Punto resumido", "Segundo punto resumido"],
     "glossary": [{"term": "Término", "definition": "Definición"}],
     "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
     "why_it_matters": ["Relevancia regional"],
@@ -978,6 +978,8 @@ class TestProcessArticlePaths:
                 "summary": "Contenido " * 200,
                 "content": "",
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -985,7 +987,8 @@ class TestProcessArticlePaths:
 
     def test_string_input_uses_hash_id(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
-        result = agent.process_article("Contenido " * 200, override_date="2026-03-02")
+        draft = agent.prepare_article("Contenido " * 200, override_date="2026-03-02")
+        result = draft.preview_markdown
         assert "Direct Headline" in result
 
     def test_content_too_short_raises(self, tmp_path):
@@ -997,6 +1000,8 @@ class TestProcessArticlePaths:
                     "summary": "x",
                     "content": "tiny",
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )
@@ -1008,6 +1013,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
         cache_s2 = agent.cache_dir / "unknown_stage2_editorial.txt"
@@ -1028,6 +1035,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
         cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
@@ -1054,6 +1063,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
         cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
@@ -1092,6 +1103,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )
@@ -1107,6 +1120,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )
@@ -1121,6 +1136,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )
@@ -1132,6 +1149,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         cache = agent._get_cache_path("unknown", EditorialStage.EDITORIAL_CRITIC_OK)
         cache.write_text("ok", encoding="utf-8")
@@ -1156,6 +1175,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         cache = agent._get_cache_path("unknown", EditorialStage.EDITORIAL_CRITIC_OK)
         cache.write_text("ok", encoding="utf-8")
@@ -1182,6 +1203,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         agent.last_critic_verdict = {
             "approved": False,
@@ -1215,6 +1238,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         legacy_cache = agent._get_cache_path("unknown", "stage2_6_editorial_critic_ok")
         legacy_cache.write_text("ok", encoding="utf-8")
@@ -1249,6 +1274,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -1261,6 +1288,8 @@ class TestProcessArticlePaths:
             "summary": "Resumen",
             "content": "Contenido " * 200,
             "url": "https://example.com/source",
+            "image_url": "https://example.com/hero.webp",
+            "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
         cache = agent.cache_dir / "unknown_stage4_enrichment.txt"
@@ -1282,6 +1311,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -1305,6 +1336,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -1328,6 +1361,8 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -1355,24 +1390,28 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
         assert GENERIC_UNCERTAINTY_NOTE in result
         assert "requires_uncertainty_note: true" in result
 
-    def test_override_date_invalid_format(self, tmp_path):
+    def test_override_date_invalid_format_fails_closed(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
-        result = agent.process_article(
-            {
-                "title": "Demo",
-                "summary": "Resumen",
-                "content": "Contenido " * 200,
-                "url": "https://example.com/source",
-            },
-            override_date="2026-13-99",
-        )
-        assert "Direct Headline" in result
+        with pytest.raises(ValueError, match="Content Contract Violation"):
+            agent.prepare_article(
+                {
+                    "title": "Demo",
+                    "summary": "Resumen",
+                    "content": "Contenido " * 200,
+                    "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
+                },
+                override_date="2026-13-99",
+            )
 
     def test_image_alt_and_passthrough_fields(self, tmp_path):
         agent = self._pipeline_agent(tmp_path)
@@ -1412,6 +1451,7 @@ class TestProcessArticlePaths:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
                 "image_alt": "Ilustración editorial relacionada con Lightning strikes kill",
             },
             override_date="2026-03-02",
@@ -1435,6 +1475,8 @@ class TestProcessArticlePaths:
                     "summary": "Resumen",
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )

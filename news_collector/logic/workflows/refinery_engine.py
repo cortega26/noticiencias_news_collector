@@ -41,7 +41,13 @@ from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts import PublicationAttemptStageResult
+from news_collector.contracts.editorial_draft import EditorialDraft
+from news_collector.contracts.publication_checkpoint import (
+    CheckpointIdentity,
+    PublicationCheckpoint,
+)
 from news_collector.contracts.publication_validation import PublicationFailureClass
+from news_collector.editorial.draft_identity import editorial_fingerprint
 from news_collector.editorial.grounding import (
     build_source_text,
     check_grounding,
@@ -51,6 +57,7 @@ from news_collector.editorial.grounding import (
 from news_collector.editorial.health_claims import find_guarantee_language
 from news_collector.editorial.readability import analyze_body_readability
 from news_collector.editorial.voice_tics import check_voice_tics
+from news_collector.logic.workflows._run_metadata import json_safe
 from news_collector.logic.workflows.audit_scheduler import AuditRequest, AuditScheduler
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
 from news_collector.logic.workflows.image_handler import (
@@ -74,6 +81,9 @@ from news_collector.logic.workflows.target_repo_publication import (
     TargetRepoPublicationWorkflow,
 )
 from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
+from news_collector.storage.publication_checkpoint_repository import (
+    PublicationCheckpointRepository,
+)
 from news_collector.utils.logger import get_logger
 
 if "TYPE_CHECKING":
@@ -224,10 +234,16 @@ class RefineryEngine:
         config: Any,
         contract_validator=None,
         remote_image_hosts: frozenset[str] | None = None,
+        checkpoint_run_id: int | None = None,
+        checkpoint_repository: PublicationCheckpointRepository | None = None,
     ):
         self.db = db_manager
         self.config = config
         self.contract_validator = contract_validator
+        self.checkpoint_run_id = checkpoint_run_id
+        self.checkpoint_repository = checkpoint_repository
+        self._prepared_draft: EditorialDraft | None = None
+        self._last_waiting: dict | None = None
         from news_collector.editorial.policy import EditorialPolicy
 
         # Load Policy
@@ -359,17 +375,25 @@ class RefineryEngine:
         """
         processed_count = 0
         errors = []
+        waiting: list[dict[str, Any]] = []
+        editorial_completed = 0
 
         for article in articles:
             article_id = "unknown"
             try:
                 self._last_blocked_error = None
+                self._last_waiting = None
+                self._prepared_draft = None
                 # Identifier
                 article_id = _resolve_article_identity(article)
                 logger.info(f"Refining item: {article_id}")
 
                 if self.process_single_article(article, target_repo_obj, target_dir):
                     processed_count += 1
+                    editorial_completed += 1
+                elif self._last_waiting:
+                    waiting.append(self._last_waiting)
+                    editorial_completed += 1
                 elif self._last_blocked_error:
                     errors.append({"id": article_id, **self._last_blocked_error})
                 else:
@@ -411,7 +435,13 @@ class RefineryEngine:
                     entry["error_code"] = error_code
                 errors.append(entry)
 
-        return {"processed_count": processed_count, "errors": errors}
+        return {
+            "processed_count": processed_count,
+            "errors": errors,
+            "waiting": waiting,
+            "waiting_for_image_count": len(waiting),
+            "editorial_completed_count": editorial_completed,
+        }
 
     @staticmethod
     def _record_grounding_stage(
@@ -478,6 +508,14 @@ class RefineryEngine:
 
         article = self._normalize_article_payload(article)
 
+        if (
+            self.checkpoint_repository is not None
+            and self.checkpoint_run_id is not None
+        ):
+            return self._process_checkpointed_article(
+                article, article_id, target_repo_obj, target_dir, run
+            )
+
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
         if self._attempt_publishing_recovery(article_id, article, target_dir, run):
             return True
@@ -522,6 +560,164 @@ class RefineryEngine:
             audit_should_run=audit_should_run,
             run=run,
         )
+
+    def _draft_settings(self) -> dict:
+        # Only explicit editorial inputs enter the fingerprint: never credentials.
+        return {
+            "policy": vars(self.policy),
+            "limits": {
+                name: getattr(self.editor, name, None)
+                for name in ("min_content_length", "max_headline_retries")
+            },
+            "models": {
+                name: str(getattr(self.editor, name, ""))
+                for name in (
+                    "model",
+                    "editor_model",
+                    "translator_model",
+                    "headlines_model",
+                    "enrichment_model",
+                    "fact_check_model",
+                )
+            },
+            "prompts": getattr(self.editor, "prompts", {}),
+        }
+
+    def _refine_revision(
+        self,
+        article: dict,
+        article_id: str,
+        canonical_date: str,
+        fingerprint: str,
+        run: "_PublicationRun",
+    ) -> tuple[str, str] | None:
+        # Namespacing prevents legacy per-ID caches from restoring stale text.
+        cache_dir = getattr(self.editor, "cache_dir", None)
+        if isinstance(cache_dir, Path):
+            self.editor.cache_dir = cache_dir / fingerprint
+            self.editor.cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            return self._refine_article(article, article_id, canonical_date, run)
+        finally:
+            if isinstance(cache_dir, Path):
+                self.editor.cache_dir = cache_dir
+
+    def _process_checkpointed_article(
+        self,
+        article: dict,
+        article_id: str,
+        target_repo_obj: Any,
+        target_dir: Path,
+        run: "_PublicationRun",
+    ) -> bool:
+        repository = self.checkpoint_repository
+        run_id = self.checkpoint_run_id
+        assert repository is not None and run_id is not None
+        checkpoint = repository.load(run_id, article_id)
+        if checkpoint is not None and checkpoint.status == "succeeded":
+            return True
+        if checkpoint is not None and checkpoint.status == "failed":
+            self._last_blocked_error = {
+                "error": "Previous item failed; explicit retry required"
+            }
+            return False
+        if self._attempt_publishing_recovery(article_id, article, target_dir, run):
+            return True
+        posts_dir = target_dir / "src/content/posts"
+        fingerprint = editorial_fingerprint(article, self._draft_settings())
+        identity = self._resolve_identity(article_id, article, posts_dir, run)
+        if checkpoint is not None and checkpoint.fingerprint == fingerprint:
+            draft = checkpoint.draft
+            draft.assert_sealed()
+            if identity.final_slug != checkpoint.identity.final_slug:
+                raise ValueError(
+                    "Persisted publication identity changed while waiting for image"
+                )
+            identity = PublicationIdentity(**checkpoint.identity.model_dump())
+            identity.is_new = False
+            self.editor.last_critic_verdict = draft.critic_verdict
+            self._prepared_draft = draft
+            refined_content, grounding_notes = (
+                draft.preview_markdown,
+                draft.grounding_notes,
+            )
+            run.record_stage("editor_refinement", True, reused_checkpoint=True)
+        else:
+            refinement = self._refine_revision(
+                article, article_id, identity.canonical_date, fingerprint, run
+            )
+            if refinement is None:
+                return False
+            refined_content, grounding_notes = refinement
+            assert isinstance(self._prepared_draft, EditorialDraft)
+            draft = self._prepared_draft
+            identity = self._finalize_output_identity(
+                article_id, refined_content, identity, posts_dir, run
+            )
+        if not self._enforce_publication_gates(
+            article_id, refined_content, identity, run
+        ):
+            return False
+        draft = EditorialDraft.model_validate(
+            {**draft.model_dump(), "grounding_notes": grounding_notes, "seal": ""}
+        )
+        checkpoint = PublicationCheckpoint(
+            article_id=article_id,
+            article=json_safe(article),
+            draft=draft,
+            identity=CheckpointIdentity(**vars(identity)),
+            fingerprint=fingerprint,
+        )
+        repository.save(run_id, checkpoint)
+        if not self._resolve_article_image(
+            article, article_id, identity, target_dir, run
+        ):
+            assert self._last_waiting is not None
+            repository.save(
+                run_id,
+                checkpoint.model_copy(
+                    update={
+                        "status": "waiting_for_image",
+                        **{
+                            k: v
+                            for k, v in self._last_waiting.items()
+                            if k != "article_id"
+                        },
+                    }
+                ),
+            )
+            return False
+        image_url = article.get("image_url")
+        if not isinstance(image_url, str) or not image_url:
+            raise ValueError("Resolved publication image must have a nonempty URL")
+        refined_content = self.editor.assemble_article(
+            draft,
+            image_url=image_url,
+            image_alt=article.get("image_alt"),
+            image_origin=article.get("image_origin"),
+        )
+        refined_content, _ = repair_text_hygiene(refined_content)
+        success = self._publish_to_target_repo(
+            target_repo_obj=target_repo_obj,
+            target_dir=target_dir,
+            article=article,
+            refined_content=refined_content,
+            grounding_notes=draft.grounding_notes,
+            audit_should_run=self._audit_should_run(
+                article, refined_content, article_id
+            ),
+            run=run,
+        )
+        repository.save(
+            run_id,
+            checkpoint.model_copy(
+                update={
+                    "status": "succeeded" if success else "failed",
+                    "pr_url": run.pr_url,
+                }
+            ),
+        )
+        return success
 
     def _audit_should_run(
         self, article: Dict[str, Any], refined_content: str, article_id: str
@@ -674,6 +870,20 @@ class RefineryEngine:
             download_fn=self._download_image,
         )
         if not img_resolution.resolved:
+            if self.checkpoint_repository is not None:
+                brief = self.image_briefs.find_for_article(article_id, [])
+                self._last_waiting = {
+                    "article_id": article_id,
+                    "image_reason": img_resolution.reason,
+                    "image_brief_slug": brief.slug if brief else None,
+                }
+                run.record_stage("image_wait", True, **self._last_waiting)
+                logger.info(
+                    "Editorial complete for {}; waiting for image ({})",
+                    article_id,
+                    img_resolution.reason,
+                )
+                return False
             run.record_stage("image_resolution", False)
             message = img_resolution.message or self._image_blocked_message(
                 img_resolution.reason, article_id
@@ -717,9 +927,19 @@ class RefineryEngine:
         )
 
         try:
-            refined_content = self.editor.process_article(
-                article, override_date=canonical_date, explicit_article_id=article_id
-            )
+            if getattr(self, "checkpoint_repository", None) is not None:
+                self._prepared_draft = self.editor.prepare_article(
+                    article,
+                    override_date=canonical_date,
+                    explicit_article_id=article_id,
+                )
+                refined_content = self._prepared_draft.preview_markdown
+            else:
+                refined_content = self.editor.process_article(
+                    article,
+                    override_date=canonical_date,
+                    explicit_article_id=article_id,
+                )
         except ValueError as ve:
             error_code = getattr(ve, "error_code", None)
             if error_code:

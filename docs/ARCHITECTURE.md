@@ -14,7 +14,9 @@ It is not a target-state manifesto.
 ### Boundary And Integration Layer
 
 - `news_collector/contracts/`
-  - Pydantic models and adapter functions for export, scoring, validation, frontend publication, system payloads, and image briefs
+  - Pydantic models and adapters for export, scoring, validation, media-independent
+    editorial drafts, durable publication checkpoints, frontend publication,
+    system payloads and image briefs
 - `news_collector/serving/`
   - public reads, authenticated admin dispatch and frontend callbacks
 - `apps/admin/`
@@ -88,11 +90,31 @@ Specific rules:
 ### Refinery And Publication
 
 1. The Astro admin dispatches publication through the API and `publication_run_workflow.py`; legacy `apps/refinery/main.py` also loads export artifacts.
-2. `news_collector/logic/workflows/refinery_engine.py` coordinates editorial processing, image handling, policy checks, file writing, manifest updates, Git operations, and PR creation.
-3. Publication targets the sibling frontend repo path `src/content/posts/`.
+2. `news_collector/logic/workflows/refinery_engine.py` prepares and validates a
+   media-free `EditorialDraft`, then persists it with source input, fingerprint
+   and canonical identity through `storage/publication_checkpoint_repository.py`.
+3. Image resolution follows editorial preparation. Unresolved images park the
+   original run in `waiting_for_image`, releasing the queued/running slot.
+   Other articles continue. Once media is ready, assembly validates `AstroPost`
+   before writing to the sibling frontend repo's `src/content/posts/`.
 4. After PR creation, the backend records publication state as `PR_CREATED`.
 5. Optional auditor work runs after PR creation and records audit metadata; pre-PR editorial/fact checks are separate.
 6. Frontend callbacks can complete/reject matching publication attempts; missing IDs do not infer affected articles. See `docs/PIPELINE_CONTRACTS.md`.
+
+The serving lifecycle resumes ready image waits at startup, after uploads,
+after workers finish and every 15 seconds. CAS claims and the existing DB
+single-flight index arbitrate dispatch; shutdown stops the reconciler and
+joins dispatched threads. Recovery uses saved source snapshots and reuses
+unchanged editorial drafts without LLM calls, including after candidate-export
+replacement. Terminal batch siblings keep their outcomes. Changed editorial
+inputs/configuration invalidate the fingerprint; media-only changes do not.
+
+`image_briefs.py` owns staged-asset validation: approved origin, actual decode,
+hash and dimensions. Pillow is a base runtime dependency; generation remains
+an active-session Codex `imagegen` workflow rather than a server-side provider.
+Apply migration `f190a1b2c3d4` before compatible code; downgrade refuses pending
+image waits and must preserve checkpoints. See the migration/rollback section
+of `docs/PIPELINE_CONTRACTS.md`.
 
 ### API Serving
 
@@ -113,6 +135,8 @@ Specific rules:
 - scoring boundary: `news_collector/contracts/scoring.py`
 - validation boundary: `news_collector/contracts/validation.py`
 - frontend publication mirror: `news_collector/contracts/frontend_schema.py`
+- backend-only editorial work and recovery: `contracts/editorial_draft.py`,
+  `contracts/publication_checkpoint.py`, `contracts/publication_checkpoint_adapters.py`
 - raw/export-to-contract mapping: `news_collector/contracts/adapters.py`
 
 ## Deliberately Custom Surfaces (plan 057 — keep decisions)
@@ -158,9 +182,10 @@ stage orchestration and the editorial-policy gate. The extracted owners are:
 - branch → write → validate → commit/push → PR:
   `target_repo_publication.py` (plan 060 Phase 7b)
 
-`process_single_article` is a short skeleton over named stage methods
+`process_single_article` dispatches checkpoint-aware preparation/resume or the
+legacy path over named stage methods
 (`_apply_contract_guard`, `_attempt_publishing_recovery`, `_resolve_identity`,
-`_resolve_article_image`, `_refine_article`, `_enforce_publication_gates`,
+`_refine_article`, `_enforce_publication_gates`, `_resolve_article_image`,
 `_publish_to_target_repo`) sharing a `_PublicationRun` state holder; the
 publish tail delegates to `TargetRepoPublicationWorkflow`. Remaining debt: the
 editorial-policy enforcement/logging and policy-integrity bootstrap still live

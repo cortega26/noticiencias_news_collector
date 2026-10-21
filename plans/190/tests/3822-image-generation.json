@@ -1,0 +1,16 @@
+{
+  "article_id": "3822",
+  "image_origin": "ai_generated",
+  "alt": "Raíces de una planta asociadas con una red de hifas de hongos en un corte del suelo.",
+  "generation_metadata": {
+    "prompt": "Generate a premium scientifically grounded editorial illustration for a Spanish-language science news article about how fungi contribute to healthy ecosystems through mycorrhizal associations and exchange with plants. Landscape 16:9 hero composition, visually readable at small thumbnail size. Main scene: an elegant restrained cutaway of real forest soil beneath a small living green plant, showing its branching roots with fine cream-colored fungal hyphae associated with the roots and spreading through the dark textured soil. Distinguish thicker roots from thinner branching fungal hyphae with credible biological scale cues; the below-ground network is the clear focal point. Soft natural daylight above ground, warm earthy browns, mossy green and ivory below, sophisticated naturalistic scientific editorial illustration with convincing textures. Communicate association and nutrient exchange through the structure of roots and hyphae, not with glowing wires, arrows, labels or invented quantitative data. Healthy plant, subtle fine root hairs, plausible fungal branching, calm balanced composition. Do not depict people or named scientists. No text, letters, logos, watermarks, mushrooms dominating the scene, neon glow, sci-fi, magical neural network, portraits, microscopes, lab equipment, fake data or diagrams with misleading measurements. This is openly an original AI-generated conceptual scientific illustration, not documentary photography and not a recreation of any publisher's source image.",
+    "tool": "OpenAI imagegen (Codex built-in)",
+    "sha256": "f1c6713543cdd18c5d8ecfb72a7a7661aff9101fae75f2000b07c92be9091bae",
+    "width": 1672,
+    "height": 941
+  },
+  "asset_commit": "fa663c7293d5afdcbff24cc0e7283a4d1707c4de",
+  "asset_repository": "cortega26/noticiencias",
+  "asset_path": "src/assets/images/2026-10-15-los-hongos-bajo-tus-pies-absorben-13-000-millones-de-toneladas-de-co2-anuales.png",
+  "scientific_visual_review": "Conceptual forest-soil cutaway. Thick plant roots are distinct from thinner pale fungal hyphae; no labels or quantitative nutrient/carbon claims. Reviewed at 375 and 1280 CSS pixels."
+}

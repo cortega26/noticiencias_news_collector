@@ -1,6 +1,6 @@
 # Typed contract inventory
 
-Generated from `news_collector/contracts/` at commit `196df75e` (2026-10-19).
+Maintained against `news_collector/contracts/`; updated for plan 190 (2026-10-21).
 Every `*.py` module in that package is listed below. `make docs-check` fails when a
 module is added, removed or renamed without updating this file.
 
@@ -105,9 +105,12 @@ For contract shapes and failure semantics, see
 
 - **Module**: `contracts/image_brief.py`
 - **Contracts**: `ImageBriefModel`, `IMAGE_BRIEF_STATUS_VALUES`,
-  `IMAGE_BRIEF_REASON_VALUES`, `IMAGE_PROMPT_VERSION`
-- **Status**: Enforced. Typed sidecar for editorial image tasks.
+  `IMAGE_BRIEF_REASON_VALUES`, `IMAGE_PROMPT_VERSION`, `ImageGenerationMetadata`
+- **Status**: Enforced. Typed sidecar for editorial image tasks, origin and
+  optional generation evidence. Asset hashes and dimensions are checked against
+  decoded bytes before a staged image can release a waiting publication.
 - **Tests**: `tests/unit/logic/workflows/test_image_briefs_security.py`,
+  `tests/unit/logic/workflows/test_image_brief_provenance.py`,
   `tests/test_serving_admin_api.py`
 
 ### 12. Publication validation and attempts
@@ -193,7 +196,39 @@ For contract shapes and failure semantics, see
 - **Tests**: `tests/unit/contracts/test_reader_reports_contract.py`,
   `tests/unit/logic/workflows/test_reader_reports_resolver.py`
 
-### 20. Package surface
+### 20. Media-independent editorial draft
+
+- **Module**: `contracts/editorial_draft.py`
+- **Contracts**: `EditorialFrontmatter`, `EditorialDraft`
+- **Status**: Enforced. Internal editorial projection preserves publication
+  validators while deferring image requirements. A content seal detects nested
+  mutation and damaged persisted drafts. Preview Markdown is not publishable;
+  final assembly still validates the complete `AstroPost` contract.
+- **Tests**: `tests/unit/editorial/test_editorial_draft.py`,
+  `tests/unit/logic/workflows/test_editorial_image_wait_resume.py`
+
+### 21. Durable publication checkpoint and item outcome
+
+- **Module**: `contracts/publication_checkpoint.py`
+- **Contracts**: `CheckpointIdentity`, `PublicationCheckpoint`,
+  `PublicationItemOutcome`
+- **Status**: Enforced. Source snapshot, editorial draft, identity, fingerprint,
+  image dependency and per-item outcome persist in `workflow_runs.run_metadata`
+  through the checkpoint repository. An item rejected before preparation can
+  retain a failure outcome without a draft.
+- **Tests**: `tests/unit/storage/test_publication_checkpoint_repository.py`,
+  `tests/unit/logic/workflows/test_editorial_image_wait_resume.py`
+
+### 22. Publication checkpoint adapter
+
+- **Module**: `contracts/publication_checkpoint_adapters.py`
+- **Contracts**: function `publication_item_from_result` (no classes)
+- **Status**: Enforced. Converts pipeline results into typed succeeded, failed
+  or waiting-for-image evidence; zero PRs with an image wait is not a failure.
+- **Tests**: `tests/unit/logic/workflows/test_editorial_image_wait_resume.py`,
+  `tests/unit/logic/workflows/test_publication_run_workflow.py`
+
+### 23. Package surface
 
 - **Modules**: `contracts/__init__.py` (re-exports `__all__`), `contracts/_constants.py`
   (`SCHEMA_VERSION`, `MANIFEST_FILENAME`)

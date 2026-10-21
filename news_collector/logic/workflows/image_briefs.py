@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
+import os
 import re
-import shutil
+import tempfile
+import warnings
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
 from news_collector.contracts import IMAGE_PROMPT_VERSION, ImageBriefModel
-from news_collector.contracts.image_brief import IMAGE_ORIGIN_VALUES
+from news_collector.contracts.image_brief import (
+    IMAGE_ORIGIN_VALUES,
+    ImageGenerationMetadata,
+)
 from news_collector.utils.slug import slugify
 
 PROMPT_TEMPLATE_PATH = (
@@ -30,6 +38,76 @@ _SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 _ALLOWED_UPLOAD_EXTENSIONS = frozenset(
     {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
 )
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_PIXELS = 40_000_000
+MAX_IMAGE_DIMENSION = 16384
+
+
+@dataclass(frozen=True)
+class _AssetInspection:
+    sha256: str
+    width: int
+    height: int
+
+
+def _inspect_image(content: bytes, extension: str) -> _AssetInspection:
+    """Decode bounded raster bytes rather than trusting a file signature."""
+    from PIL import Image, UnidentifiedImageError
+
+    if len(content) > MAX_IMAGE_BYTES:
+        raise ValueError("Image upload too large")
+    _verify_image_magic(content, extension)
+    expected_format = {
+        ".png": "PNG",
+        ".jpg": "JPEG",
+        ".jpeg": "JPEG",
+        ".gif": "GIF",
+        ".webp": "WEBP",
+        ".avif": "AVIF",
+    }.get(extension)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(content)) as image:
+                width, height = image.size
+                if (
+                    width * height > MAX_IMAGE_PIXELS
+                    or max(width, height) > MAX_IMAGE_DIMENSION
+                    or min(width, height) <= 0
+                ):
+                    raise ValueError("Image dimensions exceed supported limits")
+                if image.format != expected_format:
+                    raise ValueError("Decoded image type does not match extension")
+                image.verify()
+            with Image.open(io.BytesIO(content)) as image:
+                image.load()
+    except (
+        OSError,
+        UnidentifiedImageError,
+        SyntaxError,
+        Image.DecompressionBombError,
+        Image.DecompressionBombWarning,
+    ) as exc:
+        raise ValueError("Invalid or corrupt image upload") from exc
+    return _AssetInspection(hashlib.sha256(content).hexdigest(), width, height)
+
+
+def _atomic_write(path: Path, content: bytes) -> None:
+    """Readers see either the previous file or the complete durable replacement."""
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def _validate_slug(slug: str) -> str:
@@ -154,13 +232,52 @@ class ImageBriefStore:
             except ValueError:
                 # Invalid candidate slug can never match a stored brief.
                 continue
-            if brief is not None:
+            if brief is not None and brief.article_id == article_id:
                 return brief
 
         for brief in self.list_briefs():
             if brief.article_id == article_id:
                 return brief
         return None
+
+    def ready_for_article(self, article_id: str) -> bool:
+        """Read-only reconciler probe: rights, sidecar and actual bytes agree."""
+        return self.brief_ready(self.find_for_article(str(article_id), []))
+
+    def brief_ready(self, brief: ImageBriefModel | None) -> bool:
+        return self._read_verified_asset(brief) is not None
+
+    def _read_verified_asset(self, brief: ImageBriefModel | None) -> bytes | None:
+        if (
+            brief is None
+            or brief.status not in {"editorial_image_ready", "resolved"}
+            or brief.image_origin not in {"original", "licensed", "ai_generated"}
+            or not brief.uploaded_asset_path
+        ):
+            return None
+        path = Path(brief.uploaded_asset_path)
+        try:
+            path.resolve().relative_to(self.uploads_dir.resolve())
+            if path.stat().st_size > MAX_IMAGE_BYTES:
+                return None
+            content = path.read_bytes()
+            actual = _inspect_image(content, path.suffix.lower())
+        except (OSError, ValueError):
+            return None
+        if (
+            (brief.asset_sha256 and actual.sha256 != brief.asset_sha256)
+            or (brief.asset_width and actual.width != brief.asset_width)
+            or (brief.asset_height and actual.height != brief.asset_height)
+        ):
+            return None
+        generation = brief.generation_metadata
+        if generation and (
+            generation.sha256 != actual.sha256
+            or generation.width != actual.width
+            or generation.height != actual.height
+        ):
+            return None
+        return content
 
     def derive_slug(
         self,
@@ -245,7 +362,9 @@ class ImageBriefStore:
         uploaded_asset_path = existing.uploaded_asset_path if existing else None
         image_origin = existing.image_origin if existing else "unknown"
         status: Literal["editorial_image_ready", "needs_editorial_image"] = (
-            "editorial_image_ready" if uploaded_asset_path else "needs_editorial_image"
+            "editorial_image_ready"
+            if self.brief_ready(existing)
+            else "needs_editorial_image"
         )
 
         return ImageBriefModel(
@@ -267,16 +386,37 @@ class ImageBriefStore:
             generated_prompt=prompt,
             uploaded_asset_path=uploaded_asset_path,
             image_origin=image_origin,
+            generation_metadata=existing.generation_metadata if existing else None,
+            asset_sha256=existing.asset_sha256 if existing else None,
+            asset_width=existing.asset_width if existing else None,
+            asset_height=existing.asset_height if existing else None,
             updated_at=datetime.now(timezone.utc),
         )
 
     def save_brief(self, brief: ImageBriefModel) -> Path:
         path = self.brief_path(brief.slug)
-        path.write_text(
-            brief.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
+        _atomic_write(path, brief.model_dump_json(indent=2).encode("utf-8"))
         return path
+
+    def update_brief(self, brief: ImageBriefModel) -> ImageBriefModel:
+        """Reassess readiness after an authenticated editor updates brief details."""
+        updated = ImageBriefModel.model_validate(brief.model_dump())
+        if updated.uploaded_asset_path:
+            candidate = updated.model_copy(update={"status": "editorial_image_ready"})
+            ready_status = (
+                "resolved" if updated.status == "resolved" else "editorial_image_ready"
+            )
+            updated = updated.model_copy(
+                update={
+                    "status": (
+                        ready_status
+                        if self.brief_ready(candidate)
+                        else "needs_editorial_image"
+                    )
+                }
+            )
+        self.save_brief(updated)
+        return updated
 
     def stage_upload(
         self,
@@ -290,6 +430,7 @@ class ImageBriefStore:
         scientific_domain: str,
         subject_scene: str,
         image_origin: str | None = None,
+        generation_metadata: ImageGenerationMetadata | None = None,
     ) -> ImageBriefModel:
         _validate_slug(brief.slug)
         if image_origin is not None and image_origin not in IMAGE_ORIGIN_VALUES:
@@ -299,8 +440,16 @@ class ImageBriefStore:
             raise ValueError(f"Disallowed image upload extension: {raw_ext!r}")
         # Normalize .jpeg -> .jpg like the downloaders do.
         safe_ext = ".jpg" if raw_ext == ".jpeg" else raw_ext
-        _verify_image_magic(content, safe_ext)
-        staged_path = self.uploads_dir / f"{brief.slug}{safe_ext}"
+        actual = _inspect_image(content, safe_ext)
+        if generation_metadata is not None and (
+            generation_metadata.sha256 != actual.sha256
+            or generation_metadata.width != actual.width
+            or generation_metadata.height != actual.height
+        ):
+            raise ValueError("Generation metadata does not match actual image")
+        # Immutable per-content assets ensure a failed sidecar commit or a racing
+        # upload never changes bytes already referenced by a ready sidecar.
+        staged_path = self.uploads_dir / f"{brief.slug}-{actual.sha256}{safe_ext}"
         # NC-BE-087 S1 GUARD (defense-in-depth): containment check on the
         # resolved staged path, mirroring target_repo_writer.py NC-BE-015.
         try:
@@ -309,20 +458,32 @@ class ImageBriefStore:
             raise ValueError(
                 f"Path traversal detected for image-brief slug: {brief.slug!r}"
             ) from err
-        staged_path.write_bytes(content)
-
-        updated = brief.model_copy(
-            update={
-                "status": "editorial_image_ready",
+        origin = image_origin
+        if origin is None:
+            same_asset = brief.asset_sha256 == actual.sha256
+            origin = brief.image_origin if same_asset else "unknown"
+        generation = generation_metadata
+        if generation is None and brief.asset_sha256 == actual.sha256:
+            generation = brief.generation_metadata
+        updated = ImageBriefModel.model_validate(
+            {
+                **brief.model_dump(),
+                "status": (
+                    "editorial_image_ready"
+                    if origin != "unknown"
+                    else "needs_editorial_image"
+                ),
                 "uploaded_asset_path": str(staged_path),
                 "draft_alt_text": draft_alt_text.strip(),
                 "topic": topic.strip(),
                 "news_angle": news_angle.strip(),
                 "scientific_domain": scientific_domain.strip(),
                 "subject_scene": subject_scene.strip(),
-                "image_origin": (
-                    image_origin if image_origin is not None else brief.image_origin
-                ),
+                "image_origin": origin,
+                "generation_metadata": generation,
+                "asset_sha256": actual.sha256,
+                "asset_width": actual.width,
+                "asset_height": actual.height,
                 "generated_prompt": self.prompt_template.format(
                     topic=topic.strip(),
                     news_angle=news_angle.strip(),
@@ -333,6 +494,7 @@ class ImageBriefStore:
                 "updated_at": datetime.now(timezone.utc),
             }
         )
+        _atomic_write(staged_path, content)
         self.save_brief(updated)
         return updated
 
@@ -342,17 +504,15 @@ class ImageBriefStore:
         brief: ImageBriefModel,
         target_assets_dir: Path,
     ) -> str | None:
-        if not brief.uploaded_asset_path:
-            return None
-
-        source_path = Path(brief.uploaded_asset_path)
-        if not source_path.exists():
+        content = self._read_verified_asset(brief)
+        if content is None or brief.uploaded_asset_path is None:
             return None
 
         target_assets_dir.mkdir(parents=True, exist_ok=True)
-        extension = source_path.suffix.lower() or ".png"
+        extension = Path(brief.uploaded_asset_path).suffix.lower()
         destination = target_assets_dir / f"{brief.slug}{extension}"
-        shutil.copy2(source_path, destination)
+        destination.resolve().relative_to(target_assets_dir.resolve())
+        _atomic_write(destination, content)
         return f"~/assets/images/{destination.name}"
 
     @staticmethod

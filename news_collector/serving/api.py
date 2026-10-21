@@ -97,6 +97,7 @@ from news_collector.contracts.admin import (
     AdminDashboardHealthEnvelope,
     AdminMutationResult,
     AdminPromptsEnvelope,
+    AdminPublicationRunStatus,
     AdminPublishBatchRequest,
     AdminPublishBatchStarted,
     AdminPublishProgress,
@@ -876,31 +877,6 @@ def _validate_publish_article_url(raw_url: str) -> str:
     return canonical
 
 
-def _image_required_detail(article_id: int) -> Optional[Dict[str, Any]]:
-    """Pre-dispatch image gate for POST /v1/admin/publish (plan 168).
-
-    A `needs_editorial_image` brief means the worker's image step is
-    guaranteed to block the article before refine, so starting a run only
-    produces a failed run the operator must diagnose. Return the structured
-    409 detail instead; `editorial_image_ready` and absent briefs proceed.
-
-    The lookup is strictly read-only (`read_only=True`): dispatch validation
-    must never create brief/upload directories or rewrite a brief.
-    """
-    from news_collector.logic.workflows.image_briefs import ImageBriefStore
-
-    store = ImageBriefStore(Path("data"), read_only=True)
-    brief = store.find_for_article(str(article_id), [])
-    if brief is None or brief.status != "needs_editorial_image":
-        return None
-    return {
-        "error_code": "image_required",
-        "slug": brief.slug,
-        "article_id": article_id,
-        "prompt": brief.generated_prompt,
-    }
-
-
 def _check_config_payload_size(payload: Dict[str, Any]) -> None:
     """Reject oversize admin config payloads before any merge (413)."""
     serialized_len = len(json.dumps(payload, default=str))
@@ -1299,7 +1275,11 @@ def create_app(  # noqa: C901
                 len(recovered_pub),
                 recovered_pub,
             )
-        yield
+        publication_run_workflow.start_reconciler()
+        try:
+            yield
+        finally:
+            publication_run_workflow.stop_reconciler()
 
     app = FastAPI(title="Noticiencias API", version="1.0.0", lifespan=_lifespan)
 
@@ -2016,10 +1996,8 @@ def create_app(  # noqa: C901
 
         # Invariant: get_status() only sets status="found" alongside a
         # populated run_status (see CollectionRunStatusResult), and its
-        # value always comes from workflow_runs.status, which
-        # ck_workflow_runs_status constrains to exactly AdminRunStatus's
-        # members — cast documents that DB-enforced invariant for the type
-        # checker rather than widening AdminRunStatus's own literal type.
+        # collection lifecycle only uses AdminRunStatus members. Publication's
+        # waiting_for_image state does not widen the collection contract.
         active = result.run_status in ("queued", "running")
         return AdminCollectStatus(
             run_id=str(result.run_id),
@@ -2045,9 +2023,7 @@ def create_app(  # noqa: C901
                 "model": AdminPublishStarted,
                 "description": (
                     "A publication run is already queued or running "
-                    "(the body carries its run id), or the article's image "
-                    "brief still needs an editorial image "
-                    "(`detail.error_code=image_required`)."
+                    "(the body carries its run id)."
                 ),
             }
         },
@@ -2061,17 +2037,10 @@ def create_app(  # noqa: C901
         `article_id`, must be in the current export) or ingest+refine a
         `article_url`, then open a PR against the frontend repo. Exactly one
         of `article_id` / `article_url` is required. A second call while one
-        run is active yields 409 with the active run's id; an article whose
-        brief still needs an editorial image yields 409 `image_required`
-        without starting a run."""
+        run is active yields 409 with the active run's id. Missing images
+        defer publication after the editorial work is durably saved."""
         if payload.article_url is not None:
             _validate_publish_article_url(payload.article_url)
-        if payload.article_id is not None and payload.article_url is None:
-            image_required = _image_required_detail(payload.article_id)
-            if image_required is not None:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT, detail=image_required
-                )
         result = publication_run_workflow.start(
             article_id=payload.article_id,
             article_url=payload.article_url,
@@ -2085,7 +2054,13 @@ def create_app(  # noqa: C901
             )
         response.status_code = status.HTTP_202_ACCEPTED
         return AdminPublishStarted(
-            run_id=str(result.run_id), status="queued", detail=result.detail
+            run_id=str(result.run_id),
+            status=(
+                "waiting_for_image"
+                if result.status == "waiting_for_image"
+                else "succeeded" if result.status == "existing" else "queued"
+            ),
+            detail=result.detail,
         )
 
     @app.get(
@@ -2121,9 +2096,10 @@ def create_app(  # noqa: C901
             return AdminPublishStatus()
 
         summary = result.summary if isinstance(result.summary, dict) else {}
+        waiting = result.run_status == "waiting_for_image"
         return AdminPublishStatus(
             run_id=str(result.run_id),
-            status=cast(AdminRunStatus, result.run_status),
+            status=cast(AdminPublicationRunStatus, result.run_status),
             started_at=result.started_at.isoformat() if result.started_at else None,
             finished_at=result.finished_at.isoformat() if result.finished_at else None,
             error=result.error_detail,
@@ -2132,15 +2108,21 @@ def create_app(  # noqa: C901
             pr_url=summary.get("pr_url"),
             failure_class=summary.get("failure_class"),
             final_slug=summary.get("final_slug"),
+            editorial_completed_count=summary.get("editorial_completed_count", 0),
+            waiting_for_image_count=summary.get("waiting_for_image_count", 0),
+            image_brief_slug=summary.get("image_brief_slug"),
+            image_reason=summary.get("image_reason"),
             progress=(
                 AdminPublishProgress.model_validate(result.progress)
-                if result.progress
+                if result.progress and not waiting
                 else None
             ),
             heartbeat_at=(
-                result.heartbeat_at.isoformat() if result.heartbeat_at else None
+                result.heartbeat_at.isoformat()
+                if result.heartbeat_at and not waiting
+                else None
             ),
-            typical_seconds=result.typical_seconds,
+            typical_seconds=result.typical_seconds if not waiting else None,
         )
 
     @app.post(
@@ -2181,7 +2163,11 @@ def create_app(  # noqa: C901
         response.status_code = status.HTTP_202_ACCEPTED
         return AdminPublishBatchStarted(
             run_id=str(result.run_id),
-            status="queued",
+            status=(
+                "waiting_for_image"
+                if result.status == "waiting_for_image"
+                else "succeeded" if result.status == "existing" else "queued"
+            ),
             detail=result.detail,
             accepted_ids=list(payload.article_ids),
         )
@@ -2563,7 +2549,13 @@ def create_app(  # noqa: C901
         )
 
     # Plan 177: the image-brief routes live in their own bounded router.
-    app.include_router(build_router(verify_admin_token))
+    app.include_router(
+        build_router(
+            verify_admin_token,
+            on_image_ready=publication_run_workflow.reconcile_waiting,
+            data_dir=publication_run_workflow.data_dir,
+        )
+    )
 
     # Plan 187: reader-report triage/decision routes live in their own
     # bounded router (same mounted-router idiom); mutations dispatch to

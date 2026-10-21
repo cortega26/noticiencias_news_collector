@@ -22,8 +22,9 @@ from news_collector.logic.workflows.publication_pipeline import run_publication_
 def stub_pipeline(monkeypatch, tmp_path):
     """Stub the pipeline's collaborators; return (engine, db, source_dir)."""
     engine = MagicMock()
-    db = MagicMock()
-    db.is_processed.return_value = False
+    from news_collector.storage.database import DatabaseManager
+
+    db = DatabaseManager({"type": "sqlite", "path": tmp_path / "lifecycle.db"})
     source_dir = tmp_path / "source"
     (source_dir / "data").mkdir(parents=True, exist_ok=True)
 
@@ -70,7 +71,8 @@ def stub_pipeline(monkeypatch, tmp_path):
 
     monkeypatch.setattr(config_settings, "LLM_SYSTEM_AVAILABLE", True)
     monkeypatch.setattr(config_settings, "refresh_runtime_config", lambda cfg: None)
-    return engine, db, source_dir
+    yield engine, db, source_dir
+    db.close()
 
 
 def test_engine_is_closed_on_the_no_candidates_early_return(

@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.logic.workflows import image_briefs
 from news_collector.serving import admin_images
+from tests.fixtures.images import raster_bytes
 
 
 def _make_brief(slug: str) -> ImageBriefModel:
@@ -105,7 +106,7 @@ def test_upload_stages_asset(client: TestClient, store) -> None:
 
     response = client.post(
         "/v1/admin/images/brief-upload/upload",
-        files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+        files={"file": ("hero.png", raster_bytes(), "image/png")},
         data={
             "draft_alt_text": "Imagen de laboratorio",
             "image_origin": "ai_generated",
@@ -121,7 +122,7 @@ def test_upload_stages_asset(client: TestClient, store) -> None:
 def test_upload_unknown_404(client: TestClient, store) -> None:
     response = client.post(
         "/v1/admin/images/nope/upload",
-        files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+        files={"file": ("hero.png", raster_bytes(), "image/png")},
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Brief not found"
@@ -130,7 +131,7 @@ def test_upload_unknown_404(client: TestClient, store) -> None:
 def test_upload_traversal_slug_422(client: TestClient, store) -> None:
     response = client.post(
         "/v1/admin/images/.hidden/upload",
-        files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+        files={"file": ("hero.png", raster_bytes(), "image/png")},
     )
     assert response.status_code == 422
 
@@ -165,7 +166,7 @@ def test_upload_rejects_bad_type_422(client: TestClient, store) -> None:
 
     response = client.post(
         "/v1/admin/images/brief-badtype/upload",
-        files={"file": ("hero.svg", b"\x89PNG\r\n\x1a\nfake", "image/svg+xml")},
+        files={"file": ("hero.svg", raster_bytes(), "image/svg+xml")},
     )
     assert response.status_code == 422
 
@@ -183,3 +184,98 @@ def test_read_upload_capped_rejects_over_cap() -> None:
     with pytest.raises(HTTPException) as exc_info:
         admin_images._read_upload_capped(big, cap_bytes=16)
     assert exc_info.value.status_code == 413
+
+
+def test_verified_upload_notifies_after_durable_stage(store) -> None:
+    store.save_brief(_make_brief("brief-resume"))
+    ready_states = []
+
+    def resume():
+        ready_states.append(store.ready_for_article("123"))
+
+    app = FastAPI()
+    app.include_router(admin_images.build_router(lambda: None, resume))
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/admin/images/brief-resume/upload",
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
+            data={"image_origin": "ai_generated"},
+        )
+    assert response.status_code == 200
+    assert ready_states == [True]
+
+
+def test_unknown_upload_does_not_notify_until_rights_confirmed(store) -> None:
+    store.save_brief(_make_brief("brief-rights"))
+    notifications = []
+    app = FastAPI()
+    app.include_router(
+        admin_images.build_router(lambda: None, lambda: notifications.append(True))
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/admin/images/brief-rights/upload",
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
+        )
+        assert response.status_code == 200
+        assert response.json()["brief"]["status"] == "needs_editorial_image"
+        assert notifications == []
+        response = client.put(
+            "/v1/admin/images/brief-rights", json={"image_origin": "licensed"}
+        )
+    assert response.status_code == 200
+    assert store.ready_for_article("123")
+    assert notifications == [True]
+
+
+def test_resume_error_does_not_fail_committed_upload(store) -> None:
+    store.save_brief(_make_brief("brief-busy"))
+
+    def busy():
+        raise RuntimeError("publication slot busy")
+
+    app = FastAPI()
+    app.include_router(admin_images.build_router(lambda: None, busy))
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/admin/images/brief-busy/upload",
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
+            data={"image_origin": "original"},
+        )
+    assert response.status_code == 200
+    assert store.ready_for_article("123")
+
+
+def test_generation_evidence_upload_is_verified_and_returned(client, store) -> None:
+    import hashlib
+    import json
+
+    store.save_brief(_make_brief("brief-evidence"))
+    evidence = {
+        "prompt": "Raíces e hifas bajo tierra",
+        "tool": "imagegen",
+        "sha256": hashlib.sha256(raster_bytes()).hexdigest(),
+        "width": 24,
+        "height": 16,
+    }
+    response = client.post(
+        "/v1/admin/images/brief-evidence/upload",
+        files={"file": ("hero.png", raster_bytes(), "image/png")},
+        data={
+            "image_origin": "ai_generated",
+            "generation_metadata": json.dumps(evidence),
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["brief"]["generation_metadata"] == evidence
+    evidence["width"] = 42
+    response = client.post(
+        "/v1/admin/images/brief-evidence/upload",
+        files={"file": ("hero.png", raster_bytes(), "image/png")},
+        data={
+            "image_origin": "ai_generated",
+            "generation_metadata": json.dumps(evidence),
+        },
+    )
+    assert response.status_code == 422
+    assert store.ready_for_article("123")

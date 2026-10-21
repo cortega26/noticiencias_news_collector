@@ -7,6 +7,7 @@ import socket
 from pathlib import Path
 
 import pytest
+import yaml
 
 from news_collector.logic.workflows.pipeline_e2e import (
     FRONTEND_COPY_IGNORE,
@@ -166,6 +167,12 @@ def test_happy_path_captures_generated_markdown_artifact(tmp_path: Path) -> None
     assert summary.success is True
     assert generated_post_path
     assert Path(str(generated_post_path)).exists()
+    metadata = yaml.safe_load(
+        Path(str(generated_post_path)).read_text(encoding="utf-8").split("---", 2)[1]
+    )
+    assert metadata["image"].startswith("~/assets/images/")
+    image_name = Path(metadata["image"]).name
+    assert (bundle_root / "target_repo/src/assets/images" / image_name).is_file()
 
 
 def test_pipeline_e2e_bundle_root_is_repeatable(tmp_path: Path) -> None:

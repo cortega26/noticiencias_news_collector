@@ -39,7 +39,7 @@ _LONG_BODY = (
 )
 
 _VALID_ENRICHMENT_FIELDS: dict[str, object] = {
-    "summary_points": ["Punto resumido"],
+    "summary_points": ["Punto resumido", "Segundo punto resumido"],
     "glossary": [{"term": "Término", "definition": "Definición"}],
     "fact_check": [
         {"label": "Primera afirmación verificable", "status": "confirmed"},
@@ -100,6 +100,8 @@ def _base_article(**overrides) -> dict:
         "summary": "Resumen",
         "content": _ENGLISH_SOURCE_CONTENT,
         "url": "https://example.com/source",
+        "image_url": "https://example.com/hero.webp",
+        "image_alt": "Imagen del estudio",
     }
     article.update(overrides)
     return article

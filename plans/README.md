@@ -607,3 +607,9 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
   surface, gate abstention as a first-class number): maintainer decisions with
   their evidence recorded in the pass report; they map to no existing row and are
   not duplicated by any plan above.
+
+## Active implementation 190
+
+| ID | Plan | Priority | Effort | Dependencies | Status |
+| --- | --- | --- | --- | --- | --- |
+| 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance validated; review/merge and production rollout pending. See [evidence](190/tests/results.md). |

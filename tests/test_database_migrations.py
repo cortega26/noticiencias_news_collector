@@ -265,7 +265,8 @@ ALL_REVISIONS = [
     "c6d1a4e8f203",  # add_webhook_pull_state
     "e7f1a2b3c4d5",  # add_reader_reports
     "d2e3f4a5b6c7",  # add_reader_reports_submitted_at
-    "e5002f042c48",  # add_reader_report_decisions_duplicate_of (head)
+    "e5002f042c48",  # add_reader_report_decisions_duplicate_of
+    "f190a1b2c3d4",  # publication image wait (head)
 ]
 
 # 2447e261ecf4's downgrade() is intentionally incomplete (its own comment says
@@ -545,7 +546,7 @@ def test_publication_attempt_state_values_match_latest_migration() -> None:
 
 
 def test_workflow_run_status_values_match_latest_migration() -> None:
-    """84cf98a379c1 (Plan 060 / Phase 4a) is the latest migration to touch
+    """f190a1b2c3d4 (Plan 190) is the latest migration to touch
     ck_workflow_runs_status — its own hand-copied WORKFLOW_RUN_STATUS_VALUES
     and WORKFLOW_RUN_QUEUEABLE_STATUSES must match models.py exactly, same
     "can't import application models" reasoning as
@@ -556,22 +557,19 @@ def test_workflow_run_status_values_match_latest_migration() -> None:
     from news_collector.storage import models
 
     module_path = (
-        ROOT
-        / "alembic"
-        / "versions"
-        / "84cf98a379c1_extend_workflow_runs_durable_dispatch.py"
+        ROOT / "alembic" / "versions" / "f190a1b2c3d4_publication_image_wait.py"
     )
-    spec = importlib.util.spec_from_file_location("84cf98a379c1_migration", module_path)
+    spec = importlib.util.spec_from_file_location("f190a1b2c3d4_migration", module_path)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
 
     assert (
         models.WORKFLOW_RUN_STATUS_VALUES == migration.WORKFLOW_RUN_STATUS_VALUES
-    ), "WORKFLOW_RUN_STATUS_VALUES diverged between models.py and 84cf98a379c1"
+    ), "WORKFLOW_RUN_STATUS_VALUES diverged between models.py and f190a1b2c3d4"
     assert (
         models.WORKFLOW_RUN_QUEUEABLE_STATUSES
         == migration.WORKFLOW_RUN_QUEUEABLE_STATUSES
-    ), "WORKFLOW_RUN_QUEUEABLE_STATUSES diverged between models.py and 84cf98a379c1"
+    ), "WORKFLOW_RUN_QUEUEABLE_STATUSES diverged between models.py and f190a1b2c3d4"
 
 
 def test_84cf98a379c1_upgrade_and_downgrade_handle_a_real_legacy_row(

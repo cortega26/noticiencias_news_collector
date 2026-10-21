@@ -52,33 +52,62 @@ place `published_at`/`published_url` are set. Until a delivery is pulled, a
 live article can still appear as `publishing` locally — convergence is
 eventual by design.
 
-Hero images (`news_collector/logic/workflows/image_handler.py`): a staged
-editorial image wins; a local image path passes through; an `http(s)` image
-scraped from the source article is **not** downloaded unless its host is in
-`REMOTE_IMAGE_ALLOWLIST` (empty by default — a source outlet's lead image has no
-reuse licence on record). A blocked article queues an image brief with reason
-`third_party_image_blocked` and waits in the Images desk until an original or
-licensed image is uploaded. See `../archive/completed-tasks/spec-third-party-image-policy.md`.
+Editorial preparation completes before image resolution (plan 190).
+`EditorAgent.prepare_article()` returns a sealed `EditorialDraft` containing
+validated editorial frontmatter, body, sources, critic verdict and grounding
+notes. The draft has no image and is internal to the backend. The workflow
+persists it with the original source snapshot, canonical identity and editorial
+fingerprint in `workflow_runs.run_metadata` through the checkpoint repository.
+It never sends an incomplete Markdown post to the frontend.
 
-The Images desk shows the brief's stored `generated_prompt` (copy button) so the
-operator can generate the image without opening the JSON sidecar. Publishing an
-article whose brief is still `needs_editorial_image` is refused before dispatch
-with `409` and `detail.error_code=image_required` (slug, article id and prompt
-included) instead of starting a run that is guaranteed to fail; an
-`editorial_image_ready` brief or no brief at all proceeds normally, and
-`article_url` publishes are unchanged. When the worker does hit an unresolved
-image (for example a URL publish, or a brief changed mid-flight), the run error
-names the reason (`missing_source_image`, `third_party_image_blocked`,
-`image_download_failed`, `placeholder_image_debt`).
+Missing images, placeholders, failed downloads and unproven redistribution
+rights create or retain an image brief. They park the publication run in
+`waiting_for_image` after saving editorial work; editorial rejection remains a
+failure. Waiting releases the global publication slot, has no heartbeat or
+completion timestamp, and does not prevent the next article or batch item from
+being processed. The admin shows **Edición completada · esperando imagen** with
+the reason and a link to the brief, without an execution ETA or stall warning.
+Plan 190 supersedes plan 168's pre-dispatch `409 image_required` gate: a pending
+brief no longer prevents editorial dispatch.
 
-Image provenance is recorded on the brief at upload (`image_origin`:
-`ai_generated`, `licensed`, `original` or `unknown`) and shown in the Images
-desk. Publishing an `ai_generated` brief prefixes the stored alt text exactly
-once with `Ilustración generada con IA: `; the frontend renders `image_alt` as
-the visible `<figcaption>`, so the label appears under the hero image without a
-new caption field or a body note. Other origins leave the alt untouched, the
-prefix is never duplicated, and existing posts are not rewritten — the label is
-applied only when an article is published.
+Hero resolution (`news_collector/logic/workflows/image_handler.py`) prefers a
+staged editorial asset. A local path alone does not prove reuse rights. Remote
+source images remain subject to `REMOTE_IMAGE_ALLOWLIST` (empty by default);
+a blocked source image queues `third_party_image_blocked`, and an unverified
+local path queues `unproven_image_rights`. Staged assets require approved origin
+(`ai_generated`, `licensed` or `original`), successful decoding and matching
+asset evidence to release the image dependency. `unknown` remains readable for
+legacy briefs but cannot release a wait. The existing allowlisted remote-image
+download path remains supported; host approval is an explicit reuse policy.
+Final assembly supplies usable Spanish alt text, with a headline fallback when
+the supplied description is boilerplate.
+
+The Images desk exposes the stored `generated_prompt` and its copy button.
+During an active Codex session, Codex can use the built-in `imagegen` tool,
+review the result for scientific accuracy and cover composition, and upload it
+with `image_origin=ai_generated`. This is a session tool workflow, not an
+unattended image-generation API or a new paid provider integration. Generation
+failure leaves the image task pending and preserves the editorial draft.
+Uploads can include typed `generation_metadata` (prompt, tool, SHA-256, width
+and height); the server checks the hash and dimensions against the decoded
+file and records asset evidence. Pillow 12.3.0, previously in the Refinery lock,
+is now also pinned in the base runtime lock so serving can decode actual image
+bytes without installing the Streamlit extra.
+
+The serving process reconciles ready requests at startup, after an approved
+image is registered, after worker completion and every 15 seconds. It resumes
+the same durable request when the single-flight slot is free. Recovery reads
+the saved source snapshot even if the current candidate export no longer
+contains the article. An unchanged editorial fingerprint reuses the draft
+without repeating editorial LLM calls; changing source/editorial inputs,
+models, prompts or policy invalidates it, whereas media-only changes do not.
+Successful and failed batch siblings keep their recorded outcomes.
+
+Once media is ready, `EditorAgent.assemble_article()` validates the complete
+artifact against `AstroPost` before the normal write, frontend checks and PR
+steps. Publishing an `ai_generated` brief prefixes the alt exactly once with
+`Ilustración generada con IA: `; the frontend uses `image_alt` for its visible
+hero caption. Other origins leave alt text untouched.
 
 `news_collector/logic/workflows/refinery_engine.py` coordinates editorial
 processing, image/policy checks, target-repo writing and GitHub publication.
@@ -124,7 +153,8 @@ state stale after a successful frontend deployment.
 | No admin candidates | Effective database, source/run results and current API filters |
 | Start returns conflict | Active run ID, type, heartbeat and lease age |
 | Identity cannot be resolved | Persisted slug, manifest/frontend artifact, source/collection dates |
-| Publication stops before PR | Workflow error, editorial result, image artifact and GitHub configuration |
+| Editing is complete but no PR exists | `waiting_for_image`, image brief reason and approved asset evidence; this is a dependency wait |
+| Publication fails before PR | Workflow error, editorial result and GitHub configuration |
 | Publication seems hung | Live progress stages, heartbeat age and lease age in the admin publish status |
 | PR validation fails | Frontend diagnostic and exact render schema |
 | Deployed article remains pending in backend | Callback IDs/transport and the backend's effective database |

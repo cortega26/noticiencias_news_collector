@@ -123,16 +123,18 @@ export type AdminPublishStatus = components['schemas']['AdminPublishStatus'];
 
 export interface AdminPublishBatchItem {
   article_id: number;
-  status: 'succeeded' | 'failed';
+  status: 'succeeded' | 'failed' | 'waiting_for_image';
   pr_url: string | null;
   failure_class: string | null;
   final_slug: string | null;
   message: string | null;
+  image_brief_slug?: string | null;
+  image_reason?: string | null;
 }
 
 export interface AdminPublishBatchStarted {
   run_id: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted';
+  status: AdminPublishStarted['status'];
   detail: string;
   accepted_ids: number[];
 }
@@ -207,6 +209,14 @@ export interface AdminQualityRecentEnvelope {
   meta: { generated_at: string };
 }
 
+export interface ImageGenerationMetadata {
+  prompt: string;
+  tool: string;
+  sha256: string;
+  width: number;
+  height: number;
+}
+
 export interface AdminImageBriefItem {
   slug: string;
   article_id: string;
@@ -221,6 +231,10 @@ export interface AdminImageBriefItem {
   updated_at: string | null;
   generated_prompt: string | null;
   image_origin: 'unknown' | 'ai_generated' | 'licensed' | 'original';
+  generation_metadata?: ImageGenerationMetadata | null;
+  asset_sha256?: string | null;
+  asset_width?: number | null;
+  asset_height?: number | null;
 }
 
 export interface AdminBulkResetResult {

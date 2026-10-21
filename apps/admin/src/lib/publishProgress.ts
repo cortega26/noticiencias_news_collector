@@ -16,9 +16,9 @@ export interface PublishPhase {
 /** Refinery order (refinery_engine.process_single_article). */
 export const PUBLISH_PHASES: readonly PublishPhase[] = [
   { key: 'prep', label: 'Preparando repositorio', marker: 'identity_resolved' },
-  { key: 'image', label: 'Imagen', marker: 'image_resolution' },
   { key: 'editor', label: 'Editor IA', marker: 'editor_refinement' },
   { key: 'audit', label: 'Auditoría editorial', marker: 'frontmatter_guard' },
+  { key: 'image', label: 'Imagen', marker: 'image_resolution' },
   { key: 'validate', label: 'Validación del sitio', marker: 'frontend_publication_validation' },
   { key: 'pr', label: 'Commit y PR', marker: 'pr_created' },
 ];

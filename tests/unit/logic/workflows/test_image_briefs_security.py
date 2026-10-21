@@ -15,14 +15,15 @@ import pytest
 
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
+from tests.fixtures.images import raster_bytes
 
 TRAVERSAL_SLUGS = ["../x", "/abs", "a/b", "..", "", ".hidden", "-lead"]
 
-PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-body"
-JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"fake-jpeg-body"
-GIF_BYTES = b"GIF89a" + b"fake-gif-body"
-WEBP_BYTES = b"RIFF\x00\x00\x00\x00WEBP" + b"fake-webp-body"
-AVIF_BYTES = b"\x00\x00\x00\x20ftypavif" + b"fake-avif-body"
+PNG_BYTES = raster_bytes()
+JPEG_BYTES = raster_bytes("JPEG")
+GIF_BYTES = raster_bytes("GIF")
+WEBP_BYTES = raster_bytes("WEBP")
+AVIF_BYTES = raster_bytes("AVIF")
 
 
 def _make_store(tmp_path: Path) -> ImageBriefStore:
@@ -54,6 +55,7 @@ def _stage_kwargs(**overrides):
         "news_angle": "nuevo hallazgo",
         "scientific_domain": "medicina",
         "subject_scene": "laboratorio",
+        "image_origin": "original",
     }
     kwargs.update(overrides)
     return kwargs

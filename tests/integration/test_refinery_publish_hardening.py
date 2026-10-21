@@ -108,6 +108,22 @@ def test_legacy_export_to_pr_golden_path_preserves_source_identity(tmp_path: Pat
     assert model.published_date.tzinfo == timezone.utc
 
     engine, _mock_db, mock_git, mock_editor = _build_engine_with_mocks(tmp_path)
+    from tests.fixtures.images import raster_bytes
+
+    brief = engine.image_briefs.build_brief(
+        article=normalized, slug="owned-image-160", reason="unproven_image_rights"
+    )
+    engine.image_briefs.stage_upload(
+        brief=brief,
+        filename="owned.png",
+        content=raster_bytes(),
+        draft_alt_text=normalized["image_alt"],
+        topic=brief.topic,
+        news_angle=brief.news_angle,
+        scientific_domain=brief.scientific_domain,
+        subject_scene=brief.subject_scene,
+        image_origin="original",
+    )
     result = engine.process_single_article(normalized, MagicMock(), tmp_path / "target")
 
     assert result is True

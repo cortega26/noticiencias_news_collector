@@ -18,7 +18,6 @@ Does NOT own:
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -26,6 +25,8 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
+from news_collector.contracts.editorial_draft import EditorialDraft
+from news_collector.contracts.frontend_schema import AstroPost
 from news_collector.editorial.health_scope import is_health_scope
 from news_collector.editorial.hero_alt import resolve_hero_alt_text
 from news_collector.editorial.uncertainty import (
@@ -257,35 +258,6 @@ def apply_ai_image_disclosure(
     return f"{AI_IMAGE_ALT_PREFIX}{image_alt}"
 
 
-def _apply_media_frontmatter(
-    model_dict: dict[str, Any],
-    data: PublicationArtifactInput,
-    *,
-    final_title: str,
-) -> None:
-    if data.image_url:
-        model_dict["image"] = data.image_url
-    # Hero alt root fix (plan 079): the pre-edit fallback embeds the
-    # ENGLISH original title. Recompute boilerplate alts with the
-    # Spanish title now that it exists; good brief alts pass through.
-    previous_alt = data.image_alt if isinstance(data.image_alt, str) else None
-    resolved_alt = resolve_hero_alt_text(data.image_alt, final_title)
-    if resolved_alt and resolved_alt != (previous_alt or "").strip():
-        logger.info("Hero alt recomputed with the Spanish headline.")
-    if resolved_alt:
-        if data.image_origin == "ai_generated":
-            logger.info(
-                "Applying AI image disclosure to the visible caption "
-                "(image_origin=ai_generated, article={}).",
-                data.article_id,
-            )
-        model_dict["image_alt"] = apply_ai_image_disclosure(
-            resolved_alt, data.image_origin
-        )
-    if data.source_url:
-        model_dict["source_url"] = data.source_url
-
-
 def _apply_identity_frontmatter(
     model_dict: dict[str, Any],
     data: PublicationArtifactInput,
@@ -490,17 +462,6 @@ def _serialize_article(
     return model_dict, f"---\n{yaml_frontmatter}\n---\n\n{final_content}"
 
 
-def _strip_tldr_visual(full_article: str) -> str:
-    # Regex to remove **TL;DR Visual**... up to next **Header** or end of string
-    # Using DOTALL to match newlines
-    return re.sub(
-        r"\*\*TL;DR Visual\*\*.*?(?=\*\*|$)",
-        "",
-        full_article,
-        flags=re.DOTALL | re.MULTILINE,
-    )
-
-
 def _apply_uncertainty_counterweight(
     model_dict: dict[str, Any], headlines: dict[str, Any]
 ) -> tuple[bool, str | None]:
@@ -513,33 +474,14 @@ def _apply_uncertainty_counterweight(
     return requires_uncertainty_note, uncertainty_note
 
 
-def _finalize_article(
-    full_article: str,
+def prepare_editorial_draft(
     data: PublicationArtifactInput,
     hooks: PublicationArtifactHooks,
-) -> str:
-    # Persist source identity metadata as a hidden comment to keep provenance
-    # without widening the frontmatter schema contract.
-    full_article = hooks.upsert_source_identity(
-        full_article, data.source_id, data.source_name
-    )
-    # Logic to strip Visual planning section if no image is present (Rule from tests)
-    if not data.image_url:
-        full_article = _strip_tldr_visual(full_article)
-    return hooks.strip_emojis(full_article)
-
-
-def run_publication_artifact_stage(
-    data: PublicationArtifactInput,
-    hooks: PublicationArtifactHooks,
-) -> PublicationArtifact:
-    """Build, gate and serialize the final publication artifact.
-
-    Verbatim move of the `# 3. Assemble Final Artifact` block previously
-    inlined in `EditorAgent.process_article` (plan 060 Phase 7c-4), split
-    into pure helpers: same serialization bytes, gate order, messages and
-    failure codes.
-    """
+    *,
+    critic_verdict: dict[str, Any] | None = None,
+    grounding_notes: str = "",
+) -> EditorialDraft:
+    """Run editorial gates and seal their result without requiring media."""
     final_title = _sanitize_headline(
         data.headlines.get("direct", data.title), list_fallback="Untitled"
     )
@@ -558,7 +500,8 @@ def run_publication_artifact_stage(
             final_tags=final_tags,
             parsed_date=_parse_publication_date(data.override_date),
         )
-        _apply_media_frontmatter(model_dict, data, final_title=final_title)
+        if data.source_url:
+            model_dict["source_url"] = data.source_url
         _apply_identity_frontmatter(
             model_dict, data, hl_variants=_headline_variants(data.headlines)
         )
@@ -578,8 +521,21 @@ def run_publication_artifact_stage(
         _enforce_v2_completeness_gate(model_dict, data.required_enrichment_fields)
         _enforce_fact_check_gate(data.verified_fact_check)
 
-        model_dict, full_article = _serialize_article(
-            model_dict, hooks, data.final_content
+        model_dict = hooks.normalize_frontmatter(model_dict)
+        content = hooks.strip_emojis(
+            hooks.upsert_source_identity(
+                data.final_content, data.source_id, data.source_name
+            )
+        )
+        return EditorialDraft(
+            article_id=data.article_id,
+            content=content,
+            frontmatter=model_dict,
+            source_id=data.source_id,
+            source_name=data.source_name,
+            source_url=data.source_url,
+            critic_verdict=critic_verdict,
+            grounding_notes=grounding_notes,
         )
     except ValidationError as ve:
         logger.error(f"AstroPost Contract Validation Failed: {ve}")
@@ -590,7 +546,76 @@ def run_publication_artifact_stage(
         logger.error(f"Error generating frontmatter: {e}")
         raise
 
-    return PublicationArtifact(
-        markdown=_finalize_article(full_article, data, hooks),
-        frontmatter=model_dict,
+
+def assemble_editorial_draft(
+    draft: EditorialDraft,
+    *,
+    image_url: str,
+    image_alt: str | None,
+    image_origin: str | None,
+    hooks: PublicationArtifactHooks,
+) -> PublicationArtifact:
+    """Apply actual media to sealed work and validate the public contract."""
+    draft.assert_sealed()
+    if not isinstance(image_url, str) or not image_url.strip():
+        raise GeneratedArticleValidationError(
+            "A resolved image is required before publication",
+            error_code="image_required",
+        )
+    resolved_alt = resolve_hero_alt_text(image_alt, str(draft.frontmatter["title"]))
+    if resolved_alt and resolved_alt != (image_alt or "").strip():
+        logger.info("Hero alt recomputed with the Spanish headline.")
+    if resolved_alt and image_origin == "ai_generated":
+        logger.info(
+            "Applying AI image disclosure to the visible caption "
+            "(image_origin=ai_generated, article={}).",
+            draft.article_id,
+        )
+    media = {
+        "image": image_url,
+        "image_alt": apply_ai_image_disclosure(resolved_alt, image_origin),
+    }
+    # Preserve the existing frontmatter insertion order: core editorial keys,
+    # media, then source/identity/enrichment. No editorial generation runs here.
+    model_dict = dict(draft.frontmatter)
+    core_keys = (
+        "title",
+        "schema_version",
+        "date",
+        "author",
+        "categories",
+        "tags",
+        "excerpt",
+    )
+    model_dict = {
+        **{key: model_dict[key] for key in core_keys if key in model_dict},
+        **media,
+        **{key: val for key, val in model_dict.items() if key not in core_keys},
+    }
+    _normalized, markdown = _serialize_article(model_dict, hooks, draft.content)
+    markdown = hooks.strip_emojis(markdown)
+    # Validate the actual emitted metadata: normalization/emoji stripping can
+    # change strings after the draft was sealed (for example an emoji title).
+    emitted_frontmatter = yaml.safe_load(
+        markdown.partition("---\n")[2].partition("\n---\n")[0]
+    )
+    try:
+        AstroPost.model_validate(emitted_frontmatter)
+    except ValidationError as exc:
+        raise ValueError(f"Content Contract Violation: {exc}") from exc
+    return PublicationArtifact(markdown=markdown, frontmatter=emitted_frontmatter)
+
+
+def run_publication_artifact_stage(
+    data: PublicationArtifactInput,
+    hooks: PublicationArtifactHooks,
+) -> PublicationArtifact:
+    """Compatible final-artifact entry point using prepare then strict assembly."""
+    draft = prepare_editorial_draft(data, hooks)
+    return assemble_editorial_draft(
+        draft,
+        image_url=data.image_url or "",
+        image_alt=data.image_alt,
+        image_origin=data.image_origin,
+        hooks=hooks,
     )

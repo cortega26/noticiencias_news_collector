@@ -23,7 +23,7 @@ from news_collector.storage.migration_guard import (
 )
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAD_REVISION = "e5002f042c48"  # plan 187: duplicate_of_report_id column
+HEAD_REVISION = "f190a1b2c3d4"  # plan 190: publication image wait
 BEHIND_REVISION = "d2e3f4a5b6c7"
 
 

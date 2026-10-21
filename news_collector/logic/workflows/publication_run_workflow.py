@@ -52,6 +52,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
 from news_collector.logic.workflows.publication_attempts import read_publication_attempt
 from news_collector.storage.models import WorkflowRun
+from news_collector.storage.publication_checkpoint_repository import (
+    PublicationCheckpointRepository,
+)
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger(__name__)
@@ -99,7 +102,9 @@ def join_dispatched_publication_threads(timeout: float | None = None) -> None:
 class PublicationRunStartResult:
     """Result of :meth:`PublicationRunWorkflow.start`."""
 
-    status: Literal["started", "already_running", "invalid_request"]
+    status: Literal[
+        "started", "already_running", "invalid_request", "waiting_for_image", "existing"
+    ]
     run_id: int
     detail: str = ""
 
@@ -136,6 +141,7 @@ class PublicationRunWorkflow:
         *,
         lease_timeout_seconds: int = DEFAULT_LEASE_TIMEOUT_SECONDS,
         heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+        data_dir: str | Path = "data",
         publication_attempts_dir: (
             str | os.PathLike[str]
         ) = "data/runtime/publication_attempts",
@@ -144,6 +150,11 @@ class PublicationRunWorkflow:
         self._lease_timeout_seconds = lease_timeout_seconds
         self._heartbeat_interval_seconds = heartbeat_interval_seconds
         self._attempts_dir = Path(publication_attempts_dir)
+        self.data_dir = Path(data_dir)
+        self._checkpoints = PublicationCheckpointRepository(db_manager)
+        self._reconciler_stop = threading.Event()
+        self._reconciler_thread: threading.Thread | None = None
+        self._dispatch_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # start / dispatch
@@ -182,6 +193,33 @@ class PublicationRunWorkflow:
         # may belong to a live in-flight start() — only expiry-proven
         # running rows are safe to reap.
         self.recover_expired_leases(include_queued=False)
+
+        existing = self._checkpoints.reusable_request(
+            article_id=article_id, article_url=article_url
+        )
+        if existing is not None:
+            existing_id, complete = existing
+            if complete:
+                return PublicationRunStartResult(
+                    status="existing",
+                    run_id=existing_id,
+                    detail="Reusing the recorded publication outcome.",
+                )
+            self._reconcile_waiting_safely()
+            state = self.get_status(existing_id).run_status
+            return PublicationRunStartResult(
+                status=(
+                    "waiting_for_image"
+                    if state == "waiting_for_image"
+                    else "already_running"
+                ),
+                run_id=existing_id,
+                detail=(
+                    "Edición completada · esperando imagen"
+                    if state == "waiting_for_image"
+                    else "Publication resumed."
+                ),
+            )
 
         new_id, active_id = self._enqueue(
             {"article_id": article_id, "article_url": article_url},
@@ -223,6 +261,31 @@ class PublicationRunWorkflow:
 
         self.recover_expired_leases(include_queued=False)
 
+        existing = self._checkpoints.reusable_request(article_ids=ids)
+        if existing is not None:
+            existing_id, complete = existing
+            if complete:
+                return PublicationRunStartResult(
+                    status="existing",
+                    run_id=existing_id,
+                    detail="Reusing the recorded batch outcome.",
+                )
+            self._reconcile_waiting_safely()
+            state = self.get_status(existing_id).run_status
+            return PublicationRunStartResult(
+                status=(
+                    "waiting_for_image"
+                    if state == "waiting_for_image"
+                    else "already_running"
+                ),
+                run_id=existing_id,
+                detail=(
+                    "Edición completada · esperando imagen"
+                    if state == "waiting_for_image"
+                    else "Publication resumed."
+                ),
+            )
+
         new_id, active_id = self._enqueue({"article_ids": ids, "mode": "batch"})
         if new_id is None:
             return PublicationRunStartResult(
@@ -262,12 +325,21 @@ class PublicationRunWorkflow:
         """
         now = datetime.now(timezone.utc)
         with self._db.get_session() as session:
+            self._checkpoints.supersede_changed_waits(
+                session,
+                article_ids=(
+                    [str(i) for i in run_metadata.get("article_ids", [])]
+                    if "article_ids" in run_metadata
+                    else [str(run_metadata.get("article_id"))]
+                ),
+                article_url=run_metadata.get("article_url"),
+            )
             row = WorkflowRun(
                 run_type=RUN_TYPE_PUBLICATION,
                 status="queued",
                 started_at=now,
                 idempotency_key=idempotency_key,
-                run_metadata=run_metadata,
+                run_metadata={**run_metadata, "worker_pid": os.getpid()},
             )
             session.add(row)
             try:
@@ -310,13 +382,18 @@ class PublicationRunWorkflow:
                 with _dispatched_threads_lock:
                     _dispatched_threads.discard(thread)
 
-        thread = threading.Thread(target=run, daemon=True, name=name)
-        thread.start()
-        with _dispatched_threads_lock:
-            _dispatched_threads.add(thread)
-            finished = [t for t in _dispatched_threads if not t.is_alive()]
-            for dead in finished:
-                _dispatched_threads.discard(dead)
+        with self._dispatch_lock:
+            if self._reconciler_stop.is_set():
+                # A queued claim remains durable for startup recovery; shutdown
+                # must not create a new worker after it starts draining threads.
+                return
+            thread = threading.Thread(target=run, daemon=True, name=name)
+            thread.start()
+            with _dispatched_threads_lock:
+                _dispatched_threads.add(thread)
+                finished = [t for t in _dispatched_threads if not t.is_alive()]
+                for dead in finished:
+                    _dispatched_threads.discard(dead)
 
     def _dispatch(
         self,
@@ -387,6 +464,8 @@ class PublicationRunWorkflow:
                 article_url=article_url,
                 skip_visuals=False,
                 stage_listener=self._stage_listener(run_id),
+                checkpoint_run_id=run_id,
+                checkpoint_repository=self._checkpoints,
             )
             summary = self._collect_publication_summary(
                 result,
@@ -394,7 +473,9 @@ class PublicationRunWorkflow:
                 article_id=article_id,
                 article_url=article_url,
             )
-            if result.get("status") == "success" and result.get("processed_count", 0):
+            if result.get("status") == "waiting_for_image":
+                self._checkpoints.park(run_id, summary)
+            elif result.get("status") == "success" and result.get("processed_count", 0):
                 self.complete(run_id, summary=summary)
             else:
                 self.fail(
@@ -413,6 +494,7 @@ class PublicationRunWorkflow:
         finally:
             stop_heartbeat.set()
             heartbeat_thread.join(timeout=5)
+            self._reconcile_waiting_safely()
 
     def _run_batch(
         self,
@@ -449,6 +531,8 @@ class PublicationRunWorkflow:
                 on_item_start=lambda index, count, _id: self._reset_progress(
                     run_id, item_index=index, item_count=count
                 ),
+                checkpoint_run_id=run_id,
+                checkpoint_repository=self._checkpoints,
             )
             items: list[dict[str, Any]] = []
             for entry in batch.get("items", []):
@@ -457,12 +541,17 @@ class PublicationRunWorkflow:
                 item_id = entry.get("article_id")
                 item_result = {
                     "status": (
-                        "success" if entry.get("status") == "succeeded" else "error"
+                        "success"
+                        if entry.get("status") == "succeeded"
+                        else entry.get("status", "error")
                     ),
                     "processed_count": entry.get("processed_count", 0),
                     "message": entry.get("message"),
                     "error_code": entry.get("error_code"),
                     "article_id": str(item_id),
+                    "pr_url": entry.get("pr_url"),
+                    "image_reason": entry.get("image_reason"),
+                    "image_brief_slug": entry.get("image_brief_slug"),
                 }
                 item_summary = self._collect_publication_summary(
                     item_result,
@@ -478,6 +567,8 @@ class PublicationRunWorkflow:
                         "failure_class": item_summary.get("failure_class"),
                         "final_slug": item_summary.get("final_slug"),
                         "message": entry.get("message"),
+                        "image_reason": entry.get("image_reason"),
+                        "image_brief_slug": entry.get("image_brief_slug"),
                     }
                 )
             summary = {
@@ -486,9 +577,13 @@ class PublicationRunWorkflow:
                 "succeeded_count": batch.get("succeeded_count", 0),
                 "failed_count": batch.get("failed_count", 0),
                 "total_count": batch.get("total_count", len(items)),
+                "editorial_completed_count": batch.get("editorial_completed_count", 0),
+                "waiting_for_image_count": batch.get("waiting_for_image_count", 0),
                 "items": items,
             }
-            if batch.get("status") in ("success", "partial"):
+            if batch.get("waiting_for_image_count", 0):
+                self._checkpoints.park(run_id, summary)
+            elif batch.get("status") in ("success", "partial"):
                 self.complete(run_id, summary=summary)
             else:
                 self.fail(
@@ -514,6 +609,7 @@ class PublicationRunWorkflow:
         finally:
             stop_heartbeat.set()
             heartbeat_thread.join(timeout=5)
+            self._reconcile_waiting_safely()
 
     def _collect_publication_summary(
         self,
@@ -546,6 +642,12 @@ class PublicationRunWorkflow:
             "error_code": result.get("error_code"),
             "article_id": article_id,
             "article_url": article_url,
+            "pr_url": result.get("pr_url"),
+            "final_slug": result.get("final_slug"),
+            "editorial_completed_count": result.get("editorial_completed_count", 0),
+            "waiting_for_image_count": result.get("waiting_for_image_count", 0),
+            "image_reason": result.get("image_reason"),
+            "image_brief_slug": result.get("image_brief_slug"),
         }
 
         # The pipeline copies manual-ingest extras (incl. the resolved numeric
@@ -559,7 +661,11 @@ class PublicationRunWorkflow:
             if article_id is not None
             else str(result.get("article_id") or "").strip()
         )
-        attempt = self._read_attempt_for_id(resolved_id) if resolved_id else None
+        attempt = (
+            self._read_attempt_for_id(resolved_id)
+            if resolved_id and result.get("status") != "waiting_for_image"
+            else None
+        )
         if attempt is not None and not self._attempt_belongs_to_run(run_id, attempt):
             logger.info(
                 "Run {}: ignoring attempt evidence for article {} written by a "
@@ -711,6 +817,10 @@ class PublicationRunWorkflow:
                 "updated_at": datetime.now(timezone.utc),
                 **fields,
             }
+            if to_status == "running":
+                # A request can wait for days. Its original started_at is
+                # history, so grant the resumed owner a fresh lease immediately.
+                values["heartbeat_at"] = datetime.now(timezone.utc)
             result = session.execute(
                 update(WorkflowRun)
                 .where(WorkflowRun.id == run_id, WorkflowRun.status == from_status)
@@ -815,8 +925,27 @@ class PublicationRunWorkflow:
     # lease recovery
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _pid_alive(pid: int) -> bool:
+        """Same-host probe; Windows and permission failures defer to the lease.
+
+        Matches collection recovery's single-writer deployment contract.
+        PID reuse can delay recovery but cannot interrupt a live process.
+        """
+        if os.name == "nt":  # pragma: no cover - Windows uses lease recovery
+            return True
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
     def recover_expired_leases(self, *, include_queued: bool = True) -> list[int]:
-        """CAS every stale `run_type='publication'` row to `interrupted`.
+        """Recover stale/dead publication owners; preserve resumable checkpoints.
         Scoped to publication runs — must not touch collection rows. Queued
         rows are only definitionally orphans at process startup, so
         `start()` passes `include_queued=False` (a fresh queued row may
@@ -842,7 +971,9 @@ class PublicationRunWorkflow:
         with self._db.get_session() as session:
             stale = (
                 session.execute(
-                    select(WorkflowRun.id, WorkflowRun.status).where(
+                    select(
+                        WorkflowRun.id, WorkflowRun.status, WorkflowRun.run_metadata
+                    ).where(
                         WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
                         status_filter,
                     )
@@ -850,22 +981,66 @@ class PublicationRunWorkflow:
                 .tuples()
                 .all()
             )
+            running = (
+                session.execute(
+                    select(
+                        WorkflowRun.id,
+                        WorkflowRun.status,
+                        WorkflowRun.run_metadata,
+                    ).where(
+                        WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
+                        WorkflowRun.status == "running",
+                    )
+                )
+                .tuples()
+                .all()
+            )
+
+        stale_ids = {int(row[0]) for row in stale}
+        dead_workers = set()
+        for row in running:
+            pid = (row.run_metadata or {}).get("worker_pid")
+            if isinstance(pid, int) and not self._pid_alive(pid):
+                dead_workers.add(int(row.id))
+                if int(row.id) not in stale_ids:
+                    stale.append(row)
 
         recovered: list[int] = []
-        for stale_id, stale_status in stale:
+        for stale_id, stale_status, metadata in stale:
+            has_checkpoint = bool((metadata or {}).get("checkpoints"))
+            has_outcomes = bool((metadata or {}).get("item_outcomes"))
+            resumable = has_checkpoint or has_outcomes
             detail = (
                 "Recovered at startup: heartbeat was stale or missing."
                 if stale_status == "running"
                 else "Recovered at startup: row was still queued."
             )
-            if self._transition(
-                int(stale_id),
-                from_status=stale_status,
-                to_status="interrupted",
-                finished_at=datetime.now(timezone.utc),
-                error_code="process_restarted",
-                error_detail=detail,
-            ):
+            # Recheck the expiry predicate in the UPDATE: a heartbeat may
+            # have renewed the lease after the initial SELECT.
+            with self._db.get_session() as session:
+                result = session.execute(
+                    update(WorkflowRun)
+                    .where(
+                        WorkflowRun.id == stale_id,
+                        WorkflowRun.run_type == RUN_TYPE_PUBLICATION,
+                        WorkflowRun.status == stale_status,
+                        (
+                            WorkflowRun.run_metadata == metadata
+                            if int(stale_id) in dead_workers
+                            else status_filter
+                        ),
+                    )
+                    .values(
+                        status="waiting_for_image" if resumable else "interrupted",
+                        heartbeat_at=None,
+                        finished_at=None if resumable else datetime.now(timezone.utc),
+                        error_code=None if resumable else "process_restarted",
+                        error_detail=None if resumable else detail,
+                        updated_at=datetime.now(timezone.utc),
+                    )
+                )
+                changed = result.rowcount == 1
+            if changed:
                 recovered.append(int(stale_id))
 
         if recovered:
@@ -923,6 +1098,108 @@ class PublicationRunWorkflow:
     @staticmethod
     def generate_idempotency_key() -> str:
         return uuid.uuid4().hex
+
+    def _find_waiting_request(
+        self, article_id: int | None, article_url: str | None
+    ) -> int | None:
+        result = self._checkpoints.reusable_request(
+            article_id=article_id, article_url=article_url
+        )
+        return result[0] if result is not None else None
+
+    def _reconcile_waiting_safely(self) -> int:
+        """Best-effort scheduling never masks a completed worker's outcome."""
+        try:
+            return self.reconcile_waiting()
+        except Exception:
+            logger.exception(
+                "Image-wait reconciliation unavailable; durable requests retained"
+            )
+            return 0
+
+    def reconcile_waiting(self) -> int:
+        """Claim one ready request; the DB index arbitrates every race."""
+        if self._reconciler_stop.is_set():
+            return 0
+        from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+        store = ImageBriefStore(self.data_dir, read_only=True)
+        for run_id, metadata in self._checkpoints.waiting():
+            try:
+                checkpoints = self._checkpoints.all(run_id)
+                outcomes = self._checkpoints.outcomes(run_id)
+                if not checkpoints and not outcomes:
+                    raise ValueError(
+                        "Parked publication has no checkpoint or item evidence"
+                    )
+            except ValueError as exc:
+                logger.error(
+                    "Publication run {} cannot resume invalid evidence: {}", run_id, exc
+                )
+                self._checkpoints.reject_invalid_wait(run_id, str(exc))
+                continue
+            # ready means the process died after preparation and before image
+            # resolution; terminal-only evidence can replay without LLMs too.
+            pending = [
+                cp for cp in checkpoints.values() if cp.status == "waiting_for_image"
+            ]
+            if (
+                pending
+                and not any(store.ready_for_article(cp.article_id) for cp in pending)
+                and not any(cp.status == "ready" for cp in checkpoints.values())
+            ):
+                continue
+            if self._reconciler_stop.is_set():
+                return 0
+            if not self._checkpoints.claim(run_id):
+                return 0
+            ids = metadata.get("article_ids")
+            if metadata.get("mode") == "batch" or (
+                metadata.get("standalone") and len(ids or []) > 1
+            ):
+                self._dispatch_batch(run_id, article_ids=[int(i) for i in (ids or [])])
+            else:
+                article_id = metadata.get("article_id")
+                if article_id is None and checkpoints:
+                    candidate_id = next(iter(checkpoints))
+                    article_id = int(candidate_id) if candidate_id.isdecimal() else None
+                self._dispatch(
+                    run_id,
+                    article_id=article_id,
+                    article_url=(
+                        metadata.get("article_url") if article_id is None else None
+                    ),
+                )
+            return 1
+        return 0
+
+    def start_reconciler(self) -> None:
+        if self._reconciler_thread and self._reconciler_thread.is_alive():
+            return
+        self._reconciler_stop.clear()
+        self._reconcile_waiting_safely()
+
+        def loop() -> None:
+            while not self._reconciler_stop.wait(15):
+                self._reconcile_waiting_safely()
+
+        self._reconciler_thread = threading.Thread(
+            target=loop, name="publication-image-reconciler", daemon=True
+        )
+        self._reconciler_thread.start()
+
+    def stop_reconciler(self) -> None:
+        """Stop scheduling and boundedly drain registered workers.
+
+        A slow provider may outlive the join timeout. Its durable checkpoint and
+        worker PID remain recoverable on restart; failure persistence contains
+        closed-database errors if the process owner closes the manager meanwhile.
+        """
+        with self._dispatch_lock:
+            self._reconciler_stop.set()
+        if self._reconciler_thread:
+            self._reconciler_thread.join(timeout=5)
+        self.join_dispatched_threads(timeout=10)
 
 
 def _as_utc(value: datetime) -> datetime:

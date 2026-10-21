@@ -16,6 +16,8 @@ This repository is the system of record for collection, enrichment, scoring, sto
 - expose public API reads and authenticated admin/workflow endpoints
 - run the Astro admin UI, with Streamlit retained as a legacy fallback
 - generate publication artifacts and open pull requests against the frontend repo
+- preserve completed editorial drafts while images or their redistribution
+  rights are pending, then resume the original request when an approved image is ready
 - maintain the mirrored frontend publication contract in `news_collector/contracts/frontend_schema.py`
 
 ## Current Shape
@@ -68,6 +70,20 @@ Publication into the frontend repo depends on two files staying aligned:
 - frontend render contract: `../noticiencias/src/content.config.ts`
 
 If either changes, treat it as a cross-repo contract change.
+
+Editorial drafts and `waiting_for_image` are backend-only states (plan 190).
+Missing images defer the PR step, release the publication slot and preserve the
+source snapshot and validated draft. The serving process reconciles every 15
+seconds and after uploads; unchanged drafts resume without repeated editorial
+LLM work. A PR is distinct from a merged, deployed article. See
+[`docs/PRODUCT_FLOW.md`](docs/PRODUCT_FLOW.md) for imagegen-assisted resolution
+and [`docs/PIPELINE_CONTRACTS.md`](docs/PIPELINE_CONTRACTS.md) for the contracts.
+
+Apply Alembic revision `f190a1b2c3d4` with `make migrate` before starting the
+compatible backend/admin. Preserve checkpoints during rollback; the migration
+refuses downgrade while image waits remain. Pillow 12.3.0 is pinned in the base
+runtime lock so serving can decode and validate uploaded assets without the
+Streamlit extra.
 
 ## Governance Docs
 

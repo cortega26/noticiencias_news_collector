@@ -872,10 +872,6 @@ def run_pipeline_e2e_scenario(  # noqa: C901
         generated_post_artifact = bundle_dir / "artifacts" / "generated_post.md"
 
         if approved_article is not None:
-            if not approved_article.get("image_url"):
-                approved_article["image_url"] = (
-                    "https://example.test/e2e-placeholder.png"
-                )
             if not approved_article.get("image_alt"):
                 approved_article["image_alt"] = "Imagen e2e"
             target_dir, repo = _prepare_target_repo(bundle_dir, fixture)
@@ -893,11 +889,28 @@ def run_pipeline_e2e_scenario(  # noqa: C901
                     ),
                 ),
                 config=_make_engine_config(bundle_dir),
-                # The scenarios publish a fake remote hero image through a
-                # stubbed downloader; the shipped policy blocks every host.
-                remote_image_hosts=frozenset({"example.test"}),
             )
-            engine._download_image = lambda url, slug, target: url
+            # Owned test bytes follow the same upload/provenance path as real
+            # editorial assets. The frontend requires local processed images
+            # in JSON-LD; a fake remote placeholder cannot prove that contract.
+            image_brief = engine.image_briefs.build_brief(
+                article=approved_article,
+                slug=f"e2e-editorial-image-{selected_article_id}",
+                reason="missing_source_image",
+            )
+            engine.image_briefs.stage_upload(
+                brief=image_brief,
+                filename="editorial-hero.png",
+                content=(
+                    _repo_root() / "tests/fixtures/pipeline_e2e/editorial-hero.png"
+                ).read_bytes(),
+                draft_alt_text="Imagen sintética de prueba del flujo editorial",
+                topic=image_brief.topic,
+                news_angle=image_brief.news_angle,
+                scientific_domain=image_brief.scientific_domain,
+                subject_scene=image_brief.subject_scene,
+                image_origin="original",
+            )
             # Deterministic auditor seam: the real auditor performs network
             # LLM calls on a leaked background thread, which made the two-run
             # repeatability test exceed its timeout under full-suite load.

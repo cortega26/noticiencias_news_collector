@@ -311,6 +311,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -357,13 +359,15 @@ class TestEnrichmentInProcessArticle:
         agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
 
         # Provide upstream summary_points that should override LLM output
-        upstream_summary = ["Punto upstream manual"]
+        upstream_summary = ["Punto upstream manual", "Segundo punto manual"]
         result = agent.process_article(
             {
                 "title": "Demo",
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
                 "summary_points": upstream_summary,
             },
             override_date="2026-03-02",
@@ -409,6 +413,8 @@ class TestEnrichmentInProcessArticle:
                     "summary": "Resumen " * 20,
                     "content": "Contenido " * 200,
                     "url": "https://example.com/source",
+                    "image_url": "https://example.com/hero.webp",
+                    "image_alt": "Imagen del estudio",
                 },
                 override_date="2026-03-02",
             )
@@ -446,6 +452,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen " * 20,
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -455,6 +463,8 @@ class TestEnrichmentInProcessArticle:
                 "summary": "Resumen " * 20,
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -533,6 +543,8 @@ class TestPoisonedStage4Cache:
                 "summary": "Resumen " * 20,
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
                 "source_name": "Example Feed",
             },
             override_date="2026-03-02",

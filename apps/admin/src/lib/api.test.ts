@@ -987,6 +987,28 @@ describe('phase 4 parity client', () => {
     expect(result.brief.status).toBe('editorial_image_ready');
   });
 
+  it('uploads typed generation evidence in the multipart metadata part', async () => {
+    setToken('admin-key');
+    mockFetchResponse(200, { brief: { status: 'editorial_image_ready' }, asset_path: 'a.png' });
+    const evidence = {
+      prompt: 'Soil and mycorrhizal roots',
+      tool: 'imagegen',
+      sha256: 'a'.repeat(64),
+      width: 1536,
+      height: 1024,
+    };
+    await uploadImageBriefAsset(
+      'roots-3822',
+      new File(['png'], 'roots.png'),
+      { image_origin: 'ai_generated' },
+      evidence
+    );
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String((init.body as FormData).get('generation_metadata')))).toEqual(
+      evidence
+    );
+  });
+
   it('deleteSource DELETEs the source path', async () => {
     setToken('admin-key');
     mockFetchResponse(200, { status: 'ok', detail: 'deleted', updated: 1 });

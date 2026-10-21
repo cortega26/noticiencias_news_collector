@@ -41,6 +41,7 @@ describe('renderImageCard', () => {
 
     const pre = host.querySelector('pre[data-prompt]');
     expect(pre?.textContent).toBe(brief.generated_prompt);
+    expect(host.querySelector('[id]')?.id).toBe(brief.slug);
     // The markup must not inject the prompt's HTML.
     expect(host.querySelector('script')).toBeNull();
     expect(pre?.innerHTML).not.toContain('<script>');
@@ -55,7 +56,7 @@ describe('renderImageCard', () => {
     expect(prompt).toBe(brief.generated_prompt);
   });
 
-  it('offers "Publicar de nuevo" only when the brief is editorial_image_ready', () => {
+  it('offers "Consultar envío" only when the brief is editorial_image_ready', () => {
     const ready = mount({ ...brief, status: 'editorial_image_ready' });
     expect(ready.querySelector<HTMLButtonElement>('[data-publish]')?.dataset.publish).toBe('3724');
 

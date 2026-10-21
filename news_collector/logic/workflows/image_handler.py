@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 from urllib.parse import urlparse
 
 from news_collector.editorial.hero_alt import is_boilerplate_alt
@@ -119,7 +119,7 @@ class ArticleImageHandler:
         1. Staged editorial brief (status=editorial_image_ready / resolved)
         2. HTTP URL → download, only for allowlisted hosts; any other source
            image is not reused and the article goes to the editorial image queue
-        3. Local (non-http) image path → pass through unchanged
+        3. Local (non-http) image path without a verified brief → queue brief
         4. Missing / placeholder → queue brief
 
         download_fn: optional callable(url, slug, target_dir) -> str | None
@@ -203,7 +203,9 @@ class ArticleImageHandler:
                     reason="third_party_image_blocked",
                 )
             _dl = download_fn if download_fn is not None else self.download
-            local_ref = _dl(raw_image_url, image_slug, target_dir)
+            local_ref = self._attempt_download(
+                _dl, raw_image_url, image_slug, target_dir, article_id
+            )
             if local_ref:
                 return self._resolve_downloaded(
                     article, article_id, image_slug, local_ref, existing_brief
@@ -223,20 +225,21 @@ class ArticleImageHandler:
                 reason="image_download_failed",
             )
 
-        # 3. Local (non-http) path already set — pass through unchanged
+        # 3. A local filename carries no redistribution permission. The verified
+        # editorial brief above is the only trusted local-asset ingress.
         if (
             raw_image_url
             and not raw_image_url.startswith("http")
             and raw_image_url != "~/assets/images/default.png"
         ):
-            alt = publication_safe_image_alt(
-                article.get("image_alt"), article.get("title", article_id)
+            self._queue_brief(
+                article, article_id, image_slug, "unproven_image_rights", existing_brief
             )
             return ImageResolution(
-                resolved=True,
-                image_url=raw_image_url,
-                image_alt=alt,
-                queued_brief=False,
+                resolved=False,
+                queued_brief=True,
+                reason="unproven_image_rights",
+                message="La ruta local no acredita derechos: se requiere una imagen editorial verificada.",
             )
 
         # 4. No image URL or placeholder → queue brief
@@ -346,6 +349,22 @@ class ArticleImageHandler:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _attempt_download(
+        download: Callable[[str, str, Path], str | None],
+        url: str,
+        slug: str,
+        target_dir: Path,
+        article_id: str,
+    ) -> str | None:
+        try:
+            return download(url, slug, target_dir)
+        except Exception as exc:
+            # Transport adapters may raise instead of returning None. Image
+            # failure is a pending dependency, never an editorial failure.
+            logger.warning("Image download failed for article {}: {}", article_id, exc)
+            return None
 
     def _derive_slug(
         self,

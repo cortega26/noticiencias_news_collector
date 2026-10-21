@@ -68,7 +68,7 @@ _LONG_BODY = (
 )
 
 _VALID_ENRICHMENT_FIELDS: dict[str, object] = {
-    "summary_points": ["Punto resumido"],
+    "summary_points": ["Punto resumido", "Segundo punto resumido"],
     "glossary": [{"term": "Término", "definition": "Definición"}],
     "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
     "why_it_matters": ["Relevancia regional"],
@@ -174,6 +174,8 @@ class TestIncident1181Replay:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )
@@ -210,6 +212,8 @@ class TestEditorialRepairProviderFailure:
                 "summary": "Resumen",
                 "content": "Contenido " * 200,
                 "url": "https://example.com/source",
+                "image_url": "https://example.com/hero.webp",
+                "image_alt": "Imagen del estudio",
             },
             override_date="2026-03-02",
         )

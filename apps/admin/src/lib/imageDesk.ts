@@ -45,7 +45,7 @@ export function renderImageCard(b: AdminImageBriefItem): string {
       `<option value="${option.value}"${option.value === origin ? ' selected' : ''}>${option.label}</option>`
   ).join('');
   return `
-    <div class="card p-4" data-slug="${escapeHtml(b.slug)}">
+    <div class="card p-4" id="${escapeHtml(b.slug)}" data-slug="${escapeHtml(b.slug)}">
       <div class="mb-2 flex items-center justify-between">
         <span class="status-pill status-${b.status === 'editorial_image_ready' ? 'completed' : 'new'}">${b.status === 'editorial_image_ready' ? 'Lista' : escapeHtml(b.status)}</span>
         <span class="font-mono text-[11px] text-ink-400">${escapeHtml(b.updated_at ?? '—')}</span>
@@ -92,7 +92,7 @@ export function renderImageCard(b: AdminImageBriefItem): string {
           </label>
           ${
             b.status === 'editorial_image_ready'
-              ? `<button class="btn-primary !px-2.5 !py-1 text-xs" data-publish="${escapeHtml(b.article_id)}" type="button">Publicar de nuevo</button>`
+              ? `<button class="btn-primary !px-2.5 !py-1 text-xs" data-publish="${escapeHtml(b.article_id)}" type="button">Consultar envío</button>`
               : ''
           }
         </div>

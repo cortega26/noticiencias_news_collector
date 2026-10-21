@@ -527,7 +527,7 @@ class SystemConfig(Base):
 # producción tenían ese valor al momento del cambio — la Fase 3a nunca llegó
 # a escribir en esta tabla, confirmado consultando data/news_v3.db) y se
 # agregaron 'queued' e 'interrupted'. La nueva migración de esta fase
-# (alembic/versions/*_extend_workflow_runs_durable_dispatch.py) es la dueña
+# Plan 190: f190a1b2c3d4_publication_image_wait.py es la dueña actual
 # de mantener esta tupla en paridad con models.py, igual que a4d9a4ba00aa lo
 # es para PUBLICATION_ATTEMPT_STATE_VALUES. La copia congelada en
 # effe4ec70d6d queda como snapshot histórico y no se toca.
@@ -538,6 +538,7 @@ WORKFLOW_RUN_STATUS_VALUES = (
     "failed",
     "cancelled",
     "interrupted",
+    "waiting_for_image",
 )
 _WORKFLOW_RUN_STATUS_CHECK = "status IN ({})".format(
     ", ".join(f"'{v}'" for v in WORKFLOW_RUN_STATUS_VALUES)
@@ -608,6 +609,10 @@ class WorkflowRun(Base):
 
     __table_args__ = (
         CheckConstraint(_WORKFLOW_RUN_STATUS_CHECK, name="ck_workflow_runs_status"),
+        CheckConstraint(
+            "status != 'waiting_for_image' OR run_type = 'publication'",
+            name="ck_workflow_runs_image_wait_publication",
+        ),
         Index("ix_workflow_runs_run_type", "run_type"),
         # "Una sola colección activa": único entre las filas que cumplen el
         # predicado (run_type='collection' AND status IN queueable). Entre
