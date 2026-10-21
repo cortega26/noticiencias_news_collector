@@ -202,7 +202,7 @@ def build_decision_item(row: ReaderReportDecision) -> ReaderReportDecisionItem:
     """Map one decision row onto its (bounded) transport item."""
     return ReaderReportDecisionItem(
         id=row.id,
-        decision=row.decision,
+        decision=row.decision,  # type: ignore[arg-type]  # CHECK-constrained
         actor=row.actor,
         notes=row.notes,
         corrected_at=row.corrected_at,
@@ -228,12 +228,12 @@ def build_report_item(
     """
     return AdminReaderReportItem(
         id=report.id,
-        status=report.status,
-        resolution_status=report.resolution_status,
+        status=report.status,  # type: ignore[arg-type]  # CHECK-constrained
+        resolution_status=report.resolution_status,  # type: ignore[arg-type]
         resolved_refinery_id=report.resolved_refinery_id,
         resolved_content_sha256=report.resolved_content_sha256,
         resolution_reason=report.resolution_reason,
-        problem_type=report.problem_type,
+        problem_type=report.problem_type,  # type: ignore[arg-type]
         article_url=report.article_url,
         description=report.description,
         content_snippet=report.content_snippet,

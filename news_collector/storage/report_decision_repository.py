@@ -32,9 +32,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional, Sequence
+from typing import Optional, Sequence, cast
 
 from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
 from news_collector.contracts.reader_reports import (
@@ -214,14 +215,17 @@ def apply_report_decision(
             "write 'closed'"
         )
 
-    result = session.execute(
-        update(ReaderReport)
-        .where(
-            ReaderReport.id == planned.report_id,
-            ReaderReport.status == planned.current_status,
-            ReaderReport.status != _STATUS_CLOSED,
-        )
-        .values(status=planned.next_status, updated_at=datetime.now(timezone.utc))
+    result = cast(
+        CursorResult,
+        session.execute(
+            update(ReaderReport)
+            .where(
+                ReaderReport.id == planned.report_id,
+                ReaderReport.status == planned.current_status,
+                ReaderReport.status != _STATUS_CLOSED,
+            )
+            .values(status=planned.next_status, updated_at=datetime.now(timezone.utc))
+        ),
     )
     if result.rowcount != 1:
         raise StaleReportStateConflict(planned.report_id, planned.current_status)
