@@ -127,6 +127,9 @@ from news_collector.logic.workflows.source_catalog_workflow import (
     SourceCatalogWorkflow,
 )
 from news_collector.serving.admin_images import build_router
+from news_collector.serving.admin_reader_reports import (
+    build_router as build_reader_report_router,
+)
 from news_collector.serving.dashboard_health import build_dashboard_health
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog, WorkflowRun
@@ -2561,6 +2564,12 @@ def create_app(  # noqa: C901
 
     # Plan 177: the image-brief routes live in their own bounded router.
     app.include_router(build_router(verify_admin_token))
+
+    # Plan 187: reader-report triage/decision routes live in their own
+    # bounded router (same mounted-router idiom); mutations dispatch to
+    # the pure transition rules + the report-decision repository, so no
+    # editorial write policy lives in this adapter (LAW-B4).
+    app.include_router(build_reader_report_router(verify_admin_token, get_db))
 
     @app.delete(
         "/v1/admin/content/{refinery_id}",

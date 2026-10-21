@@ -3730,3 +3730,283 @@ def test_admin_webhook_receipts_requires_auth(api_client: TestClient) -> None:
             ).status_code
             == 403
         )
+
+
+# ---------------------------------------------------------------------------
+# Reader-report admin triage/decisions (plan 187)
+# ---------------------------------------------------------------------------
+
+
+def _seed_reader_report(
+    db_manager: DatabaseManager,
+    *,
+    key: str = "idem-187",
+    status: str = "new",
+    created_at: datetime | None = None,
+    contact_email: str | None = None,
+    contact_purged_at: datetime | None = None,
+) -> int:
+    from news_collector.storage.models import ReaderReport, ReaderReportContact
+
+    with db_manager.SessionLocal() as session:
+        fields = {
+            "idempotency_key": key,
+            "problem_type": "content_factual",
+            "status": status,
+        }
+        if created_at is not None:
+            fields["created_at"] = created_at
+        report = ReaderReport(**fields)
+        if contact_email is not None:
+            report.contact = ReaderReportContact(email=contact_email)
+        if contact_purged_at is not None:
+            report.contact_purged_at = contact_purged_at
+        session.add(report)
+        session.commit()
+        return int(report.id)
+
+
+def test_reader_report_routes_require_auth(api_client: TestClient) -> None:
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        assert api_client.get("/v1/admin/reader-reports").status_code == 401
+        assert (
+            api_client.get(
+                "/v1/admin/reader-reports", headers=_admin_headers("wrong-token")
+            ).status_code
+            == 403
+        )
+        assert api_client.get("/v1/admin/reader-reports/1").status_code == 401
+        assert (
+            api_client.post("/v1/admin/reader-reports/1/decisions", json={}).status_code
+            == 401
+        )
+
+
+def test_reader_report_list_has_no_email_anywhere(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    report_id = _seed_reader_report(
+        db_manager,
+        created_at=datetime.now(timezone.utc),
+        contact_email="reader@example.com",
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get("/v1/admin/reader-reports", headers=_admin_headers())
+
+    assert response.status_code == 200
+    envelope = response.json()
+    assert envelope["filters"] == {
+        "status": "all",
+        "resolution": "all",
+        "problem_type": "all",
+    }
+    (item,) = envelope["data"]
+    assert item["id"] == report_id
+    assert item["status"] == "new"
+    assert item["decision_count"] == 0
+    # Plan 185 privacy law: the list carries the email NOWHERE.
+    assert "reporter_email" not in response.text
+
+
+def test_reader_report_detail_email_follows_purge_stamps(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    now = datetime.now(timezone.utc)
+    live = _seed_reader_report(
+        db_manager,
+        key="idem-live",
+        contact_email="live@example.com",
+    )
+    purged = _seed_reader_report(
+        db_manager,
+        key="idem-purged",
+        contact_email="purged@example.com",
+        contact_purged_at=now,
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        live_body = api_client.get(
+            f"/v1/admin/reader-reports/{live}", headers=_admin_headers()
+        ).json()
+        purged_body = api_client.get(
+            f"/v1/admin/reader-reports/{purged}", headers=_admin_headers()
+        ).json()
+        missing = api_client.get(
+            "/v1/admin/reader-reports/424242", headers=_admin_headers()
+        )
+
+    assert live_body["reporter_email"] == "live@example.com"
+    assert live_body["decisions"] == []
+    # Post-purge (even with the contact row still present): the email never
+    # leaves the backend.
+    assert purged_body.get("reporter_email") is None
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Reader report not found"
+
+
+def test_reader_report_list_rejects_bad_filter_and_bad_cursor(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    _seed_reader_report(db_manager)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        bad_filter = api_client.get(
+            "/v1/admin/reader-reports",
+            params={"status": "bogus"},
+            headers=_admin_headers(),
+        )
+        bad_cursor = api_client.get(
+            "/v1/admin/reader-reports",
+            params={"cursor": "not!base64!"},
+            headers=_admin_headers(),
+        )
+
+    assert bad_filter.status_code == 422
+    assert "Valid:" in bad_filter.json()["detail"]
+    assert bad_cursor.status_code == 400
+    assert bad_cursor.json()["detail"] == "Invalid cursor"
+
+
+def test_reader_report_list_cursor_pagination_moves_pages(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    _seed_reader_report(
+        db_manager, created_at=datetime.now(timezone.utc) - timedelta(hours=1)
+    )
+    newest = _seed_reader_report(
+        db_manager, key="idem-2", created_at=datetime.now(timezone.utc)
+    )
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.get(
+            "/v1/admin/reader-reports",
+            params={"page_size": 1},
+            headers=_admin_headers(),
+        )
+        pagination = first.json()["pagination"]
+        second = api_client.get(
+            "/v1/admin/reader-reports",
+            params={"page_size": 1, "cursor": pagination["next_cursor"]},
+            headers=_admin_headers(),
+        )
+
+    assert pagination["has_more"] is True
+    assert [item["id"] for item in first.json()["data"]] == [newest]
+    assert second.status_code == 200
+    assert [item["id"] for item in second.json()["data"]] == [newest - 1]
+
+
+def test_reader_report_decision_replay_is_idempotent_on_the_wire(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    from sqlalchemy import func, select
+
+    from news_collector.storage.models import ReaderReportDecision
+
+    report_id = _seed_reader_report(db_manager)
+    payload = {"actor": "alaria", "notes": "la dosis está mal", "decision": "no_action"}
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        first = api_client.post(
+            f"/v1/admin/reader-reports/{report_id}/decisions",
+            json=payload,
+            headers=_admin_headers(),
+        )
+        second = api_client.post(
+            f"/v1/admin/reader-reports/{report_id}/decisions",
+            json=payload,
+            headers=_admin_headers(),
+        )
+        detail = api_client.get(
+            f"/v1/admin/reader-reports/{report_id}", headers=_admin_headers()
+        ).json()
+
+    assert first.status_code == 200
+    assert first.headers["X-Reader-Report-Decision"] == "applied"
+    assert second.status_code == 200
+    assert second.headers["X-Reader-Report-Decision"] == "replayed"
+    assert second.json()["replayed"] is True
+    assert second.json()["inserted_decision_id"] is None
+    assert second.json()["replayed_decision_id"] == first.json()["inserted_decision_id"]
+    with db_manager.SessionLocal() as session:
+        total = session.execute(
+            select(func.count()).select_from(ReaderReportDecision)
+        ).scalar_one()
+        assert int(total) == 1
+    assert detail["status"] == "no_action"
+    assert detail["decision_count"] == 1
+
+
+def test_reader_report_decision_404_and_409_and_422(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    report_id = _seed_reader_report(db_manager)
+    triaged = _seed_reader_report(db_manager, key="idem-triaged", status="triaged")
+    payload = {"actor": "alaria", "notes": "la dosis está mal", "decision": "no_action"}
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        missing = api_client.post(
+            "/v1/admin/reader-reports/424242/decisions",
+            json=payload,
+            headers=_admin_headers(),
+        )
+        held = api_client.post(
+            f"/v1/admin/reader-reports/{triaged}/decisions",
+            json={"actor": "alaria", "notes": "n", "kind": "triage"},
+            headers=_admin_headers(),
+        )
+        misshapen = api_client.post(
+            f"/v1/admin/reader-reports/{report_id}/decisions",
+            json={"actor": "alaria", "notes": "n"},
+            headers=_admin_headers(),
+        )
+        # Pydantic contract layer refuses a whitespace-only note outright.
+        blank_notes = api_client.post(
+            f"/v1/admin/reader-reports/{report_id}/decisions",
+            json={"actor": "alaria", "notes": "   ", "decision": "no_action"},
+            headers=_admin_headers(),
+        )
+
+    assert missing.status_code == 404
+    assert held.status_code == 409
+    assert "triage_only_from_new" in held.json()["detail"]
+    assert misshapen.status_code == 422
+    assert "decision_missing" in misshapen.json()["detail"]
+    assert blank_notes.status_code == 422
+
+
+def test_reader_report_decision_triage_sets_status_without_rows(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    from sqlalchemy import func, select
+
+    from news_collector.storage.models import ReaderReportDecision
+
+    report_id = _seed_reader_report(db_manager)
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            f"/v1/admin/reader-reports/{report_id}/decisions",
+            json={
+                "kind": "triage",
+                "actor": "alaria",
+                "notes": "bumped to the newsroom queue",
+            },
+            headers=_admin_headers(),
+        )
+        detail = api_client.get(
+            f"/v1/admin/reader-reports/{report_id}", headers=_admin_headers()
+        ).json()
+
+    assert response.status_code == 200
+    assert response.headers["X-Reader-Report-Decision"] == "triaged"
+    body = response.json()
+    assert body["action"] == "triage"
+    assert body["inserted_decision_id"] is None
+    with db_manager.SessionLocal() as session:
+        total = session.execute(
+            select(func.count()).select_from(ReaderReportDecision)
+        ).scalar_one()
+        assert int(total) == 0
+    assert detail["status"] == "triaged"

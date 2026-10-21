@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 from urllib.parse import SplitResult, urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -311,3 +311,262 @@ class ReconciliationSummary:
                 self.persist_failed,
             )
         )
+
+
+# =============================================================================
+# Admin triage/decision surface (plan 187)
+#
+# Typed request/response shapes for the /v1/admin/reader-reports endpoints.
+# The same privacy law as plans 185/186 applies unchanged: the reporter
+# email is NEVER part of a list item; the detail DTO carries it only when
+# a contact row exists AND ``contact_purged_at IS NULL`` (see
+# ``AdminReaderReportDetail.reporter_email``). Pure Pydantic models — no
+# I/O, no storage imports (LAW-B1/LAW-B4).
+# =============================================================================
+
+# Admin action families: ``triage`` is a notes-only queue maneuver
+# (new → triaged); ``decision`` records one final editorial decision kind.
+ReportActionKind = Literal["triage", "decision"]
+
+REPORT_ACTION_KIND_VALUES: tuple[ReportActionKind, ...] = ("triage", "decision")
+
+# Decision kinds — must stay in lockstep with READER_DECISION_VALUES in
+# storage/models.py (the ``ck_reader_report_decisions_decision`` CHECK).
+ReportDecisionKind = Literal["accepted", "rejected", "duplicate", "no_action"]
+
+REPORT_DECISION_KIND_VALUES: tuple[ReportDecisionKind, ...] = (
+    "accepted",
+    "rejected",
+    "duplicate",
+    "no_action",
+)
+
+# Free-text bounds for admin payloads (same 5000-char discipline as the
+# Worker's description cap; audit notes share it).
+MAX_DECISION_ACTOR_LENGTH = 200  # reader_report_decisions.actor column cap
+MAX_DECISION_NOTES_LENGTH = 5000
+MAX_DECISION_CORRECTION_LENGTH = 5000
+
+
+class ReportDecisionRequest(BaseModel):
+    """One admin action against one reader report (plan 187).
+
+    ``kind`` picks the action family:
+
+    - ``triage`` — notes-only queue maneuver; moves ``new → triaged`` and
+      is refused in every other current state. Triage appends NO decision
+      row: ``reader_report_decisions.decision`` is CHECK-constrained to
+      the four final kinds (plan 185 schema; extending it requires a table
+      rebuild, out of plan 187's one-column scope). The triage's own
+      audit is the report's ``status``/``updated_at``.
+    - ``decision`` — requires ``decision`` and the per-kind evidence
+      below; appends an audit row and sets the report status to the
+      decision kind.
+
+    Cross-field legality is owned by the pure rules module
+    (``logic/workflows/report_decisions.plan_decision``), not here: this
+    model validates only field shapes. ``notes`` is REQUIRED for every
+    action (audit discipline — no anonymous write). ``corrected_at`` /
+    ``correction_summary`` belong to ``accepted``; publication/deploy
+    evidence remains plan 188's concern and is intentionally absent.
+    """
+
+    kind: ReportActionKind = "decision"
+    actor: str = Field(min_length=1, max_length=MAX_DECISION_ACTOR_LENGTH)
+    notes: str = Field(min_length=1, max_length=MAX_DECISION_NOTES_LENGTH)
+    decision: Optional[ReportDecisionKind] = None
+    corrected_at: Optional[datetime] = None
+    correction_summary: Optional[str] = Field(
+        default=None, max_length=MAX_DECISION_CORRECTION_LENGTH
+    )
+    duplicate_of_report_id: Optional[int] = Field(default=None, ge=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("actor", mode="before")
+    @classmethod
+    def _actor_not_blank(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            raise ValueError("El actor es obligatorio")
+        return value
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _notes_not_blank(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            raise ValueError("Las notas son obligatorias")
+        return value
+
+    @field_validator("actor", "notes", "correction_summary", mode="before")
+    @classmethod
+    def _strip(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class ReaderReportDecisionItem(BaseModel):
+    """One persisted decision row, as the admin surface shows it.
+
+    ``publication_ref``/``deploy_evidence`` exist on the table for plan
+    188's closure flow; the 187 surface never writes them, so they are
+    always ``None`` here.
+    """
+
+    id: int
+    decision: ReportDecisionKind
+    actor: str
+    notes: Optional[str] = None
+    corrected_at: Optional[datetime] = None
+    correction_summary: Optional[str] = None
+    publication_ref: Optional[str] = None
+    deploy_evidence: Optional[str] = None
+    duplicate_of_report_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+
+
+FiltersChoice = Literal["all"]
+
+
+class AdminReaderReportFilters(BaseModel):
+    """Echo of the applied list filters (typed, no bare dicts)."""
+
+    status: Union[ReaderReportStatus, FiltersChoice] = "all"
+    resolution: Union[ReaderResolutionStatus, FiltersChoice] = "all"
+    problem_type: Union[ReaderProblemType, FiltersChoice] = "all"
+
+
+class AdminReaderReportItem(BaseModel):
+    """One report row for admin lists — contact data NEVER included.
+
+    Privacy law (plan 185): contact lives solely in
+    ``reader_report_contacts``; the list item has no reporter email field
+    at all, so no filter/pagination bug can leak it. Decision history is
+    referenced in a bounded way (count + latest row); the full history
+    belongs to the detail endpoint.
+    """
+
+    id: int
+    status: ReaderReportStatus
+    resolution_status: ReaderResolutionStatus
+    resolved_refinery_id: Optional[str] = None
+    resolved_content_sha256: Optional[str] = None
+    resolution_reason: Optional[str] = None
+
+    problem_type: ReaderProblemType
+    article_url: Optional[str] = None
+    description: Optional[str] = None
+    content_snippet: Optional[str] = None
+    evidence_url: Optional[str] = None
+    tech_browser: Optional[str] = None
+    tech_os: Optional[str] = None
+
+    submitted_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    contact_purged_at: Optional[datetime] = None
+
+    decision_count: int = 0
+    latest_decision: Optional[ReaderReportDecisionItem] = None
+
+
+class AdminReaderReportDetail(AdminReaderReportItem):
+    """Full report + append-only decision history.
+
+    Privacy contract (plan 185 law, mirrored across
+    ``storage/models.py`` and ``storage/reader_report_repository.py``):
+    ``reporter_email`` is populated ONLY when a ``reader_report_contacts``
+    row exists for this report AND ``contact_purged_at IS NULL``. After a
+    purge the email never leaves the backend through this endpoint — the
+    report body and decisions stay. The list endpoint carries no email
+    field under any circumstance.
+    """
+
+    reporter_email: Optional[str] = None
+    decisions: List[ReaderReportDecisionItem] = Field(default_factory=list)
+
+
+class AdminReaderReportPagination(BaseModel):
+    """Stable descending cursor pagination (created_at, id), article style."""
+
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+    page_size: int
+    returned: int
+
+
+class AdminReaderReportEnvelope(BaseModel):
+    """Typed list envelope for ``GET /v1/admin/reader-reports``."""
+
+    data: List[AdminReaderReportItem]
+    pagination: AdminReaderReportPagination
+    filters: AdminReaderReportFilters
+    meta: Dict[str, Any]
+
+
+class AdminReaderReportDecisionResult(BaseModel):
+    """Response of ``POST /v1/admin/reader-reports/{id}/decisions``.
+
+    ``report`` is the post-decision state (status, decision history, and
+    the conditional reporter email); ``action`` echoes the request kind;
+    ``replayed`` marks an exact-duplicate payload matched against an
+    existing decision row (no row inserted) — its id is
+    ``replayed_decision_id``; ``inserted_decision_id`` is the new audit
+    row when one was appended (``None`` for triage actions).
+    """
+
+    report: AdminReaderReportDetail
+    action: ReportActionKind
+    inserted_decision_id: Optional[int] = None
+    replayed: bool = False
+    replayed_decision_id: Optional[int] = None
+
+
+# --- pure shared context passed into the decision rules (plan 187) ---------
+
+
+@dataclass(frozen=True)
+class DecisionContext:
+    """Server-resolved inputs the pure transition rules may not fetch.
+
+    Built by the repository from SELECTs only: ``current_status`` is the
+    report's status at snapshot time (older statuses of this report may
+    have changed — the repository's CAS re-check makes the apply step
+    race-safe), ``duplicate_of_exists`` is True exactly when the
+    requested ``duplicate_of_report_id`` points at another existing
+    report row, and ``replayed_decision_id`` is the id of an earlier
+    decision row with the exact same payload (or None).
+    """
+
+    report_id: int
+    current_status: str
+    duplicate_of_exists: Optional[bool] = None
+    replayed_decision_id: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class PlannedDecision:
+    """The transition the rules authorized for one request.
+
+    Carries the request echo so the repository can persist it without a
+    second (unvalidated) copy of the payload:
+
+    - ``next_status`` is the report status to CAS to (never ``new`` —
+      decisions only move reports to ``triaged`` or a final kind — and
+      explicitly refused against a ``closed`` report).
+    - ``insert_decision_row`` is False for triage (no audit row per the
+      185 CHECK constraint; see :class:`ReportDecisionRequest`) and for
+      exact-duplicate replays (audit conservation).
+    """
+
+    report_id: int
+    action: ReportActionKind
+    current_status: str
+    next_status: Optional[str]
+    insert_decision_row: bool
+    decision: Optional[ReportDecisionKind] = None
+    actor: str = ""
+    notes: str = ""
+    corrected_at: Optional[datetime] = None
+    correction_summary: Optional[str] = None
+    duplicate_of_report_id: Optional[int] = None
+    replayed_decision_id: Optional[int] = None

@@ -496,6 +496,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/reader-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin List Reader Reports
+         * @description Bounded, cursor-paginated report queue.
+         *
+         *     Anti-leak note: the envelope's items carry no contact data and
+         *     no email field exists on the item contract (plan 185 privacy
+         *     law); the conditional email lives only on the detail endpoint.
+         */
+        get: operations["admin_list_reader_reports_v1_admin_reader_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/reader-reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Reader Report Detail
+         * @description Full report + audit history + conditional reporter email.
+         *
+         *     Privacy contract: ``reporter_email`` is included ONLY when a
+         *     contact row exists AND ``contact_purged_at IS NULL`` (plan 185
+         *     law; the email is purged by deleting the contact row and
+         *     stamping ``contact_purged_at`` — the report body and decisions
+         *     stay). The list endpoint carries no email under any condition.
+         */
+        get: operations["admin_reader_report_detail_v1_admin_reader_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/reader-reports/{report_id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Decide Reader Report
+         * @description Record one triage/decision action on one reader report.
+         *
+         *     Legality comes from ``plan_decision`` (pure rules; reasons, not
+         *     prose), persistence from ``apply_report_decision`` (CAS + audit
+         *     row, one transaction). Idempotency: the repository matches an
+         *     exact-duplicate pending decision payload BEFORE inserting — the
+         *     response then carries the current state with
+         *     ``X-Reader-Report-Decision: replayed`` and no second audit row;
+         *     changed payloads (re-decisions) append new rows while the report
+         *     is not closed. ``closed`` is unreachable here: the rules refuse
+         *     it and no transition writes it (plan 188 owns closure).
+         *
+         *     The returned ``report.reporter_email`` follows the same privacy
+         *     contract as the detail endpoint (only when a contact row exists
+         *     AND ``contact_purged_at IS NULL``).
+         */
+        post: operations["admin_decide_reader_report_v1_admin_reader_reports__report_id__decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/sources": {
         parameters: {
             query?: never;
@@ -1394,6 +1478,214 @@ export interface components {
             success: boolean;
         };
         /**
+         * AdminReaderReportDecisionResult
+         * @description Response of ``POST /v1/admin/reader-reports/{id}/decisions``.
+         *
+         *     ``report`` is the post-decision state (status, decision history, and
+         *     the conditional reporter email); ``action`` echoes the request kind;
+         *     ``replayed`` marks an exact-duplicate payload matched against an
+         *     existing decision row (no row inserted) — its id is
+         *     ``replayed_decision_id``; ``inserted_decision_id`` is the new audit
+         *     row when one was appended (``None`` for triage actions).
+         */
+        AdminReaderReportDecisionResult: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "triage" | "decision";
+            /** Inserted Decision Id */
+            inserted_decision_id?: number | null;
+            /**
+             * Replayed
+             * @default false
+             */
+            replayed: boolean;
+            /** Replayed Decision Id */
+            replayed_decision_id?: number | null;
+            report: components["schemas"]["AdminReaderReportDetail"];
+        };
+        /**
+         * AdminReaderReportDetail
+         * @description Full report + append-only decision history.
+         *
+         *     Privacy contract (plan 185 law, mirrored across
+         *     ``storage/models.py`` and ``storage/reader_report_repository.py``):
+         *     ``reporter_email`` is populated ONLY when a ``reader_report_contacts``
+         *     row exists for this report AND ``contact_purged_at IS NULL``. After a
+         *     purge the email never leaves the backend through this endpoint — the
+         *     report body and decisions stay. The list endpoint carries no email
+         *     field under any circumstance.
+         */
+        AdminReaderReportDetail: {
+            /** Article Url */
+            article_url?: string | null;
+            /** Contact Purged At */
+            contact_purged_at?: string | null;
+            /** Content Snippet */
+            content_snippet?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Decision Count
+             * @default 0
+             */
+            decision_count: number;
+            /** Decisions */
+            decisions?: components["schemas"]["ReaderReportDecisionItem"][];
+            /** Description */
+            description?: string | null;
+            /** Evidence Url */
+            evidence_url?: string | null;
+            /** Id */
+            id: number;
+            latest_decision?: components["schemas"]["ReaderReportDecisionItem"] | null;
+            /**
+             * Problem Type
+             * @enum {string}
+             */
+            problem_type: "content_factual" | "content_source" | "content_interpretation" | "content_translation" | "technical_site" | "technical_visual";
+            /** Reporter Email */
+            reporter_email?: string | null;
+            /** Resolution Reason */
+            resolution_reason?: string | null;
+            /**
+             * Resolution Status
+             * @enum {string}
+             */
+            resolution_status: "unresolved" | "resolved" | "ambiguous";
+            /** Resolved Content Sha256 */
+            resolved_content_sha256?: string | null;
+            /** Resolved Refinery Id */
+            resolved_refinery_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "triaged" | "accepted" | "rejected" | "duplicate" | "no_action";
+            /** Submitted At */
+            submitted_at?: string | null;
+            /** Tech Browser */
+            tech_browser?: string | null;
+            /** Tech Os */
+            tech_os?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * AdminReaderReportEnvelope
+         * @description Typed list envelope for ``GET /v1/admin/reader-reports``.
+         */
+        AdminReaderReportEnvelope: {
+            /** Data */
+            data: components["schemas"]["AdminReaderReportItem"][];
+            filters: components["schemas"]["AdminReaderReportFilters"];
+            /** Meta */
+            meta: {
+                [key: string]: unknown;
+            };
+            pagination: components["schemas"]["AdminReaderReportPagination"];
+        };
+        /**
+         * AdminReaderReportFilters
+         * @description Echo of the applied list filters (typed, no bare dicts).
+         */
+        AdminReaderReportFilters: {
+            /**
+             * Problem Type
+             * @default all
+             */
+            problem_type: ("content_factual" | "content_source" | "content_interpretation" | "content_translation" | "technical_site" | "technical_visual") | "all";
+            /**
+             * Resolution
+             * @default all
+             */
+            resolution: ("unresolved" | "resolved" | "ambiguous") | "all";
+            /**
+             * Status
+             * @default all
+             */
+            status: ("new" | "triaged" | "accepted" | "rejected" | "duplicate" | "no_action") | "all";
+        };
+        /**
+         * AdminReaderReportItem
+         * @description One report row for admin lists — contact data NEVER included.
+         *
+         *     Privacy law (plan 185): contact lives solely in
+         *     ``reader_report_contacts``; the list item has no reporter email field
+         *     at all, so no filter/pagination bug can leak it. Decision history is
+         *     referenced in a bounded way (count + latest row); the full history
+         *     belongs to the detail endpoint.
+         */
+        AdminReaderReportItem: {
+            /** Article Url */
+            article_url?: string | null;
+            /** Contact Purged At */
+            contact_purged_at?: string | null;
+            /** Content Snippet */
+            content_snippet?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Decision Count
+             * @default 0
+             */
+            decision_count: number;
+            /** Description */
+            description?: string | null;
+            /** Evidence Url */
+            evidence_url?: string | null;
+            /** Id */
+            id: number;
+            latest_decision?: components["schemas"]["ReaderReportDecisionItem"] | null;
+            /**
+             * Problem Type
+             * @enum {string}
+             */
+            problem_type: "content_factual" | "content_source" | "content_interpretation" | "content_translation" | "technical_site" | "technical_visual";
+            /** Resolution Reason */
+            resolution_reason?: string | null;
+            /**
+             * Resolution Status
+             * @enum {string}
+             */
+            resolution_status: "unresolved" | "resolved" | "ambiguous";
+            /** Resolved Content Sha256 */
+            resolved_content_sha256?: string | null;
+            /** Resolved Refinery Id */
+            resolved_refinery_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "triaged" | "accepted" | "rejected" | "duplicate" | "no_action";
+            /** Submitted At */
+            submitted_at?: string | null;
+            /** Tech Browser */
+            tech_browser?: string | null;
+            /** Tech Os */
+            tech_os?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * AdminReaderReportPagination
+         * @description Stable descending cursor pagination (created_at, id), article style.
+         */
+        AdminReaderReportPagination: {
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Page Size */
+            page_size: number;
+            /** Returned */
+            returned: number;
+        };
+        /**
          * AdminRejectRequest
          * @description Body for rejecting a named publication attempt.
          */
@@ -1608,6 +1900,41 @@ export interface components {
             /** Returned */
             returned: number;
         };
+        /**
+         * ReaderReportDecisionItem
+         * @description One persisted decision row, as the admin surface shows it.
+         *
+         *     ``publication_ref``/``deploy_evidence`` exist on the table for plan
+         *     188's closure flow; the 187 surface never writes them, so they are
+         *     always ``None`` here.
+         */
+        ReaderReportDecisionItem: {
+            /** Actor */
+            actor: string;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Corrected At */
+            corrected_at?: string | null;
+            /** Correction Summary */
+            correction_summary?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accepted" | "rejected" | "duplicate" | "no_action";
+            /** Deploy Evidence */
+            deploy_evidence?: string | null;
+            /** Duplicate Of Report Id */
+            duplicate_of_report_id?: number | null;
+            /** Id */
+            id: number;
+            /** Notes */
+            notes?: string | null;
+            /** Publication Ref */
+            publication_ref?: string | null;
+        };
         /** RelatedArticleResponse */
         RelatedArticleResponse: {
             /** Id */
@@ -1626,6 +1953,49 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * ReportDecisionRequest
+         * @description One admin action against one reader report (plan 187).
+         *
+         *     ``kind`` picks the action family:
+         *
+         *     - ``triage`` — notes-only queue maneuver; moves ``new → triaged`` and
+         *       is refused in every other current state. Triage appends NO decision
+         *       row: ``reader_report_decisions.decision`` is CHECK-constrained to
+         *       the four final kinds (plan 185 schema; extending it requires a table
+         *       rebuild, out of plan 187's one-column scope). The triage's own
+         *       audit is the report's ``status``/``updated_at``.
+         *     - ``decision`` — requires ``decision`` and the per-kind evidence
+         *       below; appends an audit row and sets the report status to the
+         *       decision kind.
+         *
+         *     Cross-field legality is owned by the pure rules module
+         *     (``logic/workflows/report_decisions.plan_decision``), not here: this
+         *     model validates only field shapes. ``notes`` is REQUIRED for every
+         *     action (audit discipline — no anonymous write). ``corrected_at`` /
+         *     ``correction_summary`` belong to ``accepted``; publication/deploy
+         *     evidence remains plan 188's concern and is intentionally absent.
+         */
+        ReportDecisionRequest: {
+            /** Actor */
+            actor: string;
+            /** Corrected At */
+            corrected_at?: string | null;
+            /** Correction Summary */
+            correction_summary?: string | null;
+            /** Decision */
+            decision?: ("accepted" | "rejected" | "duplicate" | "no_action") | null;
+            /** Duplicate Of Report Id */
+            duplicate_of_report_id?: number | null;
+            /**
+             * Kind
+             * @default decision
+             * @enum {string}
+             */
+            kind: "triage" | "decision";
+            /** Notes */
+            notes: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2544,6 +2914,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminQualityRecentEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_list_reader_reports_v1_admin_reader_reports_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                resolution?: string;
+                problem_type?: string;
+                page_size?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReaderReportEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_reader_report_detail_v1_admin_reader_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReaderReportDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_decide_reader_report_v1_admin_reader_reports__report_id__decisions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Decision state (append or exact-duplicate replay) with the post-decision report. */
+            200: {
+                headers: {
+                    /** @description Whether the request appended a new audit row (``applied``), matched an existing identical row (``replayed`` — no row added), or recorded a triage status change (``triaged``). */
+                    "X-Reader-Report-Decision"?: "applied" | "replayed" | "triaged";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReaderReportDecisionResult"];
                 };
             };
             /** @description Validation Error */
