@@ -30,48 +30,7 @@ SECRET_SEVERITY_DEFAULT = "HIGH"  # nosec
 
 # pip-audit advisories that remain accepted risks until upstream fixes ship.
 # Each entry must include an expiry date so suppressions cannot become permanent.
-# 2026-10-20: pillow 12.3.0 GHSAs fix only in 13.0.0, but every current streamlit
-# release caps pillow<13 (the Refinery panel is on streamlit 1.54.0) — no
-# compatible fix exists in this tree; revisit on the next streamlit bump.
-PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {
-    "GHSA-p4wg-p73j-c528": {
-        "reason": (
-            "pillow>=12.3.0 GHSAs fix only in 13.0.0, blocked upstream: "
-            "streamlit<1.57 caps pillow<13 in requirements-refinery.lock "
-            "(legacy Streamlit panel deps only; the runtime app does not "
-            "pin pillow). Re-check or drop when streamlit lifts the cap."
-        ),
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-65qm-jvmh-6pqg": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-58r4-6rv3-gfh8": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-pchr-8j38-3x4p": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-q45j-58j2-45rg": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-462x-pgg6-55fp": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-c6hw-5grf-ff96": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-    "GHSA-vx6w-vv9f-6gvg": {
-        "reason": "see GHSA-p4wg-p73j-c528",
-        "expires_on": "2026-12-15",
-    },
-}
+PIP_AUDIT_ALLOWLIST: dict[str, dict[str, str]] = {}
 
 
 def _active_pip_audit_allowlist(today: date | None = None) -> dict[str, str]:
