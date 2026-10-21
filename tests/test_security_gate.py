@@ -172,15 +172,13 @@ def test_pip_audit_findings_honors_allowlist(
 
 
 def test_pip_audit_allowlist_entries_are_expiring() -> None:
-    # Plan 156 retired the last exception once (GHSA-84m7-p3x7-pcfv). The
-    # mechanism is back for the pillow GHSAs (blocked by streamlit's
-    # pillow<13 cap in requirements-refinery.lock, 2026-10-20), so instead of
-    # an always-empty invariant the guard now asserts every live entry is
-    # temporary: reason present and an expiry date bounded into the future.
+    # The allowlist is a transitional mechanism (the pillow GHSAs used it from
+    # 2026-10-20 until streamlit lifted its pillow<13 cap and the locks moved to
+    # pillow 13). It may be empty; whatever it holds must be temporary: reason
+    # present and an expiry date bounded into the future.
     from datetime import date, timedelta
 
     active = security_gate._active_pip_audit_allowlist()  # type: ignore[attr-defined]
-    assert active, "allowlist cannot remain while no risk remains — retire it"
     for vuln_id, reason in active.items():
         assert reason.strip(), f"{vuln_id} needs a re-read reason"
     expiry_dates = [
@@ -188,7 +186,13 @@ def test_pip_audit_allowlist_entries_are_expiring() -> None:
         for vuln_id in active
     ]
     horizon = date.today() + timedelta(days=90)
-    assert max(expiry_dates) <= horizon, "no suppression may exceed 90 days"
+    assert all(d <= horizon for d in expiry_dates), "no suppression may exceed 90 days"
+
+
+def test_pip_audit_allowlist_is_empty_while_no_risk_is_accepted() -> None:
+    # Live pip-audit verdicts on all locks are clean (pillow 13, streamlit 1.66):
+    # a leftover suppression would hide a future regression of the same id.
+    assert security_gate.PIP_AUDIT_ALLOWLIST == {}
 
 
 def test_pip_audit_allowlist_expiry_guard(monkeypatch: pytest.MonkeyPatch) -> None:
