@@ -13,6 +13,8 @@ from news_collector.infrastructure.llm.attempts import (
     cool_down_provider,
     disable_provider,
     emit_attempt,
+    first_announcement,
+    provider_key,
     provider_name,
 )
 from news_collector.infrastructure.llm.failure_kinds import (
@@ -30,6 +32,7 @@ from news_collector.infrastructure.llm.provider import OllamaProvider
 from news_collector.infrastructure.llm.rate_limiter import (
     LLMRateLimitConfig,
     LLMRateLimiter,
+    redact_message,
     reset_queue_wait,
 )
 from news_collector.utils.logger import get_logger
@@ -45,6 +48,24 @@ def _is_empty_response(res: Any) -> bool:
         # {} or a degenerate parse such as {"": ""} carries no content.
         return not any(k or v for k, v in res.items())
     return False
+
+
+def _http_status(exc: BaseException) -> Optional[int]:
+    """HTTP status carried by a requests/httpx error, else ``None``."""
+    response = getattr(exc, "response", None)
+    # NB: compare with None — ``requests.Response`` is falsy for 4xx/5xx.
+    return None if response is None else getattr(response, "status_code", None)
+
+
+def _response_detail(exc: BaseException) -> str:
+    """Redacted, truncated body of the failed response (the gateway's reason)."""
+    response = getattr(exc, "response", None)
+    if response is None:
+        return ""
+    try:
+        return redact_message(str(response.text)).strip()[:200]
+    except Exception:  # noqa: BLE001 - optional detail on an already-logged failure
+        return ""
 
 
 def _is_degraded(provider: Any) -> bool:
@@ -223,6 +244,22 @@ class FallbackProvider:
             error=exc,
         )
         name = provider_name(provider)
+        if (
+            kind is FailureKind.CLIENT_ERROR
+            and _http_status(exc) == 404
+            and first_announcement(f"404:{provider_key(provider)}")
+        ):
+            # CLIENT_ERROR never degrades/disables a provider (our request, not
+            # its health), so a retired model would otherwise fail over quietly
+            # on every call forever. Say it loudly, once.
+            logger.error(
+                "LLM provider {} answered 404 for model {}: the model or endpoint "
+                "does not exist (retired or mistyped). Fix its config.toml entry; "
+                "calls keep failing over until then. Detail: {}",
+                name,
+                getattr(provider, "model", None),
+                _response_detail(exc) or "-",
+            )
         if kind is FailureKind.AUTH and disable_provider(provider, str(exc)[:120]):
             logger.error(
                 "LLM provider {} rejected our credentials ({}); disabling it for "
@@ -238,12 +275,14 @@ class FallbackProvider:
                 "LLM provider {} rate-limited; cooling down {:.0f}s", name, delay
             )
         else:
+            detail = _response_detail(exc) if kind is FailureKind.CLIENT_ERROR else ""
             logger.warning(
-                "Provider {} failed during {} ({}): {}. Proceeding to fallback...",
+                "Provider {} failed during {} ({}): {}{}. Proceeding to fallback...",
                 name,
                 self.purpose,
                 kind.value,
                 exc,
+                f" [{detail}]" if detail else "",
             )
         return kind
 
@@ -455,7 +494,13 @@ def resolve_secret(name: str) -> str:
     try:
         return str(load_env_overrides().get(name, "")).strip()
     except Exception as err:  # noqa: BLE001 - a broken .env must not break the chain
-        logger.debug("Could not read .env for {}: {}", name, err)
+        if first_announcement(f"env-read:{name}"):
+            logger.warning(
+                "Could not read .env while resolving {} ({}: {}); treating it as unset",
+                name,
+                err.__class__.__name__,
+                err,
+            )
         return ""
 
 
@@ -471,7 +516,13 @@ def _install_metrics_sink() -> None:
 
         install_default_metrics_sink()
     except Exception as err:  # noqa: BLE001 - observability must never break calls
-        logger.debug("LLM metrics sink not installed: {}", err)
+        if first_announcement("metrics-sink-install"):
+            logger.warning(
+                "LLM metrics sink not installed ({}: {}); the end-of-run LLM "
+                "report will have no provider data",
+                err.__class__.__name__,
+                err,
+            )
 
 
 _PLACEHOLDER_RE = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
