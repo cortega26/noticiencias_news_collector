@@ -158,6 +158,31 @@ not treat an exit 0 from `--dry-run` as an acknowledgment: that mode parses
 and reports without applying events. The staging tables are additive Alembic
 migration `c6d1a4e8f203`.
 
+### Reader report reconciliation (R2 → local backend)
+
+Reader reports submitted through the frontend Worker are durably stored in the
+R2 bucket `noticiencias-reports` (`reports/YYYY-MM-DD/<uuid>.json`). The local
+backend reconciles them into `reader_reports` (+ the private
+`reader_report_contacts` row) with the 185 identity resolver stamping
+`resolved_refinery_id`/`resolved_content_sha256`:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_R2_API_TOKEN=… \
+  python scripts/reconcile_reader_reports.py --dry-run   # report only, no writes
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_R2_API_TOKEN=… \
+  python scripts/reconcile_reader_reports.py --since 2026-10-01 --limit 100
+```
+
+The token needs Workers R2 Storage Edición on the account; set the vars in
+`.env` (placeholders in `.env.example`). Reconciling is idempotent by the
+Worker report UUID: running it twice yields exactly one row per report and
+counts duplicates instead of failing. Exit 0 is a completed pass (invalid
+records and duplicates are a report, not a failure); exit 1 is a run-level
+failure (bad `--since`/`--limit`, listing failure); exit 2 means missing
+credentials and performs zero I/O. The `submitted_at` column comes from
+additive Alembic migration `d2e3f4a5b6c7`.
+
+
 Hosted serving configuration lives in `Dockerfile.serving` +
 `docker-compose.serving.yml` (OCI VM systemd service `noticiencias-serving` —
 see `spec-oci-hosting-migration.md`); `fly-serving.toml` / `fly-tunnel.toml`

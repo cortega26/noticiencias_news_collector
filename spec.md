@@ -10,24 +10,18 @@ Where things live:
 - Each tracked plan's authoritative spec is its own plan file or folder under
   `plans/` — `spec.md` + `todo.md` (+ `tests/`) for multi-file plans, the plan
   file itself for single-file plans (see `docs/AGENTS.md` §0.1).
-- Completed task records: `archive/completed-tasks/README.md` — including the
-  retired 2026 root queue and the session log formerly kept in this file
-  (`archive/completed-tasks/spec-root-2026-session-log.md`).
 
-## Current task
+## Current task — 2026-10-20: reader-report reconciliation runbook
 
-_No task in flight._ When ad-hoc work starts, fill in the sections below and
-keep the file short (≤ ~60 lines); archive or delete stale content instead of
-growing it.
+**Goal**: the operator can run plan 186's R2 reconciliation locally without
+reading the plan (docs-only change; no code paths move).
 
-### Goals
+**Scope**: `docs/RUNBOOK_LOCAL_DEV.md` only — a "Reader report reconciliation
+(R2 → local backend)" subsection mirroring the webhook-pull section: env
+placeholders (already in `.env.example` since 186), `--dry-run` first pass,
+`--since/--limit`, idempotency-by-UUID, exit codes 0/1/2, migration
+`d2e3f4a5b6c7`.
 
-- (what success looks like, acceptance criteria)
-
-### Implementation
-
-- (files to change, how they change, design decisions)
-
-### Verification
-
-- (exact commands to run, outputs to check, edge cases to cover)
+**Verification**: `make docs-check` (validated commands/paths/calling
+conventions) after the edit; cross-rollup `make test-refinery` is unrelated
+and kept out of scope.
