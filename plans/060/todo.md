@@ -452,7 +452,14 @@ half — not started), same split as Phase 2 (2a/2b/2c) and Phase 3 (3a/3b/3c).
       Cloudflare credentials are env-only placeholders — first prod pass must
       provision the token and run dry. Reports only; decision-record
       reconciliation lands with the admin slice (187).)
-- [ ] Add legal admin triage/decision/correction/closure transitions.
+- [x] Add legal admin triage/decision/correction/closure transitions.
+      (Delivered 2026-10-20, backend `802f8d54`: typed admin routers
+      (list/detail/POST decisions), pure transition rules with 13 refusal
+      reasons, append-only decision repository with CAS + replay, exact-
+      duplicate payload idempotency; triage audited via report
+      status/updated_at (decision rows reserved for the 4 final kinds by the
+      185 CHECK). **Closure transitions are NOT wired yet** — they land with
+      the evidence gate of plan 188 (next slice).)
 - [ ] Link correction publication and deploy evidence before closure.
 - [ ] Pass lifecycle, idempotency, abuse, privacy, and publication tests.
 
