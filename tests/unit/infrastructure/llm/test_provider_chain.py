@@ -1015,3 +1015,117 @@ def test_shipped_groq_endpoint_uses_low_reasoning_effort():
     cfg = load_config(Path(__file__).resolve().parents[4] / "config.toml")
     groq = next(e for e in cfg.llm_endpoints if e.name == "groq")
     assert groq.extra_body == {"reasoning_effort": "low"}
+
+
+# ------------------------------------------------------------- failures are loud
+
+
+class _LogRecorder:
+    """Stand-in for the module logger: records ``(level, formatted message)``."""
+
+    def __init__(self) -> None:
+        self.records: list[tuple[str, str]] = []
+
+    def __getattr__(self, level: str):
+        if level not in {"debug", "info", "warning", "error", "critical"}:
+            raise AttributeError(level)
+
+        def log(msg: Any, *args: Any, **_kwargs: Any) -> None:
+            self.records.append((level, str(msg).format(*args) if args else str(msg)))
+
+        return log
+
+    def messages(self, level: str, containing: str = "") -> list[str]:
+        return [m for lvl, m in self.records if lvl == level and containing in m]
+
+
+def _http_error_with_body(status: int, body: str):
+    error = _http_error(status)
+    error.response._content = body.encode()
+    return error
+
+
+def test_404_is_announced_as_error_once_but_keeps_failing_over(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    rec = _LogRecorder()
+    monkeypatch.setattr(factory, "logger", rec)
+    first = FakeProvider("a", _http_error_with_body(404, '{"detail":"Function gone"}'))
+    first.outcomes.append(_http_error(404))
+    chain = FallbackProvider([first, FakeProvider("b", "ok", "ok")])
+    chain.generate_sync("p")
+    chain.generate_sync("p")
+    (error,) = rec.messages("error", "404")
+    assert "model a-model" in error and "Function gone" in error
+    # Policy unchanged: a rejected request is not provider health, so it is
+    # retried (and warned about) on every call rather than silently disabled.
+    assert first.calls == 2 and attempts.blocked_reason(first) is None
+    assert len(rec.messages("warning", "Provider a failed")) == 2
+
+
+def test_other_client_errors_warn_without_the_404_error(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    rec = _LogRecorder()
+    monkeypatch.setattr(factory, "logger", rec)
+    FallbackProvider(
+        [
+            FakeProvider("a", _http_error_with_body(400, "bad payload")),
+            FakeProvider("b"),
+        ]
+    ).generate_sync("p")
+    assert rec.messages("error") == []
+    (warning,) = rec.messages("warning", "Provider a failed")
+    assert "client_error" in warning and "bad payload" in warning
+
+
+def test_failing_attempt_sink_is_announced_once(monkeypatch):
+    rec = _LogRecorder()
+    monkeypatch.setattr(attempts, "logger", rec)
+
+    def broken_sink(_record):
+        raise RuntimeError("db locked")
+
+    attempts.register_attempt_sink(broken_sink)
+    try:
+        chain = FallbackProvider([FakeProvider("a", "ok", "ok")])
+        assert chain.generate_sync("p") == "ok"  # fail-open for the call itself
+        assert chain.generate_sync("p") == "ok"
+    finally:
+        attempts.unregister_attempt_sink(broken_sink)
+    (warning,) = rec.messages("warning", "sink")
+    assert "db locked" in warning and "incomplete" in warning
+
+
+def test_metrics_sink_install_failure_is_announced_once(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+    from news_collector.observability import llm_metrics_store
+
+    rec = _LogRecorder()
+    monkeypatch.setattr(factory, "logger", rec)
+
+    def boom():
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(llm_metrics_store, "install_default_metrics_sink", boom)
+    factory._install_metrics_sink()
+    factory._install_metrics_sink()
+    (warning,) = rec.messages("warning", "metrics sink not installed")
+    assert "read-only filesystem" in warning
+
+
+def test_unreadable_env_is_announced_once_and_treated_as_unset(monkeypatch):
+    from news_collector.infrastructure.llm import factory
+
+    rec = _LogRecorder()
+    monkeypatch.setattr(factory, "logger", rec)
+    monkeypatch.delenv("LOUD_TEST_KEY", raising=False)
+
+    def boom():
+        raise PermissionError(".env")
+
+    monkeypatch.setattr(factory, "load_env_overrides", boom)
+    assert factory.resolve_secret("LOUD_TEST_KEY") == ""
+    assert factory.resolve_secret("LOUD_TEST_KEY") == ""
+    (warning,) = rec.messages("warning", "LOUD_TEST_KEY")
+    assert "treating it as unset" in warning
