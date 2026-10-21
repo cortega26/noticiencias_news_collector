@@ -59,6 +59,7 @@ def test_moving_one_weight_automatically_rebalances_siblings():
     assert not at.exception
 
     recency = next(s for s in at.slider if s.key == "w_recency")
+    initial = _weight_sliders(at)
     recency.set_value(0.5)
     at.run(timeout=60)
 
@@ -69,10 +70,19 @@ def test_moving_one_weight_automatically_rebalances_siblings():
     assert round(sum(values.values()), 4) == 1.0
     # The moved weight grew, so the siblings must have shrunk, not kept
     # their original values (that is what the old bug did and then validate
-    # rejected the save).
-    assert values["w_source_credibility"] < 0.1
-    assert values["w_content_quality"] < 0.4
-    assert values["w_engagement_potential"] < 0.4
+    # rejected the save). Asserts are relative to the seeded config so the
+    # guard holds for any operator tuning, not just the committed defaults:
+    # a sibling keeps its value only when the config seeds it at 0.0.
+    for key in WEIGHT_KEYS:
+        if key == "w_recency":
+            continue
+        if initial[key] > 0.0:
+            assert values[key] < initial[key], (
+                f"{key} kept its value ({initial[key]} -> {values[key]}), "
+                "the old bug path"
+            )
+        else:
+            assert values[key] == 0.0
 
 
 def test_moving_last_slider_rebalances_already_renderered_siblings():
@@ -84,6 +94,7 @@ def test_moving_last_slider_rebalances_already_renderered_siblings():
     at.run(timeout=60)
     assert not at.exception
 
+    initial = _weight_sliders(at)
     engagement = next(s for s in at.slider if s.key == "w_engagement_potential")
     engagement.set_value(0.5)
     at.run(timeout=60)
@@ -92,9 +103,19 @@ def test_moving_last_slider_rebalances_already_renderered_siblings():
     values = _weight_sliders(at)
     assert values["w_engagement_potential"] == 0.5
     assert round(sum(values.values()), 4) == 1.0
-    assert values["w_source_credibility"] < 0.1
-    assert values["w_recency"] < 0.1
-    assert values["w_content_quality"] < 0.4
+    # Same shrink-property relative to the *rendered* previous step, so
+    # operator-tuned weights (e.g. recency .15, content .4) cannot make the
+    # guard vacuous or flaky.
+    for key in WEIGHT_KEYS:
+        if key == "w_engagement_potential":
+            continue
+        if initial[key] > 0.0:
+            assert values[key] < initial[key], (
+                f"{key} kept its value ({initial[key]} -> {values[key]}), "
+                "the old bug path"
+            )
+        else:
+            assert values[key] == 0.0
 
 
 def test_rebalanced_weights_are_what_the_save_button_would_persist():
