@@ -418,9 +418,18 @@ class HtmlCollector(BaseCollector):
             "last_modified": None,
             "content_hash": None,
         }
-        with contextlib.suppress(Exception):
+        try:
             cached_headers = (
                 self.db_manager.get_source_feed_metadata(source_id) or cached_headers
+            )
+        except Exception as e:
+            # Falls back to an unconditional GET, but a failing metadata read
+            # means the DB is unhealthy: say so.
+            self._emit_log(
+                "warning",
+                "collector.feed.metadata_fetch_failed",
+                source_id=source_id,
+                details={"error": str(e)},
             )
 
         headers = self.headers.copy()

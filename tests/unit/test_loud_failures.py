@@ -279,3 +279,68 @@ async def test_html_network_failure_after_retries_is_logged(monkeypatch):
     assert call.kwargs["source_id"] == "s1" and call.kwargs["details"] == {
         "attempts": 3
     }
+
+
+def _metadata_warnings(collector) -> list[dict]:
+    return [
+        c.kwargs
+        for c in collector._emit_log.call_args_list
+        if c.args[:2] == ("warning", "collector.feed.metadata_fetch_failed")
+    ]
+
+
+def test_rss_feed_metadata_read_failure_is_a_warning_not_debug():
+    from unittest.mock import patch
+
+    from noticiencias.config_manager import load_config
+
+    from news_collector.collectors.rss_collector import RSSCollector
+
+    with patch("news_collector.collectors.base_collector.get_database_manager"):
+        collector = RSSCollector(logger_factory=MagicMock(), config=load_config())
+    collector.db_manager = MagicMock()
+    collector.db_manager.get_source_feed_metadata.side_effect = (
+        sqlite3.OperationalError("disk I/O error")
+    )
+    collector._emit_log = MagicMock()
+    # Stop right after the metadata read: the replay source short-circuits the fetch.
+    collector._feed_replay_source = SimpleNamespace(
+        fetch_feed=lambda **_kw: {"success": True}
+    )
+    result = collector._fetch_feed_robust("s1", {"url": "https://example.org/feed"})
+    assert result == {"success": True}  # behaviour unchanged: unconditional GET
+    (kwargs,) = _metadata_warnings(collector)
+    assert (
+        kwargs["source_id"] == "s1" and "disk I/O error" in kwargs["details"]["error"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_html_feed_metadata_read_failure_is_logged_not_suppressed():
+    from unittest.mock import AsyncMock, patch
+
+    import httpx
+
+    from news_collector.collectors.html_collector import HtmlCollector
+
+    with patch("news_collector.collectors.html_collector.get_runtime_config"):
+        collector = HtmlCollector(logger_factory=MagicMock())
+    collector.db_manager = MagicMock()
+    collector.db_manager.get_source_feed_metadata.side_effect = (
+        sqlite3.OperationalError("disk I/O error")
+    )
+    collector._emit_log = MagicMock()
+    collector._backoff_sleep_async = AsyncMock()
+    client = MagicMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = False
+    client.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
+    with patch("httpx.AsyncClient", return_value=client):
+        result = await collector._fetch_html_conditional(
+            "https://example.org/news", "s1", {"url": "https://example.org/news"}
+        )
+    assert result == (None, None)  # the fetch still proceeds without cached headers
+    (kwargs,) = _metadata_warnings(collector)
+    assert (
+        kwargs["source_id"] == "s1" and "disk I/O error" in kwargs["details"]["error"]
+    )
