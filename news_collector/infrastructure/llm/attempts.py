@@ -51,6 +51,7 @@ def provider_key(provider: Any) -> str:
 _LOCK = threading.Lock()
 _DISABLED: Dict[str, tuple[str, float]] = {}
 _COOLDOWN_UNTIL: Dict[str, float] = {}
+_ANNOUNCED: set[str] = set()
 
 MAX_COOLDOWN_S = 300.0
 # A rejected credential is retried after this long: long enough not to spam a
@@ -97,11 +98,24 @@ def cool_down_provider(provider: Any, seconds: Optional[float]) -> float:
     return delay
 
 
+def first_announcement(key: str) -> bool:
+    """True only the first time ``key`` is seen in this process.
+
+    Lets a persistent failure raise one loud message instead of one per call.
+    """
+    with _LOCK:
+        if key in _ANNOUNCED:
+            return False
+        _ANNOUNCED.add(key)
+        return True
+
+
 def reset_state() -> None:
     """Clear process-wide state (tests / long-lived services)."""
     with _LOCK:
         _DISABLED.clear()
         _COOLDOWN_UNTIL.clear()
+        _ANNOUNCED.clear()
 
 
 # ---------------------------------------------------------------------- records
@@ -173,5 +187,14 @@ def emit_attempt(
         try:
             sink(record)
         except Exception as sink_err:  # noqa: BLE001 - metrics must never break calls
-            logger.debug("LLM attempt sink failed: {}", sink_err)
+            # Fail-open for the call, loud for the operator: a dead sink blinds
+            # the run report. Once per sink, since it would fail on every attempt.
+            if first_announcement(f"sink:{getattr(sink, '__qualname__', repr(sink))}"):
+                logger.warning(
+                    "LLM attempt sink {} failed ({}: {}); run-report metrics "
+                    "are incomplete until it is fixed",
+                    getattr(sink, "__qualname__", repr(sink)),
+                    sink_err.__class__.__name__,
+                    sink_err,
+                )
     return record

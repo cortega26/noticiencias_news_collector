@@ -23,7 +23,11 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-ADMIN_PANEL = Path(__file__).resolve().parents[1] / "apps/refinery/admin_panel.py"
+# Absolute: AppTest.from_file resolves a relative path against the calling test
+# file (streamlit >= 1.57), not the working directory.
+ADMIN_PANEL = str(
+    Path(__file__).resolve().parents[1] / "apps" / "refinery" / "admin_panel.py"
+)
 
 WEIGHT_KEYS = (
     "w_source_credibility",

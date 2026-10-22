@@ -26,6 +26,12 @@ STAGES = ("prescoring", "scoring", "rescoring")
 # share of empty responses before the run-end block notes the provider.
 _BLANK_RATE_MIN_CALLS = 3
 _BLANK_RATE_WARN_THRESHOLD = 0.25
+# A provider with zero successes is "dead" once it has this many real attempts;
+# config faults (below) count from the first one.
+_DEAD_PROVIDER_MIN_CALLS = 3
+# Failure kinds that do not heal on their own (bad key, retired model, rejected
+# request). Plain strings: the metrics store persists ``FailureKind`` values.
+_CONFIG_FAULT_KINDS = ("auth", "client_error")
 # Stages that can raise a degraded alert. Re-scoring is informational: it is
 # served by the cache/heuristics by policy, so its heuristic share is expected.
 ALERTING_STAGES = ("prescoring", "scoring")
@@ -92,6 +98,30 @@ def _stage_outcomes(counts: Mapping[str, int]) -> List[StageOutcome]:
     return outcomes
 
 
+def _dead_provider_reasons(purpose: str, rows: Iterable[ProviderSummary]) -> List[str]:
+    """Providers that served nothing while another one covered for them.
+
+    The chain hides such a provider behind whichever one answered, so the run
+    looks healthy while a fallback is dead (e.g. a retired model answering 404).
+    Config faults count from the first attempt; anything else needs a few
+    attempts to rule out a one-off blip.
+    """
+    out: List[str] = []
+    for p in rows:
+        if p.ok or not p.calls:
+            continue
+        config_fault = any(p.kinds.get(kind) for kind in _CONFIG_FAULT_KINDS)
+        if not (config_fault or p.calls >= _DEAD_PROVIDER_MIN_CALLS):
+            continue
+        failures = ", ".join(f"{k}={v}" for k, v in sorted(p.kinds.items())) or "-"
+        out.append(
+            f"{purpose}: {p.provider} ({p.model}) falló {p.calls}/{p.calls} "
+            f"intentos [{failures}] mientras otro proveedor cubrió el trabajo; "
+            "revisa su configuración"
+        )
+    return out
+
+
 def build_run_report(
     counts: Mapping[str, int],
     providers: Sequence[ProviderSummary],
@@ -128,8 +158,11 @@ def build_run_report(
         for p in providers:
             by_purpose.setdefault(p.purpose or "all", []).append(p)
         for purpose, rows in by_purpose.items():
-            if sum(r.calls for r in rows) and sum(r.ok for r in rows) == 0:
+            served = sum(r.ok for r in rows)
+            if sum(r.calls for r in rows) and served == 0:
                 reasons.append(f"{purpose}: every provider attempt failed")
+            elif served:
+                reasons.extend(_dead_provider_reasons(purpose, rows))
     return LLMRunReport(
         run_id=run_id,
         stages=stages,

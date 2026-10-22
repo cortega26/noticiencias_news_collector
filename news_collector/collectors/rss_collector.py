@@ -485,8 +485,10 @@ class RSSCollector(BaseCollector):
             if meta:
                 cached_headers = meta
         except Exception as e:
+            # Falls back to an unconditional GET, but a failing metadata read
+            # means the DB is unhealthy: say so.
             self._emit_log(
-                "debug",
+                "warning",
                 "collector.feed.metadata_fetch_failed",
                 source_id=source_id,
                 details={"error": str(e)},

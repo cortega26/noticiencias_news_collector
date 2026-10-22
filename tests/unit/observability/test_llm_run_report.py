@@ -434,3 +434,66 @@ def test_blank_rate_note_silent_below_floor():
 def test_format_without_providers_has_no_note():
     report = rr.build_run_report({"scoring.llm": 1}, [], run_id="r1")
     assert "respuestas vacías" not in rr.format_run_report(report)
+
+
+# ------------------------------------------------- dead provider behind a healthy one
+
+
+def _row(provider, *, calls, ok, kinds=None, purpose="scoring"):
+    return ProviderSummary(
+        provider, f"{provider}-m", purpose, calls=calls, ok=ok, kinds=kinds or {}
+    )
+
+
+def test_dead_fallback_behind_a_healthy_provider_degrades_the_run():
+    """A retired model answering 404 is hidden by whichever provider covers it."""
+    rows = [
+        _row("groq", calls=10, ok=10),
+        _row("openrouter", calls=5, ok=0, kinds={"client_error": 5}),
+    ]
+    report = rr.build_run_report({"scoring.llm": 10}, rows)
+    assert report.degraded is True
+    (reason,) = report.reasons
+    assert "openrouter (openrouter-m) falló 5/5 intentos [client_error=5]" in reason
+    assert "DEGRADADO" in rr.format_run_report(report)
+
+
+def test_a_single_config_fault_attempt_is_enough():
+    rows = [
+        _row("groq", calls=10, ok=10),
+        _row("openrouter", calls=1, ok=0, kinds={"auth": 1}),
+    ]
+    assert rr.build_run_report({}, rows).degraded is True
+
+
+def test_transient_failures_below_the_threshold_do_not_degrade():
+    rows = [
+        _row("groq", calls=10, ok=10),
+        _row("openrouter", calls=2, ok=0, kinds={"timeout": 2}),
+    ]
+    assert rr.build_run_report({}, rows).degraded is False
+
+
+def test_repeated_transient_failures_with_no_success_degrade():
+    rows = [
+        _row("groq", calls=10, ok=10),
+        _row("openrouter", calls=3, ok=0, kinds={"timeout": 3}),
+    ]
+    assert rr.build_run_report({}, rows).degraded is True
+
+
+def test_provider_with_some_successes_is_not_dead():
+    rows = [
+        _row("groq", calls=10, ok=10),
+        _row("openrouter", calls=5, ok=1, kinds={"client_error": 4}),
+    ]
+    assert rr.build_run_report({}, rows).degraded is False
+
+
+def test_total_outage_is_reported_once_not_per_provider():
+    rows = [
+        _row("groq", calls=3, ok=0, kinds={"timeout": 3}),
+        _row("openrouter", calls=3, ok=0, kinds={"client_error": 3}),
+    ]
+    report = rr.build_run_report({}, rows)
+    assert report.reasons == ["scoring: every provider attempt failed"]
