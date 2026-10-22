@@ -387,6 +387,23 @@ class GitHubPublisher:
                             "No force push was attempted."
                         ) from rebase_error
 
+    def ensure_pull_request_draft(self, repo_url: str, branch_name: str) -> None:
+        """Read current remote review state before pushing changed article content."""
+        owner, repo_name = repo_url.removesuffix(".git").rstrip("/").split("/")[-2:]
+        response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo_name}/pulls",
+            params={"head": f"{owner}:{branch_name}", "state": "open"},
+            headers=self.headers,
+            timeout=15,
+        )
+        response.raise_for_status()
+        for pull in response.json():
+            if pull.get("draft") is not True:
+                raise ValueError(
+                    "Existing article PR is ready for review; return it to draft "
+                    "before changing its content and request renewed human review."
+                )
+
     def create_pull_request(
         self,
         repo_url: str,
@@ -394,6 +411,7 @@ class GitHubPublisher:
         title: str,
         body: str,
         base_branch: str | None = None,
+        draft: bool = False,
     ) -> str:
         """Creates a Pull Request via GitHub API."""
         # Extract owner and repo from URL
@@ -409,6 +427,7 @@ class GitHubPublisher:
             "body": body,
             "head": branch_name,
             "base": (base_branch or self.base_branch).strip() or self.base_branch,
+            "draft": draft,
         }
 
         response = requests.post(
@@ -433,7 +452,24 @@ class GitHubPublisher:
             if search_response.status_code == 200:
                 prs = search_response.json()
                 if prs:
-                    existing_url = str(prs[0].get("html_url", ""))
+                    existing = prs[0]
+                    if draft:
+                        if existing.get("draft") is not True:
+                            raise ValueError(
+                                "Existing article PR is ready for review; renewed human review "
+                                "is required. Return it to draft before retrying publication."
+                            )
+                        number = existing.get("number")
+                        if not isinstance(number, int) or isinstance(number, bool):
+                            raise ValueError("Existing draft PR has no valid number")
+                        refreshed = requests.patch(
+                            f"{api_url}/{number}",
+                            json={"title": title, "body": body},
+                            headers=self.headers,
+                            timeout=15,
+                        )
+                        refreshed.raise_for_status()
+                    existing_url = str(existing.get("html_url", ""))
                     logger.info(
                         f"Recovered existing PR for branch {branch_name}: {existing_url}"
                     )

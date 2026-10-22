@@ -165,18 +165,20 @@ class TestFromRawString:
 
 class TestEditorialStage:
     def test_values_preserve_existing_keys_except_intentionally_versioned_critic(self):
-        assert EditorialStage.TRANSLATION.value == "stage1_translation"
-        assert EditorialStage.EDITORIAL.value == "stage2_editorial"
-        assert EditorialStage.TECHNICAL_CRITIC_OK.value == "stage2_5_critic_ok"
+        assert EditorialStage.TRANSLATION.value == "stage1_translation_evidence_v2"
+        assert EditorialStage.EDITORIAL.value == "stage2_editorial_evidence_v2"
+        assert (
+            EditorialStage.TECHNICAL_CRITIC_OK.value == "stage2_5_critic_evidence_v2_ok"
+        )
         assert (
             EditorialStage.EDITORIAL_CRITIC_OK.value
-            == "stage2_6_editorial_critic_value_add_v3_ok"
+            == "stage2_6_editorial_critic_evidence_v5_ok"
         )
-        assert EditorialStage.ENRICHMENT.value == "stage4_enrichment"
+        assert EditorialStage.ENRICHMENT.value == "stage4_enrichment_evidence_v2"
 
     def test_formats_as_the_legacy_cache_filename_stem(self):
         assert (
             f"abc_{EditorialStage.TECHNICAL_CRITIC_OK}.txt"
-            == "abc_stage2_5_critic_ok.txt"
+            == "abc_stage2_5_critic_evidence_v2_ok.txt"
         )
-        assert str(EditorialStage.ENRICHMENT) == "stage4_enrichment"
+        assert str(EditorialStage.ENRICHMENT) == "stage4_enrichment_evidence_v2"

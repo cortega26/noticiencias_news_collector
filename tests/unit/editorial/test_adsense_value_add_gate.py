@@ -48,10 +48,12 @@ def test_close_paraphrase_rejects_even_when_seven_scores_pass():
 
 
 def test_close_paraphrase_cannot_be_approved():
-    with pytest.raises(ValueError, match="thresholds"):
+    assert (
         _parse_editorial_critic_result(
             _scores_verdict(value_add_assessment="close_paraphrase")
-        )
+        )[0]
+        is False
+    )
 
 
 @pytest.mark.parametrize("assessment", ["substantive", "insufficient_source"])
@@ -149,7 +151,7 @@ def test_invalid_close_paraphrase_fails_open_and_publishes():
     verdict = agent._critic_editorial_pass("Contenido editorial " * 20)
     assert verdict.is_valid is True
     assert verdict.checkpointable is False
-    assert agent.last_critic_verdict is None
+    assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     # The engine gate must publish for the fail-open verdict the agent just
     # produced, and for a legacy/missing-assessment verdict with no

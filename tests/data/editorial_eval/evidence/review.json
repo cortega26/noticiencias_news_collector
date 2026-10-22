@@ -1,0 +1,9 @@
+{
+  "human_review": {
+    "status": "pending",
+    "reviewer_a": null,
+    "reviewer_b": null,
+    "adjudicated": null
+  },
+  "meaning": "Source excerpts are recorded references; outputs are deliberate synthetic negative controls, not generated comparisons or human gold. Literal assertions detect these exact mutations, not semantic correctness or general close paraphrase. The arXiv case only asserts that repository presence alone does not attest peer review, not current publication status."
+}

@@ -214,3 +214,37 @@ docs fully removes the pilot. It has no runtime, schema, publication, prompt or
 model dependency. It does not replace the snapshot quality gate or Plan 048's
 enrichment evaluation. Add real captured cases only with traceable provenance
 and explicit review evidence; do not label synthetic fixtures as reviewed.
+
+## Evidence-first controls and live prompt comparison (plan 191)
+
+`tests/data/editorial_eval/evidence/` adds eleven controls using traceable NASA,
+LJMU, NIH and arXiv excerpts. Both output sets are **synthetic**, with one
+faithful control and ten deliberate mutations: close adaptation without the
+assigned explanation, unsupported regional application, incomplete evidence,
+numerical drift, causal overstatement, unproved review status, animal-to-human
+extrapolation, misleading headline, contradictory verification panel and reversal of a source negation.
+`review.json` keeps all human labels pending. These are literal replay controls,
+not proof of semantic entailment, plagiarism or production quality.
+
+`capture_chain.py` runs the actual configured `EditorAgent.prepare_article`
+with old and new prompt files, isolated caches and no publication/media step.
+It compares **prompts under the current runtime**, not the old runtime against
+the new runtime. It records errors in the denominator, hashes of the source and
+prompts, actual verdicts, pending human assessment and bounded calls/time/output
+tokens. Configured provider order and model IDs are retained; evaluation-only
+timeouts and output caps are explicit. Existing credentials must already be in
+the environment; no subscription or account change is made.
+
+```bash
+python tools/editorial_eval/capture_chain.py \
+  --source /tmp/available-source.txt --source-url https://example.org/source \
+  --title 'Pregunta científica' --publication-date 2024-06-05 --baseline-prompts /tmp/baseline-prompts.yaml \
+  --output-dir /tmp/editorial-comparison --max-calls 24 --max-seconds 600
+```
+
+A transport/parser canary, deterministic control pass or completed draft is not
+human semantic acceptance. Do not publish captured drafts or record reviewer
+names without actual review. Failed runs also save a review packet containing
+the retained concrete critic findings; stage caches preserve the draft. Call
+budgets count logical editorial/provider-seam calls; a configured fallback
+chain may attempt multiple providers within one such call.

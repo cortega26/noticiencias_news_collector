@@ -557,5 +557,13 @@ class TestPoisonedStage4Cache:
             "Nature - Stable plasma maintenance in nuclear fusion experiments"
         )
         # And the on-disk cache was overwritten with the valid artifact
-        regenerated = json.loads(cache_path.read_text(encoding="utf-8"))
+        from news_collector.components.editorial.editorial_stages import EditorialStage
+
+        regenerated = json.loads(
+            agent._get_cache_path("demo", EditorialStage.ENRICHMENT).read_text(
+                encoding="utf-8"
+            )
+        )
+        # Legacy artifact is preserved; versioned caches never mutate it.
+        assert json.loads(cache_path.read_text(encoding="utf-8"))["sources"] == []
         assert len(regenerated["sources"]) == 1

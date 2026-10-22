@@ -33,6 +33,7 @@ _DERIVED_AVERAGE = 8.43  # 59 / 7, rounded to two decimals
 def _verdict(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "approved": True,
+        "material_claims_supported": True,
         "average": 8.5,
         "feedback": "",
         "recoverable": True,
@@ -108,10 +109,12 @@ class TestApprovalRuleUnchanged:
             _parse_editorial_critic_result(_verdict(rigor_score=5))
 
     def test_close_paraphrase_cannot_be_approved(self):
-        with pytest.raises(ValueError, match="contradicts the stated thresholds"):
+        assert (
             _parse_editorial_critic_result(
                 _verdict(value_add_assessment="close_paraphrase")
-            )
+            )[0]
+            is False
+        )
 
 
 class TestAgentStoresDerivedVerdict:

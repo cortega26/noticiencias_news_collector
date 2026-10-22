@@ -1,0 +1,11 @@
+# 191 task status
+- [x] Read governance, inspect exact paths and start baseline checks.
+- [x] Revise prompt chain and implement internal evidence/review packet.
+- [x] Enforce material editorial holds and honest unverified outcomes; bind/version caches.
+- [x] Create draft article PRs with final human review checklist.
+- [x] Add source-backed regression controls and run targeted tests.
+- [x] Fix reviewer P1: retain known material findings through failed re-review, including durable candidate binding and isolation regressions.
+- [x] Fix second reviewer P1: retain known headline fidelity/sensationalism rejection through unverified re-review/resume.
+- [x] Run configured live stages and mandatory local gates; record safe holds/provider failures and pending semantic acceptance.
+- [x] Independent safety review: fourteen adversarial cases and 134 focused tests; final feedback-selection change covered by evidence regressions/full local gates.
+- [ ] Parent integration and human semantic acceptance (no commit/push/merge by implementer).

@@ -72,6 +72,7 @@ def pipeline_agent(tmp_path, monkeypatch):
                         )
                     },
                     "approved": True,
+                    "material_claims_supported": True,
                     "recoverable": True,
                     "feedback": "",
                     "value_add_assessment": "substantive",
@@ -169,3 +170,37 @@ def test_draft_preserves_non_media_cross_field_validators(tmp_path, monkeypatch)
     stored["frontmatter"]["image"] = None
     with pytest.raises(ValidationError, match="must not contain media"):
         EditorialDraft.model_validate(stored)
+
+
+def test_changed_candidate_invalidates_critic_and_enrichment_approvals(
+    tmp_path, monkeypatch
+):
+    from news_collector.components.editorial.editorial_stages import EditorialStage
+
+    agent, calls = pipeline_agent(tmp_path, monkeypatch)
+    article = raw_article()
+    agent.prepare_article(article, override_date="2026-03-02")
+    calls.clear()
+    cached_editorial = agent._get_cache_path("3822", EditorialStage.EDITORIAL)
+    cached_editorial.write_text(
+        BODY.replace("procesos celulares", "procesos biológicos")
+    )
+    agent.prepare_article(article, override_date="2026-03-02")
+    assert any("Quality Control Editor" in call for call in calls)
+    assert any("STAGE_editor_critic" in call for call in calls)
+    assert any("STAGE_enrichment" in call for call in calls)
+
+
+def test_disabled_technical_review_cannot_create_success_checkpoint(
+    tmp_path, monkeypatch
+):
+    from news_collector.components.editorial.editorial_stages import EditorialStage
+
+    agent, _ = pipeline_agent(tmp_path, monkeypatch)
+    monkeypatch.setenv("ENABLE_TRANSLATION_GUARD", "false")
+    draft = agent.prepare_article(raw_article(), override_date="2026-03-02")
+    assert not agent._get_cache_path(
+        "3822", EditorialStage.TECHNICAL_CRITIC_OK
+    ).exists()
+    assert agent.last_technical_verdict["verification_status"] == "unverified"
+    assert "Revisión técnica" in draft.grounding_notes

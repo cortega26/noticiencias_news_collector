@@ -624,3 +624,90 @@ def test_create_pull_request_failure_raises(publisher):
             publisher.create_pull_request(
                 "https://github.com/org/repo.git", "feat/b", "Title", "Body"
             )
+
+
+def test_article_pr_requests_draft_at_api_boundary(publisher):
+    with patch(
+        "news_collector.components.publishing.github_publisher.requests.post"
+    ) as post:
+        post.return_value.status_code = 201
+        post.return_value.json.return_value = {
+            "html_url": "https://github.com/o/r/pull/1"
+        }
+        publisher.create_pull_request(
+            "https://github.com/o/r", "article", "Title", "Pending review", draft=True
+        )
+    assert post.call_args.kwargs["json"]["draft"] is True
+
+
+def test_ready_article_pr_cannot_be_reused_as_reviewed_after_content_change(publisher):
+    with (
+        patch(
+            "news_collector.components.publishing.github_publisher.requests.post"
+        ) as post,
+        patch(
+            "news_collector.components.publishing.github_publisher.requests.get"
+        ) as get,
+    ):
+        post.return_value.status_code = 422
+        get.return_value.status_code = 200
+        get.return_value.json.return_value = [
+            {"number": 1, "draft": False, "html_url": "https://github.com/o/r/pull/1"}
+        ]
+        with pytest.raises(ValueError, match="renewed human review"):
+            publisher.create_pull_request(
+                "https://github.com/o/r",
+                "article",
+                "Title",
+                "Changed evidence",
+                draft=True,
+            )
+
+
+def test_existing_draft_review_packet_is_refreshed(publisher):
+    with (
+        patch(
+            "news_collector.components.publishing.github_publisher.requests.post"
+        ) as post,
+        patch(
+            "news_collector.components.publishing.github_publisher.requests.get"
+        ) as get,
+        patch(
+            "news_collector.components.publishing.github_publisher.requests.patch"
+        ) as update,
+    ):
+        post.return_value.status_code = 422
+        get.return_value.status_code = 200
+        get.return_value.json.return_value = [
+            {"number": 1, "draft": True, "html_url": "https://github.com/o/r/pull/1"}
+        ]
+        result = publisher.create_pull_request(
+            "https://github.com/o/r",
+            "article",
+            "Title",
+            "Final evidence fingerprint",
+            draft=True,
+        )
+    assert result == "https://github.com/o/r/pull/1"
+    assert update.call_args.kwargs["json"]["body"] == "Final evidence fingerprint"
+
+
+def test_review_preflight_rejects_existing_ready_pr(publisher):
+    with patch(
+        "news_collector.components.publishing.github_publisher.requests.get"
+    ) as get:
+        get.return_value.json.return_value = [{"draft": False}]
+        with pytest.raises(ValueError, match="before changing its content"):
+            publisher.ensure_pull_request_draft("https://github.com/o/r", "article")
+
+
+def test_review_preflight_allows_only_no_pr_or_draft(publisher):
+    with patch(
+        "news_collector.components.publishing.github_publisher.requests.get"
+    ) as get:
+        for pulls in ([], [{"draft": True}]):
+            get.return_value.json.return_value = pulls
+            assert (
+                publisher.ensure_pull_request_draft("https://github.com/o/r", "article")
+                is None
+            )

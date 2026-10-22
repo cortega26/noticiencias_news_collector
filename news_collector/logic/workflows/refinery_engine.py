@@ -1058,6 +1058,14 @@ class RefineryEngine:
         if isinstance(refined_content, str):
             self._record_prose_hygiene_stages(article, refined_content, run)
 
+        draft = getattr(self, "_prepared_draft", None)
+        packet = (
+            draft.grounding_notes
+            if isinstance(draft, EditorialDraft)
+            else getattr(self.editor, "last_review_notes", "")
+        )
+        if isinstance(packet, str) and packet:
+            grounding_notes = packet + "\n\n" + grounding_notes
         return refined_content, grounding_notes
 
     @staticmethod

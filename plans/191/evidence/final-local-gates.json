@@ -1,0 +1,64 @@
+{
+  "local_log": "/tmp/noticiencias-pipeline-final-gates7.log",
+  "exit_code": 0,
+  "targets": [
+    "lint",
+    "type",
+    "test",
+    "test-contracts",
+    "test-boundaries",
+    "quality-gate",
+    "docs-check",
+    "inventory-check"
+  ],
+  "type": {
+    "mypy_source_files": 3,
+    "unit_passed": 4462,
+    "unit_skipped": 5,
+    "unit_deselected": 190,
+    "unit_seconds": 155.45,
+    "coverage_percent": 90.07,
+    "coverage_baseline_percent": 88.44,
+    "changed_files_ratchet": "passed"
+  },
+  "test": {
+    "passed": 4462,
+    "skipped": 5,
+    "deselected": 190,
+    "seconds": 97.42
+  },
+  "contracts": {
+    "passed": 310
+  },
+  "boundaries": {
+    "passed": 3
+  },
+  "quality_gate": "three snapshots valid",
+  "docs_checked": 15,
+  "inventory_drift_count": 0,
+  "independent_safety_cases": 14,
+  "independent_focused_tests": 134,
+  "scoring_canary": {
+    "passed": 5,
+    "total": 5,
+    "seconds": 1.4,
+    "editorial_semantic_proof": false
+  },
+  "failed_or_interrupted_preliminary_runs": {
+    "gates3": "isort formatting corrected",
+    "gates4": "complexity reduced without suppressing lint",
+    "gates5": "stale cache-key version assertion corrected",
+    "gates6": "interrupted to include concrete material feedback repair; not a pass"
+  },
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false,
+  "final_document_checks": {
+    "log": "/tmp/noticiencias-pipeline-final-docs2.log",
+    "exit_code": 0,
+    "targets": [
+      "docs-check",
+      "inventory-check",
+      "plans-ledger-check"
+    ]
+  }
+}

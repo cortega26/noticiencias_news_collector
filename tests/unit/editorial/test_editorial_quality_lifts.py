@@ -41,7 +41,7 @@ _VALID_ENRICHMENT = json.dumps(
 
 
 class TestHeadlineExhaustionEvent:
-    def test_exhaustion_publishes_last_and_emits_event(self, monkeypatch) -> None:
+    def test_exhaustion_holds_rejected_headlines(self, monkeypatch) -> None:
         agent = _agent()
         headlines = {"direct": "Titular final"}
         agent._generate_headlines = MagicMock(return_value=dict(headlines))
@@ -53,14 +53,16 @@ class TestHeadlineExhaustionEvent:
             lambda *a, **k: events.append(a[0] if a else None),
         )
 
-        result = agent._generate_headlines_with_critic("cuerpo")
+        import pytest
 
-        assert result == headlines
-        assert agent._headline_critic_pass.call_count == 3  # initial + 2 retries
-        structured = [e for e in events if isinstance(e, dict)]
-        assert len(structured) == 1
-        assert structured[0]["event"] == "headline_critic.exhausted"
-        assert structured[0]["attempts"] == 3
+        from news_collector.components.editorial.ai_editor import (
+            GeneratedArticleValidationError,
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as held:
+            agent._generate_headlines_with_critic("cuerpo")
+        assert held.value.error_code == "E_HEADLINE_EVIDENCE"
+        assert agent._headline_critic_pass.call_count == 3
 
     def test_approval_short_circuits_without_event(self, monkeypatch) -> None:
         agent = _agent()

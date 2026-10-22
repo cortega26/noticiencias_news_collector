@@ -1,0 +1,1 @@
+Behavioral tests extend `tests/unit/editorial/`, `tests/decompose_refinery/`, and the existing `tools/editorial_eval` corpus. These tests exercise repository runtime code; semantic human labels remain pending until a human records review.

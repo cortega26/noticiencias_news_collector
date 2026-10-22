@@ -24,6 +24,7 @@ from news_collector.components.editorial.ai_editor import (
     GeneratedArticleValidationError,
 )
 from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
+from news_collector.components.editorial.editorial_stages import EditorialStage
 
 _LONG_BODY = (
     "**El Impacto (Lead)**\n"
@@ -448,7 +449,9 @@ class TestProcessArticleFactCheckIntegration:
         agent = _pipeline_agent(tmp_path)
         article_id = "fc-cache-hit"
 
-        cache_path = agent.cache_dir / f"{article_id}_stage4_enrichment.txt"
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
+        agent.process_article(_base_article(id=article_id), override_date="2026-03-02")
+        cache_path = agent._get_cache_path(article_id, EditorialStage.ENRICHMENT)
         cached_enrichment = {
             **_VALID_ENRICHMENT_FIELDS,
             "fact_check": [
@@ -484,7 +487,9 @@ class TestProcessArticleFactCheckIntegration:
         agent = _pipeline_agent(tmp_path)
         article_id = "fc-cache-hit-ok"
 
-        cache_path = agent.cache_dir / f"{article_id}_stage4_enrichment.txt"
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "confirmed"})
+        agent.process_article(_base_article(id=article_id), override_date="2026-03-02")
+        cache_path = agent._get_cache_path(article_id, EditorialStage.ENRICHMENT)
         cached_enrichment = {
             **_VALID_ENRICHMENT_FIELDS,
             "fact_check": [{"label": "Afirmación cacheada", "status": "confirmed"}],

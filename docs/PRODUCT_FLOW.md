@@ -164,3 +164,36 @@ Use [PIPELINE_CONTRACTS.md](PIPELINE_CONTRACTS.md) for contracts,
 [RUNBOOK_LOCAL_DEV.md](RUNBOOK_LOCAL_DEV.md) for setup and
 [runbook.md](runbook.md) for incidents. Historical plans do not override those
 active sources or the files that implement the behavior.
+
+### Evidence-first editorial review (plan 191)
+
+The editor builds an internal brief from the source text already retrieved by
+collection: reader question, proposed explanatory contribution, exact bounded
+passage, source URL/hash and coverage limitations. It performs no additional
+retrieval and does not claim that the available news source is independent or
+primary evidence. Adaptation, proofreading, headline and enrichment callers
+receive this context. Source-support comparison preserves uncertainty; it is
+not an independent fact check.
+
+Material unsupported claims and close paraphrase surviving bounded repair hold
+publication; persistent unsupported/sensationalist headlines also hold it.
+Infrastructure and skipped reviews remain explicitly unverified, never cached
+as successful review. Stage artifacts preserve work for correction. Versioned,
+source/prompt-bound stage caches and candidate-bound critic checkpoints prevent
+old approvals from silently covering changed editorial inputs.
+
+Article PRs are created as **drafts** with available evidence, actual critic
+findings, image provenance, final artifact fingerprint and a human review
+checklist. Human review remains **pending** until the editor reviews the final
+headline, body and metadata. Changes to the final commit/evidence need renewed
+review. No human reviewer metadata is generated. This implementation does not
+change GitHub protected settings; a draft/checklist alone cannot enforce human
+approval against an operator who marks a PR ready and merges it.
+
+Known material or headline fidelity/sensationalism findings remain held through
+failed/malformed re-review and regeneration. Candidate changes (including a
+technical repair on resume) require explicit material revalidation within the
+same article/source/prompt revision; only positive checkpoints require exact
+body equality. Concrete findings and reviewed/latest-candidate hashes remain
+in isolated review artifacts, and unverified infrastructure never clears a
+known rejection. A new article/source/prompt revision starts a separate review.
