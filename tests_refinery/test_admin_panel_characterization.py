@@ -20,6 +20,7 @@ start to avoid state leaking in from a previous test in the same run.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import patch
 
 import streamlit as st
@@ -27,7 +28,7 @@ from streamlit.testing.v1 import AppTest
 
 from news_collector.storage.database import DatabaseManager
 
-ADMIN_PANEL = "apps/refinery/admin_panel.py"
+ADMIN_PANEL = Path(__file__).resolve().parents[1] / "apps/refinery/admin_panel.py"
 
 
 @contextmanager

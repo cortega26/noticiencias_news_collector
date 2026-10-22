@@ -81,9 +81,10 @@ and [`docs/PIPELINE_CONTRACTS.md`](docs/PIPELINE_CONTRACTS.md) for the contracts
 
 Apply Alembic revision `f190a1b2c3d4` with `make migrate` before starting the
 compatible backend/admin. Preserve checkpoints during rollback; the migration
-refuses downgrade while image waits remain. Pillow 12.3.0 is pinned in the base
+refuses downgrade while image waits remain. Pillow 13.0.0 is pinned in the base
 runtime lock so serving can decode and validate uploaded assets without the
-Streamlit extra.
+Streamlit extra. The legacy Refinery minimum is Streamlit 1.66.1 for
+Pillow 13 compatibility.
 
 ## Governance Docs
 

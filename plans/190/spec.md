@@ -68,3 +68,14 @@ folder; never overwrite root task files. Document migration-before-code rollout
 and rollback that preserves drafts and disables auto-resume. Publishing is via PR
 only; no merge or destructive DB changes. Mark completed only with evidence;
 provider/runtime limitations must remain explicit.
+
+## Dependency security follow-up
+
+The PR dependency review identified GHSA-8g5g-8vmr-9782 in Pillow 12.3.0.
+Require the patched Pillow 13.0.0 release and keep runtime/refinery locks
+consistent. Streamlit 1.66.1 supports Pillow 13; raise the fallback minimum
+so both admin paths remain installable. Verify actual image decoding and the existing security gates;
+retain the legacy Refinery fallback. Do not waive the advisory.
+Make its AppTest harness independent of the checkout location: resolve the app
+path absolutely and restrict sibling-checkout discovery to the fixture root,
+rather than scanning unrelated directories outside the test workspace.

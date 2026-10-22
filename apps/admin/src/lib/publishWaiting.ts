@@ -16,6 +16,7 @@ const IMAGE_REASONS: Record<string, string> = {
   placeholder_image_debt: 'La imagen provisional requiere reemplazo',
   missing_alt_text: 'Falta el texto alternativo de la imagen',
   third_party_image_blocked: 'Derechos de redistribución pendientes',
+  unproven_image_rights: 'Derechos de redistribución pendientes',
 };
 
 function imageDependency(reason?: string | null, slug?: string | null): string {

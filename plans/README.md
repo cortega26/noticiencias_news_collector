@@ -612,4 +612,4 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 
 | ID | Plan | Priority | Effort | Dependencies | Status |
 | --- | --- | --- | --- | --- | --- |
-| 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance validated; review/merge and production rollout pending. See [evidence](190/tests/results.md). |
+| 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance in [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382); final dependency review, merge and rollout pending. See [evidence](190/tests/results.md). |

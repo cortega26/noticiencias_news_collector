@@ -19,9 +19,11 @@ These tests run only under the isolated `.venv-refinery` environment
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
-ADMIN_PANEL = "apps/refinery/admin_panel.py"
+ADMIN_PANEL = Path(__file__).resolve().parents[1] / "apps/refinery/admin_panel.py"
 
 WEIGHT_KEYS = (
     "w_source_credibility",

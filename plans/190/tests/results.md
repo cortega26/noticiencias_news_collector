@@ -21,7 +21,7 @@ secret detector and its exceptions were unchanged.
 - `make test-contracts`, `make test-boundaries`, `make quality-gate`,
   `make quality`: passed. Existing security severity/allowlist and non-blocking
   Semgrep policy were retained; no thresholds or suppressions were weakened.
-- `make admin-test`: 95 passed. `make admin-lint`, `make admin-build`,
+- `make admin-test`: 96 passed. `make admin-lint`, `make admin-build`,
   `make admin-contracts-check`: passed.
 - `make docs-check`, `make inventory-check`, `make plans-ledger-check`: passed.
 - Fresh independent lifecycle review: 85 focused cases passed, no material gap;
@@ -111,3 +111,19 @@ publication attempt exists in the canary copy; it is not evidence in the live
 service. Do not merge it as production publication until the real backend
 request/attempt has been correlated after rollout. No merge, deploy or live
 publication has been claimed.
+
+## Dependency review follow-up
+
+Socket identified [GHSA-8g5g-8vmr-9782](https://github.com/advisories/GHSA-8g5g-8vmr-9782)
+in the initially promoted Pillow 12.3.0. The patched release is Pillow 13.0.0;
+all four locks are regenerated with the repository sync script. Streamlit
+1.66.1 supports Pillow 13 and replaces the fallback's incompatible 1.54.0
+constraint. The AppTest entrypoint fixtures now use absolute paths, matching
+current Streamlit path resolution. The public image-rights wait reason also
+has a Spanish label and a regression test.
+
+The isolated SAST lock resolves MCP 1.30.0 to Semgrep 1.180.0's required
+1.29.0. This is an explicit tool-only resolver correction under the existing
+SAST isolation/security policy, not a runtime dependency or new waiver. Other
+resolver deltas are confined to Pillow, Streamlit and its required transitives.
+The task uses a private Python environment; the shared environment was preserved.

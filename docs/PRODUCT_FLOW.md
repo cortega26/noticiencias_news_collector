@@ -90,7 +90,7 @@ unattended image-generation API or a new paid provider integration. Generation
 failure leaves the image task pending and preserves the editorial draft.
 Uploads can include typed `generation_metadata` (prompt, tool, SHA-256, width
 and height); the server checks the hash and dimensions against the decoded
-file and records asset evidence. Pillow 12.3.0, previously in the Refinery lock,
+file and records asset evidence. Pillow 13.0.0, previously in the Refinery lock,
 is now also pinned in the base runtime lock so serving can decode actual image
 bytes without installing the Streamlit extra.
 

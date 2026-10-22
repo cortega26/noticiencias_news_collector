@@ -302,7 +302,7 @@ the existing description/headline fallback. Missing, placeholder,
 download-failed and unproven-rights assets defer only publication. Optional
 `ImageGenerationMetadata` records prompt, tool, SHA-256 and dimensions; upload
 validates the supplied hash and size against actual bytes and the brief also
-records `asset_sha256`, `asset_width` and `asset_height`. Pillow 12.3.0 is pinned
+records `asset_sha256`, `asset_width` and `asset_height`. Pillow 13.0.0 is pinned
 in the base runtime lock as well as the existing Refinery lock; decoding actual
 bytes no longer depends on installing the Streamlit extra. Codex can
 generate and review assets through its built-in `imagegen` during an active

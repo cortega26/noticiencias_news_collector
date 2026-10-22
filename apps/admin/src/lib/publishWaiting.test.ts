@@ -58,6 +58,13 @@ describe('waiting publication', () => {
     expect(host.textContent).toContain('editorial rejection');
   });
 
+  it('explains unproven image rights in Spanish', () => {
+    const host = mount({ ...waiting, image_reason: 'unproven_image_rights' });
+    expect(host.textContent).toContain('Derechos de redistribución pendientes');
+    expect(host.textContent).not.toContain('unproven_image_rights');
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/images#roots-3822');
+  });
+
   it('escapes unknown reasons and encodes brief anchors', () => {
     const host = mount({
       ...waiting,
