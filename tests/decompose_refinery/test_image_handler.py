@@ -539,7 +539,9 @@ class TestThirdPartyImagePolicy:
         assert result.resolved is True
         assert result.image_url == "~/assets/images/staged.jpg"
 
-    def test_local_image_path_is_not_affected(self, image_briefs_stub, target_dir):
+    def test_local_image_path_without_provenance_stays_pending(
+        self, image_briefs_stub, target_dir
+    ):
         strict = ArticleImageHandler(
             image_briefs=image_briefs_stub, remote_image_hosts=frozenset()
         )
@@ -548,8 +550,9 @@ class TestThirdPartyImagePolicy:
             strict, target_dir, "~/assets/images/own-illustration.webp"
         )
 
-        assert result.resolved is True
-        assert result.image_url == "~/assets/images/own-illustration.webp"
+        assert result.resolved is False
+        assert result.queued_brief is True
+        assert result.reason == "unproven_image_rights"
 
 
 class TestSlugWriteGuard:

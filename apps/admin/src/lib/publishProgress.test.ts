@@ -17,12 +17,12 @@ describe('currentPhaseIndex', () => {
 
   it('moves one past the furthest marker reached, ignoring minor stages', () => {
     expect(currentPhaseIndex(['identity_resolved'])).toBe(1);
-    expect(currentPhaseIndex(['identity_resolved', 'image_resolution'])).toBe(2);
+    expect(currentPhaseIndex(['identity_resolved', 'editor_refinement'])).toBe(2);
     expect(
       currentPhaseIndex([
         'identity_resolved',
-        'image_resolution',
         'editor_refinement',
+        'frontmatter_guard',
         'text_hygiene',
       ])
     ).toBe(3);

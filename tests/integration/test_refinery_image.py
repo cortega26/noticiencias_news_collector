@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
+from tests.fixtures.images import raster_bytes
 
 
 @pytest.fixture
@@ -73,7 +74,7 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
 
         # Mock Response
         mock_response = MagicMock()
-        mock_response.content = b"fake-image-data"
+        mock_response.content = raster_bytes("JPEG")
         mock_response.headers = {"Content-Type": "image/jpeg"}
         mock_instance.get.return_value = mock_response
 
@@ -87,7 +88,7 @@ def test_download_image_integration(mock_refinery_engine, tmp_path):
             target_dir / "src/assets/images/2024-01-01-test-article.jpg"
         )
         assert expected_image_path.exists()
-        assert expected_image_path.read_bytes() == b"fake-image-data"
+        assert expected_image_path.read_bytes() == raster_bytes("JPEG")
 
         # 2. Check if EditorAgent was called with updated image_url
         mock_refinery_engine.editor.process_article.assert_called_once()
@@ -123,7 +124,7 @@ def test_downloaded_image_without_alt_still_publishes(mock_refinery_engine, tmp_
         mock_instance = MockClient.return_value
         mock_instance.__enter__.return_value = mock_instance
         mock_response = MagicMock()
-        mock_response.content = b"fake-image-data"
+        mock_response.content = raster_bytes("JPEG")
         mock_response.headers = {"Content-Type": "image/jpeg"}
         mock_instance.get.return_value = mock_response
 
@@ -210,13 +211,14 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
     ready_brief = mock_refinery_engine.image_briefs.stage_upload(
         brief=brief,
         filename="editorial.png",
-        # NC-BE-087: stage_upload requires genuine image bytes (magic-verified).
-        content=b"\x89PNG\r\n\x1a\nmanual-image-data",
+        # Plan 190: upload validates decoded bytes and explicit provenance.
+        content=raster_bytes(),
         draft_alt_text="Imagen editorial del artículo de prueba",
         topic=brief.topic,
         news_angle=brief.news_angle,
         scientific_domain=brief.scientific_domain,
         subject_scene=brief.subject_scene,
+        image_origin="original",
     )
 
     result = mock_refinery_engine.process_single_article(
@@ -229,7 +231,7 @@ def test_resolved_editorial_brief_materializes_asset_for_publish(
         / "src/assets/images/2024-01-03-test-article-ready-for-editorial-image.png"
     )
     assert expected_image_path.exists()
-    assert expected_image_path.read_bytes() == b"\x89PNG\r\n\x1a\nmanual-image-data"
+    assert expected_image_path.read_bytes() == raster_bytes()
 
     call_args = mock_refinery_engine.editor.process_article.call_args
     passed_article = call_args[0][0]

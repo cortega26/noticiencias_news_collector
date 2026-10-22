@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from .image_brief import ImageOrigin
+from .image_brief import ImageGenerationMetadata, ImageOrigin
 
 
 class AdminArticleListItem(BaseModel):
@@ -190,6 +190,7 @@ class AdminCollectRequest(BaseModel):
 AdminRunStatus = Literal[
     "queued", "running", "succeeded", "failed", "cancelled", "interrupted"
 ]
+AdminPublicationRunStatus = AdminRunStatus | Literal["waiting_for_image"]
 
 
 class AdminCollectStatus(BaseModel):
@@ -230,7 +231,7 @@ class AdminPublishStarted(BaseModel):
     """Response to POST /v1/admin/publish."""
 
     run_id: str
-    status: AdminRunStatus = "queued"
+    status: AdminPublicationRunStatus = "queued"
     detail: str
 
 
@@ -247,7 +248,7 @@ class AdminPublishStatus(BaseModel):
     """Status of the most recent (or a named) publication run."""
 
     run_id: Optional[str] = None
-    status: AdminRunStatus = "queued"
+    status: AdminPublicationRunStatus = "queued"
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
     error: Optional[str] = None
@@ -257,6 +258,10 @@ class AdminPublishStatus(BaseModel):
     pr_url: Optional[str] = None
     failure_class: Optional[str] = None
     final_slug: Optional[str] = None
+    editorial_completed_count: int = 0
+    waiting_for_image_count: int = 0
+    image_brief_slug: Optional[str] = None
+    image_reason: Optional[str] = None
     # Live progress for the GUI: completed stage names of the current article,
     # last lease heartbeat, and the median duration of recent successful runs.
     progress: Optional[AdminPublishProgress] = None
@@ -296,18 +301,20 @@ class AdminPublishBatchItem(BaseModel):
     """Explicit per-item outcome inside a batch run summary."""
 
     article_id: int
-    status: Literal["succeeded", "failed"]
+    status: Literal["succeeded", "failed", "waiting_for_image"]
     pr_url: Optional[str] = None
     failure_class: Optional[str] = None
     final_slug: Optional[str] = None
     message: Optional[str] = None
+    image_brief_slug: Optional[str] = None
+    image_reason: Optional[str] = None
 
 
 class AdminPublishBatchStarted(BaseModel):
     """Response to POST /v1/admin/publish/batch."""
 
     run_id: str
-    status: AdminRunStatus = "queued"
+    status: AdminPublicationRunStatus = "queued"
     detail: str
     accepted_ids: List[int] = Field(default_factory=list)
 
@@ -451,6 +458,10 @@ class AdminImageBriefItem(BaseModel):
     updated_at: Optional[str] = None
     generated_prompt: Optional[str] = None
     image_origin: ImageOrigin = "unknown"
+    generation_metadata: Optional[ImageGenerationMetadata] = None
+    asset_sha256: Optional[str] = None
+    asset_width: Optional[int] = None
+    asset_height: Optional[int] = None
 
 
 class AdminImageQueueEnvelope(BaseModel):

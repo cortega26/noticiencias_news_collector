@@ -179,6 +179,8 @@ def test_run_batch_success_merges_pr_urls_per_item(
     assert kwargs.pop("skip_visuals") is False
     assert callable(kwargs.pop("stage_listener"))
     assert callable(kwargs.pop("on_item_start"))
+    assert kwargs.pop("checkpoint_run_id") == run_id
+    assert kwargs.pop("checkpoint_repository") is workflow._checkpoints
     assert kwargs == {}
     status = workflow.get_status(run_id)
     assert status.run_status == "succeeded"

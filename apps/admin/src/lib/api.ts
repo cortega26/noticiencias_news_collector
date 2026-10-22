@@ -53,6 +53,7 @@ import type {
   AdminSourceListItem,
   AdminSourceUpsertPayload,
   ArticleStatus,
+  ImageGenerationMetadata,
 } from './types';
 
 export { AUTH_BYPASS, clearToken, getToken, setToken } from './auth';
@@ -360,10 +361,12 @@ export function updateImageBrief(
 export function uploadImageBriefAsset(
   slug: string,
   file: File,
-  fields: Record<string, string>
+  fields: Record<string, string>,
+  generationMetadata?: ImageGenerationMetadata
 ): Promise<AdminImageBriefUploadResult> {
   const form = new FormData();
   form.append('file', file);
+  if (generationMetadata) form.append('generation_metadata', JSON.stringify(generationMetadata));
   for (const [k, v] of Object.entries(fields)) {
     if (v) form.append(k, v);
   }

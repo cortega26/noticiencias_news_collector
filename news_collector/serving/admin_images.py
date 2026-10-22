@@ -37,7 +37,14 @@ from news_collector.contracts.admin import (
     AdminImageBriefUploadResult,
     AdminImageQueueEnvelope,
 )
-from news_collector.contracts.image_brief import ImageBriefModel, ImageOrigin
+from news_collector.contracts.image_brief import (
+    ImageBriefModel,
+    ImageGenerationMetadata,
+    ImageOrigin,
+)
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger("AdminImages")
 
 # NC-BE-087 S2: ceiling for admin image-brief uploads — generous above any
 # GUI-produced hero image. Overridable in tests via monkeypatch.
@@ -60,13 +67,33 @@ def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
-def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa: C901
+def build_router(  # noqa: C901
+    verify_admin_token: Callable[..., None],
+    on_image_ready: Callable[[], object] | None = None,
+    *,
+    data_dir: Path | None = None,
+) -> APIRouter:
     """Build the admin images router with the caller's auth dependency.
 
     ``verify_admin_token`` is injected rather than imported: ``api.py`` owns
     it and imports this module, so importing it back would be a cycle.
     """
     router = APIRouter()
+    image_data_dir = Path(data_dir) if data_dir is not None else Path("data")
+
+    def notify_image_ready(store, brief: ImageBriefModel) -> None:
+        if on_image_ready is None or not store.brief_ready(brief):
+            return
+        try:
+            on_image_ready()
+        except Exception as exc:
+            # The durable stage succeeded. Periodic reconciliation will retry;
+            # a busy publication slot must not turn a valid upload into failure.
+            logger.warning(
+                "Image staged for article {}; resume deferred: {}",
+                brief.article_id,
+                exc,
+            )
 
     @router.get("/v1/admin/images", response_model=AdminImageQueueEnvelope)
     def admin_image_queue(
@@ -74,7 +101,7 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
     ) -> AdminImageQueueEnvelope:
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
 
-        store = ImageBriefStore(Path("data"))
+        store = ImageBriefStore(image_data_dir)
         briefs = store.list_briefs()
         return AdminImageQueueEnvelope(
             briefs=[
@@ -96,6 +123,10 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
                     ),
                     generated_prompt=brief.generated_prompt,
                     image_origin=brief.image_origin,
+                    generation_metadata=brief.generation_metadata,
+                    asset_sha256=brief.asset_sha256,
+                    asset_width=brief.asset_width,
+                    asset_height=brief.asset_height,
                 )
                 for brief in briefs
             ]
@@ -113,7 +144,7 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
         """Edit an image brief's editable fields (no asset upload)."""
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
 
-        store = ImageBriefStore(Path("data"))
+        store = ImageBriefStore(image_data_dir)
         try:
             brief = store.load_brief(slug)
         except ValueError as exc:
@@ -128,13 +159,10 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
             update={**updates, "updated_at": datetime.now(timezone.utc)}
         )
         try:
-            updated = ImageBriefModel.model_validate(updated.model_dump())
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        try:
-            store.save_brief(updated)
+            updated = store.update_brief(updated)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        notify_image_ready(store, updated)
         return AdminImageBriefUploadResult(
             brief=updated.model_dump(mode="json"),
             asset_path=updated.uploaded_asset_path or "",
@@ -154,6 +182,7 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
         subject_scene: Optional[str] = Form(None),
         draft_alt_text: Optional[str] = Form(None),
         image_origin: Optional[ImageOrigin] = Form(None),
+        generation_metadata: Optional[str] = Form(None),
         _: None = Depends(verify_admin_token),
     ) -> AdminImageBriefUploadResult:
         """Stage an image asset for a brief (multipart)."""
@@ -169,7 +198,7 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
         ):
             raise HTTPException(status_code=413, detail="File upload too large")
 
-        store = ImageBriefStore(Path("data"))
+        store = ImageBriefStore(image_data_dir)
         try:
             brief = store.load_brief(slug)
         except ValueError as exc:
@@ -191,9 +220,15 @@ def build_router(verify_admin_token: Callable[..., None]) -> APIRouter:  # noqa:
                 scientific_domain=scientific_domain or brief.scientific_domain,
                 subject_scene=subject_scene or brief.subject_scene,
                 image_origin=image_origin,
+                generation_metadata=(
+                    ImageGenerationMetadata.model_validate_json(generation_metadata)
+                    if generation_metadata
+                    else None
+                ),
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        notify_image_ready(store, updated)
         return AdminImageBriefUploadResult(
             brief=updated.model_dump(mode="json"),
             asset_path=updated.uploaded_asset_path or "",

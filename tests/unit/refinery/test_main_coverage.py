@@ -72,6 +72,9 @@ def _patch_main_deps(monkeypatch, tmp_path: Path) -> dict:
     """Patch every dependency main() constructs; return handles for overrides."""
     config = _config()
     db = MagicMock()
+    from tests.fixtures.workflow_storage import sqlite_workflow_sessions
+
+    db.get_session.side_effect = sqlite_workflow_sessions(tmp_path / "workflow.db")
     git_handler = MagicMock()
     engine = MagicMock()
     engine.process_articles.return_value = {"processed_count": 1, "errors": []}

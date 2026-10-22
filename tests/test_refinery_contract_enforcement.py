@@ -10,6 +10,27 @@ from news_collector.contracts.adapters import adapt_export_article_to_collector_
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
 
 
+def _stage_owned_image(engine, article):
+    from tests.fixtures.images import raster_bytes
+
+    brief = engine.image_briefs.build_brief(
+        article=article,
+        slug=f"owned-image-{article['id']}",
+        reason="unproven_image_rights",
+    )
+    engine.image_briefs.stage_upload(
+        brief=brief,
+        filename="owned.png",
+        content=raster_bytes(),
+        draft_alt_text="Imagen editorial con procedencia original acreditada",
+        topic=brief.topic,
+        news_angle=brief.news_angle,
+        scientific_domain=brief.scientific_domain,
+        subject_scene=brief.subject_scene,
+        image_origin="original",
+    )
+
+
 def validate_collector_payload(payload):
     from news_collector.contracts.collector import CollectorArticleModel
 
@@ -81,6 +102,7 @@ def test_process_single_article_enforces_contract(tmp_path):
     engine.git.create_branch.return_value = "content/update/test"
     engine.git.create_pull_request.return_value = "https://github.com/org/repo/pull/1"
 
+    _stage_owned_image(engine, valid_article)
     result = engine.process_single_article(valid_article, MagicMock(), tmp_path)
     assert result is True
 
@@ -128,6 +150,7 @@ def test_process_single_article_accepts_legacy_export_after_adapter(tmp_path):
     normalized["image_url"] = "~/assets/images/legacy.jpg"
     normalized["image_alt"] = "Imagen editorial del artículo legacy"
 
+    _stage_owned_image(engine, normalized)
     result = engine.process_single_article(normalized, MagicMock(), tmp_path)
 
     assert normalized["source_id"] == "lilian_weng"
@@ -198,6 +221,7 @@ def test_process_single_article_accepts_audited_article_after_strip(tmp_path):
         },
     }
 
+    _stage_owned_image(engine, audited_article)
     result = engine.process_single_article(audited_article, MagicMock(), tmp_path)
 
     assert result is True

@@ -416,9 +416,8 @@ export interface paths {
          *     `article_id`, must be in the current export) or ingest+refine a
          *     `article_url`, then open a PR against the frontend repo. Exactly one
          *     of `article_id` / `article_url` is required. A second call while one
-         *     run is active yields 409 with the active run's id; an article whose
-         *     brief still needs an editorial image yields 409 `image_required`
-         *     without starting a run.
+         *     run is active yields 409 with the active run's id. Missing images
+         *     defer publication after the editorial work is durably saved.
          */
         post: operations["admin_publish_v1_admin_publish_post"];
         delete?: never;
@@ -1153,10 +1152,17 @@ export interface components {
         AdminImageBriefItem: {
             /** Article Id */
             article_id: string;
+            /** Asset Height */
+            asset_height?: number | null;
+            /** Asset Sha256 */
+            asset_sha256?: string | null;
+            /** Asset Width */
+            asset_width?: number | null;
             /** Draft Alt Text */
             draft_alt_text?: string | null;
             /** Generated Prompt */
             generated_prompt?: string | null;
+            generation_metadata?: components["schemas"]["ImageGenerationMetadata"] | null;
             /**
              * Image Origin
              * @default unknown
@@ -1268,9 +1274,8 @@ export interface components {
             /**
              * Status
              * @default queued
-             * @enum {string}
              */
-            status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+            status: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted") | "waiting_for_image";
         };
         /**
          * AdminPublishProgress
@@ -1320,9 +1325,8 @@ export interface components {
             /**
              * Status
              * @default queued
-             * @enum {string}
              */
-            status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+            status: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted") | "waiting_for_image";
         };
         /**
          * AdminPublishStatus
@@ -1334,6 +1338,11 @@ export interface components {
              * @default false
              */
             active: boolean;
+            /**
+             * Editorial Completed Count
+             * @default 0
+             */
+            editorial_completed_count: number;
             /** Error */
             error?: string | null;
             /** Failure Class */
@@ -1344,6 +1353,10 @@ export interface components {
             finished_at?: string | null;
             /** Heartbeat At */
             heartbeat_at?: string | null;
+            /** Image Brief Slug */
+            image_brief_slug?: string | null;
+            /** Image Reason */
+            image_reason?: string | null;
             /** Pr Url */
             pr_url?: string | null;
             progress?: components["schemas"]["AdminPublishProgress"] | null;
@@ -1354,15 +1367,19 @@ export interface components {
             /**
              * Status
              * @default queued
-             * @enum {string}
              */
-            status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+            status: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted") | "waiting_for_image";
             /** Summary */
             summary?: {
                 [key: string]: unknown;
             };
             /** Typical Seconds */
             typical_seconds?: number | null;
+            /**
+             * Waiting For Image Count
+             * @default 0
+             */
+            waiting_for_image_count: number;
         };
         /**
          * AdminQualityAggregate
@@ -1873,6 +1890,8 @@ export interface components {
             draft_alt_text?: string | null;
             /** File */
             file: string;
+            /** Generation Metadata */
+            generation_metadata?: string | null;
             /** Image Origin */
             image_origin?: ("unknown" | "ai_generated" | "licensed" | "original") | null;
             /** News Angle */
@@ -1888,6 +1907,22 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ImageGenerationMetadata
+         * @description Generation evidence verified against the staged asset's actual bytes.
+         */
+        ImageGenerationMetadata: {
+            /** Height */
+            height: number;
+            /** Prompt */
+            prompt: string;
+            /** Sha256 */
+            sha256: string;
+            /** Tool */
+            tool: string;
+            /** Width */
+            width: number;
         };
         /** PaginationResponse */
         PaginationResponse: {
@@ -2788,7 +2823,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminPublishStarted"];
                 };
             };
-            /** @description A publication run is already queued or running (the body carries its run id), or the article's image brief still needs an editorial image (`detail.error_code=image_required`). */
+            /** @description A publication run is already queued or running (the body carries its run id). */
             409: {
                 headers: {
                     [name: string]: unknown;

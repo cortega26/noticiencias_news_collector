@@ -5,13 +5,14 @@ from __future__ import annotations
 import re
 from unittest.mock import MagicMock
 
+import pytest
 import yaml
 
 from news_collector.components.editorial.ai_editor import EditorAgent  # noqa: E402
 from news_collector.components.editorial.editorial_critic_gate import CriticVerdict
 
 _VALID_ENRICHMENT_FIELDS: dict[str, object] = {
-    "summary_points": ["Punto resumido"],
+    "summary_points": ["Punto resumido", "Segundo punto resumido"],
     "glossary": [{"term": "Término", "definition": "Definición"}],
     "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
     "why_it_matters": ["Relevancia regional"],
@@ -46,7 +47,7 @@ def parse_frontmatter(content: str) -> dict:
     return yaml.safe_load(match.group(1))
 
 
-def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> None:
+def test_prepare_without_image_preserves_editorial_work_and_source(tmp_path) -> None:
     agent = EditorAgent("http://example", "model")
     agent.cache_dir = tmp_path / "editor-cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +86,7 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
         "excerpt": "This is a short excerpt for SEO purposes that is long enough.",
     }  # type: ignore[method-assign]
 
-    result = agent.process_article(
+    draft = agent.prepare_article(
         {
             "title": "Demo",
             "summary": "Resumen",
@@ -96,10 +97,14 @@ def test_process_article_strips_tldr_without_image_and_adds_source(tmp_path) -> 
         override_date="2026-03-02",
     )
 
-    assert "TL;DR Visual" not in result
+    result = draft.preview_markdown
+    assert "TL;DR Visual" in draft.content
     assert "⚡" not in result
+    assert "image" not in draft.frontmatter
+    assert "image_alt" not in draft.frontmatter
+    with pytest.raises(ValueError, match="resolved image is required"):
+        agent.assemble_article(draft, "", None, None)
 
-    fm = parse_frontmatter(result)
     fm = parse_frontmatter(result)
     assert (
         fm.get("source_url") == "https://example.com/source"

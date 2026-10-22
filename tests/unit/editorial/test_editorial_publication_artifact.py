@@ -38,7 +38,7 @@ _CODEX_WHY_IT_MATTERS = (
 
 def _enrichment() -> dict:
     return {
-        "summary_points": ["Punto uno"],
+        "summary_points": ["Punto uno", "Punto dos"],
         "glossary": [{"term": "Término", "definition": "Definición"}],
         "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
         "why_it_matters": ["Relevancia regional"],
@@ -115,7 +115,7 @@ def test_happy_path_builds_frontmatter_and_markdown() -> None:
     assert result.frontmatter["date"] == date(2026, 9, 26)
     assert result.frontmatter["categories"] == ["ciencia"]
     assert result.frontmatter["tags"]
-    assert result.frontmatter["summary_points"] == ["Punto uno"]
+    assert result.frontmatter["summary_points"] == ["Punto uno", "Punto dos"]
     assert result.frontmatter["requires_uncertainty_note"] is False
 
     assert result.markdown.startswith("---\n")
@@ -194,18 +194,14 @@ def test_health_scope_overclaim_blocks_publication() -> None:
     assert excinfo.value.error_code == "editorial_capability_overclaim"
 
 
-def test_tldr_visual_is_stripped_only_without_image() -> None:
-    content = (
-        "## Cuerpo\n\n**TL;DR Visual** un plano del laboratorio\n\n"
-        "**Sección**\n\ntexto final."
-    )
-
-    without_image = run_publication_artifact_stage(
-        _input(final_content=content, image_url=None), _hooks()
-    )
+def test_image_free_draft_is_not_a_publication_artifact() -> None:
+    content = "## Cuerpo\n\n**TL;DR Visual** un plano del laboratorio\n\n**Sección**\n\ntexto final."
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        run_publication_artifact_stage(
+            _input(final_content=content, image_url=None), _hooks()
+        )
+    assert excinfo.value.error_code == "image_required"
     with_image = run_publication_artifact_stage(_input(final_content=content), _hooks())
-
-    assert "TL;DR Visual" not in without_image.markdown
     assert "TL;DR Visual" in with_image.markdown
 
 
@@ -281,3 +277,129 @@ def test_ai_alt_with_colons_serializes_as_valid_quoted_yaml() -> None:
 
     assert parsed["image_alt"] == "Ilustración generada con IA: Descripción"
     assert "image_alt: 'Ilustración generada con IA: Descripción'" in result.markdown
+
+
+def test_preparation_without_media_preserves_editorial_work_and_identity() -> None:
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        prepare_editorial_draft,
+    )
+
+    draft = prepare_editorial_draft(
+        _input(image_url=None, image_alt=None),
+        _hooks(),
+        critic_verdict={"approved": True, "average": 87},
+        grounding_notes="Verified against source text.",
+    )
+
+    assert draft.frontmatter["title"] == "Título directo"
+    assert "image" not in draft.frontmatter
+    assert "image_alt" not in draft.frontmatter
+    assert draft.article_id == "article-1"
+    assert draft.source_id == "source-1"
+    assert draft.critic_verdict == {"approved": True, "average": 87}
+    assert draft.grounding_notes == "Verified against source text."
+    assert "source_id=source-1" in draft.preview_markdown
+
+
+def test_image_free_preparation_rejects_disputed_fact_check() -> None:
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        prepare_editorial_draft,
+    )
+
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        prepare_editorial_draft(
+            _input(
+                image_url=None,
+                verified_fact_check=[{"label": "Dato falso", "status": "disputed"}],
+            ),
+            _hooks(),
+        )
+    assert excinfo.value.error_code == "editorial_fact_check_disputed"
+
+
+def test_preparation_rejects_invalid_editorial_schema_without_placeholder_media() -> (
+    None
+):
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        prepare_editorial_draft,
+    )
+
+    with pytest.raises(ValueError, match="summary_points must have 2-5"):
+        prepare_editorial_draft(
+            _input(
+                image_url=None,
+                enrichment_fields={**_enrichment(), "summary_points": ["Solo uno"]},
+            ),
+            _hooks(),
+        )
+
+
+def test_saved_draft_assembles_with_ai_disclosure_once_without_editorial_work() -> None:
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        assemble_editorial_draft,
+        prepare_editorial_draft,
+    )
+    from news_collector.contracts.editorial_draft import EditorialDraft
+    from news_collector.contracts.frontend_schema import AstroPost
+
+    draft = prepare_editorial_draft(_input(image_url=None), _hooks())
+    replayed = EditorialDraft.model_validate_json(draft.model_dump_json())
+    artifact = assemble_editorial_draft(
+        replayed,
+        image_url="/images/generated-roots.webp",
+        image_alt="Raíces e hifas en el suelo",
+        image_origin="ai_generated",
+        hooks=_hooks(),
+    )
+
+    parsed = yaml.safe_load(artifact.markdown.split("---", 2)[1])
+    post = AstroPost.model_validate(parsed)
+    assert post.image == "/images/generated-roots.webp"
+    assert post.image_alt == "Ilustración generada con IA: Raíces e hifas en el suelo"
+    assert artifact.markdown.count("Ilustración generada con IA:") == 1
+    assert artifact.markdown.count("source_id=source-1") == 1
+    assert "image" not in replayed.frontmatter
+
+
+def test_assembly_rejects_missing_image_but_preserves_saved_draft() -> None:
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        assemble_editorial_draft,
+        prepare_editorial_draft,
+    )
+
+    draft = prepare_editorial_draft(_input(image_url=None), _hooks())
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        assemble_editorial_draft(
+            draft,
+            image_url="",
+            image_alt="Raíces",
+            image_origin="ai_generated",
+            hooks=_hooks(),
+        )
+    assert excinfo.value.error_code == "image_required"
+    assert draft.frontmatter["title"] == "Título directo"
+
+
+def test_assembly_validates_metadata_after_emoji_stripping() -> None:
+    from news_collector.components.editorial.editorial_publication_artifact import (
+        assemble_editorial_draft,
+        prepare_editorial_draft,
+    )
+
+    draft = prepare_editorial_draft(
+        _input(
+            headlines={
+                "direct": "🌱🌱🌱🌱🌱",
+                "excerpt": "Descripción suficientemente larga",
+            }
+        ),
+        _hooks(),
+    )
+    with pytest.raises(ValueError, match="Content Contract Violation"):
+        assemble_editorial_draft(
+            draft,
+            image_url="/images/roots.webp",
+            image_alt="Raíces e hifas",
+            image_origin="ai_generated",
+            hooks=_hooks(strip_emojis=lambda text: text.replace("🌱", "")),
+        )

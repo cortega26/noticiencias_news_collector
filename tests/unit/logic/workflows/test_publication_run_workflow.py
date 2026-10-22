@@ -320,6 +320,8 @@ def test_run_calls_pipeline_entry_point_with_expected_kwargs(
     workflow._run(run_id, 42, None)
 
     listener = seen.pop("stage_listener")
+    assert seen.pop("checkpoint_run_id") == run_id
+    assert seen.pop("checkpoint_repository") is workflow._checkpoints
     assert callable(listener)
     assert seen == {"process_id": "42", "article_url": None, "skip_visuals": False}
 

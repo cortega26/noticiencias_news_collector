@@ -40,9 +40,11 @@ from news_collector.components.editorial.editorial_publication_artifact import (
     _capability_overclaim_block as _capability_overclaim_block,
 )
 from news_collector.components.editorial.editorial_publication_artifact import (
-    run_publication_artifact_stage,
+    assemble_editorial_draft,
+    prepare_editorial_draft,
 )
 from news_collector.components.editorial.editorial_stages import EditorialStage
+from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from news_collector.editorial.health_claims import find_guarantee_language
 from news_collector.editorial.readability import check_english_spillover, check_headline
@@ -2257,16 +2259,13 @@ class EditorAgent:
         safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(article_id))
         return self.cache_dir / f"{safe_id}_{stage}.txt"
 
-    def process_article(  # noqa: C901
+    def prepare_article(  # noqa: C901
         self,
         raw_text: str | dict,
         override_date: str | None = None,
         explicit_article_id: str | None = None,
-    ) -> str:
-        """
-        Orchestrate the 3-stage pipeline: Translate -> Adapt -> Metadata.
-        Includes checkpointing to prevent data loss.
-        """
+    ) -> EditorialDraft:
+        """Prepare validated editorial work independently of publication media."""
         # Per-article lifecycle invariant: the refinery engine reads this
         # attribute after process_article returns to enforce the
         # close-paraphrase hold. Clear any verdict from a previous article
@@ -2285,9 +2284,6 @@ class EditorAgent:
         summary = editorial.summary
         content = editorial.content
         content_mode = editorial.content_mode
-        image_url = editorial.image_url
-        image_alt = editorial.image_alt
-        image_origin = editorial.image_origin
         source_id = editorial.source_id
         source_name = editorial.source_name
         source_url = editorial.source_url
@@ -2694,7 +2690,7 @@ class EditorAgent:
         enrichment_fields["fact_check"] = verified_fact_check
 
         # 3. Assemble Final Artifact (typed stage, plan 060 Phase 7c-4)
-        artifact = run_publication_artifact_stage(
+        return prepare_editorial_draft(
             PublicationArtifactInput(
                 final_content=final_content,
                 headlines=headlines,
@@ -2707,9 +2703,9 @@ class EditorAgent:
                 final_category=final_category,
                 raw_category=raw_category,
                 metadata_category=metadata_category,
-                image_url=image_url,
-                image_alt=image_alt,
-                image_origin=image_origin,
+                image_url=None,
+                image_alt=None,
+                image_origin=None,
                 source_id=source_id,
                 source_name=source_name,
                 source_url=source_url,
@@ -2720,8 +2716,46 @@ class EditorAgent:
                 upsert_source_identity=self._upsert_source_identity_comment,
                 strip_emojis=self._strip_emojis,
             ),
+            critic_verdict=self.last_critic_verdict,
         )
+
+    def assemble_article(
+        self,
+        draft: EditorialDraft,
+        image_url: str,
+        image_alt: str | None,
+        image_origin: str | None,
+    ) -> str:
+        """Assemble a publishable article without rerunning editorial stages."""
+        artifact = assemble_editorial_draft(
+            draft,
+            image_url=image_url,
+            image_alt=image_alt,
+            image_origin=image_origin,
+            hooks=PublicationArtifactHooks(
+                normalize_frontmatter=self._normalize_frontmatter_for_yaml,
+                upsert_source_identity=self._upsert_source_identity_comment,
+                strip_emojis=self._strip_emojis,
+            ),
+        )
+        self.last_critic_verdict = draft.critic_verdict
         return artifact.markdown
+
+    def process_article(
+        self,
+        raw_text: str | dict,
+        override_date: str | None = None,
+        explicit_article_id: str | None = None,
+    ) -> str:
+        """Compatible prepare + assemble entry point for image-ready callers."""
+        draft = self.prepare_article(raw_text, override_date, explicit_article_id)
+        editorial = EditorialInput.from_raw(raw_text, explicit_article_id)
+        return self.assemble_article(
+            draft,
+            editorial.image_url or "",
+            editorial.image_alt,
+            editorial.image_origin,
+        )
 
     def generate_social_content(self, article_content: str, url: str = "") -> str:
         """Generates social media posts (Twitter/LinkedIn) for the refined article."""

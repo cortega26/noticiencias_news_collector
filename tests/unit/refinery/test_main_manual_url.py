@@ -42,6 +42,11 @@ def test_main_article_url_uses_manual_ingest_export_and_normal_processing(
         ollama=SimpleNamespace(api_url="http://ollama.local"),
     )
     db_manager = MagicMock()
+    from tests.fixtures.workflow_storage import sqlite_workflow_sessions
+
+    db_manager.get_session.side_effect = sqlite_workflow_sessions(
+        tmp_path / "workflow.db"
+    )
     git_handler = MagicMock()
     engine = MagicMock()
     engine.process_articles.return_value = {"processed_count": 1, "errors": []}
@@ -142,6 +147,11 @@ def test_main_article_url_propagates_processing_error_code(tmp_path: Path, monke
         ollama=SimpleNamespace(api_url="http://ollama.local"),
     )
     db_manager = MagicMock()
+    from tests.fixtures.workflow_storage import sqlite_workflow_sessions
+
+    db_manager.get_session.side_effect = sqlite_workflow_sessions(
+        tmp_path / "workflow.db"
+    )
     git_handler = MagicMock()
     engine = MagicMock()
     engine.process_articles.return_value = {

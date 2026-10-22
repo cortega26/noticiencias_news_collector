@@ -44,6 +44,9 @@ The following files are authoritative for the exact concern they implement:
    - backend mirror of the frontend publication artifact
 4. `news_collector/storage/database.py`
    - persisted publication state and canonical slug persistence behavior
+   - `storage/publication_checkpoint_repository.py` owns durable editorial
+     checkpoint writes and atomic park/claim operations; the ORM status
+     constraint and Alembic revision `f190a1b2c3d4` define image-wait persistence
 5. `news_collector/logic/workflows/refinery_engine.py`
    - editorial publication stages; lifecycle leases live in `collection_run_workflow.py` and `publication_run_workflow.py` in the same directory
 6. `config.toml`, `news_collector/config/*`, `config/sources.*`
@@ -109,6 +112,20 @@ Any change to the publication frontmatter contract is a cross-repo change.
 
 Pull-request creation records `PR_CREATED`. Frontend merge/deploy happens in the sibling repo. Authenticated callbacks handled by `news_collector/serving/webhook_handler.py` can reject or complete matching publication attempts using explicit `publication_ids`; events without IDs do not guess the affected articles. A workflow run succeeding, scoring status `completed`, PR creation, and deployment acknowledgment are distinct states. See `docs/PIPELINE_CONTRACTS.md` and `docs/adr/0005-completed-is-scoring-state-not-publication.md`.
 
+Editorial completion is another distinct state. Missing or unproven-rights
+images do not abort editing: a sealed, backend-only draft and source snapshot
+persist before publication enters `waiting_for_image`. That publication-only
+state holds no queued/running slot or heartbeat; collection states and the
+frontend `AstroPost` requirements are unchanged. Plan 190 supersedes plan 168's
+pre-dispatch `409 image_required`. The same request resumes when validated
+media is ready, reusing unchanged editorial work without LLM regeneration.
+The serving reconciler checks startup, upload/worker completion and every 15
+seconds. Codex can generate/review images in an active session; no unattended
+image-generation API is configured by this workflow.
+
+Apply migration `f190a1b2c3d4` before compatible code. Rollback preserves saved
+drafts; downgrade is guarded while any publication remains in image wait.
+
 ### Publication identity reuses persisted evidence and never falls back to the clock
 
 Current publication identity reuse order is:
@@ -136,7 +153,7 @@ and invariants, not every semantic claim or every document.
 | Runtime config schema | `noticiencias/config_schema.py` + `config.toml` | `docs/config_fields.md` (generated), `docs/database_deployment.md` |
 | Validation commands | `Makefile` + `.github/workflows/*.yml` | `docs/ci.md`, `README.md`, `docs/AGENTS.md` |
 | Cross-repo contracts and failure semantics | `news_collector/contracts/*.py` | `docs/PIPELINE_CONTRACTS.md`, `context/CONTRACTS.md` (derived) |
-| Publication workflow states | `news_collector/logic/workflows/refinery_engine.py` | `docs/PRODUCT_FLOW.md`, `docs/SOURCE_OF_TRUTH.md` |
+| Publication workflow states and durable waits | `news_collector/logic/workflows/publication_run_workflow.py`, `news_collector/storage/publication_checkpoint_repository.py`, ORM constraints and Alembic migrations; article stages in `refinery_engine.py` | `docs/PRODUCT_FLOW.md`, `docs/PIPELINE_CONTRACTS.md`, `docs/SOURCE_OF_TRUTH.md` |
 | Deployment/host facts | frontend `src/config.yaml` / `astro.config.mjs`; backend `fly-serving.toml`, `fly-tunnel.toml` (declared configuration, not live-state proof) | `docs/PRODUCT_FLOW.md`, `docs/RUNBOOK_LOCAL_DEV.md` |
 | Search implementation | frontend `src/pages/search.json.js` + `src/utils/build-search-index.ts` | frontend `docs/ARCHITECTURE.md`, `docs/SOURCE_OF_TRUTH.md` |
 | Security/CI gates | `.github/workflows/quality.yml`, `scripts/security_gate.py` | `docs/security.md`, `docs/ci.md` |

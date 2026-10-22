@@ -16,6 +16,7 @@ IMAGE_BRIEF_REASON_VALUES = (
     "missing_source_image",
     "image_download_failed",
     "placeholder_image_debt",
+    "unproven_image_rights",
 )
 IMAGE_PROMPT_VERSION = "editorial-image-v1"
 
@@ -30,9 +31,22 @@ ImageBriefReason = Literal[
     "placeholder_image_debt",
     "missing_alt_text",
     "third_party_image_blocked",
+    "unproven_image_rights",
 ]
 ImageOrigin = Literal["unknown", "ai_generated", "licensed", "original"]
 IMAGE_ORIGIN_VALUES = ("unknown", "ai_generated", "licensed", "original")
+
+
+class ImageGenerationMetadata(BaseModel):
+    """Generation evidence verified against the staged asset's actual bytes."""
+
+    prompt: str = Field(min_length=5, max_length=20000)
+    tool: str = Field(min_length=2, max_length=100)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ImageBriefModel(BaseModel):
@@ -55,6 +69,10 @@ class ImageBriefModel(BaseModel):
     # Provenance recorded at upload; `unknown` keeps legacy sidecars loadable.
     # `ai_generated` drives the visible alt/caption disclosure (plan 169).
     image_origin: ImageOrigin = "unknown"
+    generation_metadata: ImageGenerationMetadata | None = None
+    asset_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    asset_width: int | None = Field(default=None, gt=0)
+    asset_height: int | None = Field(default=None, gt=0)
     updated_at: datetime
 
     model_config = ConfigDict(extra="forbid")

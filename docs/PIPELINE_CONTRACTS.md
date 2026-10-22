@@ -16,6 +16,7 @@ It intentionally distinguishes current behavior from desired future hardening.
 | Collection export | `news_collector/system/reporting.py` and collector entrypoints | `apps/refinery/main.py` | `ExportContractV2` from `news_collector/contracts/export.py` | `schema_version: 2` is the preferred path; legacy `schema_version: 1` is still tolerated with warnings |
 | Scoring boundary | workflow/system code | scoring modules | `ArticleScoringData`, `ScoringInputModel` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
 | Validation boundary | workflow/system code | validation modules | `ArticleValidationPayload` | adapter-owned mapping in `news_collector/contracts/adapters.py` |
+| Editorial preparation checkpoint | `EditorAgent.prepare_article()` and Refinery workflow | durable publication recovery | `EditorialDraft`, `PublicationCheckpoint`, `PublicationItemOutcome` | backend-only draft and original source snapshot; media is resolved before creating an `AstroPost` |
 | Frontend publication artifact | `news_collector/logic/workflows/refinery_engine.py` | sibling frontend repo | frontmatter/body matching `AstroPost` mirror in `news_collector/contracts/frontend_schema.py` | cross-repo mirror of `../noticiencias/src/content.config.ts` |
 | Read API | `news_collector/serving/api.py` | HTTP clients | `ArticleListParams`, `ArticlesEnvelope` | deterministic cursor pagination and validated query parameters |
 | Admin API (Phase 1) | `news_collector/serving/api.py` | Astro admin GUI | `news_collector/contracts/admin.py` shapes | read-oriented triage/detail/health/analytics/config under `ADMIN_API_KEY`; mutations dispatch to existing storage/workflow modules |
@@ -179,11 +180,21 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
 - publication trigger/status (`/v1/admin/publish`, `/v1/admin/publish/batch`,
   `GET /v1/admin/publish/status?run_id=`) is durable in `workflow_runs`
   (Plan 060 Phase 4c) and single-flight; an unrecognized run id returns 404.
-  A single-article publish whose image brief is still `needs_editorial_image`
-  returns `409` with `detail.error_code=image_required` (slug, article id,
-  stored prompt) **before** any run row exists; `editorial_image_ready`,
-  resolved and absent briefs proceed, and `article_url` publishes are
-  unchanged. The lookup is read-only.
+  Plan 190 supersedes the plan-168 pre-dispatch image gate: missing images
+  no longer return `409 image_required`. A valid request begins editing, then
+  returns to durable `waiting_for_image` if media is unresolved. A repeated
+  pending request reuses its run ID; completed matching revisions reuse their
+  stored outcome. `AdminPublicationRunStatus` extends `AdminRunStatus` with
+  `waiting_for_image` for publication responses only. Collection keeps its
+  existing six-state vocabulary. A queued/running publication still produces
+  the normal 409 single-flight conflict.
+  Waiting reports `active=false`, no completion timestamp, no live progress,
+  no heartbeat and no `typical_seconds`; the GUI keeps polling without ETA or
+  stalled-worker warnings. The response exposes `editorial_completed_count`,
+  `waiting_for_image_count`, `image_reason` and `image_brief_slug` in addition
+  to its persisted summary. Batch items distinguish `succeeded`, `failed` and
+  `waiting_for_image`. `processed_count` counts PR successes; zero PRs with
+  pending images is not an execution error.
   While a run is queued/running `AdminPublishStatus` also carries **advisory
   live progress**: the article's recorded Refinery stage names
   (`progress.stages`, fed by the `RefineryEngine.stage_listener` hook),
@@ -262,21 +273,86 @@ for that same attempt; a later retry must identify its own PR/content attempt.
 - Publication identity reuse is strong but still has fallback branches that can use non-source dates.
 - `RefineryEngine` remains broader than ideal and mixes several responsibilities inside one workflow module.
 
+## Editorial checkpoints and image readiness (plan 190)
+
+`contracts/editorial_draft.py` defines the sealed, media-free editorial
+projection. Its editorial fields retain the existing validators; only the
+image dependency is deferred. `EditorAgent.process_article()` remains the
+compatible prepare-and-assemble wrapper. An internal preview is not a valid
+frontend post. Final assembly must satisfy the unchanged `AstroPost` mirror.
+
+`contracts/publication_checkpoint.py` defines `PublicationCheckpoint`, canonical
+`CheckpointIdentity` and `PublicationItemOutcome`; structural conversion from
+pipeline results lives in `contracts/publication_checkpoint_adapters.py`.
+`storage/publication_checkpoint_repository.py` owns their atomic persistence in
+`workflow_runs.run_metadata`. The source snapshot, prepared draft, fingerprint,
+brief reference and per-item outcomes survive restarts and export replacement.
+The fingerprint includes editorial inputs, prompts, models and policy while
+excluding image fields. Media-only resolution reuses validated work without
+repeating editorial LLM calls; changed editorial inputs require preparation
+again. A rejected sibling can retain a typed outcome without a draft.
+
+Image briefs retain their existing statuses. An accessible URL or local path
+alone does not establish redistribution rights. Staged-asset readiness requires
+a valid decoded asset, matching asset evidence and approved provenance
+(`ai_generated`, `licensed` or `original`); `image_origin=unknown` cannot release
+a wait. The existing remote-image host allowlist remains an explicit reuse
+policy for source downloads. Final assembly supplies usable alt text through
+the existing description/headline fallback. Missing, placeholder,
+download-failed and unproven-rights assets defer only publication. Optional
+`ImageGenerationMetadata` records prompt, tool, SHA-256 and dimensions; upload
+validates the supplied hash and size against actual bytes and the brief also
+records `asset_sha256`, `asset_width` and `asset_height`. Pillow 13.0.0 is pinned
+in the base runtime lock as well as the existing Refinery lock; decoding actual
+bytes no longer depends on installing the Streamlit extra. Codex can
+generate and review assets through its built-in `imagegen` during an active
+session; the server does not call an unattended generation API.
+
 ## Workflow lifecycle and client boundaries
 
-`CollectionRunWorkflow` and `PublicationRunWorkflow` own status rows in
-`workflow_runs`. The database enforces one active run per run type. Their
-default lease is 3,600 seconds with a 60-second heartbeat cadence; constructor
-values and tests own the exact cutoff behavior. Recovery marks runs
-`interrupted`; daemon-thread execution does not resume from a persisted step.
-Do not infer exactly-once Git/LLM effects or multiple-worker safety.
+`CollectionRunWorkflow` and `PublicationRunWorkflow` own `workflow_runs` status
+rows. The database enforces one queued/running run per run type. The default
+lease is 3,600 seconds with a 60-second heartbeat cadence. Publication's
+`waiting_for_image` rows do not hold the active slot, heartbeat or
+`finished_at`. Atomic claims of those rows arbitrate ready-image and busy-slot
+races without creating a new request.
 
-Publication start accepts exactly one of `article_id` or `url`; it has no
-publication dry-run switch. Workflow success is distinct from frontend deploy
-acknowledgment. Tests in `tests/unit/logic/workflows/` cover both run types.
+The serving lifecycle reconciles at startup, approved asset registration,
+worker completion and every 15 seconds. Checkpoint-bearing orphaned publication
+runs are recovered into resumable waiting; runs without durable replay evidence
+remain `interrupted`. Collection recovery keeps its existing interruption
+semantics. Replay reuses terminal siblings and persisted PR evidence; database
+claims and publication identity checks do not imply exactly-once external
+GitHub effects or general multiple-worker support.
 
-Admin TypeScript interfaces are currently maintained by hand. Plan 080 proposes
-generation for selected response types; it is not a current codegen guarantee.
-`apps/admin/src/lib/api.ts` defines the localStorage/build-time token fallback
-and development bypass. `PUBLIC_ADMIN_API_KEY` is browser-visible; it must not
-be described as a server-only secret.
+Publication start accepts exactly one of `article_id` or `article_url`; it has
+no publication dry-run switch. Editorial completion, waiting, workflow success,
+PR creation and frontend deployment acknowledgment are distinct states.
+
+The four collect/publish started/status response types are generated from
+`apps/admin/openapi.json`; other admin interfaces remain handwritten where
+shown in `apps/admin/src/lib/types.ts`. Use `make admin-contracts-generate` and
+`make admin-contracts-check` for deliberate schema changes.
+`apps/admin/src/lib/api.ts` uses the localStorage/build-time token fallback and
+development bypass. `PUBLIC_ADMIN_API_KEY` is browser-visible and is not a
+server-only secret. Waiting requests remain independently watched in Curaduría;
+links from the article and image desks carry the run ID for continued polling.
+
+## Image-wait migration and rollback
+
+Apply Alembic revision `f190a1b2c3d4` (for example, `make migrate`) before starting
+the compatible backend and regenerated admin. It extends the workflow status
+constraint and restricts `waiting_for_image` to publication rows; it does not
+change collection states or the frontend post schema. Verify the migration and
+resume flow on a database copy before a live rollout.
+
+For rollback, stop the serving process first so its reconciler stops and joins
+before replacing code; preserve a database backup and every checkpoint. Leaving
+the upgraded schema in place is preferable to discarding pending work. The
+migration refuses downgrade while any row is `waiting_for_image`. Before an
+older backend or a schema downgrade is used, resolve those requests or perform
+an explicit maintenance transition to `interrupted` that preserves
+`run_metadata` and its checkpoints. There is no destructive automatic rewrite
+in the downgrade. Interrupted checkpoints remain retained for controlled
+recovery after compatible code is restored; do not delete them to satisfy the
+constraint.

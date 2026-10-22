@@ -60,6 +60,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       }
       if (!cardsEl) return;
       cardsEl.innerHTML = briefs.map((b) => renderImageCard(b)).join('');
+      if (window.location.hash) {
+        document
+          .getElementById(decodeURIComponent(window.location.hash.slice(1)))
+          ?.scrollIntoView();
+      }
     } catch (e) {
       if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
@@ -114,8 +119,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       target.toggleAttribute('disabled', true);
       try {
         const started = await startPublish({ articleId });
-        showToast(`Publicación iniciada (run ${started.run_id})`);
-        await load();
+        showToast(
+          started.status === 'waiting_for_image'
+            ? `Edición completada · esperando imagen (proceso ${started.run_id})`
+            : `Envío consultado (proceso ${started.run_id}). Ver estado en Curaduría.`
+        );
+        window.location.assign(`/triage?run_id=${encodeURIComponent(started.run_id)}`);
       } catch (e) {
         if (e instanceof Error && e.name === 'AuthError') {
           clearToken();
@@ -154,7 +163,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     if (!card) return;
     try {
       await uploadImageBriefAsset(slug, input.files[0], collectFields(card));
-      showToast(`Recurso añadido a ${slug}`);
+      showToast(`Recurso añadido a ${slug}. El envío pendiente se reanudará automáticamente.`);
       await load();
     } catch (e) {
       if (e instanceof Error && e.name === 'AuthError') {

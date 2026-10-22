@@ -55,7 +55,7 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
     agent._headline_critic_pass = lambda *args, **kwargs: (True, None)  # type: ignore[method-assign]
     agent._generate_enrichment_fields = MagicMock(
         return_value={
-            "summary_points": ["Punto resumido"],
+            "summary_points": ["Punto resumido", "Segundo punto resumido"],
             "glossary": [{"term": "Término", "definition": "Definición"}],
             "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
             "why_it_matters": ["Relevancia regional"],
@@ -93,6 +93,8 @@ def test_process_article_recovers_when_editorial_stage_is_empty(tmp_path) -> Non
                 "summary": "Resumen científico",
                 "content": "Contenido base " * 100,
                 "url": "https://example.com/article",
+                "image_url": "https://example.com/image.webp",
+                "image_alt": "Ilustración del estudio",
             },
             override_date="2026-03-02",
         )

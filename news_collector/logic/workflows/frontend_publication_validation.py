@@ -25,6 +25,12 @@ logger = get_logger().create_module_logger("FrontendPublicationValidation")
 
 FIXTURE_ARTICLE_ID = "smoke-test-ci-fixture"
 FIXTURE_POST_FILENAME = "_smoke-test.md"
+FIXTURE_IMAGE_FILENAME = "_smoke-test.png"
+# The frontend only accepts first-party hero images (JSON-LD must point at
+# https://noticiencias.com/_astro/...), so the fixture stages a real local asset
+# exactly like a published post does instead of linking a remote placeholder.
+_FIXTURE_REMOTE_IMAGE_LINE = "image: https://example.com/placeholder.jpg"
+_FIXTURE_LOCAL_IMAGE_LINE = f"image: ~/assets/images/{FIXTURE_IMAGE_FILENAME}"
 
 CommandRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 
@@ -544,6 +550,31 @@ def _load_manifest(manifest_path: Path) -> tuple[dict[str, str], str | None]:
     return normalized, original_text
 
 
+def _fixture_png_bytes() -> bytes:
+    """A small valid 1200x630 PNG for the fixture's local hero image."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (1200, 630), (23, 46, 77)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _use_local_fixture_image(markdown: str) -> str:
+    """Point the rendered fixture at the staged local image.
+
+    Fails loudly when the rendered frontmatter no longer carries the remote
+    placeholder line, instead of silently validating a different post.
+    """
+    if markdown.count(_FIXTURE_REMOTE_IMAGE_LINE) != 1:
+        raise ValueError(
+            "smoke fixture image line not found in the rendered frontmatter: "
+            f"expected exactly one {_FIXTURE_REMOTE_IMAGE_LINE!r}"
+        )
+    return markdown.replace(_FIXTURE_REMOTE_IMAGE_LINE, _FIXTURE_LOCAL_IMAGE_LINE)
+
+
 def _stage_fixture(frontend_root: Path) -> dict[str, str | None]:
     posts_dir = frontend_root / "src" / "content" / "posts"
     posts_dir.mkdir(parents=True, exist_ok=True)
@@ -553,7 +584,14 @@ def _stage_fixture(frontend_root: Path) -> dict[str, str | None]:
     manifest, original_manifest_text = _load_manifest(manifest_path)
     manifest[FIXTURE_ARTICLE_ID] = FIXTURE_POST_FILENAME
 
-    post_path.write_text(render_fixture_markdown(), encoding="utf-8")
+    images_dir = frontend_root / "src" / "assets" / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    image_path = images_dir / FIXTURE_IMAGE_FILENAME
+    image_path.write_bytes(_fixture_png_bytes())
+
+    post_path.write_text(
+        _use_local_fixture_image(render_fixture_markdown()), encoding="utf-8"
+    )
     manifest_path.write_text(
         f"{json.dumps(manifest, indent=2, sort_keys=True)}\n", encoding="utf-8"
     )
@@ -561,6 +599,7 @@ def _stage_fixture(frontend_root: Path) -> dict[str, str | None]:
     return {
         "post_path": str(post_path),
         "manifest_path": str(manifest_path),
+        "image_path": str(image_path),
         "original_manifest_text": original_manifest_text,
     }
 
@@ -570,6 +609,9 @@ def _cleanup_fixture(frontend_root: Path, staged: dict[str, str | None]) -> None
     manifest_path = Path(staged["manifest_path"] or "")
     if post_path.exists():
         post_path.unlink()
+    image_path = Path(staged.get("image_path") or "")
+    if image_path.name == FIXTURE_IMAGE_FILENAME and image_path.exists():
+        image_path.unlink()
 
     original_manifest_text = staged.get("original_manifest_text")
     if original_manifest_text is None:

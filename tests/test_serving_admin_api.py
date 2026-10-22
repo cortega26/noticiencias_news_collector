@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from news_collector.serving import create_app
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, ScoreLog, Source, WorkflowRun
+from tests.fixtures.images import raster_bytes
 
 pytestmark = pytest.mark.e2e
 
@@ -1364,10 +1365,10 @@ def test_admin_publish_lifecycle_and_db_survives(
         assert after.status_code == 200
 
 
-def test_admin_publish_refuses_needs_editorial_image_without_a_run(
+def test_admin_publish_starts_editorial_work_with_a_pending_image(
     api_client: TestClient, tmp_path, monkeypatch
 ) -> None:
-    """Plan 168: a pending brief is a structured 409, never a doomed run."""
+    """Plan 190: an image dependency must not prevent editorial dispatch."""
     from news_collector.logic.workflows.publication_run_workflow import (
         PublicationRunStartResult,
         PublicationRunWorkflow,
@@ -1399,16 +1400,10 @@ def test_admin_publish_refuses_needs_editorial_image_without_a_run(
             "/v1/admin/publish", json={"article_id": 3724}, headers=_admin_headers()
         )
 
-    assert response.status_code == 409, response.text
-    assert response.json()["detail"] == {
-        "error_code": "image_required",
-        "slug": "test-image-brief",
-        "article_id": 3724,
-        "prompt": prompt,
-    }
-    # The lookup must never create data/ directories (read-only pre-check).
-    assert store_kwargs == {"read_only": True}
-    start_mock.assert_not_called()
+    assert response.status_code == 202, response.text
+    assert response.json()["run_id"] == "99"
+    assert store_kwargs == {}
+    start_mock.assert_called_once_with(article_id=3724, article_url=None)
 
 
 @pytest.mark.parametrize("status", ["editorial_image_ready", "resolved"])
@@ -2582,8 +2577,11 @@ def test_admin_image_brief_upload_stages_asset(
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.post(
             "/v1/admin/images/brief-upload/upload",
-            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
-            data={"draft_alt_text": "Imagen de laboratorio"},
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
+            data={
+                "draft_alt_text": "Imagen de laboratorio",
+                "image_origin": "original",
+            },
             headers=_admin_headers(),
         )
         assert response.status_code == 200
@@ -2612,7 +2610,7 @@ def test_admin_image_brief_upload_persists_image_origin(
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.post(
             "/v1/admin/images/brief-origin/upload",
-            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
             data={"image_origin": "ai_generated"},
             headers=_admin_headers(),
         )
@@ -2637,7 +2635,7 @@ def test_admin_image_brief_upload_rejects_invalid_origin_422(
     with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
         response = api_client.post(
             "/v1/admin/images/brief-origin-bad/upload",
-            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
             data={"image_origin": "scraped"},
             headers=_admin_headers(),
         )
@@ -2674,7 +2672,7 @@ def test_admin_image_brief_traversal_slug_422(
         assert response.status_code == 422
         response = api_client.post(
             "/v1/admin/images/%2E%2E/upload",
-            files={"file": ("hero.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+            files={"file": ("hero.png", raster_bytes(), "image/png")},
             headers=_admin_headers(),
         )
         assert response.status_code == 422
@@ -2696,7 +2694,7 @@ def test_admin_image_brief_upload_rejects_bad_type_422(
         # Disallowed extension, even with genuine PNG bytes.
         response = api_client.post(
             "/v1/admin/images/brief-badtype/upload",
-            files={"file": ("hero.svg", b"\x89PNG\r\n\x1a\nfake", "image/svg+xml")},
+            files={"file": ("hero.svg", raster_bytes(), "image/svg+xml")},
             headers=_admin_headers(),
         )
         assert response.status_code == 422
@@ -4010,3 +4008,101 @@ def test_reader_report_decision_triage_sets_status_without_rows(
         ).scalar_one()
         assert int(total) == 0
     assert detail["status"] == "triaged"
+
+
+@pytest.mark.parametrize(
+    ("workflow_status", "api_status"),
+    [("waiting_for_image", "waiting_for_image"), ("existing", "succeeded")],
+)
+def test_admin_publish_reuses_waiting_or_completed_request(
+    api_client: TestClient, monkeypatch, workflow_status: str, api_status: str
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunWorkflow,
+    )
+
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "start",
+        lambda self, **kwargs: SimpleNamespace(
+            status=workflow_status, run_id=99, detail="Existing request."
+        ),
+    )
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.post(
+            "/v1/admin/publish", json={"article_id": 3822}, headers=_admin_headers()
+        )
+    assert response.status_code == 202
+    assert response.json() == {
+        "run_id": "99",
+        "status": api_status,
+        "detail": "Existing request.",
+    }
+
+
+def test_admin_publish_waiting_has_no_running_progress_or_eta(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStatusResult,
+        PublicationRunWorkflow,
+    )
+
+    summary = {
+        "editorial_completed_count": 1,
+        "waiting_for_image_count": 1,
+        "image_reason": "missing_source_image",
+        "image_brief_slug": "roots-3822",
+    }
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "get_status",
+        lambda self, run_id: PublicationRunStatusResult(
+            status="found",
+            run_id=99,
+            run_status="waiting_for_image",
+            summary=summary,
+            progress={"stages": ["editor_refinement"]},
+            heartbeat_at=datetime.now(timezone.utc),
+            typical_seconds=300,
+        ),
+    )
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/publish/status?run_id=99", headers=_admin_headers()
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "waiting_for_image"
+    assert body["active"] is False
+    assert body["finished_at"] is None
+    assert body["progress"] is None
+    assert body["heartbeat_at"] is None
+    assert body["typical_seconds"] is None
+    for key, value in summary.items():
+        assert body[key] == value
+
+
+def test_admin_lifespan_starts_and_stops_publication_reconciler(
+    db_manager: DatabaseManager, sources_yaml_path: Path, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunWorkflow,
+    )
+
+    events = []
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "start_reconciler",
+        lambda self: events.append("start"),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "stop_reconciler",
+        lambda self: events.append("stop"),
+        raising=False,
+    )
+    with TestClient(create_app(db_manager, sources_yaml_path=sources_yaml_path)):
+        assert events == ["start"]
+    assert events == ["start", "stop"]

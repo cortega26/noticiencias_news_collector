@@ -38,7 +38,7 @@ class TestEditorAgentTags(unittest.TestCase):
         )
         self.agent._generate_enrichment_fields = MagicMock(
             return_value={
-                "summary_points": ["Punto resumido"],
+                "summary_points": ["Punto resumido", "Segundo punto resumido"],
                 "glossary": [{"term": "Término", "definition": "Definición"}],
                 "fact_check": [{"label": "Afirmación", "status": "confirmed"}],
                 "why_it_matters": ["Relevancia regional"],
@@ -82,7 +82,8 @@ class TestEditorAgentTags(unittest.TestCase):
         self.agent._get_cache_path.return_value.exists.return_value = False
         self.agent._get_cache_path.return_value.write_text = MagicMock()
 
-        result = self.agent.process_article(raw_text, override_date="2026-03-02")
+        draft = self.agent.prepare_article(raw_text, override_date="2026-03-02")
+        result = draft.preview_markdown
 
         # Parse YAML
         import re
@@ -107,7 +108,8 @@ class TestEditorAgentTags(unittest.TestCase):
         self.agent._get_cache_path = MagicMock()
         self.agent._get_cache_path.return_value.exists.return_value = False
 
-        result = self.agent.process_article(raw_text, override_date="2026-03-02")
+        draft = self.agent.prepare_article(raw_text, override_date="2026-03-02")
+        result = draft.preview_markdown
 
         # Parse YAML
         import re

@@ -399,6 +399,8 @@ class WorkflowLifecycleMachine(RuleBasedStateMachine):
         if rec["status"] == "queued":
             assert changed is True
             rec["status"] = "running"
+            if rec["run_type"] == "publication":
+                rec["heartbeat_at"] = self._clock.now
         else:
             assert changed is False
 

@@ -16,8 +16,9 @@ from pydantic import ValidationError
 
 from news_collector.contracts.image_brief import ImageBriefModel
 from news_collector.logic.workflows.image_briefs import ImageBriefStore
+from tests.fixtures.images import raster_bytes
 
-PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-body"
+PNG_BYTES = raster_bytes()
 
 
 def _brief(slug: str = "brief-origin", **overrides) -> ImageBriefModel:

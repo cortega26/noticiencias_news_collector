@@ -552,6 +552,8 @@ def run_publication_pipeline(  # noqa: C901
     process_new_content=False,
     dry_run=False,
     stage_listener=None,
+    checkpoint_run_id: int | None = None,
+    checkpoint_repository=None,
 ):
     """
     Workflow-layer entry point for the Noticiencias publication pipeline.
@@ -575,7 +577,29 @@ def run_publication_pipeline(  # noqa: C901
         dict: Execution capabilities summary or status.
     """
     from news_collector.observability import llm_run_stats
+    from news_collector.storage.publication_checkpoint_repository import (
+        PublicationCheckpointRepository,
+    )
 
+    replay = (
+        checkpoint_repository.load(checkpoint_run_id, str(process_id))
+        if checkpoint_repository is not None
+        and checkpoint_run_id is not None
+        and process_id
+        else None
+    )
+    if replay is not None and replay.status in {"succeeded", "failed"}:
+        return {
+            "status": "success" if replay.status == "succeeded" else "error",
+            "processed_count": int(replay.status == "succeeded"),
+            "editorial_completed_count": 1,
+            "waiting_for_image_count": 0,
+            "pr_url": replay.pr_url,
+            "final_slug": replay.identity.final_slug,
+            "message": "Reusing the recorded item outcome.",
+        }
+    own_checkpoint_run = False
+    standalone_success = False
     llm_scope = llm_run_stats.begin_scope()  # this publication only (see RunScope)
     logger.info(f"Starting Noticiencias Refinery... (Dry Run={dry_run})")
 
@@ -602,7 +626,7 @@ def run_publication_pipeline(  # noqa: C901
     # needs below for config.github/config.ollama/etc).
     config_settings.refresh_runtime_config(config)
 
-    if not fetch_only:
+    if not fetch_only and replay is None:
         llm_warnings = preflight_llm_provider(config=config, logger=logger)
 
         if not config_settings.LLM_SYSTEM_AVAILABLE:
@@ -626,7 +650,7 @@ def run_publication_pipeline(  # noqa: C901
     # Initialize Database
     db_manager = DatabaseManager()
 
-    git_handler = GitHubPublisher(config.github.token)
+    git_handler = GitHubPublisher(config.github.token or "")
     resolved_models = resolve_ollama_stage_models(config, logger=logger)
     # api_url is only used by the OllamaProvider fallback; NVIDIA/Gemini providers
     # ignore it and read their credentials from config instead.
@@ -695,7 +719,7 @@ def run_publication_pipeline(  # noqa: C901
             preferred_export_path is not None
             and preferred_export_path.exists()
             and not fetch_only
-        )
+        ) or replay is not None
 
         # 1. Clone Source Repo
         if skip_clone:
@@ -722,7 +746,7 @@ def run_publication_pipeline(  # noqa: C901
 
         # 2. Run News Collector (if available) -> Generates new data in SOURCE_DIR/data
         # SKIP if process_id is set (Refine Only Mode) to separate workflows
-        if not process_id:
+        if not process_id and replay is None:
             # Pass dry_run
             run_collector_script(SOURCE_DIR, fast_mode=fast_mode, dry_run=dry_run)
         else:
@@ -746,7 +770,7 @@ def run_publication_pipeline(  # noqa: C901
 
         # Find candidate files (md or json)
         # Recursively find files
-        articles_to_process = []
+        articles_to_process: list[dict[str, Any]] = []
 
         # Check for Collector Export (Primary Source)
         # 1. Look in Cloned Repo (Cloud Source)
@@ -759,7 +783,7 @@ def run_publication_pipeline(  # noqa: C901
 
         selected_export_path = None
 
-        if (
+        if replay is None and (
             (preferred_export_path is not None and preferred_export_path.exists())
             or CLONED_EXPORT_PATH.exists()
             or SIBLING_EXPORT_PATH.exists()
@@ -775,6 +799,13 @@ def run_publication_pipeline(  # noqa: C901
                 logger.info(f"Using export at {selected_export_path}")
             logger.info(
                 f"Loaded {len(articles_to_process)} new articles from JSON export."
+            )
+
+        if replay is not None:
+            articles_to_process = [replay.article]
+            logger.info(
+                "Resuming article {} from its durable source snapshot",
+                replay.article_id,
             )
 
         # Fallback / Supplemental: Source Repo Files
@@ -871,6 +902,24 @@ def run_publication_pipeline(  # noqa: C901
                 "processed_count": 0,
             }
 
+        if checkpoint_repository is None:
+            checkpoint_repository = PublicationCheckpointRepository(db_manager)
+            try:
+                checkpoint_run_id = checkpoint_repository.standalone(
+                    [str(a["id"]) for a in articles_to_process]
+                )
+            except Exception as exc:
+                logger.error("Could not acquire durable publication slot: {}", exc)
+                return {
+                    "status": "error",
+                    "processed_count": 0,
+                    "error_code": "publication_slot_unavailable",
+                    "message": str(exc),
+                }
+            own_checkpoint_run = True
+        engine.checkpoint_repository = checkpoint_repository
+        engine.checkpoint_run_id = checkpoint_run_id
+
         last_error = None
         processed_count = 0
 
@@ -924,33 +973,64 @@ def run_publication_pipeline(  # noqa: C901
 
         emit_run_report(emit=logger.info, export_path=None, scope=llm_scope)
 
+        pending = summary.get("waiting", []) if articles_to_process else []
+        if pending:
+            result = {
+                "status": "waiting_for_image",
+                "processed_count": processed_count,
+                "editorial_completed_count": summary.get(
+                    "editorial_completed_count", 0
+                ),
+                "waiting_for_image_count": len(pending),
+                "waiting": pending,
+                "message": "Edición completada · esperando imagen",
+                **pending[0],
+            }
+            if own_checkpoint_run:
+                checkpoint_repository.park(checkpoint_run_id, result)
+            return merge_manual_ingest_context(result)
+
         if processed_count == 0 and last_error:
-            message = (
+            error_message = (
                 last_error.get("message")
                 if isinstance(last_error, dict)
                 else str(last_error)
             )
             result = {
                 "status": "error",
-                "message": f"Error procesando artículo: {message}",
+                "message": f"Error procesando artículo: {error_message}",
                 "processed_count": 0,
             }
             if isinstance(last_error, dict) and last_error.get("error_code"):
                 result["error_code"] = last_error["error_code"]
             return merge_manual_ingest_context(result)
 
-        result = {"status": "success", "processed_count": processed_count}
+        standalone_success = processed_count > 0
+        result = {
+            "status": "success",
+            "processed_count": processed_count,
+            "editorial_completed_count": summary.get(
+                "editorial_completed_count", processed_count
+            ),
+            "waiting_for_image_count": 0,
+        }
         return merge_manual_ingest_context(result)
     finally:
+        if own_checkpoint_run:
+            checkpoint_repository.finish_standalone(
+                checkpoint_run_id, standalone_success
+            )
         engine.close()
 
 
-def run_publication_batch(
+def run_publication_batch(  # noqa: C901 - explicit per-item replay, error and wait outcomes
     article_ids: "list[int]",
     *,
     skip_visuals: bool = False,
     stage_listener: Any = None,
     on_item_start: Any = None,
+    checkpoint_run_id: int | None = None,
+    checkpoint_repository=None,
 ) -> Dict[str, Any]:
     """Thin batch fan-out over :func:`run_publication_pipeline` (plan 109).
 
@@ -966,6 +1046,9 @@ def run_publication_batch(
     run time. No new abstraction, no change to the single-article path.
     """
     from news_collector.contracts.admin import BATCH_MAX_IDS
+    from news_collector.contracts.publication_checkpoint_adapters import (
+        publication_item_from_result,
+    )
 
     ids = list(article_ids or [])
     if not ids or len(ids) > BATCH_MAX_IDS:
@@ -975,11 +1058,27 @@ def run_publication_batch(
     for index, article_id in enumerate(ids):
         if on_item_start is not None:
             on_item_start(index, len(ids), article_id)
+        recorded = (
+            checkpoint_repository.outcomes(checkpoint_run_id).get(str(article_id))
+            if checkpoint_repository is not None
+            else None
+        )
         try:
+            if recorded is not None and recorded.status in {"succeeded", "failed"}:
+                items.append({**recorded.model_dump(), "article_id": article_id})
+                continue
             result = run_publication_pipeline(
                 process_id=str(article_id),
                 skip_visuals=skip_visuals,
                 stage_listener=stage_listener,
+                **(
+                    {
+                        "checkpoint_run_id": checkpoint_run_id,
+                        "checkpoint_repository": checkpoint_repository,
+                    }
+                    if checkpoint_repository is not None
+                    else {}
+                ),
             )
         except Exception as exc:  # per-item crash -> explicit failed item
             logger.error(
@@ -993,19 +1092,40 @@ def run_publication_batch(
                 "processed_count": 0,
                 "error_code": "batch_item_crashed",
             }
+        if checkpoint_repository is not None:
+            checkpoint_repository.save_outcome(
+                checkpoint_run_id, publication_item_from_result(str(article_id), result)
+            )
         ok = result.get("status") == "success" and bool(result.get("processed_count"))
         items.append(
             {
                 "article_id": article_id,
-                "status": "succeeded" if ok else "failed",
+                "status": (
+                    "succeeded"
+                    if ok
+                    else (
+                        "waiting_for_image"
+                        if result.get("status") == "waiting_for_image"
+                        else "failed"
+                    )
+                ),
                 "processed_count": int(result.get("processed_count") or 0),
                 "message": result.get("message"),
                 "error_code": result.get("error_code"),
+                "editorial_completed_count": result.get(
+                    "editorial_completed_count", int(ok)
+                ),
+                "image_reason": result.get("image_reason"),
+                "image_brief_slug": result.get("image_brief_slug"),
+                "pr_url": result.get("pr_url"),
             }
         )
 
     succeeded = sum(1 for item in items if item["status"] == "succeeded")
-    if succeeded == len(items):
+    waiting = sum(1 for item in items if item["status"] == "waiting_for_image")
+    if waiting:
+        status = "waiting_for_image"
+    elif succeeded == len(items):
         status = "success"
     elif succeeded:
         status = "partial"
@@ -1015,7 +1135,11 @@ def run_publication_batch(
         "status": status,
         "processed_count": succeeded,
         "succeeded_count": succeeded,
-        "failed_count": len(items) - succeeded,
+        "failed_count": len(items) - succeeded - waiting,
+        "waiting_for_image_count": waiting,
+        "editorial_completed_count": sum(
+            item["editorial_completed_count"] for item in items
+        ),
         "total_count": len(items),
         "items": items,
     }

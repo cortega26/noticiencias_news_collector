@@ -49,6 +49,14 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     >
     </div>
 
+    <div
+      id="publish-waiting"
+      role="status"
+      aria-live="polite"
+      class="mb-6 hidden space-y-3 rounded-lg border border-ink-700 bg-ink-850/60 px-4 py-2.5 font-mono text-xs text-ink-200"
+    >
+    </div>
+
     <div id="status-filter" class="mb-6 flex flex-wrap gap-2"></div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
@@ -234,12 +242,13 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     parseServerTime,
     secondsSinceLastSign,
   } from '../lib/publishProgress';
-  import type {
-    AdminCollectStarted,
-    AdminPublishBatchItem,
-    AdminPublishStarted,
-    AdminPublishStatus,
-  } from '../lib/types';
+  import {
+    renderPublishItems,
+    isPublishActive,
+    shouldPollPublish,
+    renderWaitingPublication,
+  } from '../lib/publishWaiting';
+  import type { AdminCollectStarted, AdminPublishStarted, AdminPublishStatus } from '../lib/types';
   import type { AdminArticleDetail, AdminArticleListItem, ArticleStatus } from '../lib/types';
 
   const STATUSES: ArticleStatus[] = [
@@ -891,7 +900,49 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   const publishUrlForm = document.getElementById('publish-url-form') as HTMLFormElement | null;
   const publishUrlInput = document.getElementById('publish-url') as HTMLInputElement | null;
   const publishUrlBtn = document.getElementById('publish-url-btn');
-  let publishPollTimer: number | undefined;
+  const waitingStatusEl = document.getElementById('publish-waiting');
+  const publicationWatches = new Map<
+    string,
+    {
+      timer: number;
+      status: AdminPublishStatus['status'];
+      waiting?: AdminPublishStatus;
+    }
+  >();
+  const WATCH_STORAGE_NAME = 'noticiencias-publication-watches';
+  let publishDispatching = false;
+
+  function saveWatches() {
+    try {
+      sessionStorage.setItem(WATCH_STORAGE_NAME, JSON.stringify([...publicationWatches.keys()]));
+    } catch {
+      /* Session storage can be unavailable; current-page polling still works. */
+    }
+  }
+
+  function renderWaitingRuns() {
+    if (!waitingStatusEl) return;
+    const rows = [...publicationWatches.values()].filter(
+      (w) => w.status === 'waiting_for_image' && w.waiting
+    );
+    waitingStatusEl.innerHTML = rows
+      .map((w) => `<div>${renderWaitingPublication(w.waiting!)}</div>`)
+      .join('');
+    waitingStatusEl.classList.toggle('hidden', rows.length === 0);
+  }
+
+  function releasePublicationWatch(runId: string) {
+    window.clearInterval(publicationWatches.get(runId)?.timer);
+    publicationWatches.delete(runId);
+    saveWatches();
+    renderWaitingRuns();
+  }
+
+  function updatePublishControls() {
+    setPublishInFlight(
+      publishDispatching || [...publicationWatches.values()].some((w) => isPublishActive(w.status))
+    );
+  }
   let publishInFlight = false;
 
   // Live progress panel: rebuilt only when the run changes, then patched in
@@ -1001,24 +1052,17 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 
   /** Render a batch run's per-item outcomes (plan 109) into the status box. */
   function renderBatchItems(runId: string, items: unknown): boolean {
-    if (!Array.isArray(items) || items.length === 0) return false;
-    const lines = (items as Partial<AdminPublishBatchItem>[]).map((item) => {
-      const id = esc(String(item.article_id ?? '?'));
-      if (item.status === 'succeeded' && item.pr_url) {
-        return `#${id} ✓ <a class="text-amber-400 underline" href="${esc(item.pr_url)}" target="_blank" rel="noopener">${esc(item.pr_url)}</a>`;
-      }
-      const reason = esc(item.failure_class ?? item.message ?? 'unknown error');
-      return `#${id} ✗ ${reason}`;
-    });
+    const lines = renderPublishItems(items);
+    if (!lines) return false;
     renderPublishStatus(
-      `Lote ${esc(runId)} terminado:<br>${lines.join('<br>')} <span class="text-ink-500">(actualizando la cola…)</span>`
+      `Lote ${esc(runId)} terminado:<br>${lines} <span class="text-ink-500">(actualizando la cola…)</span>`
     );
     return true;
   }
 
   function scheduleQueueRefresh() {
     setTimeout(() => {
-      publishStatusEl?.classList.add('hidden');
+      if (!publishInFlight) publishStatusEl?.classList.add('hidden');
       status = 'pending';
       cursor = null;
       items = [];
@@ -1030,26 +1074,47 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   }
 
   function pollPublish(runId: string) {
-    window.clearInterval(publishPollTimer);
+    releasePublicationWatch(runId);
     let transientFailures = 0;
     const MAX_TRANSIENT = 5;
-    publishPollTimer = window.setInterval(async () => {
+    let polling = false;
+    const watch = {
+      timer: 0,
+      status: 'queued' as AdminPublishStatus['status'],
+      waiting: undefined as AdminPublishStatus | undefined,
+    };
+    publicationWatches.set(runId, watch);
+    saveWatches();
+    watch.timer = window.setInterval(async () => {
+      if (polling) return;
+      polling = true;
       try {
         const st = await getPublishStatus(runId);
+        if (publicationWatches.get(runId) !== watch) return;
         transientFailures = 0;
-        if (st.status === 'running' || st.status === 'queued') {
-          showProgress(runId, st);
+        watch.status = st.status;
+        watch.waiting = st.status === 'waiting_for_image' ? st : undefined;
+        renderWaitingRuns();
+        updatePublishControls();
+        if (shouldPollPublish(st.status)) {
+          if (isPublishActive(st.status)) showProgress(runId, st);
+          else {
+            if (progress?.runId === runId) stopProgress();
+            if (![...publicationWatches.values()].some((w) => isPublishActive(w.status))) {
+              publishStatusEl?.classList.add('hidden');
+            }
+          }
           return;
         }
-        window.clearInterval(publishPollTimer);
-        setPublishInFlight(false);
+        releasePublicationWatch(runId);
+        updatePublishControls();
         const batchItems = (st.summary as Record<string, unknown> | undefined)?.items;
         if (st.status === 'succeeded' && st.pr_url) {
           renderPublishStatus(
-            `Publicado — PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`
+            `PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`
           );
           scheduleQueueRefresh();
-        } else if (st.status === 'succeeded' && renderBatchItems(runId, batchItems)) {
+        } else if (renderBatchItems(runId, batchItems)) {
           batchSelected.clear();
           scheduleQueueRefresh();
         } else if (st.status === 'succeeded') {
@@ -1067,17 +1132,26 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           renderPublishStatus(`No publicado (proceso ${runId}): ${esc(reason)}`);
         }
       } catch (e) {
+        if (publicationWatches.get(runId) !== watch) return;
         if (e instanceof Error && e.name === 'AuthError') {
-          window.clearInterval(publishPollTimer);
+          publicationWatches.forEach((w) => window.clearInterval(w.timer));
+          publicationWatches.clear();
+          renderWaitingRuns();
           stopProgress();
-          setPublishInFlight(false);
+          updatePublishControls();
           clearToken();
           showAuthGate();
           return;
         }
-        if (e instanceof NetworkError && transientFailures < MAX_TRANSIENT) {
+        if (
+          e instanceof NetworkError &&
+          (watch.status === 'waiting_for_image' || transientFailures < MAX_TRANSIENT)
+        ) {
           transientFailures += 1;
           const retrying = `${transientFailures}/${MAX_TRANSIENT}`;
+          if (watch.status === 'waiting_for_image') {
+            return; // A waiting dependency has no running clock or stall warning.
+          }
           if (progress?.runId === runId) showProgress(runId, progress.st, retrying);
           else
             renderPublishStatus(
@@ -1085,9 +1159,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             );
           return;
         }
-        window.clearInterval(publishPollTimer);
-        setPublishInFlight(false);
+        releasePublicationWatch(runId);
+        updatePublishControls();
         renderPublishStatus(`Falló la consulta de estado: ${esc((e as Error).message)}`);
+      } finally {
+        polling = false;
       }
     }, 3000);
   }
@@ -1097,6 +1173,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       showToast('Ya hay una publicación en curso.', 'err');
       return;
     }
+    publishDispatching = true;
     setPublishInFlight(true);
     renderPublishStatus('Iniciando proceso…');
     try {
@@ -1125,6 +1202,9 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       }
       setPublishInFlight(false);
       renderPublishStatus(`No se pudo iniciar la publicación: ${esc((e as Error).message)}`);
+    } finally {
+      publishDispatching = false;
+      updatePublishControls();
     }
   }
 
@@ -1145,6 +1225,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       showToast('Marca primero de 1 a 5 filas publicables.', 'err');
       return;
     }
+    publishDispatching = true;
     setPublishInFlight(true);
     renderPublishStatus(`Iniciando lote de ${ids.length} artículos…`);
     try {
@@ -1170,11 +1251,44 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       }
       setPublishInFlight(false);
       renderPublishStatus(`No se pudo iniciar el lote: ${esc((e as Error).message)}`);
+    } finally {
+      publishDispatching = false;
+      updatePublishControls();
     }
   }
 
   batchBtn?.addEventListener('click', () => void doPublishBatch());
 
+  function restorePublicationWatches() {
+    const requestedRun = new URLSearchParams(window.location.search).get('run_id');
+    if (requestedRun && /^\d+$/.test(requestedRun) && !publicationWatches.has(requestedRun)) {
+      pollPublish(requestedRun);
+    }
+    try {
+      const ids: unknown = JSON.parse(sessionStorage.getItem(WATCH_STORAGE_NAME) ?? '[]');
+      if (Array.isArray(ids))
+        ids
+          .filter((id): id is string => typeof id === 'string')
+          .forEach((id) => {
+            if (!publicationWatches.has(id)) pollPublish(id);
+          });
+      updatePublishControls();
+    } catch {
+      /* Invalid/unavailable storage does not prevent triage. */
+    }
+  }
+  restorePublicationWatches();
+  window.addEventListener('auth:ready', restorePublicationWatches);
+  window.addEventListener('pagehide', () => {
+    publicationWatches.forEach((w) => window.clearInterval(w.timer));
+    stopProgress();
+  });
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    publicationWatches.forEach((w) => window.clearInterval(w.timer));
+    publicationWatches.clear();
+    restorePublicationWatches();
+  });
   renderFilters();
   void loadQueue();
 </script>

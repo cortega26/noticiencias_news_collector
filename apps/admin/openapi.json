@@ -970,6 +970,39 @@
             "title": "Article Id",
             "type": "string"
           },
+          "asset_height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Height"
+          },
+          "asset_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Sha256"
+          },
+          "asset_width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Width"
+          },
           "draft_alt_text": {
             "anyOf": [
               {
@@ -991,6 +1024,16 @@
               }
             ],
             "title": "Generated Prompt"
+          },
+          "generation_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageGenerationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "image_origin": {
             "default": "unknown",
@@ -1285,17 +1328,25 @@
             "type": "string"
           },
           "status": {
-            "default": "queued",
-            "enum": [
-              "queued",
-              "running",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "interrupted"
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "running",
+                  "succeeded",
+                  "failed",
+                  "cancelled",
+                  "interrupted"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "waiting_for_image",
+                "type": "string"
+              }
             ],
-            "title": "Status",
-            "type": "string"
+            "default": "queued",
+            "title": "Status"
           }
         },
         "required": [
@@ -1381,17 +1432,25 @@
             "type": "string"
           },
           "status": {
-            "default": "queued",
-            "enum": [
-              "queued",
-              "running",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "interrupted"
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "running",
+                  "succeeded",
+                  "failed",
+                  "cancelled",
+                  "interrupted"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "waiting_for_image",
+                "type": "string"
+              }
             ],
-            "title": "Status",
-            "type": "string"
+            "default": "queued",
+            "title": "Status"
           }
         },
         "required": [
@@ -1408,6 +1467,11 @@
             "default": false,
             "title": "Active",
             "type": "boolean"
+          },
+          "editorial_completed_count": {
+            "default": 0,
+            "title": "Editorial Completed Count",
+            "type": "integer"
           },
           "error": {
             "anyOf": [
@@ -1464,6 +1528,28 @@
             ],
             "title": "Heartbeat At"
           },
+          "image_brief_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Brief Slug"
+          },
+          "image_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Reason"
+          },
           "pr_url": {
             "anyOf": [
               {
@@ -1508,17 +1594,25 @@
             "title": "Started At"
           },
           "status": {
-            "default": "queued",
-            "enum": [
-              "queued",
-              "running",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "interrupted"
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "running",
+                  "succeeded",
+                  "failed",
+                  "cancelled",
+                  "interrupted"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "waiting_for_image",
+                "type": "string"
+              }
             ],
-            "title": "Status",
-            "type": "string"
+            "default": "queued",
+            "title": "Status"
           },
           "summary": {
             "additionalProperties": true,
@@ -1535,6 +1629,11 @@
               }
             ],
             "title": "Typical Seconds"
+          },
+          "waiting_for_image_count": {
+            "default": 0,
+            "title": "Waiting For Image Count",
+            "type": "integer"
           }
         },
         "title": "AdminPublishStatus",
@@ -2934,6 +3033,17 @@
             "title": "File",
             "type": "string"
           },
+          "generation_metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Metadata"
+          },
           "image_origin": {
             "anyOf": [
               {
@@ -3013,6 +3123,48 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImageGenerationMetadata": {
+        "additionalProperties": false,
+        "description": "Generation evidence verified against the staged asset's actual bytes.",
+        "properties": {
+          "height": {
+            "exclusiveMinimum": 0.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "prompt": {
+            "maxLength": 20000,
+            "minLength": 5,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "tool": {
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Tool",
+            "type": "string"
+          },
+          "width": {
+            "exclusiveMinimum": 0.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "prompt",
+          "tool",
+          "sha256",
+          "width",
+          "height"
+        ],
+        "title": "ImageGenerationMetadata",
         "type": "object"
       },
       "PaginationResponse": {
@@ -4581,7 +4733,7 @@
     },
     "/v1/admin/publish": {
       "post": {
-        "description": "Start one Refinery run (async): refine a candidate article (by\n`article_id`, must be in the current export) or ingest+refine a\n`article_url`, then open a PR against the frontend repo. Exactly one\nof `article_id` / `article_url` is required. A second call while one\nrun is active yields 409 with the active run's id; an article whose\nbrief still needs an editorial image yields 409 `image_required`\nwithout starting a run.",
+        "description": "Start one Refinery run (async): refine a candidate article (by\n`article_id`, must be in the current export) or ingest+refine a\n`article_url`, then open a PR against the frontend repo. Exactly one\nof `article_id` / `article_url` is required. A second call while one\nrun is active yields 409 with the active run's id. Missing images\ndefer publication after the editorial work is durably saved.",
         "operationId": "admin_publish_v1_admin_publish_post",
         "parameters": [
           {
@@ -4630,7 +4782,7 @@
                 }
               }
             },
-            "description": "A publication run is already queued or running (the body carries its run id), or the article's image brief still needs an editorial image (`detail.error_code=image_required`)."
+            "description": "A publication run is already queued or running (the body carries its run id)."
           },
           "422": {
             "content": {
