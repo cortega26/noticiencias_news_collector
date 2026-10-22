@@ -4,6 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 from news_collector.logic.workflows.frontend_publication_validation import (
@@ -12,6 +13,7 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     _load_manifest,
     _record_check,
     _stage_fixture,
+    _use_local_fixture_image,
     render_fixture_markdown,
     run_frontend_publication_validation,
 )
@@ -119,6 +121,33 @@ def test_stage_fixture_writes_post_and_manifest(tmp_path: Path) -> None:
     assert data["schema_version"] == 2
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["smoke-test-ci-fixture"] == "_smoke-test.md"
+
+
+def test_stage_fixture_stages_a_first_party_local_hero_image(tmp_path: Path) -> None:
+    """The frontend rejects remote hero images in JSON-LD, so the fixture must
+    reference a staged local asset (`~/assets/images/...`), like real posts."""
+    staged = _stage_fixture(tmp_path)
+    image_path = Path(staged["image_path"])
+    assert image_path == tmp_path / "src" / "assets" / "images" / "_smoke-test.png"
+    assert image_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    frontmatter = (
+        Path(staged["post_path"]).read_text(encoding="utf-8").split("---", 2)[1]
+    )
+    assert yaml.safe_load(frontmatter)["image"] == "~/assets/images/_smoke-test.png"
+
+
+def test_cleanup_fixture_removes_the_staged_image(tmp_path: Path) -> None:
+    staged = _stage_fixture(tmp_path)
+    _cleanup_fixture(tmp_path, staged)
+    assert not Path(staged["image_path"]).exists()
+    assert not Path(staged["post_path"]).exists()
+
+
+def test_use_local_fixture_image_fails_loudly_when_the_line_is_missing() -> None:
+    with pytest.raises(ValueError, match="image line not found"):
+        _use_local_fixture_image(
+            "---\ntitle: x\nimage: https://other.test/a.jpg\n---\n"
+        )
 
 
 def test_stage_fixture_failure_writes_summary(tmp_path: Path) -> None:

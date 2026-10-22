@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -33,6 +34,16 @@ def _refinery_test_env(monkeypatch):
         published_content,
         "iter_candidate_repo_roots",
         lambda *_args, **_kwargs: [REPO_ROOT],
+    )
+    # Nor clone the target repo: the panel reads TARGET_REPO_URL only from the
+    # untracked `.env`, so without it the real resolver runs `git clone ''`.
+    # An empty snapshot keeps the published-content tab inert and hermetic.
+    monkeypatch.setattr(
+        published_content,
+        "resolve_published_content_snapshot",
+        lambda **_kwargs: SimpleNamespace(
+            articles=[], repo_root=REPO_ROOT, source_label="Fixture vacío"
+        ),
     )
     os.chdir(REPO_ROOT)
     yield
