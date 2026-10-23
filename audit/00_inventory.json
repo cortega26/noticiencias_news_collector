@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-22T20:12:32.303542+00:00",
+  "generated_at": "2026-10-23T13:58:01.671045+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -951,7 +951,7 @@
       "alembic>=1.13.1",
       "starlette>=0.49.1",
       "tenacity>=8.1.0",
-      "gitpython>=3.1.41",
+      "gitpython>=3.2.1",
       "pillow>=13.0.0"
     ],
     "optional_security": [

@@ -8,4 +8,5 @@
 - [x] Fix second reviewer P1: retain known headline fidelity/sensationalism rejection through unverified re-review/resume.
 - [x] Run configured live stages and mandatory local gates; record safe holds/provider failures and pending semantic acceptance.
 - [x] Independent safety review: fourteen adversarial cases and 134 focused tests; final feedback-selection change covered by evidence regressions/full local gates.
+- [x] Repair GitPython advisory with a bounded official dependency/lock update and verify compatibility, security gates and file fingerprints in an isolated environment.
 - [ ] Parent integration and human semantic acceptance (no commit/push/merge by implementer).
