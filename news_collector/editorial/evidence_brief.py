@@ -6,8 +6,9 @@ The planning question and proposed contribution are assignments, not findings.
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
+
+from news_collector.editorial.draft_identity import editorial_text_sha256
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ def build_evidence_brief(
             "e incertidumbre. No añadir aplicaciones ni contexto sin respaldo."
         ),
         source_url=source_url,
-        source_sha256=hashlib.sha256(source_content.encode()).hexdigest(),
+        source_sha256=editorial_text_sha256(source_content),
         coverage=content_mode,
         passage=source_content[:3000],
         truncated=len(source_content) > 3000,

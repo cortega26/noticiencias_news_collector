@@ -13,6 +13,11 @@ _MEDIA_KEYS = frozenset(
 )
 
 
+def editorial_text_sha256(text: str) -> str:
+    """Hash exact UTF-8 text without normalization or identity serialization."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def _editorial_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {

@@ -14,6 +14,7 @@ from news_collector.components.editorial.ai_editor import (
 from news_collector.editorial.draft_identity import editorial_fingerprint
 from news_collector.editorial.evidence_brief import build_evidence_brief
 from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
+from tests.unit.editorial.evidence_pipeline import pipeline_with_provider_responses
 
 
 def test_brief_preserves_actual_available_excerpt_and_coverage():
@@ -152,40 +153,54 @@ def test_generated_pr_is_draft_and_requests_review_of_exact_artifact():
     assert "this checklist does not enforce or attest a review" in request["body"]
 
 
-def test_source_backed_replay_detects_exact_negative_controls(tmp_path):
+@pytest.fixture
+def replay_corpus():
     from pathlib import Path
-
-    from tools.editorial_eval.assertions import get_assert
-    from tools.editorial_eval.prepare import prepare_replay
 
     corpus = Path(__file__).resolve().parents[2] / "data/editorial_eval/evidence"
     cases = [
         json.loads(line) for line in (corpus / "cases.jsonl").read_text().splitlines()
     ]
+    return corpus, cases
+
+
+@pytest.mark.parametrize("label", ["baseline", "candidate"])
+def test_source_backed_replay_detects_exact_negative_controls(replay_corpus, label):
+    from tools.editorial_eval.assertions import get_assert
+
+    corpus, cases = replay_corpus
+    outputs = {
+        row["case_id"]: row
+        for row in (
+            json.loads(line)
+            for line in (corpus / f"{label}.jsonl").read_text().splitlines()
+        )
+    }
+    failures = set()
+    for case in cases:
+        result = get_assert(
+            outputs[case["case_id"]]["output"],
+            {"vars": {**case, "stored_error": None}},
+        )
+        if not result["pass"]:
+            failures.add(case["case_id"])
+    expected_failures = (
+        {case["case_id"] for case in cases if case["case_id"] != "faithful_limit"}
+        if label == "candidate"
+        else set()
+    )
+    assert failures == expected_failures
+
+
+def test_source_backed_replay_preserves_sources_and_pending_review(
+    tmp_path, replay_corpus
+):
+    from tools.editorial_eval.prepare import prepare_replay
+
+    corpus, cases = replay_corpus
     assert len(cases) == 11
     assert all(case["source_url"].startswith("https://") for case in cases)
     assert all(case["review_evidence"] is None for case in cases)
-    failures = []
-    for label in ("baseline", "candidate"):
-        outputs = {
-            row["case_id"]: row
-            for row in (
-                json.loads(line)
-                for line in (corpus / f"{label}.jsonl").read_text().splitlines()
-            )
-        }
-        for case in cases:
-            result = get_assert(
-                outputs[case["case_id"]]["output"],
-                {"vars": {**case, "stored_error": None}},
-            )
-            if not result["pass"]:
-                failures.append((label, case["case_id"]))
-    assert set(failures) == {
-        ("candidate", case["case_id"])
-        for case in cases
-        if case["case_id"] != "faithful_limit"
-    }
     review = json.loads((corpus / "review.json").read_text())
     assert review["human_review"]["status"] == "pending"
     summary = prepare_replay(
@@ -221,103 +236,6 @@ def test_enrichment_and_source_review_preserve_negation_and_expose_transport_fai
     }
 
 
-def _pipeline_with_provider_responses(
-    tmp_path,
-    monkeypatch,
-    reviews,
-    repair_suffix="",
-    technical_scores=None,
-    headline_reviews=None,
-    empty_after_rejection=False,
-):
-    """Exercise real preparation/repair/gating; replace only provider I/O."""
-    monkeypatch.setenv("ENABLE_EDITORIAL_CRITIC", "true")
-    agent = EditorAgent("http://example", "model")
-    agent.cache_dir = tmp_path / "editor-cache"
-    agent.cache_dir.mkdir(exist_ok=True)
-    agent.category_resolver._classifier = MagicMock(
-        try_classify_article=MagicMock(return_value=None)
-    )
-    body = (
-        "El estudio describe una observación limitada y no demuestra causalidad. "
-        "La fuente explica el método y sus límites; faltan estudios posteriores. "
-    ) * 12
-    responses = iter(reviews)
-    scores = iter(technical_scores) if technical_scores is not None else None
-    headline_responses = (
-        iter(headline_reviews) if headline_reviews is not None else None
-    )
-    headline_rejected = False
-    agent.recorded_repair_prompts = []
-    suffixes = iter(repair_suffix) if isinstance(repair_suffix, list) else None
-
-    def send(prompt, system="", **kwargs):
-        nonlocal headline_rejected
-        if system.startswith(agent.prompts["editor_critic"]["system"]):
-            response = next(responses)
-            if isinstance(response, Exception):
-                raise response
-            return response if isinstance(response, str) else json.dumps(response)
-        if system.startswith(agent.prompts["headline_critic"]["system"]):
-            if headline_responses is not None:
-                response = next(headline_responses)
-                if isinstance(response, Exception):
-                    raise response
-                if isinstance(response, dict) and response.get("approved") is False:
-                    headline_rejected = True
-                return response if isinstance(response, str) else json.dumps(response)
-            return json.dumps(
-                {"approved": True, "fidelity_pass": True, "sensationalism_pass": True}
-            )
-        if system.startswith(agent.prompts["headline"]["system"]):
-            if empty_after_rejection and headline_rejected:
-                return "{}"
-            return json.dumps(
-                {
-                    "direct": "Una observación que requiere nuevos estudios",
-                    "question": "¿Qué limita la observación?",
-                    "benefit": "Los límites de este estudio",
-                    "excerpt": "La observación descrita tiene límites y requiere estudios posteriores.",
-                    "tags": ["observacion"],
-                }
-            )
-        if system.startswith(agent.prompts["enrichment"]["system"]):
-            return json.dumps(
-                {
-                    "summary_points": ["Observación limitada", "No prueba causalidad"],
-                    "glossary": [{"term": "Observación", "definition": "Un registro"}],
-                    "fact_check": [
-                        {"label": "No prueba causalidad", "status": "uncertain"}
-                    ],
-                    "why_it_matters": [],
-                    "confidence": "Limitada",
-                    "sources": [
-                        {"title": "Fuente", "url": "https://example.org/source"}
-                    ],
-                }
-            )
-        if prompt.startswith("Analyze the following text across four criteria"):
-            return json.dumps(
-                {"score": 95, "reason": "Spanish complete article", "recoverable": True}
-            )
-        if prompt.startswith("La versión anterior fue rechazada"):
-            agent.recorded_repair_prompts.append(prompt)
-            return body + (next(suffixes) if suffixes is not None else repair_suffix)
-        return body
-
-    agent._send_prompt = send
-    agent._send_fact_check_prompt = lambda *args, **kwargs: {"status": "uncertain"}
-    article = {
-        "id": "hold-one",
-        "title": "Una observación limitada",
-        "content": body,
-        "url": "https://example.org/source",
-        "source_name": "Fuente",
-        "category": "espacio",
-    }
-    return agent, article, body
-
-
 @pytest.mark.parametrize(
     "failure",
     [
@@ -345,7 +263,7 @@ def test_known_material_hold_survives_unverified_rereview_and_resume(
         support_issues=[issue],
     )
     suffix = "\n\nUna reparación requiere nueva revisión." if changed_repair else ""
-    agent, article, body = _pipeline_with_provider_responses(
+    agent, article, body = pipeline_with_provider_responses(
         tmp_path, monkeypatch, [rejected, failure, failure], suffix
     )
     for _ in range(2):
@@ -375,7 +293,7 @@ def test_verified_repair_clears_hold_and_only_that_candidate_gets_checkpoint(
 ):
     from news_collector.components.editorial.editorial_stages import EditorialStage
 
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [_verdict(material_claims_supported=False), _verdict()],
@@ -405,7 +323,7 @@ def test_material_hold_does_not_leak_to_another_article_or_revision(
         GeneratedArticleValidationError,
     )
 
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [
@@ -432,9 +350,10 @@ def test_known_material_hold_survives_technical_repair_on_resume(tmp_path, monke
     from news_collector.components.editorial.editorial_publication_artifact import (
         GeneratedArticleValidationError,
     )
+    from news_collector.components.editorial.editorial_stages import EditorialStage
 
     issue = "The unsupported material claim still needs explicit revalidation"
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [
@@ -454,6 +373,10 @@ def test_known_material_hold_survives_technical_repair_on_resume(tmp_path, monke
         assert exc.value.error_code == "E_EDITORIAL_EVIDENCE"
     assert issue in agent.last_critic_verdict["support_issues"]
     assert agent.last_critic_verdict["material_claims_supported"] is False
+    assert agent.recorded_technical_scores == [95, 95, 0, 95]
+    candidate = agent._get_cache_path("hold-one", EditorialStage.EDITORIAL).read_text()
+    assert "Reparación técnica: texto cambiado sin revisión material." in candidate
+    assert "Spanish complete article" in agent.recorded_repair_prompts[-1]
 
 
 @pytest.mark.parametrize(
@@ -474,7 +397,7 @@ def test_known_headline_rejection_survives_unverified_rereview_and_resume(
         "sensationalism_pass": True,
         "regenerate_instruction": instruction,
     }
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [_verdict()],
@@ -501,7 +424,7 @@ def test_known_headline_rejection_survives_empty_regeneration(tmp_path, monkeypa
         GeneratedArticleValidationError,
     )
 
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [_verdict()],
@@ -525,7 +448,7 @@ def test_known_headline_rejection_survives_empty_regeneration(tmp_path, monkeypa
 
 
 def test_successful_headline_revalidation_clears_known_rejection(tmp_path, monkeypatch):
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [_verdict()],
@@ -554,7 +477,7 @@ def test_headline_hold_does_not_leak_to_another_article_or_revision(
     )
 
     failed_review = TimeoutError("headline provider unavailable")
-    agent, article, _ = _pipeline_with_provider_responses(
+    agent, article, _ = pipeline_with_provider_responses(
         tmp_path,
         monkeypatch,
         [_verdict(), _verdict()],

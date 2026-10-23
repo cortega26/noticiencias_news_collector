@@ -1,3 +1,19 @@
+# Held candidate review packet
+
+This literal view preserves the archived packet as data. Human review remains pending.
+The captured text is not rendered as Markdown or HTML.
+
+Raw archived bytes: [candidate-trial4-review-packet.raw.txt](candidate-trial4-review-packet.raw.txt)
+
+SHA-256: `f44eb8c6d803388402de16d984dd62a8de6bd2c74a2fdf2927508a6689b0b383`
+
+The raw artifact preserves every byte previously archived at `candidate-trial4-review-packet.md`.
+It remains a reconstruction from the retained
+[execution report](candidate-trial4-chain-report.json) and stage cache,
+with the [held draft](candidate-trial4-held-draft.md) retained separately.
+It is not a completed candidate draft or editorial approval.
+
+````text
 # Held candidate — human review pending
 
 This packet was reconstructed from the retained execution report and stage cache after the bounded run. It is not a completed editorial draft or approval.
@@ -42,3 +58,4 @@ Partial source coverage: summary_only. The retained source and stage-2 draft are
     "reviewer": null
   }
 }
+````

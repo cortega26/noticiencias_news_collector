@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 import re
@@ -47,6 +46,7 @@ from news_collector.components.editorial.editorial_publication_artifact import (
 from news_collector.components.editorial.editorial_stages import EditorialStage
 from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
+from news_collector.editorial.draft_identity import editorial_text_sha256
 from news_collector.editorial.evidence_brief import build_evidence_brief
 from news_collector.editorial.health_claims import find_guarantee_language
 from news_collector.editorial.readability import check_english_spillover, check_headline
@@ -1753,10 +1753,10 @@ class EditorAgent:
             cache.write_text(
                 json.dumps(
                     {
-                        "body_sha256": hashlib.sha256(body.encode()).hexdigest(),
-                        "headlines_sha256": hashlib.sha256(
-                            json.dumps(headlines, sort_keys=True).encode()
-                        ).hexdigest(),
+                        "body_sha256": editorial_text_sha256(body),
+                        "headlines_sha256": editorial_text_sha256(
+                            json.dumps(headlines, sort_keys=True)
+                        ),
                         "verdict": self.last_headline_verdict,
                     },
                     ensure_ascii=False,
@@ -2495,13 +2495,13 @@ class EditorAgent:
             brief.markdown(), "BRIEF_EVIDENCIA_NO_CONFIABLE"
         )
         editor_context["evidence_brief"] = brief.markdown()
-        self._cache_revision = hashlib.sha256(
+        self._cache_revision = editorial_text_sha256(
             json.dumps(
                 [input_text, source_url, content_mode, self.prompts],
                 ensure_ascii=False,
                 sort_keys=True,
-            ).encode()
-        ).hexdigest()[:24]
+            )
+        )[:24]
 
         # 2. Pipeline Execution
 
@@ -2571,12 +2571,9 @@ class EditorAgent:
         technical_cached = False
         if cache_s2_5.exists():
             try:
-                technical_cached = (
-                    json.loads(cache_s2_5.read_text(encoding="utf-8")).get(
-                        "content_sha256"
-                    )
-                    == hashlib.sha256(final_content.encode()).hexdigest()
-                )
+                technical_cached = json.loads(
+                    cache_s2_5.read_text(encoding="utf-8")
+                ).get("content_sha256") == editorial_text_sha256(final_content)
             except (ValueError, AttributeError) as exc:
                 logger.warning("Ignoring unusable technical checkpoint: {}", exc)
         if technical_cached:
@@ -2609,11 +2606,7 @@ class EditorAgent:
                 try:
                     cache_s2_5.write_text(
                         json.dumps(
-                            {
-                                "content_sha256": hashlib.sha256(
-                                    final_content.encode()
-                                ).hexdigest()
-                            }
+                            {"content_sha256": editorial_text_sha256(final_content)}
                         ),
                         encoding="utf-8",
                     )
@@ -2698,7 +2691,7 @@ class EditorAgent:
                 # revision until explicit material revalidation succeeds.
                 if pending_material or (
                     candidate_checkpoint.get("content_sha256")
-                    == hashlib.sha256(final_content.encode()).hexdigest()
+                    == editorial_text_sha256(final_content)
                 ):
                     cached_critic = stored_verdict
             except (ValueError, AttributeError) as exc:
@@ -2725,9 +2718,7 @@ class EditorAgent:
                     cache_s2_6.write_text(
                         json.dumps(
                             {
-                                "content_sha256": hashlib.sha256(
-                                    final_content.encode()
-                                ).hexdigest(),
+                                "content_sha256": editorial_text_sha256(final_content),
                                 "verdict": self.last_critic_verdict,
                             },
                             ensure_ascii=False,
@@ -2753,7 +2744,7 @@ class EditorAgent:
                     # artifact binds its pending revalidation to the latest draft.
                     current.setdefault(
                         "reviewed_content_sha256",
-                        hashlib.sha256(candidate.encode()).hexdigest(),
+                        editorial_text_sha256(candidate),
                     )
                     _persist_editorial_review_artifact()
                 return verdict
@@ -2880,9 +2871,7 @@ class EditorAgent:
 
         # --- STAGE 6: Editorial Enrichment Fields ---
         print("\n--- STAGE 6: Editorial Enrichment Fields ---")
-        self._enrichment_body_revision = hashlib.sha256(
-            final_content.encode()
-        ).hexdigest()[:24]
+        self._enrichment_body_revision = editorial_text_sha256(final_content)[:24]
         cache_s4 = self._get_cache_path(article_id, EditorialStage.ENRICHMENT)
 
         def _enrichment_cache_is_usable(cached: Any) -> TypeGuard[dict]:
@@ -3013,9 +3002,7 @@ class EditorAgent:
                     indent=2,
                 )
                 + "\n\nSHA-256 prompts: `"
-                + hashlib.sha256(
-                    json.dumps(self.prompts, sort_keys=True).encode()
-                ).hexdigest()
+                + editorial_text_sha256(json.dumps(self.prompts, sort_keys=True))
                 + "`\n\nRevisión humana final: PENDIENTE. No se ha atribuido revisión a ninguna persona."
             ),
         )

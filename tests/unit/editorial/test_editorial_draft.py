@@ -13,6 +13,47 @@ from pydantic import ValidationError
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.contracts.frontend_schema import AstroPost
+from news_collector.editorial.draft_identity import editorial_text_sha256
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+        (
+            "áéíóú ñ 漢字 🌌\n e\u0301\r\n",
+            "d871efb2f1532ea44eb86512beb64b381cbc40dda3a07baff83e6fdd847ff7d2",
+        ),
+        (
+            " spaced\n",
+            "defe2f4fa0a8089d7f99756b92ccfa1306c85121e6c644ce65ab2c77355e68a9",
+        ),
+        (
+            "e\u0301",
+            "bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6",
+        ),
+        ("é", "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"),
+    ],
+)
+def test_editorial_text_digest_preserves_original_exact_utf8(text, expected):
+    assert editorial_text_sha256(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("ensure_ascii", "expected"),
+    [
+        (True, "939c314d2a7083a567b66ceafb03d160d02d39e746b4ebde5a6d7879af0dcc98"),
+        (False, "9144391ed507328795c3d5afcceafa3fb4db078a1dee5a31d55273e540ed4b07"),
+    ],
+)
+def test_editorial_text_digest_keeps_caller_json_serialization(ensure_ascii, expected):
+    serialized = json.dumps(
+        {"z": "¿Raíces? 🌱", "a": {"é": [True, None, 1.5]}},
+        sort_keys=True,
+        ensure_ascii=ensure_ascii,
+    )
+    assert editorial_text_sha256(serialized) == expected
+
 
 BODY = (
     "Las raíces reciben nutrientes del suelo gracias a asociaciones con hongos. "

@@ -1,3 +1,20 @@
+# Paired trial 3 baseline review packet
+
+This literal view preserves the archived packet as data. Human review remains pending.
+The captured text is not rendered as Markdown or HTML.
+
+Raw archived bytes: [paired-trial3-baseline-review-packet.raw.txt](paired-trial3-baseline-review-packet.raw.txt)
+
+SHA-256: `0b11e069b79b7deb4d7d3fe4ddccb13af2c0050e607d95268d6699564462ff44`
+
+The raw artifact preserves every byte previously archived at `paired-trial3-baseline-review-packet.md`.
+The [paired execution report](paired-trial3-chain-report.json) and
+[baseline capture](paired-trial3-baseline.jsonl) retain their original bytes.
+The archived packet includes the previously documented single appended terminal LF.
+Remove exactly that final LF from the raw artifact to recover the captured original,
+whose SHA-256 is `033a841490c2a79ded49b4392aa3a7d0e42fa4d9e9b1f367260e593266520133`.
+
+````text
 ## Brief de evidencia (interno, revisión humana pendiente)
 
 Pregunta del lector: ¿Qué permite concluir la evidencia disponible sobre «Cómo se evalúan indicios de vida en exoplanetas» y qué queda por resolver?
@@ -92,3 +109,4 @@ Revisión de titulares:
 SHA-256 prompts: `9531d54386877d8c9edce30c0f9e804fa204ba0f9d45a89c53d7ec4dc92252eb`
 
 Revisión humana final: PENDIENTE. No se ha atribuido revisión a ninguna persona.
+````
