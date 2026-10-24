@@ -202,12 +202,16 @@ it, so it could silently describe a stale surface.
 ### Admin contracts
 
 - `.github/workflows/ci.yml` (job `admin-contracts`, on every push/PR): installs
-  Python + Node 24 and `npm ci` in `apps/admin`, then runs
+  Python + Node 24 and `npm ci --legacy-peer-deps` in `apps/admin`, then gates
+  dependencies with `npm audit --audit-level=high` before running
   `make admin-contracts-check` (fresh OpenAPI export compared against
   `apps/admin/openapi.json`, then `openapi-typescript --check` on the committed
   types), `make admin-test`, `make admin-build` and `make admin-lint`
   (`prettier --check` + `eslint`, the same check as the `admin-lint` pre-commit
   hook).
+- The admin Vitest DOM environment uses Happy DOM >=21.0.4, the patched minimum
+  for [GHSA-834v-8h66-3h79](https://github.com/advisories/GHSA-834v-8h66-3h79).
+  The audit includes development dependencies; the high threshold remains enforced.
 - Local regeneration: `make admin-contracts-generate`.
 - Ownership: Pydantic models in `news_collector/contracts/admin.py` are the
   source; the exporter is the only writer of `apps/admin/openapi.json`; the
