@@ -53,7 +53,6 @@ Baseline: Node v24.19.0; `npm audit --audit-level=high` exits 1 with one high
 Happy DOM advisory and one moderate fast-uri dependency finding. Upstream CI
 run 40102228536 / job 120896561198 shows the same failure.
 
-
 Verified candidate results (2026-10-24, Node v24.19.0 / npm 11.17.0):
 
 - `npm ci --legacy-peer-deps`: passes against the final lock.
