@@ -314,6 +314,11 @@ class LocalPRGitHandler:
         if repo_obj.is_dirty(untracked_files=True):
             repo_obj.index.commit(message)
 
+    def ensure_pull_request_draft(self, repo_url: str, branch_name: str) -> None:
+        # This adapter has no remote PRs or remote pushes. The real GitHub
+        # adapter enforces draft state at its HTTP boundary.
+        del repo_url, branch_name
+
     def create_pull_request(
         self,
         *,
@@ -321,6 +326,7 @@ class LocalPRGitHandler:
         branch_name: str,
         title: str,
         body: str,
+        draft: bool = False,
     ) -> str:
         del repo_url, title, body
         return f"https://example.test/pr/{branch_name}"

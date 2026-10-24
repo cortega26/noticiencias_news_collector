@@ -180,9 +180,16 @@ class TestCreatePR:
             "Processed by Noticiencias Refinery (recovered from publishing state).",
             "REFINERY_NOTE",
         )
-        assert (
-            normal_stripped == recovery_stripped
-        ), "PR body structure diverged between normal and recovery paths"
+        # Artifact fingerprints intentionally differ between normal and recovery.
+        normal_prefix, normal_suffix = normal_stripped.split(
+            "Final content SHA-256:", 1
+        )
+        recovery_prefix, recovery_suffix = recovery_stripped.split(
+            "Final content SHA-256:", 1
+        )
+        assert normal_prefix == recovery_prefix
+        assert normal_suffix.split("\n", 1)[1] == recovery_suffix.split("\n", 1)[1]
+        assert mock_git.create_pull_request.call_args.kwargs["draft"] is True
 
 
 # ---------------------------------------------------------------------------

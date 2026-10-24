@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-22T01:00:10.201452+00:00",
+  "generated_at": "2026-10-23T20:02:58.112147+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -287,6 +287,7 @@
       "187-report-admin-decisions.md",
       "188-report-closure-evidence.md",
       "190",
+      "191",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -950,7 +951,7 @@
       "alembic>=1.13.1",
       "starlette>=0.49.1",
       "tenacity>=8.1.0",
-      "gitpython>=3.1.41",
+      "gitpython>=3.2.1",
       "pillow>=13.0.0"
     ],
     "optional_security": [
@@ -1421,6 +1422,13 @@
     "plans/190/tests/README.md",
     "plans/190/tests/results.md",
     "plans/190/todo.md",
+    "plans/191/evidence.md",
+    "plans/191/evidence/candidate-trial4-held-draft.md",
+    "plans/191/evidence/candidate-trial4-review-packet.md",
+    "plans/191/evidence/paired-trial3-baseline-review-packet.md",
+    "plans/191/spec.md",
+    "plans/191/tests/README.md",
+    "plans/191/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

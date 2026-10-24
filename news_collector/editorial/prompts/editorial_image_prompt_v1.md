@@ -12,8 +12,10 @@ GOAL
 Generate an image that feels like premium editorial visual journalism for a science news publication in Spanish. It must be visually engaging, credible, polished, and strongly connected to the article’s actual subject matter.
 
 CRITICAL CREATIVE DIRECTION
-- The image must NOT look AI-generated.
-- It must feel like a real editorial image that could appear in a serious science magazine or high-end news feature.
+- The output is a conceptual illustration; never present it as a documentary image.
+- Preserve limitations: do not depict inferred archaeological behavior, an unconfirmed biosignature or a clinical benefit as observed fact.
+- Prefer a clear explanatory diagram or comparison over a fabricated photographic reconstruction when it better conveys the finding.
+- It must be suitable for a serious science magazine, clearly identified as an illustration in publication metadata.
 - Prioritize realism, restraint, clarity, and narrative relevance over spectacle.
 - Avoid generic futuristic AI-art aesthetics.
 - Avoid exaggerated sci-fi tropes unless the article is explicitly about speculative futures.

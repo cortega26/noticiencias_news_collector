@@ -145,6 +145,12 @@ security lock with `-c requirements.lock` and emptying the exception map (plan
 `make verify-ci`, and both run in the `lint` job of `.github/workflows/ci.yml` —
 not only on a developer's machine.
 
+GitPython requires >=3.2.1 to address
+[GHSA-83vg-56qc-22m7](https://github.com/advisories/GHSA-83vg-56qc-22m7).
+The runtime, refinery and security locks share that patched version. Refresh
+with `python scripts/sync_lockfiles.py --upgrade-package gitpython==3.2.1`;
+keep unrelated pins and the shared security-gate policy unchanged.
+
 ### Venv cache key contract
 
 Every workflow that calls `.github/actions/setup-python-env` passes

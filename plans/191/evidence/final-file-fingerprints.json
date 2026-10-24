@@ -1,0 +1,131 @@
+{
+  "base_commit": "1b948aedf67c105fd3309b7da068cb2ea6c62a1b",
+  "branch": "growth/editorial-pipeline-20261022",
+  "baseline_prompt_reference": "1b948aedf67c105fd3309b7da068cb2ea6c62a1b:config/prompts.yaml",
+  "runtime_ai_editor_sha256": "28d0deba62710a2b8ee91562afdaf4913be1a4f49c29bfdb81a4fca5e4a38dfa",
+  "prompts_file_sha256": "9d6a24d171e94bc86c5477891a93146fa4c7249af0ae94702338a286174c7d7f",
+  "files": {
+    "audit/00_inventory.json": "f4f2073296d4bd88b106a06836b55c47fbf57fd9aa3d6a615b81af6ac1263a79",
+    "config/prompts.yaml": "9d6a24d171e94bc86c5477891a93146fa4c7249af0ae94702338a286174c7d7f",
+    "docs/PRODUCT_FLOW.md": "2cc54e3cabbf758d0a4fdcb15eef87ea904f2dc3d04ce28d7bb0d7da31396755",
+    "docs/ci.md": "cd0d34fef7776a645600810b49e38f1f2233321d6d955c5ac6d10451c6f09a12",
+    "news_collector/components/editorial/ai_editor.py": "28d0deba62710a2b8ee91562afdaf4913be1a4f49c29bfdb81a4fca5e4a38dfa",
+    "news_collector/components/editorial/editorial_stages.py": "df9a3d5d8ece7d45f6e527ac01ac11af4b51f04f99d3a1dba5e5d1ab7f602a34",
+    "news_collector/components/publishing/github_publisher.py": "739c92c9bd24ab213bc894b005697b9e7699017c4cbc74109910db7cce10f8d0",
+    "news_collector/editorial/draft_identity.py": "a5348d85d2ca55e28bff0652921883c8ec619d0f7312c45d91122ae49732c4e3",
+    "news_collector/editorial/evidence_brief.py": "dc03489e77e1382eb8d00ce65144eaf2e078a7f78ce4df1bc1a74857efd8f822",
+    "news_collector/editorial/prompts/editorial_image_prompt_v1.md": "22d035b0b3c7d3142b060ef289465ede41861601096d17fcb124e9cef89cc049",
+    "news_collector/logic/workflows/pipeline_e2e.py": "d9cbae82b9076271683a7e638868d4f32185b6b8db696c532a35ca61f4d8860d",
+    "news_collector/logic/workflows/pr_orchestrator.py": "464469063167b8491d415a61303fed3432a3570e768123a3747b3855468b2f5c",
+    "news_collector/logic/workflows/refinery_engine.py": "2e2f474db89d8706986c05f58b91fcd2383a7e78d5a03132c77ccebc7a4e5cd7",
+    "news_collector/logic/workflows/target_repo_publication.py": "60ef89c549f7bc1980fb173aac133054d5f87e6400bd209e02b4fe3cdfaa7b28",
+    "plans/191/evidence.md": "4004615486d1b1ef0de6b86a2302faeb2590fddb8f8ff7f43e0414411ee99f26",
+    "plans/191/evidence/candidate-trial4-candidate.jsonl": "9d845238d400e7fb84c75cf709b55bd2559ecff7fa5664b0a6115af2b1cdbb48",
+    "plans/191/evidence/candidate-trial4-chain-report.json": "06660e5ab69c81f4383f9445357a8d0557ee912e8ab13717ce5714445bd54d09",
+    "plans/191/evidence/candidate-trial4-held-draft.md": "53048de464f755671cc3fe200a3d38ef10bf9595ccf7780124038ff635b5e1d9",
+    "plans/191/evidence/candidate-trial4-review-packet.md": "5a68d1a4c38f4503156b23449bb63a40e2c5d195ba545c56e0c6c596bac6dd59",
+    "plans/191/evidence/candidate-trial4-review-packet.raw.txt": "f44eb8c6d803388402de16d984dd62a8de6bd2c74a2fdf2927508a6689b0b383",
+    "plans/191/evidence/final-local-gates.json": "a7fec7ddf6d61b347f92fe5259342ffb65c74dd7c5e9ddfcdde5060951464ab9",
+    "plans/191/evidence/independent-safety-review.json": "6b44edd793863298912509ecd2426e40212545b853372d1741f649b51bfb64a3",
+    "plans/191/evidence/paired-trial3-baseline-review-packet.md": "5d6c955cf9a7b404807cdbdb2ce30480b6d9b2b0308098e61457a6450efcb2a0",
+    "plans/191/evidence/paired-trial3-baseline-review-packet.raw.txt": "0b11e069b79b7deb4d7d3fe4ddccb13af2c0050e607d95268d6699564462ff44",
+    "plans/191/evidence/paired-trial3-baseline.jsonl": "fa68e58d1c66d0da089e5de71e214d038606428b7fcf4713c85ba378eab0742a",
+    "plans/191/evidence/paired-trial3-candidate.jsonl": "c7e58050b148eae3a15e396205aae909669bacb269944189d8f9c865e8ed4106",
+    "plans/191/evidence/paired-trial3-chain-report.json": "10cb16c4b9dcd4b83e5fda1cd806a84e24a32d0ac5f993aa032d0114cfa63d54",
+    "plans/191/evidence/source-nasa-excerpts.txt": "52e750ea55a197da90276343b83a0d853874cf312443da6a6920b250794ba218",
+    "plans/191/evidence/trial1-baseline.jsonl": "c9e871e29ad74e75c574ea8d282e731ed0f13635c8c514f008dbd238ee8dd5e4",
+    "plans/191/evidence/trial1-candidate.jsonl": "a67721a56d6127c32e70e4489e613b2df73bf6ae4715dffcf6fa23781942c315",
+    "plans/191/evidence/trial1-chain-report.json": "48fa6af883743ef98c21985fbe75bd407f4ec4b05b942dcf49df478b95bf7142",
+    "plans/191/evidence/trial2-candidate.jsonl": "f051f0eb4597876ab0478a06bb2ee745c0fb44a0f53adb07f9a152d1fd91cbca",
+    "plans/191/evidence/trial2-chain-report.json": "6df978ddcdc60638b539359e424c7d21868c529757757ebb80541263247e744c",
+    "plans/191/spec.md": "cdca04e6d21e9fdc4e74799cae1d3ab25ba4ff513f4a17cea86f2de56957ffc9",
+    "plans/191/tests/README.md": "853ed560cd441a9d575bab3bb4e75d921254c9fe68eab3dce6cd31dac806b33f",
+    "plans/191/todo.md": "db8b53d6d94cabc8f29d441875bbe19b4d90b4146945ac59c250ed1661892f91",
+    "plans/README.md": "af4cc58d1735f696f3aff17912df3f8db8b00eb1d8d664a8cc9c7a52a09bb5f8",
+    "pyproject.toml": "5f0535ad382373f47b105e121e0d42e525e5528869491ef606a8b87cf7ea90ae",
+    "requirements-refinery.lock": "809095aeb380207a1692f8539e4c668eee9424ed6e589c4e7793a537c887f5e0",
+    "requirements-security.lock": "7245a3766a23eb4ae5b8f06b6b642c2e09a113f4da63a269b97e46eaf1d2896c",
+    "requirements.lock": "a13c143e3643697da67423f24817996f83893e2dd07c704bd54192f21a7d65be",
+    "tests/data/editorial_eval/evidence/baseline.jsonl": "afc02a72b3f9f4bb6e34402077f5d63237ce4270d2ae9fa7bc4b824fbf8ddbd3",
+    "tests/data/editorial_eval/evidence/candidate.jsonl": "5a32f53f6df6eeb63349ad7172ee89a390511fccb6d43b8f5395c3720c706fce",
+    "tests/data/editorial_eval/evidence/cases.jsonl": "0fc1b5432722c853199169c291bf07bb5b06f2877c3a5c99ce92b1535995b807",
+    "tests/data/editorial_eval/evidence/review.json": "43054cac0cfd159b73a3520481fea30304f2121d85be548e82d61061c9a66fea",
+    "tests/decompose_refinery/test_pr_orchestrator.py": "824379d72ae95904ece03920c9a4b66f5f6377c0392bd9ea15198c08fcf0da7c",
+    "tests/decompose_refinery/test_target_repo_publication.py": "4d8f5131a5b43b10435c2572c69f3f89ebf8869eb09b599bf8dccec0bded2ed9",
+    "tests/unit/editorial/evidence_pipeline.py": "2ce1f7cebd715bd5548d498e98f3a95d5fb775fbe640bfacf438e304a3c8591b",
+    "tests/unit/editorial/test_adsense_value_add_gate.py": "03189a513cbe31c90f574fa1b583d6b8f45b7f9facb6fbc139d0c60c637cd904",
+    "tests/unit/editorial/test_ai_editor_coverage.py": "eeeed05e2db105ff32edd8fb41d950dc8a3dc58e4ac5c60d2c7a48042a833e7e",
+    "tests/unit/editorial/test_capture_chain.py": "c44f3843c6e5a3affb7beabd92b54707734c313765fbd0fe480df84c62210e32",
+    "tests/unit/editorial/test_critic_average_derivation_155.py": "ebfb2f2edd9a1d4f84429a3cd524684c3487c1fa82d458bac40cf4a81f854dbd",
+    "tests/unit/editorial/test_critic_fail_open_103.py": "3afb83d9ec20d6eb0890b8a4d5669d645cf4b83655395457a39ba01ff878b20e",
+    "tests/unit/editorial/test_editorial_draft.py": "5f8de0a797af78e3a254b401572973e94a9766b746b0ce8e5f53448202b26307",
+    "tests/unit/editorial/test_editorial_input.py": "3fff06592021156e1087b83524ae198031fe6f95a0724edbbbdc9f6991c2adfe",
+    "tests/unit/editorial/test_editorial_quality_lifts.py": "db8c3022be1382402f1544e0eae4131efcca09d1e1b41a2587011d0474395561",
+    "tests/unit/editorial/test_enrichment_fields.py": "4f498046d6c884996a9cecb9324248cf3335ef7868c8445c66e3f8d90e0fcb1b",
+    "tests/unit/editorial/test_evidence_first.py": "63599a915764cfb0fc5be03e903524d25b040759afd4eac0ff4c2f974303f6cd",
+    "tests/unit/editorial/test_fact_check_verification.py": "9d83b21b58e6ae0e66aeca36a17eed12cff6dacc62a683cdafd9c4bcc1d56341",
+    "tests/unit/logic/workflows/test_frontend_publication_validation_fixture.py": "4ce02323611f6d3e052b2932a4973054c5d47e34208382124da6becd5746c515",
+    "tests/unit/publishing/test_github_publisher_mock.py": "23134c0276158c66d03cecce35a237010972691cb98ee3dee53e6bcdab5345c0",
+    "tools/editorial_eval/README.md": "211728107a1ca75ab950d9c7ec1bbb84e39db48d292c104234ec5be8e7d4a245",
+    "tools/editorial_eval/capture_chain.py": "1a9d57ddd78d9db47cf8017a9fde9b77a0df91dfad581722f7699f7202a21d3c"
+  },
+  "manifest_self_excluded": true,
+  "archived_copy_normalization": {
+    "note": "Captured reports describe original bytes. The held draft, source excerpts and baseline raw packet each preserve the earlier one-terminal-LF archival normalization. The baseline mapping now names its byte-identical .raw.txt archive; historical .md lineage and the current literal display wrapper are explicit. Remove one final LF from each named archive to reproduce its captured original. Current wrappers have separate current file hashes.",
+    "files": {
+      "plans/191/evidence/candidate-trial4-held-draft.md": {
+        "captured_original_sha256": "1618cff19270901341eedf8317d3fe916d68a93c1dd98fe1d66bf35927563558",
+        "archived_copy_sha256": "53048de464f755671cc3fe200a3d38ef10bf9595ccf7780124038ff635b5e1d9",
+        "normalization": "Exactly one terminal LF appended by required end-of-file-fixer hook. Remove that final LF to reproduce the original captured bytes."
+      },
+      "plans/191/evidence/source-nasa-excerpts.txt": {
+        "captured_original_sha256": "9ee1bd8ecd699248a9807ed96791b6c3cb282d75b1c4de573f919285485cac4f",
+        "archived_copy_sha256": "52e750ea55a197da90276343b83a0d853874cf312443da6a6920b250794ba218",
+        "normalization": "Exactly one terminal LF appended by required end-of-file-fixer hook. Remove that final LF to reproduce the original captured bytes."
+      },
+      "plans/191/evidence/paired-trial3-baseline-review-packet.raw.txt": {
+        "captured_original_sha256": "033a841490c2a79ded49b4392aa3a7d0e42fa4d9e9b1f367260e593266520133",
+        "archived_copy_sha256": "0b11e069b79b7deb4d7d3fe4ddccb13af2c0050e607d95268d6699564462ff44",
+        "normalization": "Exactly one terminal LF appended by required end-of-file-fixer hook. Remove that final LF to reproduce the original captured bytes.",
+        "historical_archived_path": "plans/191/evidence/paired-trial3-baseline-review-packet.md",
+        "current_wrapper_path": "plans/191/evidence/paired-trial3-baseline-review-packet.md",
+        "raw_archive_path": "plans/191/evidence/paired-trial3-baseline-review-packet.raw.txt"
+      }
+    }
+  },
+  "inventory_scope_correction": {
+    "note": "Current post-staging refresh observes both raw archives and the new test helper as tracked files. Existing inventory sections do not change; only generated_at changed. Final inventory drift is zero.",
+    "historical_note": "Required inventory gate after staging observes the new plan directory and its seven Markdown files. The regenerated baseline adds only those entries and generated_at; no runtime change."
+  },
+  "historical_pre_digest_runtime_ai_editor_sha256": "f6d593351afe664e6350a298694f59e150c26b675f1f67bccf08edc7ede9a380",
+  "packet_archive_representation": {
+    "note": "Adjacent raw archives exactly reproduce the archived .md packet bytes at pre-repair HEAD; the .md files are current literal display wrappers. No captured report hashes were rewritten.",
+    "files": {
+      "plans/191/evidence/candidate-trial4-review-packet.md": {
+        "historical_archived_path": "plans/191/evidence/candidate-trial4-review-packet.md",
+        "raw_archive_path": "plans/191/evidence/candidate-trial4-review-packet.raw.txt",
+        "raw_sha256": "f44eb8c6d803388402de16d984dd62a8de6bd2c74a2fdf2927508a6689b0b383",
+        "current_wrapper_sha256": "5a68d1a4c38f4503156b23449bb63a40e2c5d195ba545c56e0c6c596bac6dd59",
+        "raw_equals_previous_archived_md": true
+      },
+      "plans/191/evidence/paired-trial3-baseline-review-packet.md": {
+        "historical_archived_path": "plans/191/evidence/paired-trial3-baseline-review-packet.md",
+        "raw_archive_path": "plans/191/evidence/paired-trial3-baseline-review-packet.raw.txt",
+        "raw_sha256": "0b11e069b79b7deb4d7d3fe4ddccb13af2c0050e607d95268d6699564462ff44",
+        "current_wrapper_sha256": "5d6c955cf9a7b404807cdbdb2ce30480b6d9b2b0308098e61457a6450efcb2a0",
+        "raw_equals_previous_archived_md": true
+      }
+    }
+  },
+  "final_verification": {
+    "artifact": "plans/191/evidence/final-local-gates.json",
+    "files_count": 63,
+    "changed_files_including_manifest": 64,
+    "required_local_gates": "passed",
+    "optional_full_frontend_pipeline": "300-second timeout then interrupted; not a 14-case pass",
+    "synthetic_pipeline": "14 passed separately",
+    "human_semantic_acceptance": "pending",
+    "plan191_status": "PARTIAL",
+    "hosted_codacy_clearance": "not established"
+  }
+}

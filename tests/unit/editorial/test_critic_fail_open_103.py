@@ -98,7 +98,7 @@ class TestKeylessCriticVerdictFailsOpen:
         verdict = agent._critic_editorial_pass("real body")
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
-        assert agent.last_critic_verdict is None
+        assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     def test_empty_dict_verdict_fails_open(self):
         """A bare {} verdict (generic-extractor fallback) also fails open."""

@@ -1,0 +1,27 @@
+{
+  "reviewer": "independent code agent; not human editorial reviewer",
+  "scope": "provider-boundary adversarial tests of material/headline safety holds",
+  "passed_cases": 14,
+  "cases": [
+    "PASS original editorial technical-repair resume repro now held",
+    "PASS headline fidelity/timeout/changed=False held including new-agent durable resume",
+    "PASS headline fidelity/timeout/changed=True held including new-agent durable resume",
+    "PASS headline fidelity/malformed/changed=False held including new-agent durable resume",
+    "PASS headline fidelity/malformed/changed=True held including new-agent durable resume",
+    "PASS headline fidelity/empty/changed=False held including new-agent durable resume",
+    "PASS headline fidelity/empty/changed=True held including new-agent durable resume",
+    "PASS headline sensationalism/timeout/changed=False held including new-agent durable resume",
+    "PASS headline sensationalism/timeout/changed=True held including new-agent durable resume",
+    "PASS headline sensationalism/malformed/changed=False held including new-agent durable resume",
+    "PASS headline sensationalism/malformed/changed=True held including new-agent durable resume",
+    "PASS headline sensationalism/empty/changed=False held including new-agent durable resume",
+    "PASS headline sensationalism/empty/changed=True held including new-agent durable resume",
+    "PASS positive editorial checkpoint not reused after body change"
+  ],
+  "raw_local_log": "/tmp/noticiencias-final-quality-p1-verification.log",
+  "raw_log_sha256": "19bc390a0737e6d969b41d1b38574afb40cff967d4544bc140ace6a53c82a460",
+  "additional_focused_tests_passed": 134,
+  "subsequent_change": "Concrete source support issues now reach the real repair provider prompt when critic feedback is blank; separately covered by 35 evidence regressions and final full gates.",
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false
+}

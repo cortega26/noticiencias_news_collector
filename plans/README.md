@@ -612,4 +612,5 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 
 | ID | Plan | Priority | Effort | Dependencies | Status |
 | --- | --- | --- | --- | --- | --- |
+| 191 | [Evidence-first editorial pipeline](191/spec.md) | P1 | L | 190 | PARTIAL — prompt/source fidelity, durable material/headline holds, review packets and versioned caches locally verified; parent integration and human semantic acceptance pending. See [evidence](191/evidence.md). |
 | 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance in [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382); final dependency review, merge and rollout pending. See [evidence](190/tests/results.md). |

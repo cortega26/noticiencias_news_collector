@@ -506,6 +506,7 @@ class TargetRepoPublicationWorkflow:
         record_stage: StageRecorder,
     ) -> None:
         """6. Commit & Push."""
+        deps.pr_orchestrator.ensure_draft_branch(branch_name, git_handler=deps.git)
         deps.git.commit_and_push(
             request.target_repo_obj,
             f"Update article: {output_filename}",

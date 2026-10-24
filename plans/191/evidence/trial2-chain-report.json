@@ -1,0 +1,48 @@
+{
+  "scope": "old/new prompts on current runtime, configured provider chain with bounded evaluation-only token/time limits",
+  "max_calls_per_label": 16,
+  "max_seconds_per_label": 600,
+  "source_content_mode": "summary_only",
+  "calls": 13,
+  "elapsed_seconds": 333.3,
+  "records": [
+    {
+      "label": "candidate",
+      "calls": 13,
+      "elapsed_seconds": 333.28,
+      "last_stage": "fact_check_verification",
+      "error": "ValueError at fact_check_verification: stage_failure: process_article requires override_date (canonical publication date); refusing to use the runtime clock in frontmatter (LAW-B5).",
+      "output_chars": 0,
+      "critic_verdict": {
+        "approved": true,
+        "average": 9.14,
+        "scores": {
+          "hook_score": 9,
+          "clarity_score": 9,
+          "structure_score": 10,
+          "rigor_score": 9,
+          "voice_score": 9,
+          "shareability_score": 9,
+          "closing_score": 9
+        },
+        "value_add_assessment": "substantive",
+        "value_add_evidence": "El artículo sintetiza y explica los conceptos clave de la fuente (zona habitable, limitaciones del Webb, futuro de la búsqueda de vida) con una voz propia y una estructura clara, no se limita a parafrasear frase a frase. Separa observación de inferencia y especulación, y especifica limitaciones.",
+        "material_claims_supported": true,
+        "support_issues": [],
+        "verification_status": "reviewed"
+      },
+      "headline_verdict": {
+        "approved": true,
+        "verification_status": "reviewed",
+        "fidelity_pass": true,
+        "sensationalism_pass": true
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null
+      }
+    }
+  ],
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false
+}

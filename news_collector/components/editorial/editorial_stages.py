@@ -21,8 +21,9 @@ from enum import StrEnum
 class EditorialStage(StrEnum):
     """Cache identity of each EditorAgent stage artifact."""
 
-    TRANSLATION = "stage1_translation"
-    EDITORIAL = "stage2_editorial"
-    TECHNICAL_CRITIC_OK = "stage2_5_critic_ok"
-    EDITORIAL_CRITIC_OK = "stage2_6_editorial_critic_value_add_v3_ok"
-    ENRICHMENT = "stage4_enrichment"
+    TRANSLATION = "stage1_translation_evidence_v2"
+    EDITORIAL = "stage2_editorial_evidence_v2"
+    TECHNICAL_CRITIC_OK = "stage2_5_critic_evidence_v2_ok"
+    EDITORIAL_CRITIC_OK = "stage2_6_editorial_critic_evidence_v5_ok"
+    HEADLINE_CRITIC_REVIEW = "stage3_headline_critic_evidence_v1_review"
+    ENRICHMENT = "stage4_enrichment_evidence_v2"

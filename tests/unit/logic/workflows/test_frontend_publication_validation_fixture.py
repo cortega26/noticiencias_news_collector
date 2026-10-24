@@ -5,7 +5,7 @@ Plan 060 / Phase 2a, Step 3: proves the backend v1 smoke fixture replacement
 real fail-closed gate a real article goes through
 (news_collector/components/editorial/ai_editor.py:2177-2190,
 GeneratedArticleValidationError(error_code="editorial_v2_incomplete")) — for
-each of the six V2-required enrichment fields, a variant of the fixture with
+each of the five V2-required enrichment fields, a variant of the fixture with
 that field missing must be rejected before it could ever be staged, and the
 complete fixture must succeed and carry every field.
 """
@@ -24,7 +24,6 @@ _V2_REQUIRED_ENRICHMENT_FIELDS = (
     "summary_points",
     "glossary",
     "fact_check",
-    "why_it_matters",
     "confidence",
     "sources",
 )

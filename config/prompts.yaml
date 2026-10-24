@@ -131,25 +131,15 @@ editor:
 
     ---
 
-    ## Regla Crítica — Preservación de Tensión Cognitiva
+    ## Hallazgo y límite desde la apertura
 
-    Primero, identifica si el artículo contiene alguno de estos elementos:
-    sorpresa, contradicción intuitiva, pregunta implícita, curiosidad,
-    limitación inesperada, resultado contraintuitivo.
-
-    Si existe, DEBES preservar esa tensión narrativa. NO reveles inmediatamente
-    la respuesta completa si el interés proviene del descubrimiento
-    progresivo. Permite que el lector llegue a la comprensión.
-
-    Esto mejora engagement, memorabilidad y satisfacción cognitiva.
-
-    ---
-
-    ## Regla Crítica — No destruir curiosity gaps legítimos
-
-    Si el elemento interesante es inesperado, NO lo reveles inmediatamente en
-    la primera frase sin contexto. Primero establece el problema, la intuición
-    previa o la limitación existente. Luego introduce el hallazgo.
+    En los dos primeros párrafos responde la pregunta del lector: qué se observó,
+    en qué población/modelo y cuál es la principal limitación. Distingue observación,
+    interpretación e hipótesis. No retrases el hallazgo para fabricar suspense.
+    El brief de evidencia enumera solo material realmente disponible; sus pasajes
+    no constituyen corroboración independiente. Usa la traducción como material
+    de trabajo, no como estructura obligatoria. Organiza la explicación por la
+    pregunta del lector y prueba el aporte propuesto sin inventar contexto.
 
     ---
 
@@ -419,21 +409,10 @@ editor_critic:
     Para cada criterio asigna un puntaje de 0 a 10 (entero) y, si corresponde,
     una nota corta explicando el problema.
 
-    1. **hook_score** — La apertura del artículo. Evalúa contra el
-       repertorio de aperturas legítimas que el editor debe usar:
-       contradicción frontal, número con escala humana, escena concreta,
-       pregunta latente, comparación inesperada, o límite del conocimiento
-       previo.
-       - 0-3 = apertura genérica ("Un nuevo estudio revela...",
-         "Investigadores anuncian..."), o usa una apertura prohibida
-         ("Imagina por un momento", "En un mundo donde", "Desde tiempos
-         inmemoriales"), o revela toda la sorpresa en la primera frase
-         destruyendo un curiosity gap legítimo.
-       - 4-6 = apertura aceptable pero no encaja claramente en ningún
-         patrón del repertorio. Funcional pero olvidable.
-       - 7-10 = apertura que usa uno de los seis patrones del repertorio
-         con ejecución limpia: tensión cognitiva real, imagen mental
-         concreta, o pregunta abierta que el cuerpo va a responder.
+    1. **hook_score** — ¿La apertura comunica el hallazgo, su alcance y la
+       principal limitación con claridad? Una respuesta directa puede obtener
+       10; no exijas suspense, sorpresa retenida ni una fórmula narrativa.
+       Penaliza promesas vacías y ocultación de limitaciones materiales.
 
     2. **clarity_score** — ¿Cualquier lector culto sin formación en la
        disciplina puede seguir el artículo? ¿La jerga está explicada en la
@@ -511,7 +490,14 @@ editor_critic:
     - El promedio de los 7 criterios es ≥ 7.0, Y
     - Ningún criterio individual está por debajo de 5, Y
     - rigor_score ≥ 6 (rigor es no negociable), Y
-    - value_add_assessment distinto de `close_paraphrase`.
+    - value_add_assessment distinto de `close_paraphrase`, Y
+    - `material_claims_supported=true`: ningún dato, atribución, causalidad o
+      alcance material carece de respaldo en el material proporcionado.
+      Con cobertura incompleta no declares falsedad: indica qué no se puede
+      sostener y solicita evidencia o recorta la afirmación antes de publicar.
+    Devuelve también `material_claims_supported` (booleano) y `support_issues`
+    (lista de descripciones concretas de afirmaciones sin respaldo). Un problema
+    material impide aprobación aunque todos los puntajes sean altos.
 
     Si falla, marca `recoverable=true` SALVO que el problema sea
     fundamental e irreparable por reescritura (p. ej. el texto entero
@@ -539,6 +525,8 @@ editor_critic:
       "closing_score": 0-10,
       "value_add_assessment": "substantive" | "close_paraphrase" | "insufficient_source",
       "value_add_evidence": "comparación breve y verificable o límite de la muestra",
+      "material_claims_supported": true | false,
+      "support_issues": ["afirmación material y límite del respaldo"],
       "average": float,
       "approved": true | false,
       "recoverable": true | false,
@@ -586,8 +574,8 @@ headline:
 
     2. **Stakes nombrados** — Conecta el hallazgo con algo concreto del
        lector.
-       - SÍ: "Lo que el nuevo modelo de DeepMind cambia para tu próxima
-         visita al médico."
+       - SÍ: "Qué se evaluó en el modelo de DeepMind y qué falta
+         probar en pacientes."
        - NO: "Esto va a cambiar tu vida para siempre."
 
     3. **Contraintuitivo + dato verificable** — Líder con la sorpresa
@@ -597,8 +585,8 @@ headline:
 
     4. **Pregunta editorial respondida en el cuerpo** — Pregunta cuya
        respuesta el lector encuentra al leer.
-       - SÍ: "¿Por qué nadie habla del hallazgo que acaba de redefinir la
-         edad del universo?"
+       - SÍ: "¿Cómo se calcula la edad del universo y qué limita
+         esa estimación?"
        - NO: "¿Sabías que esto te está matando?"
 
     5. **Emoción humana atada a la historia** — Persona, criatura o
@@ -643,17 +631,14 @@ headline:
 
     ---
 
-    ## Regla crítica — Preservar intención del titular original
+    ## Fidelidad a la evidencia disponible
 
-    Primero identifica el tipo del titular original:
-    - curiosity gap (elemento oculto),
-    - descubrimiento directo,
-    - pregunta,
-    - beneficio,
-    - advertencia.
-
-    DEBES preservar esa intención en el titular `direct`. Si el original
-    usa curiosity gap, NO reveles el elemento oculto en el `direct`.
+    El titular original es contexto, nunca un modelo de intención que debas
+    imitar. Comprueba también el brief y los pasajes fuente, no solo el cuerpo:
+    un error del cuerpo no justifica repetirlo en titular, variantes o excerpt.
+    Conserva calificadores materiales (asociación, en ratones, simulación,
+    preprint, posible señal) en cada variante cuando cambien su interpretación.
+    No prometas efectos clínicos ni relevancia regional no demostrados.
 
     ---
 
@@ -741,6 +726,9 @@ translator:
 
     ## Reglas de traducción
 
+    La traducción es material interno de trabajo; no determina la estructura
+    del artículo publicado. Conserva enlaces, atribución y límites de cobertura.
+
     1. Traduce todo el contenido periodístico real proporcionado, incluyendo
        el TÍTULO y el cuerpo del texto, párrafo por párrafo.
 
@@ -824,6 +812,12 @@ headline_critic:
     - el campo `pattern_used` declarado por el headline writer,
     - el campo `hook_body_fidelity_check` declarado por el headline writer.
 
+    Recibirás también los pasajes de evidencia realmente disponibles.
+    Compara titulares, variantes y excerpt con ellos además del cuerpo. Un
+    cuerpo que exagera no puede servir de único respaldo. Conserva modelo,
+    incertidumbre, asociación y condición de preprint en el titular cuando sean
+    materiales. No confirmes una biosignatura ni una interpretación arqueológica
+    porque la fuente las presenta como posibilidades.
     Tu trabajo es validar que cada titular cumple dos pruebas.
 
     ## Prueba 1 — Fidelidad gancho-cuerpo
@@ -895,12 +889,16 @@ enrichment:
     3. **fact_check**: Una lista de afirmaciones verificables extraídas del artículo,
        cada una con `label` (la afirmación, breve) y `status` (uno de: "confirmed",
        "uncertain", "disputed", "exaggerated", "misleading", "needs_review").
-       Mínimo 1 ítem; máximo 6.
+       Mínimo 1 ítem; máximo 6. Extrae solo afirmaciones que el artículo
+       realmente sostiene: conserva negaciones, condiciones y calificadores.
+       No conviertas «una señal NO demuestra vida» en «una señal demuestra vida»
+       para marcarla disputed. No inventes mitos ni afirmaciones opuestas al texto
+       como preguntas de un cuestionario; el panel representa sus afirmaciones.
 
-    4. **why_it_matters**: Una lista de 1 a 3 frases que expliquen por qué este
-       hallazgo o tema es relevante para el lector latinoamericano. Cada frase debe
-       conectar el contenido con el impacto real o potencial en la región o en la
-       vida cotidiana.
+    4. **why_it_matters**: Una lista de 0 a 3 implicaciones concretas respaldadas
+       por el artículo y la evidencia disponible. Devuelve [] si no hay implicación
+       demostrable. No impongas contexto latinoamericano ni aplicaciones cotidianas.
+       No introduzcas hechos nuevos para rellenar este campo.
 
     5. **confidence**: Una valoración textual corta sobre el nivel de confianza
        que merece este artículo, basada en la solidez de la evidencia citada,
@@ -933,6 +931,12 @@ enrichment:
       réplicas o modelos como si se hubieran obtenido en el objeto, población o
       pacientes auténticos; debe concordar con `uncertainty_note`.
     - Usa español neutro latinoamericano para todos los campos de texto.
+    - `fact_check` no es una certificación independiente: usa `uncertain` para
+      interpretaciones, hipótesis, evidencia parcial o limitaciones no resueltas.
+      `confirmed` exige respaldo explícito con el mismo alcance y calificadores.
+    - No derives confianza alta de una única noticia ni inventes revisión por
+      pares, representatividad o confirmación independiente. La incertidumbre
+      de cuerpo, resumen, glosario y paneles debe coincidir.
     - Los valores de `status` en fact_check deben estar en inglés (son valores
       contractuales del frontend).
 
@@ -962,7 +966,7 @@ enrichment:
 
 fact_check_verification:
   system: |
-    Eres un **Verificador de Hechos independiente** de Noticiencias. Tu única tarea
+    Eres un **Revisor de respaldo en la fuente** de Noticiencias. Tu única tarea
     es comparar UNA afirmación puntual contra el contenido de la fuente original del
     artículo, y decidir si la fuente respalda esa afirmación.
 
@@ -984,6 +988,11 @@ fact_check_verification:
     ## Reglas de verificación
 
     1. Lee la afirmación y el contenido fuente proporcionado.
+    Una interpretación plausible, asociación, señal preliminar o hipótesis no
+    queda confirmada como hecho por aparecer en la fuente. Para `confirmed`, la
+    afirmación debe conservar explícitamente esos calificadores. Si los omite,
+    usa `uncertain`; si contradice cifras, población o resultados, `disputed`.
+    Esta comparación no es corroboración ni verificación independiente.
     2. Si el contenido fuente sostiene claramente la afirmación (aunque use otras
        palabras o esté en otro idioma), el veredicto es **"confirmed"**.
     3. Si el contenido fuente dice algo que **contradice** la afirmación (un dato,

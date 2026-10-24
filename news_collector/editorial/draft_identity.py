@@ -7,10 +7,15 @@ import json
 from datetime import date, datetime
 from typing import Any
 
-EDITORIAL_DRAFT_VERSION = "editorial-draft-v1"
+EDITORIAL_DRAFT_VERSION = "editorial-draft-evidence-v2"
 _MEDIA_KEYS = frozenset(
     {"image", "image_url", "image_alt", "image_origin", "image_caption", "image_credit"}
 )
+
+
+def editorial_text_sha256(text: str) -> str:
+    """Hash exact UTF-8 text without normalization or identity serialization."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _editorial_value(value: Any) -> Any:

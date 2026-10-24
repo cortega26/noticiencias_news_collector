@@ -1,0 +1,56 @@
+{
+  "scope": "old/new prompts on current runtime, configured provider chain with bounded evaluation-only token/time limits",
+  "max_calls": 24,
+  "calls": 17,
+  "elapsed_seconds": 606.89,
+  "records": [
+    {
+      "label": "baseline",
+      "calls": 14,
+      "error": "ValueError: stage_failure",
+      "output_chars": 0,
+      "critic_verdict": {
+        "approved": false,
+        "average": 8.57,
+        "scores": {
+          "hook_score": 8,
+          "clarity_score": 9,
+          "structure_score": 9,
+          "rigor_score": 9,
+          "voice_score": 9,
+          "shareability_score": 8,
+          "closing_score": 8
+        },
+        "value_add_assessment": "substantive",
+        "value_add_evidence": "El artículo reorganiza el material lineal de la fuente (entrevista NASA) en secciones conceptuales claras (zona habitable, método, biofirmas, obstáculos, planetas Hycean, futuro), añade analogía explicativa (huella dactilar) y enmarca la narrativa en torno a la pregunta del lector, no solo sigue el orden de la fuente.",
+        "material_claims_supported": null,
+        "support_issues": [],
+        "verification_status": "unverified"
+      },
+      "headline_verdict": {
+        "approved": true,
+        "verification_status": "reviewed",
+        "fidelity_pass": true,
+        "sensationalism_pass": true
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null
+      }
+    },
+    {
+      "label": "candidate",
+      "calls": 3,
+      "error": "TimeoutError: stage_failure",
+      "output_chars": 0,
+      "critic_verdict": null,
+      "headline_verdict": null,
+      "human_review": {
+        "status": "pending",
+        "reviewer": null
+      }
+    }
+  ],
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false
+}

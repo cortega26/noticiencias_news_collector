@@ -1,0 +1,93 @@
+{
+  "scope": "old/new prompts on current runtime, configured provider chain with bounded evaluation-only token/time limits",
+  "max_calls_per_label": 16,
+  "max_seconds_per_label": 600,
+  "source_content_mode": "summary_only",
+  "evaluation_only_source_check_timeout_seconds": 30,
+  "evaluation_only_source_check_retries": 0,
+  "runtime_ai_editor_sha256": "06cb388c765dbf2fe81e5d848a5197d39f50b909ec2895025af76b6623b37172",
+  "calls": 23,
+  "elapsed_seconds": 421.47,
+  "records": [
+    {
+      "label": "baseline",
+      "calls": 16,
+      "elapsed_seconds": 314.49,
+      "last_stage": "fact_check_verification",
+      "error": null,
+      "output_chars": 9157,
+      "critic_verdict": {
+        "approved": false,
+        "average": 9.14,
+        "scores": {
+          "hook_score": 9,
+          "clarity_score": 9,
+          "structure_score": 8,
+          "rigor_score": 10,
+          "voice_score": 10,
+          "shareability_score": 9,
+          "closing_score": 9
+        },
+        "value_add_assessment": "substantive",
+        "value_add_evidence": "El artículo transforma la información de la fuente en una explicación accesible, desmintiendo la idea de la \"zona habitable\" como pasaporte automático para la vida y usando analogías claras (\"huellas en el barro\") para explicar la complejidad de las biosignaturas, añadiendo un valor explicativo que la fuente, aunque buena, no articula de la misma manera para un público amplio. Mantiene la atribución de las voces expertas de la NASA.",
+        "material_claims_supported": null,
+        "support_issues": [],
+        "verification_status": "unverified"
+      },
+      "headline_verdict": {
+        "approved": true,
+        "verification_status": "reviewed",
+        "fidelity_pass": true,
+        "sensationalism_pass": true
+      },
+      "source_support_verdict": {
+        "verification_status": "reviewed",
+        "claims_checked": 6,
+        "issues": []
+      },
+      "human_review": {
+        "status": "pending",
+        "reviewer": null
+      }
+    },
+    {
+      "label": "candidate",
+      "calls": 7,
+      "elapsed_seconds": 106.96,
+      "last_stage": "editor_critic",
+      "error": "GeneratedArticleValidationError at editor_critic: E_EDITORIAL_EVIDENCE: Revisión editorial pendiente: afirmaciones materiales sin respaldo o paráfrasis cercana tras reparación. Borrador conservado en caché.",
+      "output_chars": 0,
+      "critic_verdict": {
+        "approved": false,
+        "average": 8.0,
+        "scores": {
+          "hook_score": 8,
+          "clarity_score": 9,
+          "structure_score": 6,
+          "rigor_score": 8,
+          "voice_score": 9,
+          "shareability_score": 8,
+          "closing_score": 8
+        },
+        "value_add_assessment": "substantive",
+        "value_add_evidence": "El artículo sintetiza y amplía la información de la fuente, añadiendo explicaciones y límites que no aparecen textualmente en el material fuente.",
+        "material_claims_supported": false,
+        "support_issues": [
+          "Afirmación de que \"Marte está en la zona habitable del Sol\" no está respaldada por el material fuente proporcionado."
+        ],
+        "verification_status": "reviewed"
+      },
+      "headline_verdict": {
+        "approved": false,
+        "verification_status": "unverified"
+      },
+      "source_support_verdict": null,
+      "human_review": {
+        "status": "pending",
+        "reviewer": null
+      }
+    }
+  ],
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false
+}

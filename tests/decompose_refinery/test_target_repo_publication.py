@@ -648,3 +648,28 @@ class TestPublishingMark:
 
         assert first.branch_name == "content/update-first"
         assert second.branch_name == "content/update-second"
+
+
+def test_ready_article_pr_blocks_before_commit_push(tmp_path):
+    """A later PR-creation refusal cannot protect an already-pushed ready PR."""
+    import pytest
+
+    from news_collector.components.publishing.github_publisher import GitHubPublisher
+    from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
+
+    publisher = object.__new__(GitHubPublisher)
+    publisher.headers = {}
+    publisher.commit_and_push = MagicMock()
+    orchestrator = PROrchestrator(
+        publisher, MagicMock(), {"target_repo_url": "https://github.com/o/r"}
+    )
+    deps = _deps(git=publisher, pr_orchestrator=orchestrator)
+    with patch(
+        "news_collector.components.publishing.github_publisher.requests.get"
+    ) as get:
+        get.return_value.json.return_value = [{"draft": False}]
+        with pytest.raises(ValueError, match="before changing its content"):
+            TargetRepoPublicationWorkflow()._commit_and_push(
+                _request(tmp_path), deps, "post.md", "article", StageLog()
+            )
+    publisher.commit_and_push.assert_not_called()

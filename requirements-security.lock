@@ -555,9 +555,9 @@ gitdb==4.0.12 \
     # via
     #   -c requirements.lock
     #   gitpython
-gitpython==3.1.61 \
-    --hash=sha256:8ab28c9da863cdd9e7d7694ec46cf3e6c9a12d8a30a1acd3447aec11975d530c \
-    --hash=sha256:f51c24d8c0f733a195447385f5774a5dfe8767f5acfd7994a33755644c6ecc95
+gitpython==3.2.1 \
+    --hash=sha256:0f1229ec5c057bdabdeeda8bda4f17bda679ab33dbccc00f24e6a480553c8613 \
+    --hash=sha256:d66b0832aa8755c1a84892937282df0befb16c97e5a64aeebd68be9c5e323f53
     # via
     #   -c requirements.lock
     #   noticiencias-news-collector (pyproject.toml)

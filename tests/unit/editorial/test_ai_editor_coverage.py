@@ -86,6 +86,8 @@ def _editorial_critic_payload(
         "closing_score": score,
         "feedback": feedback,
         "recoverable": recoverable,
+        "material_claims_supported": True,
+        "support_issues": [],
     }
 
 
@@ -506,7 +508,7 @@ class TestCriticPasses:
 
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
-        assert agent.last_critic_verdict is None
+        assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     def test_editorial_critic_approval_must_match_prompt_thresholds(self):
         agent = _bare_agent()
@@ -518,7 +520,7 @@ class TestCriticPasses:
 
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
-        assert agent.last_critic_verdict is None
+        assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     def test_editorial_critic_cannot_reject_when_scores_meet_thresholds(self):
         agent = _bare_agent()
@@ -530,7 +532,7 @@ class TestCriticPasses:
 
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
-        assert agent.last_critic_verdict is None
+        assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     def test_editorial_critic_approved(self):
         agent = _bare_agent()
@@ -548,6 +550,8 @@ class TestCriticPasses:
                     "closing_score": 8,
                     "feedback": "",
                     "recoverable": True,
+                    "material_claims_supported": True,
+                    "support_issues": [],
                 }
             )
         )
@@ -571,6 +575,8 @@ class TestCriticPasses:
                     "closing_score": 8,
                     "feedback": "",
                     "recoverable": True,
+                    "material_claims_supported": True,
+                    "support_issues": [],
                 }
             )
         )
@@ -661,6 +667,8 @@ class TestCriticPasses:
                     "closing_score": 9,
                     "feedback": "",
                     "recoverable": True,
+                    "material_claims_supported": True,
+                    "support_issues": [],
                 }
             )
         )
@@ -681,6 +689,9 @@ class TestCriticPasses:
             },
             "value_add_assessment": None,
             "value_add_evidence": None,
+            "material_claims_supported": True,
+            "support_issues": [],
+            "verification_status": "reviewed",
         }
 
     def test_editorial_critic_stashes_verdict_on_reject(self):
@@ -700,7 +711,7 @@ class TestCriticPasses:
         verdict = agent._critic_editorial_pass("real body")
         assert verdict.is_valid is True
         assert verdict.checkpointable is False
-        assert agent.last_critic_verdict is None
+        assert agent.last_critic_verdict["verification_status"] == "unverified"
 
     def test_extract_editorial_critic_json_fallback(self):
         agent = _bare_agent()
@@ -790,8 +801,9 @@ class TestCriticPasses:
         agent._headline_critic_pass = MagicMock(
             side_effect=[(False, "regen now"), (False, "again"), (False, "last")]
         )
-        result = agent._generate_headlines_with_critic("body")
-        assert result == {"direct": "H"}
+        with pytest.raises(GeneratedArticleValidationError) as held:
+            agent._generate_headlines_with_critic("body")
+        assert held.value.error_code == "E_HEADLINE_EVIDENCE"
 
     def test_generate_headlines_with_critic_honors_configured_retries(self):
         """text_processing.max_headline_retries=0 disables the retry loop:
@@ -802,8 +814,9 @@ class TestCriticPasses:
         agent.max_headline_retries = 0
         agent._generate_headlines = MagicMock(return_value={"direct": "H"})
         agent._headline_critic_pass = MagicMock(return_value=(False, "regen now"))
-        result = agent._generate_headlines_with_critic("body")
-        assert result == {"direct": "H"}
+        with pytest.raises(GeneratedArticleValidationError) as held:
+            agent._generate_headlines_with_critic("body")
+        assert held.value.error_code == "E_HEADLINE_EVIDENCE"
         assert agent._generate_headlines.call_count == 1
         assert agent._headline_critic_pass.call_count == 1
 
@@ -1017,7 +1030,7 @@ class TestProcessArticlePaths:
             "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
-        cache_s2 = agent.cache_dir / "unknown_stage2_editorial.txt"
+        cache_s2 = agent._get_cache_path("unknown", EditorialStage.EDITORIAL)
         cache_s2.write_text("---\ntitle: x\n---\n", encoding="utf-8")
         result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
@@ -1039,7 +1052,7 @@ class TestProcessArticlePaths:
             "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
-        cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
+        cache_s1 = agent._get_cache_path("unknown", EditorialStage.TRANSLATION)
         assert cache_s1.exists()
         cache_s1.write_text(cached_text, encoding="utf-8")
 
@@ -1067,7 +1080,7 @@ class TestProcessArticlePaths:
             "image_alt": "Imagen del estudio",
         }
         agent.process_article(article, override_date="2026-03-02")
-        cache_s1 = agent.cache_dir / "unknown_stage1_translation.txt"
+        cache_s1 = agent._get_cache_path("unknown", EditorialStage.TRANSLATION)
         cache_s1.write_text("Traducción breve.", encoding="utf-8")
 
         calls = []
@@ -1152,12 +1165,20 @@ class TestProcessArticlePaths:
             "image_url": "https://example.com/hero.webp",
             "image_alt": "Imagen del estudio",
         }
-        cache = agent._get_cache_path("unknown", EditorialStage.EDITORIAL_CRITIC_OK)
-        cache.write_text("ok", encoding="utf-8")
         calls = []
-        agent._critic_editorial_pass = lambda *a, **k: (
-            calls.append(1) or CriticVerdict(True)
-        )
+
+        def reviewed(content, *args, **kwargs):
+            calls.append(content)
+            agent.last_critic_verdict = {
+                "approved": True,
+                "material_claims_supported": True,
+                "verification_status": "reviewed",
+            }
+            return CriticVerdict(True)
+
+        agent._critic_editorial_pass = reviewed
+        agent.process_article(article, override_date="2026-03-02")
+        calls.clear()
         result = agent.process_article(article, override_date="2026-03-02")
         assert calls == []
         assert "Direct Headline" in result
@@ -1178,8 +1199,17 @@ class TestProcessArticlePaths:
             "image_url": "https://example.com/hero.webp",
             "image_alt": "Imagen del estudio",
         }
-        cache = agent._get_cache_path("unknown", EditorialStage.EDITORIAL_CRITIC_OK)
-        cache.write_text("ok", encoding="utf-8")
+
+        def reviewed(content, *args, **kwargs):
+            agent.last_critic_verdict = {
+                "approved": True,
+                "material_claims_supported": True,
+                "verification_status": "reviewed",
+            }
+            return CriticVerdict(True)
+
+        agent._critic_editorial_pass = reviewed
+        agent.process_article(article, override_date="2026-03-02")
 
         def _must_not_run(*a, **k):
             raise AssertionError("gate must be skipped on cache hit")
@@ -1187,7 +1217,17 @@ class TestProcessArticlePaths:
         agent._critic_editorial_pass = _must_not_run
         result = agent.process_article(article, override_date="2026-03-02")
         assert "Direct Headline" in result
-        assert agent.last_critic_verdict == {"approved": True, "from_cache": True}
+        assert agent.last_critic_verdict["reviewed_content_sha256"]
+        assert {
+            key: value
+            for key, value in agent.last_critic_verdict.items()
+            if key != "reviewed_content_sha256"
+        } == {
+            "approved": True,
+            "from_cache": True,
+            "material_claims_supported": True,
+            "verification_status": "reviewed",
+        }
 
     def test_stale_close_paraphrase_does_not_block_the_next_article(self, tmp_path):
         """PR 373 reviewer hardening: the verdict is per article, not per agent.

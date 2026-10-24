@@ -13,6 +13,47 @@ from pydantic import ValidationError
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.contracts.frontend_schema import AstroPost
+from news_collector.editorial.draft_identity import editorial_text_sha256
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+        (
+            "áéíóú ñ 漢字 🌌\n e\u0301\r\n",
+            "d871efb2f1532ea44eb86512beb64b381cbc40dda3a07baff83e6fdd847ff7d2",
+        ),
+        (
+            " spaced\n",
+            "defe2f4fa0a8089d7f99756b92ccfa1306c85121e6c644ce65ab2c77355e68a9",
+        ),
+        (
+            "e\u0301",
+            "bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6",
+        ),
+        ("é", "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"),
+    ],
+)
+def test_editorial_text_digest_preserves_original_exact_utf8(text, expected):
+    assert editorial_text_sha256(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("ensure_ascii", "expected"),
+    [
+        (True, "939c314d2a7083a567b66ceafb03d160d02d39e746b4ebde5a6d7879af0dcc98"),
+        (False, "9144391ed507328795c3d5afcceafa3fb4db078a1dee5a31d55273e540ed4b07"),
+    ],
+)
+def test_editorial_text_digest_keeps_caller_json_serialization(ensure_ascii, expected):
+    serialized = json.dumps(
+        {"z": "¿Raíces? 🌱", "a": {"é": [True, None, 1.5]}},
+        sort_keys=True,
+        ensure_ascii=ensure_ascii,
+    )
+    assert editorial_text_sha256(serialized) == expected
+
 
 BODY = (
     "Las raíces reciben nutrientes del suelo gracias a asociaciones con hongos. "
@@ -72,6 +113,7 @@ def pipeline_agent(tmp_path, monkeypatch):
                         )
                     },
                     "approved": True,
+                    "material_claims_supported": True,
                     "recoverable": True,
                     "feedback": "",
                     "value_add_assessment": "substantive",
@@ -169,3 +211,37 @@ def test_draft_preserves_non_media_cross_field_validators(tmp_path, monkeypatch)
     stored["frontmatter"]["image"] = None
     with pytest.raises(ValidationError, match="must not contain media"):
         EditorialDraft.model_validate(stored)
+
+
+def test_changed_candidate_invalidates_critic_and_enrichment_approvals(
+    tmp_path, monkeypatch
+):
+    from news_collector.components.editorial.editorial_stages import EditorialStage
+
+    agent, calls = pipeline_agent(tmp_path, monkeypatch)
+    article = raw_article()
+    agent.prepare_article(article, override_date="2026-03-02")
+    calls.clear()
+    cached_editorial = agent._get_cache_path("3822", EditorialStage.EDITORIAL)
+    cached_editorial.write_text(
+        BODY.replace("procesos celulares", "procesos biológicos")
+    )
+    agent.prepare_article(article, override_date="2026-03-02")
+    assert any("Quality Control Editor" in call for call in calls)
+    assert any("STAGE_editor_critic" in call for call in calls)
+    assert any("STAGE_enrichment" in call for call in calls)
+
+
+def test_disabled_technical_review_cannot_create_success_checkpoint(
+    tmp_path, monkeypatch
+):
+    from news_collector.components.editorial.editorial_stages import EditorialStage
+
+    agent, _ = pipeline_agent(tmp_path, monkeypatch)
+    monkeypatch.setenv("ENABLE_TRANSLATION_GUARD", "false")
+    draft = agent.prepare_article(raw_article(), override_date="2026-03-02")
+    assert not agent._get_cache_path(
+        "3822", EditorialStage.TECHNICAL_CRITIC_OK
+    ).exists()
+    assert agent.last_technical_verdict["verification_status"] == "unverified"
+    assert "Revisión técnica" in draft.grounding_notes

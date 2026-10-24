@@ -53,6 +53,14 @@ class PROrchestrator:
     # Public interface
     # ------------------------------------------------------------------
 
+    def ensure_draft_branch(self, branch_name: str, *, git_handler: Any = None) -> None:
+        """Refuse changing an already ready article PR before any remote push."""
+        repo_url = self.resolve_repo_url()
+        if not repo_url:
+            raise ValueError("Missing repository URL for article review preflight")
+        git = git_handler if git_handler is not None else self._git
+        git.ensure_pull_request_draft(repo_url, branch_name)
+
     def create_pr(
         self,
         *,
@@ -112,7 +120,22 @@ class PROrchestrator:
             f"{refinery_note}\n\n"
             "Required frontend gates before merge/publication:\n"
             "- Content Guard\n"
-            "- Deploy to GitHub Pages"
+            "- Deploy to GitHub Pages\n\n"
+            "## Final human editorial review — PENDING\n\n"
+            "This automated article submission starts as a draft. No human approval is implied.\n"
+            "- [ ] Verify headline, body and metadata against available source evidence.\n"
+            "- [ ] Resolve material unsupported claims, close paraphrase and unverified checks.\n"
+            "- [ ] Confirm the actual added value and meaningful source independence.\n"
+            "- [ ] Verify image provenance, relevance, labels and limitations.\n"
+            "- [ ] Approve the final commit; changes to content/evidence require renewed review.\n\n"
+            f"Final content SHA-256: `{content_sha256 or 'unavailable — review pending'}`\n"
+            f"Source URL: {article.get('url') or article.get('source_url') or 'unavailable'}\n"
+            "Image provenance (not inferred): "
+            f"origin={article.get('image_origin') or 'unknown'}; "
+            f"credit={article.get('image_credit') or 'unknown'}; "
+            f"URL={article.get('image_url') or article.get('image') or 'unknown'}\n"
+            "GitHub protected review requirements are an operator setting; this checklist "
+            "does not enforce or attest a review."
         )
         if review_notes.strip():
             pr_body += f"\n\n{review_notes.strip()}"
@@ -122,6 +145,7 @@ class PROrchestrator:
             branch_name=branch_name,
             title=f"News: {output_filename.replace('.md', '')}",
             body=pr_body,
+            draft=True,
         )
 
         if pr_url:

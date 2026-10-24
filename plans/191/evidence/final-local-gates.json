@@ -1,0 +1,244 @@
+{
+  "local_log": "/tmp/noticiencias-pipeline-final-gates7.log",
+  "exit_code": 0,
+  "targets": [
+    "lint",
+    "type",
+    "test",
+    "test-contracts",
+    "test-boundaries",
+    "quality-gate",
+    "docs-check",
+    "inventory-check"
+  ],
+  "type": {
+    "mypy_source_files": 3,
+    "unit_passed": 4462,
+    "unit_skipped": 5,
+    "unit_deselected": 190,
+    "unit_seconds": 155.45,
+    "coverage_percent": 90.07,
+    "coverage_baseline_percent": 88.44,
+    "changed_files_ratchet": "passed"
+  },
+  "test": {
+    "passed": 4462,
+    "skipped": 5,
+    "deselected": 190,
+    "seconds": 97.42
+  },
+  "contracts": {
+    "passed": 310
+  },
+  "boundaries": {
+    "passed": 3
+  },
+  "quality_gate": "three snapshots valid",
+  "docs_checked": 15,
+  "inventory_drift_count": 0,
+  "independent_safety_cases": 14,
+  "independent_focused_tests": 134,
+  "scoring_canary": {
+    "passed": 5,
+    "total": 5,
+    "seconds": 1.4,
+    "editorial_semantic_proof": false
+  },
+  "failed_or_interrupted_preliminary_runs": {
+    "gates3": "isort formatting corrected",
+    "gates4": "complexity reduced without suppressing lint",
+    "gates5": "stale cache-key version assertion corrected",
+    "gates6": "interrupted to include concrete material feedback repair; not a pass"
+  },
+  "human_semantic_acceptance": "pending",
+  "production_or_deployment_proof": false,
+  "final_document_checks": {
+    "log": "/tmp/noticiencias-pipeline-final-docs2.log",
+    "exit_code": 0,
+    "targets": [
+      "docs-check",
+      "inventory-check",
+      "plans-ledger-check"
+    ]
+  },
+  "codacy_repair_verification": {
+    "recorded_at": "2026-10-23T20:16:22.732364+00:00",
+    "branch": "growth/editorial-pipeline-20261022",
+    "head_before_uncommitted_repairs": "bdac4c198b7b8c3c5734824e20b890bbc6d100aa",
+    "environment": {
+      "python": "3.13.12",
+      "gitpython": "3.2.1",
+      "venv": "/tmp/noticiencias-delivery-20261022/gitpython-env",
+      "bootstrap_stamp_omitted": true,
+      "canonical_environment_modified": false
+    },
+    "initial_command": {
+      "targets": [
+        "lint",
+        "type",
+        "test",
+        "test-contracts",
+        "test-boundaries",
+        "quality-gate",
+        "test-integration",
+        "test-e2e",
+        "docs-check",
+        "inventory-check",
+        "plans-ledger-check",
+        "weak-tests-check"
+      ],
+      "log": "/tmp/noticiencias-delivery-20261022/backend-final-codacy-gates.log",
+      "exit_code": 143,
+      "status": "interrupted only after actual optional full-frontend timeout; not an all-target pass"
+    },
+    "lint": "passed",
+    "type": {
+      "mypy_source_files": 3,
+      "unit_passed": 4474,
+      "unit_skipped": 5,
+      "unit_deselected": 190,
+      "seconds": 129.37,
+      "coverage_percent": 90.08,
+      "coverage_baseline_percent": 88.44,
+      "changed_files_ratchet": "passed"
+    },
+    "test": {
+      "passed": 4474,
+      "skipped": 5,
+      "deselected": 190,
+      "seconds": 98.76
+    },
+    "contracts": {
+      "passed": 310,
+      "seconds": 2.16
+    },
+    "boundaries": {
+      "passed": 3,
+      "seconds": 0.93
+    },
+    "quality_gate": "three snapshots valid",
+    "integration": {
+      "passed": 116,
+      "skipped": 1,
+      "seconds": 14.22,
+      "skip": "SCRAPLING_E2E opt-in real network check"
+    },
+    "root_e2e_marked": {
+      "passed": 189,
+      "deselected": 4480,
+      "seconds": 21.15
+    },
+    "optional_full_frontend_e2e": {
+      "result": "300-second timeout observed; suite then interrupted, no 14-case result",
+      "test": "tests/e2e_pipeline/test_pipeline_e2e.py::test_pipeline_e2e_scenarios[stuck_publishing_recovery-True-None]",
+      "mode": "reviewed full frontend selected by task parity sibling",
+      "observed_stage": "active Astro build; output grew from 84 to 104 MB",
+      "existing_timeout_seconds": 300,
+      "timeout_or_policy_changed": false,
+      "cleanup": "SIGTERM exact task-owned process group 3868811; no remaining owned processes",
+      "proof": "/tmp/noticiencias-delivery-20261022/backend-final-optional-e2e-timeout.json",
+      "cause_boundary": "Full-site build exceeded existing test budget; no evidence establishes a digest regression. Synthetic fixture checks below are separate."
+    },
+    "synthetic_pipeline_e2e": {
+      "passed": 14,
+      "seconds": 28.61,
+      "mode": "existing CI-style synthetic default with only owned parity symlink temporarily absent",
+      "source_or_timeout_changes": false,
+      "same_symlink_inode_restored": 3058617,
+      "log": "/tmp/noticiencias-delivery-20261022/backend-final-synthetic-and-docs.log",
+      "exit_code": 0
+    },
+    "docs": {
+      "checked": 15,
+      "passed": true
+    },
+    "inventory": {
+      "drift_count": 0,
+      "refresh_change": "generated_at only"
+    },
+    "plans_ledger": "passed",
+    "weak_tests": {
+      "tests": 3978,
+      "assertion_free": 36,
+      "baseline": 36,
+      "passed": true
+    },
+    "digest_refactor": {
+      "ai_editor_file_size": {
+        "tool": "lizard",
+        "version": "1.24.0",
+        "head_commit": "bdac4c198b7b8c3c5734824e20b890bbc6d100aa",
+        "file": "news_collector/components/editorial/ai_editor.py",
+        "head_nloc": 2361,
+        "current_nloc": 2348,
+        "head_sha256": "f6d593351afe664e6350a298694f59e150c26b675f1f67bccf08edc7ede9a380",
+        "current_sha256": "28d0deba62710a2b8ee91562afdaf4913be1a4f49c29bfdb81a4fca5e4a38dfa",
+        "configured_codacy_threshold": 500,
+        "codacy_reanalysis": "not performed; no clearance inferred",
+        "same_file_baseline_nloc": 2043
+      },
+      "digest_expression_cases_equal": 22,
+      "digest_original_expressions": 11,
+      "digest_source_proof": "/tmp/noticiencias-editorial-digest-20261023/after.json",
+      "capture_refactor_historical_proof": "/tmp/noticiencias-delivery-20261022/codacy-python-refactor-proof.json",
+      "historical_proof_note": "runtime_and_prompts_equal_to_HEAD describes pre-digest extraction only; current runtime is separately fingerprinted",
+      "semantic_acceptance": "pending",
+      "plan191_status": "PARTIAL"
+    },
+    "capture_integrity": {
+      "raw_packets": [
+        {
+          "raw": "plans/191/evidence/candidate-trial4-review-packet.raw.txt",
+          "sha256": "f44eb8c6d803388402de16d984dd62a8de6bd2c74a2fdf2927508a6689b0b383",
+          "bytes": 1773,
+          "equals_previous_archived_md": true,
+          "wrapper_literal_payload_exact": true
+        },
+        {
+          "raw": "plans/191/evidence/paired-trial3-baseline-review-packet.raw.txt",
+          "sha256": "0b11e069b79b7deb4d7d3fe4ddccb13af2c0050e607d95268d6699564462ff44",
+          "bytes": 6315,
+          "equals_previous_archived_md": true,
+          "wrapper_literal_payload_exact": true,
+          "one_lf_recovered_original_sha256": "033a841490c2a79ded49b4392aa3a7d0e42fa4d9e9b1f367260e593266520133"
+        }
+      ],
+      "other_immutable_artifacts_unchanged": [
+        "plans/191/evidence/candidate-trial4-candidate.jsonl",
+        "plans/191/evidence/candidate-trial4-chain-report.json",
+        "plans/191/evidence/candidate-trial4-held-draft.md",
+        "plans/191/evidence/independent-safety-review.json",
+        "plans/191/evidence/paired-trial3-baseline.jsonl",
+        "plans/191/evidence/paired-trial3-candidate.jsonl",
+        "plans/191/evidence/paired-trial3-chain-report.json",
+        "plans/191/evidence/source-nasa-excerpts.txt",
+        "plans/191/evidence/trial1-baseline.jsonl",
+        "plans/191/evidence/trial1-candidate.jsonl",
+        "plans/191/evidence/trial1-chain-report.json",
+        "plans/191/evidence/trial2-candidate.jsonl",
+        "plans/191/evidence/trial2-chain-report.json"
+      ],
+      "prompts_sha256": "9d6a24d171e94bc86c5477891a93146fa4c7249af0ae94702338a286174c7d7f"
+    },
+    "current_runtime_ai_editor_sha256": "28d0deba62710a2b8ee91562afdaf4913be1a4f49c29bfdb81a4fca5e4a38dfa",
+    "prompts_sha256": "9d6a24d171e94bc86c5477891a93146fa4c7249af0ae94702338a286174c7d7f",
+    "human_semantic_acceptance": "pending",
+    "plan191_status": "PARTIAL",
+    "new_provider_calls": 0,
+    "production_or_deployment_proof": false,
+    "hosted_codacy_reanalysis": "not performed; no clearance inferred",
+    "markdown": {
+      "tool": "markdownlint-cli 0.45.0",
+      "unfiltered_exit_code": 1,
+      "default_diagnostics": {
+        "MD013": 54
+      },
+      "target_rules": {
+        "MD022": 0,
+        "MD032": 0,
+        "MD034": 0
+      },
+      "suppression_added": false
+    }
+  }
+}
