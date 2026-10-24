@@ -614,3 +614,9 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 | --- | --- | --- | --- | --- | --- |
 | 191 | [Evidence-first editorial pipeline](191/spec.md) | P1 | L | 190 | PARTIAL — prompt/source fidelity, durable material/headline holds, review packets and versioned caches locally verified; parent integration and human semantic acceptance pending. See [evidence](191/evidence.md). |
 | 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance in [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382); final dependency review, merge and rollout pending. See [evidence](190/tests/results.md). |
+
+## Bounded CI repair (2026-10-24)
+
+| ID | Plan | Priority | Effort | Dependencies | Status |
+| --- | --- | --- | --- | --- | --- |
+| 193 | [Admin Happy DOM security gate](193-admin-happy-dom-security.md) | P1 | S | None | PARTIAL — local audit/admin/baseline/security/docs gates verified; independent final review and integration pending. See plan results and existing Semgrep caveat. |
