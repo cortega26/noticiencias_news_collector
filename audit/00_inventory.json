@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-24T14:33:20.282191+00:00",
+  "generated_at": "2026-10-25T16:53:13.480554+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -289,6 +289,7 @@
       "190",
       "191",
       "193-admin-happy-dom-security.md",
+      "194",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1431,6 +1432,9 @@
     "plans/191/tests/README.md",
     "plans/191/todo.md",
     "plans/193-admin-happy-dom-security.md",
+    "plans/194/spec.md",
+    "plans/194/tests/README.md",
+    "plans/194/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

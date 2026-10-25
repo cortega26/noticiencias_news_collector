@@ -154,6 +154,7 @@ admin-install: ## Install the new Refinery admin GUI (Astro app in apps/admin/)
 	@cd apps/admin && npm ci
 
 admin-dev: ## Run ONLY the admin GUI (default :4321, proxying /v1/* at the API port). Overrides: `make admin-dev API_PORT=8001 GUI_PORT=4330`. You must run `make serve` in another terminal, or the GUI gets connection-refused on every /v1/* call. Most of the time you want `make admin`.
+	@bash scripts/dev/check_admin_dependencies.sh
 	@bash -c 'if ! (exec 3<>/dev/tcp/127.0.0.1/$(or $(API_PORT),8000)) 2>/dev/null; then \
 	  echo "WARNING: nothing is listening on :$(or $(API_PORT),8000) — the serving API is not running."; \
 	  echo "         Run \`make serve\` in another terminal, or just use \`make admin\` (runs both)."; \

@@ -29,6 +29,12 @@ see `scripts/validate_plans_ledger.py`.
 
 ## Execution order & status
 
+### Local work synchronization (2026-10-25)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | IN PROGRESS — completed startup fix ported to current main; original local work preserved separately, fresh validation/integration pending. |
+
 ### Targeted technology adoption (2026-09-04)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
