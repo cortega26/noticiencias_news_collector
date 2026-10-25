@@ -1,0 +1,210 @@
+{
+  "verifiedAt": "2026-10-25T18:07:58.074704+00:00",
+  "initialWorktrees": 7,
+  "initialPendingEntries": 88,
+  "canonical": {
+    "frontend": {
+      "head": "172d9ad3f58701acd65317880d6059a600ede3f8",
+      "remoteMain": "172d9ad3f58701acd65317880d6059a600ede3f8",
+      "branch": "main",
+      "clean": true
+    },
+    "backend": {
+      "head": "ac5bd24bdf7e884fb026ecd0038c48b938e875a8",
+      "remoteMain": "ac5bd24bdf7e884fb026ecd0038c48b938e875a8",
+      "branch": "main",
+      "clean": true
+    }
+  },
+  "retainedCleanCheckouts": [
+    {
+      "repo": "frontend",
+      "worktree": "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias",
+      "head": "172d9ad3f58701acd65317880d6059a600ede3f8",
+      "upstream": "origin/main",
+      "clean": true
+    },
+    {
+      "repo": "frontend",
+      "worktree": "/home/carlos/VS_Code_Projects/_worktrees/nc-strategy-move",
+      "head": "a6d1534884cf95b8cc35b33a4cd9a0b09dd50e29",
+      "upstream": "origin/docs/strategy-operating-system-v1",
+      "clean": true
+    },
+    {
+      "repo": "frontend",
+      "worktree": "/tmp/noticiencias-3822-candidate",
+      "head": "fa663c7293d5afdcbff24cc0e7283a4d1707c4de",
+      "upstream": "origin/archive/local-sync-20261025/content/update-2026-10-15-los-hongos-bajo-tus-pies-absorben-13-000-millones-de-toneladas-de-co2-anuales",
+      "clean": true
+    },
+    {
+      "repo": "backend",
+      "worktree": "/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector",
+      "head": "ac5bd24bdf7e884fb026ecd0038c48b938e875a8",
+      "upstream": "origin/main",
+      "clean": true
+    },
+    {
+      "repo": "backend",
+      "worktree": "/home/carlos/VS_Code_Projects/_worktrees/noticiencias-backend-sync-20261025",
+      "head": "c562a283b880e31c92fb21eb574148f5dd59d770",
+      "upstream": "origin/sync/admin-preflight-20261025",
+      "clean": true
+    }
+  ],
+  "preservedRefs": [
+    {
+      "repo": "frontend",
+      "local": "advisor/001-newsletter-backend-spike",
+      "remote": "archive/local-sync-20261025/advisor/001-newsletter-backend-spike",
+      "sha": "639f4887a1a4924aea636e8cebaa610ca4c4c4f9"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/003-traffic-analytics-spike",
+      "remote": "archive/local-sync-20261025/advisor/003-traffic-analytics-spike",
+      "sha": "e971ef36584728ae00e1e23b79cf100d59fe9cf9"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/004-series-fate-spike",
+      "remote": "archive/local-sync-20261025/advisor/004-series-fate-spike",
+      "sha": "13e3ba87130b57b31af23bff5e3793f109c1d26c"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/005-recursos-library-spike",
+      "remote": "archive/local-sync-20261025/advisor/005-recursos-library-spike",
+      "sha": "5075b734d34f3e434f09d99ffe4239ab6ee88088"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/006-social-graduation-spike",
+      "remote": "archive/local-sync-20261025/advisor/006-social-graduation-spike",
+      "sha": "821993ba186f6025931011d8429265a06e9488ae"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/011-noticiencias-perf",
+      "remote": "archive/local-sync-20261025/advisor/011-noticiencias-perf",
+      "sha": "790ce629445252fd86ef02052c0674c42edf2c69"
+    },
+    {
+      "repo": "frontend",
+      "local": "advisor/cov-blog-floor",
+      "remote": "archive/local-sync-20261025/advisor/cov-blog-floor",
+      "sha": "e98dfdadd6700c3537b33c9da419e2e0900dfa9d"
+    },
+    {
+      "repo": "frontend",
+      "local": "archive/worktree-drafts-20261025",
+      "remote": "archive/worktree-drafts-20261025",
+      "sha": "cf15e9ffd9d16e4a028d3b061a8a4900df99786c"
+    },
+    {
+      "repo": "frontend",
+      "local": "content/update-2026-08-10-que-efectos-tiene-un-rayo-sin-rasgunos-visibles",
+      "remote": "archive/local-sync-20261025/content/update-2026-08-10-que-efectos-tiene-un-rayo-sin-rasgunos-visibles",
+      "sha": "ab9d87e233b2cd9516d262c90c703bd815859e3c"
+    },
+    {
+      "repo": "frontend",
+      "local": "content/update-2026-09-17-a-450-anos-luz-estrella-esconde-punto-de-luz-tan-joven-como-bebe",
+      "remote": "archive/local-sync-20261025/content/update-2026-09-17-a-450-anos-luz-estrella-esconde-punto-de-luz-tan-joven-como-bebe",
+      "sha": "798cb3f343c954f68c7e9eb048d5916ea0d88e01"
+    },
+    {
+      "repo": "frontend",
+      "local": "content/update-2026-09-18-noticia-cientifica",
+      "remote": "archive/local-sync-20261025/content/update-2026-09-18-noticia-cientifica",
+      "sha": "cd2d748b6e97d1b899fd839da061945b736f6733"
+    },
+    {
+      "repo": "frontend",
+      "local": "content/update-2026-10-15-los-hongos-bajo-tus-pies-absorben-13-000-millones-de-toneladas-de-co2-anuales",
+      "remote": "archive/local-sync-20261025/content/update-2026-10-15-los-hongos-bajo-tus-pies-absorben-13-000-millones-de-toneladas-de-co2-anuales",
+      "sha": "fa663c7293d5afdcbff24cc0e7283a4d1707c4de"
+    },
+    {
+      "repo": "frontend",
+      "local": "docs/strategy-operating-system-v1",
+      "remote": "docs/strategy-operating-system-v1",
+      "sha": "a6d1534884cf95b8cc35b33a4cd9a0b09dd50e29"
+    },
+    {
+      "repo": "frontend",
+      "local": "feat/social-buffer-pkg7",
+      "remote": "archive/local-sync-20261025/feat/social-buffer-pkg7",
+      "sha": "33af5626a09d96ee6046bc9907e73e5433c04074"
+    },
+    {
+      "repo": "frontend",
+      "local": "feat/social-manifest-and-x-card",
+      "remote": "archive/local-sync-20261025/feat/social-manifest-and-x-card",
+      "sha": "362ee30fbbac25377df7f733c2bfb34c62667b61"
+    },
+    {
+      "repo": "frontend",
+      "local": "feat/social-publisher-pkg7",
+      "remote": "archive/local-sync-20261025/feat/social-publisher-pkg7",
+      "sha": "b04cf329c7d76b91384b77620abef5de23aae106"
+    },
+    {
+      "repo": "frontend",
+      "local": "fix/content-guard-lint-annotations",
+      "remote": "archive/local-sync-20261025/fix/content-guard-lint-annotations",
+      "sha": "05e0804006a9c338a4bf48497dd1f3cb1dad0e11"
+    },
+    {
+      "repo": "frontend",
+      "local": "fix/deploy-env-url",
+      "remote": "archive/local-sync-20261025/fix/deploy-env-url",
+      "sha": "0780d877d1185bdf8c2208cbab90a3e1af8b6e7c"
+    },
+    {
+      "repo": "frontend",
+      "local": "fix/translation-residue-spanish-gente-20261010",
+      "remote": "fix/translation-residue-spanish-gente-20261010",
+      "sha": "822b11d451a24eb0da0ab59134aa9c8922309bc6"
+    },
+    {
+      "repo": "frontend",
+      "local": "fix/validate-test-any",
+      "remote": "archive/local-sync-20261025/fix/validate-test-any",
+      "sha": "f2f82b188c715e916b29cde716d7e11d1e6747a8"
+    },
+    {
+      "repo": "backend",
+      "local": "advisor/188-report-closure",
+      "remote": "archive/local-sync-20261025/advisor/188-report-closure",
+      "sha": "f23e2d211bd5dd8d8d2af63463af2a823800f0e5"
+    },
+    {
+      "repo": "backend",
+      "local": "archive/local-main-sync-20261025",
+      "remote": "archive/local-main-sync-20261025",
+      "sha": "66902bf45e1993afe321dab966ea29da76a97d9e"
+    },
+    {
+      "repo": "backend",
+      "local": "fix/editorial-image-wait-20261021",
+      "remote": "archive/local-sync-20261025/fix/editorial-image-wait-20261021",
+      "sha": "fd80e8c735fec83717158633d419e261bad71beb"
+    },
+    {
+      "repo": "backend",
+      "local": "wip/webhook-inbox-source-health-2026-10-12",
+      "remote": "archive/local-sync-20261025/wip/webhook-inbox-source-health-2026-10-12",
+      "sha": "530ad49d108befcf38e7647f99cdf1954320ab12"
+    }
+  ],
+  "disposition": {
+    "canonicalBackendEntries": 20,
+    "sourceFilesInReconstructibleDraftPatches": 25,
+    "runtimeOrDependencyEntriesPreservedPrivately": 43,
+    "credentials": "Excluded from Git; redacted record and restricted originals retained; operator rotation outstanding"
+  },
+  "readyRepairPR": 392,
+  "privateBackup": "/home/carlos/.local/share/codex/task-backups/noticiencias-sync-20261025T162223Z"
+}
