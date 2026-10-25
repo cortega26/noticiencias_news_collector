@@ -1,0 +1,158 @@
+{
+  "verifiedAt": "2026-10-25T23:23:47.261805+00:00",
+  "mergedPRs": [
+    {
+      "repository": "frontend",
+      "number": 354,
+      "merge": "2d9c496ff09f597c0b1f110fb14e75df603a8b99"
+    },
+    {
+      "repository": "backend",
+      "number": 394,
+      "merge": "30106724d961bbf2efb906a89cbc0a4631044cb0"
+    }
+  ],
+  "postMergeWorkflows": [
+    {
+      "repository": "frontend",
+      "conclusion": "success",
+      "databaseId": 40225905602,
+      "headSha": "2d9c496ff09f597c0b1f110fb14e75df603a8b99",
+      "name": "Content Guard",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias/actions/runs/40225905602"
+    },
+    {
+      "repository": "frontend",
+      "conclusion": "success",
+      "databaseId": 40225905626,
+      "headSha": "2d9c496ff09f597c0b1f110fb14e75df603a8b99",
+      "name": "Deploy Cloudflare Worker",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias/actions/runs/40225905626"
+    },
+    {
+      "repository": "frontend",
+      "conclusion": "success",
+      "databaseId": 40225905703,
+      "headSha": "2d9c496ff09f597c0b1f110fb14e75df603a8b99",
+      "name": "Deploy to GitHub Pages",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias/actions/runs/40225905703"
+    },
+    {
+      "repository": "frontend",
+      "conclusion": "success",
+      "databaseId": 40225905672,
+      "headSha": "2d9c496ff09f597c0b1f110fb14e75df603a8b99",
+      "name": "Hero Image Delivery",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias/actions/runs/40225905672"
+    },
+    {
+      "repository": "frontend",
+      "conclusion": "success",
+      "databaseId": 40226072641,
+      "headSha": "2d9c496ff09f597c0b1f110fb14e75df603a8b99",
+      "name": "Social Distribution",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias/actions/runs/40226072641"
+    },
+    {
+      "repository": "backend",
+      "conclusion": "success",
+      "databaseId": 40227245662,
+      "headSha": "30106724d961bbf2efb906a89cbc0a4631044cb0",
+      "name": "CI",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias_news_collector/actions/runs/40227245662"
+    },
+    {
+      "repository": "backend",
+      "conclusion": "success",
+      "databaseId": 40227245660,
+      "headSha": "30106724d961bbf2efb906a89cbc0a4631044cb0",
+      "name": "Code Quality",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias_news_collector/actions/runs/40227245660"
+    },
+    {
+      "repository": "backend",
+      "conclusion": "success",
+      "databaseId": 40227245688,
+      "headSha": "30106724d961bbf2efb906a89cbc0a4631044cb0",
+      "name": "docs",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias_news_collector/actions/runs/40227245688"
+    },
+    {
+      "repository": "backend",
+      "conclusion": "success",
+      "databaseId": 40227245727,
+      "headSha": "30106724d961bbf2efb906a89cbc0a4631044cb0",
+      "name": "E2E Contract Test",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias_news_collector/actions/runs/40227245727"
+    },
+    {
+      "repository": "backend",
+      "conclusion": "success",
+      "databaseId": 40227245723,
+      "headSha": "30106724d961bbf2efb906a89cbc0a4631044cb0",
+      "name": "Sync master from main",
+      "status": "completed",
+      "url": "https://github.com/cortega26/noticiencias_news_collector/actions/runs/40227245723"
+    }
+  ],
+  "openGitHubAlerts": {
+    "frontend": {
+      "dependabot": 0,
+      "code-scanning": 0,
+      "secret-scanning": 0
+    },
+    "backend": {
+      "dependabot": 0,
+      "code-scanning": 0,
+      "secret-scanning": 0
+    }
+  },
+  "npmAudits": {
+    "frontend": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "workers": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "admin": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "editorial": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "separateLocalWork": {
+    "backlogDrafts": "Preserved without commit or push as requested by owner.",
+    "backendRuntimeExport": "data/exports/latest_articles.json preserved in place and privately; not part of security patches."
+  },
+  "credentialRotation": "Not verified; an operator action, not established by zero GitHub alerts."
+}

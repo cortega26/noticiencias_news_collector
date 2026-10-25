@@ -33,13 +33,13 @@ see `scripts/validate_plans_ledger.py`.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 195 | [Resolve current Security and Quality findings](195/spec.md) | P1 | M | None | IN_PROGRESS — patched dependency paths, full npm audit workflow checks and strict shared Semgrep scan; local verification and independent review in [195/tests](195/tests/README.md). Live integration/cleanup receipts belong to the associated PR. |
+| 195 | [Resolve current Security and Quality findings](195/spec.md) | P1 | M | None | DONE — frontend #354 and backend #394 merged; exact-head and main CI passed, four npm trees audit clean and both repositories report zero open GitHub dependency/code/secret alerts. [Delivery evidence](195/tests/delivery-receipts.json). Separate owner-held WIP and credential rotation remain explicitly outside this source remediation. KEEP: operational security audit and scanner triage reference. |
 
 ### Local work synchronization (2026-10-25)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | DONE — admin preflight merged in PR #392 (`ac5bd24b`), exact-head and main CI passed; 88 initial entries accounted for, 24 source refs preserved remotely, canonical mains and retained source checkouts clean/synchronized. Credential rotation remains an operator action. Evidence: [194/tests](194/tests/README.md). KEEP: source-preservation receipts remain referenced by the active security review. |
+| 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | DONE — admin preflight merged in PR #392 (`ac5bd24b`), exact-head and main CI passed; 88 initial entries accounted for, 24 source refs preserved remotely, canonical mains and retained source checkouts clean/synchronized. Credential rotation remains an operator action. Evidence: [194/tests](194/tests/README.md). KEEP: source-preservation receipts support the retained operational audit. |
 
 ### Targeted technology adoption (2026-09-04)
 
