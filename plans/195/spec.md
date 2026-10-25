@@ -27,6 +27,15 @@ index DDL are not user SQL. Document findings explicitly without broad rule
 suppression or altering applied migrations to appease a scanner. Run real
 positive/negative scanner controls and verify technical-error propagation.
 
+## CI regression budget correction
+
+The exact-head CI test job exposed an existing harness mismatch: the global
+pytest timeout10s interrupted the real offline npm process before its own30s
+subprocess timeout. Give only the admin-dependency regression module an outer45s
+budget, preserving the inner30s process cap, all real npm calls and all startup
+rejection assertions. Do not add retries or alter production startup behavior.
+Verify all eight cases with fresh fixture caches and retain the failed CI receipt.
+
 ## Acceptance and verification
 
 - Inspect live GitHub alerts and actual dependency paths, documenting versions and exposure. No raw secret values in logs/reports.

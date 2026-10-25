@@ -12,6 +12,10 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# Real npm startup on cold CI runners can exceed the suite's 10-second default.
+# Let run_command's 30-second subprocess cap report a stalled child first.
+pytestmark = pytest.mark.timeout(45)
+
 
 @pytest.fixture()
 def admin_repo(tmp_path: Path) -> Path:

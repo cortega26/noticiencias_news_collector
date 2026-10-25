@@ -52,3 +52,12 @@ operator action; absence of GitHub secret alerts does not prove revocation.
 4. **Quality defect — scanner noise/failure handling:** replace the starter
    catch-all with official profiles; preserve visible reviewed findings and
    fail on technical/partial-scan errors. See the source triage and controls.
+
+## Exact-head CI regression and correction
+
+The first PR CI test job failed only
+`test_preflight_rejects_unusable_tree[incomplete]`: the global10s pytest timeout
+interrupted its real offline npm subprocess before the existing30s child cap.
+Other CI unit cases:4,483passed/3skipped. The module now has a45s outer budget;
+the30s subprocess cap and all real-npm behavior assertions are unchanged.
+Failed receipt: GitHub Actions job121267532614 in run40226051369.
