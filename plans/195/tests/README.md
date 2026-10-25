@@ -61,3 +61,28 @@ interrupted its real offline npm subprocess before the existing30s child cap.
 Other CI unit cases:4,483passed/3skipped. The module now has a45s outer budget;
 the30s subprocess cap and all real-npm behavior assertions are unchanged.
 Failed receipt: GitHub Actions job121267532614 in run40226051369.
+
+## Verified integration and delivery
+
+The dated delivery-receipts.json records completed actions, not predicted CI:
+
+- Frontend PR354 merged as2d9c496f. Content Guard, Pages deployment, Cloudflare
+  Worker deployment, hero delivery and social workflow all passed on main.
+  Public post-deployment checks also passed. Its16dependency alerts are closed.
+- Backend PR394 merged reviewed headcca56834 as30106724 after23checks.
+  Main CI (including Docker), Code Quality (including the new npm audit), docs,
+  E2E contract and master synchronization all completed successfully.
+- Refreshed GitHub queries:0open dependency, code-scanning and secret-scanning
+  alerts in each repository. Refreshed npm audits:0vulnerabilities for site,
+  workers, admin and editorial tool, explicitly including dev dependencies.
+- Canonical source heads were synchronized and local npm installations updated.
+  The frontend task branch/worktree and backend implementation branch were
+  removed after exact-SHA/ancestry checks. Final documentation worktree removal
+  and final-main CI are checked separately in the associated delivery response.
+- Separate backlog worktrees remain uncommitted/unpushed under the owner's
+  explicit constraint. A newly generated canonical runtime export was privately
+  backed up and retained unchanged; it was not included in security commits.
+
+Seven reviewed Semgrep audit matches and the unchanged optional-peer mismatches
+remain visible/documented. This does not claim a vulnerability-free codebase,
+complete taint analysis, credential revocation or completion of AdSense review.
