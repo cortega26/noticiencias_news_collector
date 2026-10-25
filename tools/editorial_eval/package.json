@@ -13,6 +13,10 @@
     "eval:baseline": "promptfoo eval -c ../../reports/editorial-eval/promptfooconfig.baseline.yaml --max-concurrency 1 --no-cache --no-share -o ../../reports/editorial-eval/baseline-results.json"
   },
   "devDependencies": {
-    "promptfoo": "0.124.1"
+    "promptfoo": "0.125.1"
+  },
+  "overrides": {
+    "@azure/msal-node": "7.1.0",
+    "basic-ftp": "6.2.3"
   }
 }

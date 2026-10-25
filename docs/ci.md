@@ -97,12 +97,18 @@ sender change; do not let the workflow track `main`.
 
 `.github/workflows/quality.yml` (job `quality-gate`):
 
-- `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep runs from `.venv-security` with `--config auto` and is non-blocking
+- `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses the shared `make semgrep-audit` target with official `p/python`, `p/security-audit` and `p/secrets` profiles and metrics disabled and strict scan-error handling; findings remain advisory, while technical scanner failures fail the gate
 - `make quality-gate` — snapshot-first quality gate (no LLM)
 - `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy. The security lock is semgrep-free and the allowlist is empty (plan 156 retired the `GHSA-84m7-p3x7-pcfv` exception); semgrep now lives in its own hash-pinned tool lock installed only into `.venv-security`
 - gitleaks secret scan (binary downloaded in CI; locally `make security` runs it when installed and fails with an explicit message when it is missing — set `SKIP_SECRET_SCAN=1` to skip that leg deliberately). The CI pin lives in `GITLEAKS_VERSION` in `.github/workflows/quality.yml`; use the same version locally.
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 - Plan 160 fixes the gitleaks 8.30 run: `.gitleaks-baseline.json` is refreshed with the pinned CI binary and the test-fixture path is allowlisted.
+
+The same workflow also runs `npm-audit` (Node24, contents-read only): full
+`npm audit --include=dev --audit-level=low` against `apps/admin` and `tools/editorial_eval`.
+These commands audit committed lockfiles without installing or executing the
+optional replay tool. Both include development dependencies and fail on
+reported vulnerabilities; Python quality gates alone do not cover npm trees.
 
 ## Local Parity Commands
 

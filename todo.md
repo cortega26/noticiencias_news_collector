@@ -1,3 +1,3 @@
 # Todo: current task
 
-Follow [plan 194's checklist](plans/194/todo.md). Fresh validation results belong in [its evidence record](plans/194/tests/README.md). Preserve all original local source changes before cleaning checkouts; never publish credentials or merge incomplete features merely to make Git status clean.
+Follow [plan195](plans/195/todo.md); record fresh verification in [its evidence](plans/195/tests/README.md). Do not dismiss vulnerabilities or claim unexecuted checks passed.
