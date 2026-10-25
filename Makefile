@@ -254,7 +254,18 @@ quality: bootstrap $(BOOTSTRAP_SECURITY_STAMP) ## Run all quality checks (lint, 
 	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT) --progress-spinner off || true
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality] Running Semgrep..."
-	@$(SEMGREP) scan --config .semgrep.yml --error || echo "Semgrep found issues (non-blocking for now)"
+	@$(MAKE) semgrep-audit
+
+.PHONY: semgrep-audit
+semgrep-audit: $(BOOTSTRAP_SECURITY_STAMP) ## Official rule profiles; findings advisory, scanner failures fatal
+	@mkdir -p $(SECURITY_DIR)
+	@status=0; $(SEMGREP) scan --config p/python --config p/security-audit --config p/secrets \
+		--metrics=off --strict --error --json --output $(SECURITY_DIR)/semgrep.json || status=$$?; \
+	if [ $$status -eq 1 ]; then \
+		echo "Semgrep findings are advisory; review $(SECURITY_DIR)/semgrep.json."; \
+	elif [ $$status -ne 0 ]; then \
+		echo "Semgrep failed technically (exit $$status)." >&2; exit $$status; \
+	fi
 
 quality-fix: bootstrap ## Run auto-fixers then quality checks
 	@echo "[quality-fix] Auto-formatting..."
@@ -275,7 +286,7 @@ quality-ci: bootstrap context-validate $(BOOTSTRAP_SECURITY_STAMP) ## Run strict
 	@$(PIP_AUDIT) -r requirements.lock -f json -o $(PIP_AUDIT_REPORT) --progress-spinner off || true
 	@$(PYTHON) scripts/security_gate.py pip-audit $(PIP_AUDIT_REPORT) --severity HIGH --status $(SECURITY_STATUS)
 	@echo "[quality-ci] Running Semgrep..."
-	@$(SEMGREP) scan --config auto --error || echo "Semgrep found issues (non-blocking for now)"
+	@$(MAKE) semgrep-audit
 
 context-validate: bootstrap ## Validate context files against MODULE_INDEX.md
 	@$(PYTHON_BIN) scripts/validate_context.py

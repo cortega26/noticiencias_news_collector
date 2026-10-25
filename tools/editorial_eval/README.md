@@ -184,7 +184,7 @@ Production metrics paths are not used.
 
 ## Interpret results
 
-`results.json` follows Promptfoo 0.124.1's own schema. Read:
+`results.json` follows Promptfoo 0.125.1's own schema. Read:
 
 - `results.results[]` — one row per case/label, in prepared order.
 - `testCase.description` — `baseline:<case_id>` or `candidate:<case_id>`.
@@ -199,7 +199,7 @@ Do not read a passing row as factual approval. Do not compare totals without
 checking the specific case IDs. Provider errors belong in the denominator and
 are reported as failures, not removed.
 
-Known Promptfoo 0.124.1 behaviour: before rendering a prompt it removes exactly
+Known Promptfoo 0.125.1 behaviour: before rendering a prompt it removes exactly
 one trailing newline from each string variable. The seeded fixtures therefore
 store Markdown without a trailing newline; a captured output whose final newline
 matters would need that limitation recorded. List variables are preserved with
@@ -248,3 +248,16 @@ names without actual review. Failed runs also save a review packet containing
 the retained concrete critic findings; stage caches preserve the draft. Call
 budgets count logical editorial/provider-seam calls; a configured fallback
 chain may attempt multiple providers within one such call.
+
+## Security maintenance (2026-10-25)
+
+Promptfoo0.125.1 removes optional jks-js and its unpatched node-forge path.
+The optional Azure MSAL Node tree is overridden to7.1.0 for
+GHSA-xcx6-jx8p-x3h5. This package supports only offline echo replay; optional
+cloud authentication is not exercised or claimed compatible by the replay test.
+The proxy-agent/get-uri tree is overridden to basic-ftp6.2.3 because its5.x
+range excludes the ReDoS fix. body-parser is updated to2.4.0 within its existing
+range. FTP retrieval and the Promptfoo HTTP server are outside supported offline
+replay and are not activated by these changes.
+Run `npm audit` here, including development dependencies, when updating the
+lockfile. A green Python quality gate does not audit this separate npm package.

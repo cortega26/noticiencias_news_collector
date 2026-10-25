@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-25T16:53:13.480554+00:00",
+  "generated_at": "2026-10-25T19:23:40.710449+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -34,7 +34,6 @@
     ".nvmrc": null,
     ".placeholder-audit.yaml": null,
     ".pre-commit-config.yaml": null,
-    ".semgrep.yml": null,
     ".semgrepignore": null,
     "AGENTS.md": null,
     "CHANGELOG.md": null,
@@ -290,6 +289,7 @@
       "191",
       "193-admin-happy-dom-security.md",
       "194",
+      "195",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -681,6 +681,10 @@
     {
       "target": "quality",
       "description": "Run all quality checks (lint, type, security, audit)"
+    },
+    {
+      "target": "semgrep-audit",
+      "description": "Official rule profiles; findings advisory, scanner failures fatal"
     },
     {
       "target": "quality-fix",
@@ -1435,6 +1439,10 @@
     "plans/194/spec.md",
     "plans/194/tests/README.md",
     "plans/194/todo.md",
+    "plans/195/spec.md",
+    "plans/195/tests/README.md",
+    "plans/195/tests/semgrep-triage.md",
+    "plans/195/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

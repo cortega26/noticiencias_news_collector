@@ -36,7 +36,7 @@ make quality-ci
 | **Ruff**      | Linting, Formatting, Imports, Complexity | `pyproject.toml`               |
 | **Mypy**      | Static Type Checking                     | `pyproject.toml`               |
 | **Bandit**    | Python Security Linter                   | `pyproject.toml`               |
-| **Semgrep**   | SAST (Advanced Security Patterns)        | `.semgrep.yml`                 |
+| **Semgrep**   | SAST (Advanced Security Patterns)        | `make semgrep-audit` (official Python/security/secrets profiles)                 |
 | **pip-audit** | Dependency Vulnerability Scanning        | `pyproject.toml` (via CI/Make) |
 
 ## Interpreting Failures

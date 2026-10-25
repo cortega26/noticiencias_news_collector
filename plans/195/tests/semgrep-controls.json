@@ -1,0 +1,13 @@
+{
+  "provenance": "synthetic source fixtures scanned by real Semgrep; never executed",
+  "positiveExit": 1,
+  "directInterpolatedSqlDetected": true,
+  "plainStringsNotFlagged": true,
+  "scannerErrors": 0,
+  "missingExecutableGateExit": 2,
+  "technicalFailureReported": true,
+  "limitation": "An earlier text(variable) data-flow probe produced no finding. These community rules do not prove complete taint analysis.",
+  "strictMalformedSourceExit": 3,
+  "strictParseErrors": 1,
+  "partialScanNotReportedSuccessful": true
+}

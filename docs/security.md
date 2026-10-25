@@ -13,7 +13,7 @@ does not prove it is required for merge.
 | Entry point | Current behavior |
 | --- | --- |
 | `make security` | pip-audit and Bandit JSON interpreted by `scripts/security_gate.py`; gitleaks runs when installed, and its absence fails the target unless `SKIP_SECRET_SCAN=1` skips it explicitly |
-| `make quality-ci` | Context validation, Ruff, scoped mypy plus coverage tests, Bandit and pip-audit gates; Semgrep runs from the isolated `.venv-security` with `--config auto` and is non-blocking |
+| `make quality-ci` | Context validation, Ruff, scoped mypy plus coverage tests, Bandit and pip-audit gates; Semgrep runs from the isolated `.venv-security` through `make semgrep-audit` (official Python/security/secrets profiles, metrics disabled, strict scan-error handling); findings are advisory and technical failures are fatal |
 | `.github/workflows/quality.yml` | Installs gitleaks, provisions `.venv-security` (cached on `requirements-semgrep.lock`), runs quality checks and the separate secret scan; uploads reports |
 | `make security-dev` | Audits security/refinery locks through the shared `scripts/security_gate.py` policy (`PIP_AUDIT_ALLOWLIST`, reason + expiry enforced), like every pip-audit leg; the security lock is semgrep-free and the allowlist is empty |
 
