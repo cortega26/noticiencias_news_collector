@@ -33,7 +33,7 @@ see `scripts/validate_plans_ledger.py`.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | IN PROGRESS — completed startup fix ported to current main; original local work preserved separately, fresh validation/integration pending. |
+| 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | DONE — admin preflight merged in PR #392 (`ac5bd24b`), exact-head and main CI passed; 88 initial entries accounted for, 24 source refs preserved remotely, canonical mains and retained source checkouts clean/synchronized. Credential rotation remains an operator action. Evidence: [194/tests](194/tests/README.md). |
 
 ### Targeted technology adoption (2026-09-04)
 
