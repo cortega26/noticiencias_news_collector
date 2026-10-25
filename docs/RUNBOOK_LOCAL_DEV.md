@@ -52,8 +52,8 @@ Migrate before starting: these targets do not depend on `make migrate`.
 Both `make admin` and `make admin-dev` check installed npm dependencies before
 starting services. After pulling changes to the admin dependencies, or if startup
 reports missing/incompatible packages (for example, an unresolved `openapi-fetch`
-import), run `make admin-install` to synchronize `apps/admin/node_modules` with
-the committed lockfile, then restart the panel. The startup check is offline;
+import), run `make admin-install` to synchronize the installed admin dependencies
+with the committed lockfile, then restart the panel. The startup check is offline;
 it never installs packages automatically.
 
 When publishing from the desk, start the stack with `SERVING_RELOAD=0`

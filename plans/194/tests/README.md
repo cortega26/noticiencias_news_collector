@@ -13,3 +13,5 @@ These are fresh results on current backend main plus the admin preflight port, n
 Restricted private originals and all-ref bundles are retained at `/home/carlos/.local/share/codex/task-backups/noticiencias-sync-20261025T162223Z/`. Live credentials were excluded from public snapshots; effective local configuration was verified unchanged after removing serialized credentials. Rotation of the exposed credentials remains an operator action, not a completed step.
 
 Ready source fix and preservation refs are distinct. Final CI, merge and checkout-cleanup receipts will be recorded separately after those actions actually occur.
+
+The first PR CI run caught a documentation-path regression: Python-only jobs do not install the admin dependencies, so the new runbook must not assert that their generated directory already exists. The failure was reproduced by temporarily moving only this task's dependency directory; the wording was corrected without weakening the doc checker. Both the doc command and its live-repository regression test were then rerun with dependencies absent.
