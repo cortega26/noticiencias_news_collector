@@ -45,7 +45,7 @@ if [[ -n "${GUI_PORT+x}" ]]; then GUI_EXPLICIT=1; else GUI_PORT=$GUI_PORT_DEFAUL
 die() { echo "admin-stack: $*" >&2; exit 1; }
 
 [[ -x "$python_bin" ]] || die "python interpreter not found at '$python_bin' — run 'make bootstrap' first"
-[[ -d apps/admin/node_modules ]] || die "apps/admin/node_modules missing — run 'make admin-install' first"
+bash scripts/dev/check_admin_dependencies.sh
 
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && { exec 3>&- 3<&-; return 0; } || return 1; }
 
