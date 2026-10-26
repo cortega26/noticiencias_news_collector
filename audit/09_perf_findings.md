@@ -1,5 +1,7 @@
 # Phase 9 — Performance & Efficiency Findings
 
+> Nota: `tools/perf/profile_collectors.py` se retiró el 2026-10-26: dependía de `AsyncRSSCollector`, eliminado del código. Sus referencias aquí son históricas.
+
 ## Methodology
 - Added JSONL replay fixture (`tests/data/perf/rss_load_sample.jsonl`) with mixed HTTP outcomes (200 + cached 304) to exercise retry, caching, and parallel fetch paths under controlled latency.【F:tests/data/perf/rss_load_sample.jsonl†L1-L4】
 - Implemented `src/perf/load_replay.py` harness to patch collectors deterministically for perf tests, enabling reuse across unit tests and the new profiling CLI.【F:src/perf/load_replay.py†L1-L233】
