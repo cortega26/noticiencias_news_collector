@@ -6,3 +6,6 @@
 # analyzing generated declarations only produces noise.
 exclude_paths:
   - 'apps/admin/src/lib/generated/**'
+  # Registros de evaluación (evidencia inmutable: informes, JSONL de corridas,
+  # bundles sellados). Se conservan tal cual se generaron; no son código.
+  - 'reports/evaluation/**'
