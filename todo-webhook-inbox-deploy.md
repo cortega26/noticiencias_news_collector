@@ -77,12 +77,12 @@ receipt histórico `id:v1:36785713548:publish_complete` debe caer como
 
 ## Criterios de aceptación (marcar al rechequear)
 
-- [ ] `https://api.noticiencias.com/v1/admin/webhook/receipts` responde 401/503 (ya no 404)
+- [x] `https://api.noticiencias.com/v1/admin/webhook/receipts` responde 401/503 (ya no 404) — 401 verificado 2026-10-26
 - [ ] `make webhooks-pull ARGS="--dry-run"` corre contra el hosted y reporta sin escribir
 - [ ] `make webhooks-pull` aplica y una segunda corrida es 100% duplicates
 - [ ] `WEBHOOK_INBOX_PULL=1 make admin` ejecuta el pull al arrancar (log visible)
 - [ ] Un publish local nuevo queda `completed` tras el pull, sin replay manual
-- [ ] (Opcional) timer systemd instalado y corriendo
+- [x] (Opcional) timer systemd instalado y corriendo — `noticiencias-webhooks-pull.timer` cada 15 min (usuario)
 
 ## Follow-ups conocidos (no bloquean)
 
@@ -96,3 +96,15 @@ receipt histórico `id:v1:36785713548:publish_complete` debe caer como
 - `spec-webhook-inbox-pull.md` / `todo-webhook-inbox-pull.md` (spec del inbox)
 - `spec-oci-hosting-migration.md` §Operations (deploy/update de la VM)
 - `docs/RUNBOOK_LOCAL_DEV.md` §"Webhook callbacks (hosted inbox → local pull)"
+
+## Rechequeo 2026-10-26
+
+- El timer ejecutaba una copia del código del 2026-10-10 sin la corrección del
+  plan 132; un recibo no correlacionado bloqueó la cola desde el 2026-10-19.
+  Ahora usa una copia de `main` (`~/.local/share/noticiencias-serving-<sha>`,
+  drop-in `90-noticiencias-runtime.conf`); regenerarla tras cada cambio del
+  puller.
+- Los callbacks perdidos o sin correlación se cierran con
+  `scripts/ops/reconcile_publication_attempts.py --github` (plan 198).
+- Pendiente: las verificaciones de `make webhooks-pull` manual y
+  `WEBHOOK_INBOX_PULL=1 make admin` (requieren `ADMIN_API_KEY` local).
