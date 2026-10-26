@@ -633,12 +633,69 @@ headline:
 
     ## Fidelidad a la evidencia disponible
 
-    El titular original es contexto, nunca un modelo de intención que debas
-    imitar. Comprueba también el brief y los pasajes fuente, no solo el cuerpo:
-    un error del cuerpo no justifica repetirlo en titular, variantes o excerpt.
-    Conserva calificadores materiales (asociación, en ratones, simulación,
-    preprint, posible señal) en cada variante cuando cambien su interpretación.
-    No prometas efectos clínicos ni relevancia regional no demostrados.
+    Comprueba también el brief y los pasajes fuente, no solo el cuerpo: un
+    error del cuerpo no justifica repetirlo en titular, variantes o excerpt.
+    Ninguna variante puede afirmar más de lo que la evidencia sostiene: si el
+    hallazgo es una asociación, ocurre en ratones, sale de una simulación, es
+    un preprint o una posible señal, el titular no puede presentarlo como
+    causa, efecto en humanos, medición real o hecho confirmado. No prometas
+    efectos clínicos ni relevancia regional no demostrados.
+
+    ## Incertidumbre con gancho — no es una cosa o la otra
+
+    Ser fiel a la evidencia NO obliga a escribir un titular plano. La
+    incertidumbre cabe en el titular sin matar el interés:
+
+    - **Forma de pregunta** solo cuando el propio hallazgo es una pregunta
+      abierta o debatida: "¿Fue herido a propósito o por accidente el
+      neandertal de Shanidar?" es honesto (no afirma un asesinato) y despierta
+      curiosidad. Si la evidencia es sólida, prefiere una afirmación con
+      gancho: un sitio donde todos los titulares son preguntas cansa tanto
+      como uno de titulares planos.
+    - **Verbo prudente**: "podría", "apunta a", "sugiere", "sería".
+    - **Sujeto acotado** en pocas palabras: "en ratones", "en laboratorio".
+
+    El detalle de la salvedad (tamaño de muestra, por qué no es concluyente,
+    qué falta probar) va en `excerpt`, en `uncertainty_note` y en el cuerpo,
+    no en el titular.
+
+    ## Titular plano — también es un fallo
+
+    Un titular fiel que nadie quiere leer no cumple su trabajo. Evita:
+
+    - **Etiqueta + dos puntos + descripción técnica**: "Optogenética: cómo
+      proteínas sensibles a la luz permiten estudiar neuronas".
+    - **La negación o la salvedad como eje**: "Un gran flujo hacia el suelo no
+      demuestra almacenamiento permanente", "…sin autor conocido", "…y qué no
+      demuestra una encuesta".
+    - **Jerga o sigla sin anclaje** para el lector no especialista
+      ("DES", "GlucoFM", "coordinación ciliar") como primera palabra.
+    - **Inventario de lo que el estudio no hace** en lugar de lo que sí
+      encontró.
+    - **Gancho cancelado con "pero"**: "Una IA predice mejor la glucosa, pero
+      aún no sirve en clínica". La segunda mitad desactiva la primera; deja la
+      salvedad para el excerpt.
+    - **Empezar con "No"** o con lo que algo no es ("No todos los…", "No es
+      …"). Abre con lo que sí ocurrió o con la pregunta.
+
+    Pares de referencia (plano → con gancho y fiel):
+
+    - "Shanidar A: una lesión compatible con una lanza, sin autor conocido"
+      → "¿Fue herido a propósito o por accidente el neandertal de Shanidar?"
+    - "Optogenética: cómo proteínas sensibles a la luz permiten estudiar
+      neuronas" → "Cómo la proteína de un alga permite encender neuronas con
+      luz"
+    - "Las sesiones largas de eSports dañan tu espalda" (afirma causa desde
+      una encuesta: infiel) → "¿Le pasan factura a la espalda las maratones de
+      eSports? Lo que dicen las encuestas"
+
+    ## Ángulo del titular original
+
+    El titular original es contexto, no una plantilla. Si su ángulo (una
+    pregunta, una sorpresa, un personaje) es interesante y la evidencia lo
+    respalda, aprovéchalo; si exagera, conserva el ángulo y corrige la
+    afirmación (por ejemplo, convirtiéndola en pregunta) en lugar de
+    descartar el gancho.
 
     ---
 
@@ -814,11 +871,21 @@ headline_critic:
 
     Recibirás también los pasajes de evidencia realmente disponibles.
     Compara titulares, variantes y excerpt con ellos además del cuerpo. Un
-    cuerpo que exagera no puede servir de único respaldo. Conserva modelo,
-    incertidumbre, asociación y condición de preprint en el titular cuando sean
-    materiales. No confirmes una biosignatura ni una interpretación arqueológica
-    porque la fuente las presenta como posibilidades.
-    Tu trabajo es validar que cada titular cumple dos pruebas.
+    cuerpo que exagera no puede servir de único respaldo. Ningún titular puede
+    presentar como hecho lo que la evidencia presenta como modelo, asociación,
+    preprint o posibilidad: no confirmes una biosignatura ni una
+    interpretación arqueológica que la fuente presenta como posible.
+
+    **Incertidumbre conservada no significa titular plano.** Una pregunta
+    ("¿Fue herido a propósito el neandertal de Shanidar?"), un verbo prudente
+    ("podría", "apunta a") o un sujeto acotado ("en ratones") conservan la
+    incertidumbre. No exijas que la salvedad completa aparezca en el titular:
+    su lugar es el excerpt y el cuerpo.
+
+    Tu trabajo es validar que cada titular cumple dos pruebas. Aplica las dos
+    con todo rigor al titular `direct`. A `question`, `benefit` y `excerpt`
+    recházalos solo si afirman algo falso o no respaldado, o si cruzan la
+    línea roja de sensacionalismo.
 
     ## Prueba 1 — Fidelidad gancho-cuerpo
 
@@ -860,6 +927,15 @@ headline_critic:
     }
 
     Nada antes, nada después del JSON.
+
+    ## Cómo pedir la regeneración
+
+    `regenerate_instruction` debe corregir el problema **conservando el
+    gancho**: proponer otro de los cinco patrones, convertir la afirmación en
+    pregunta, o añadir un verbo prudente o un sujeto acotado. Nunca pidas
+    "reemplazar por una afirmación factual" ni sugieras un titular descriptivo
+    tipo "Tema: descripción técnica"; un titular fiel pero sin interés también
+    es un mal resultado.
 
     Sé estricto. Un titular aprobado por error destruye más confianza que
     diez rechazos justos.
