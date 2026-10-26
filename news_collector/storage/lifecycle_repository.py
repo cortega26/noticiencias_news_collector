@@ -483,6 +483,67 @@ def _concurrent_callback_result(attempt: Any) -> PublicationCallbackApplyResult:
     )
 
 
+def _reconciliation_is_current_attempt(
+    session: Any, attempt: Any, article: Any | None
+) -> tuple[dict[str, Any], bool]:
+    """Projection context for an evidence-backed reconciliation (plan 198).
+
+    Same token rule as callbacks; attempts written before the
+    ``publication_attempt_id`` token existed are current when they are the
+    article's latest attempt and the article points at no other attempt.
+    """
+    article_metadata, current_attempt = _callback_projection_context(attempt, article)
+    if current_attempt or article is None:
+        return article_metadata, current_attempt
+    attempt_details = attempt.details if isinstance(attempt.details, dict) else {}
+    if attempt_details.get("publication_attempt_id"):
+        return article_metadata, False
+    if article_metadata.get("publication_attempt_id"):
+        return article_metadata, False
+    latest_id = (
+        session.query(func.max(_PublicationAttemptModel.id))
+        .filter(_PublicationAttemptModel.article_id == attempt.article_id)
+        .scalar()
+    )
+    return article_metadata, latest_id == attempt.id
+
+
+def _reconciliation_state_refusal(
+    attempt: Any | None, target_state: str
+) -> PublicationCallbackApplyResult | None:
+    """Refuse anything but a ``PR_CREATED`` attempt (plan 198)."""
+    if attempt is None:
+        return PublicationCallbackApplyResult(
+            matched=False, transitioned=False, reason="attempt_not_found"
+        )
+    if attempt.state == "PR_CREATED":
+        return None
+    return _callback_state_conflict(attempt, target_state) or (
+        PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="attempt_not_in_flight",
+        )
+    )
+
+
+def _pr_created_content_sha256(session: Any, attempt_id: int) -> str:
+    rows = (
+        session.query(_PublicationEventModel)
+        .filter(
+            _PublicationEventModel.publication_attempt_id == attempt_id,
+            _PublicationEventModel.event_type == "pr_created",
+        )
+        .all()
+    )
+    for row in rows:
+        if isinstance(row.details, dict) and row.details.get("content_sha256"):
+            return str(row.details["content_sha256"])
+    return ""
+
+
 def _persist_correlated_publication_callback(
     session: Any,
     attempt: Any,
@@ -497,8 +558,9 @@ def _persist_correlated_publication_callback(
     article: Any | None,
     article_metadata: dict[str, Any],
     current_attempt: bool,
+    occurred_at: datetime | None = None,
 ) -> PublicationCallbackApplyResult:
-    now = datetime.now(timezone.utc)
+    now = occurred_at or datetime.now(timezone.utc)
     changed = _transition_correlated_attempt(
         session, attempt.id, attempt.state, target_state, now
     )
@@ -868,6 +930,65 @@ class LifecycleRepository:
                 article=context.article,
                 article_metadata=context.article_metadata,
                 current_attempt=context.current_attempt,
+            )
+
+    def apply_reconciled_pull_request_outcome(
+        self,
+        attempt_id: int,
+        *,
+        target_state: str,
+        evidence: dict[str, Any],
+        deploy_url: str | None,
+        occurred_at: datetime,
+    ) -> PublicationCallbackApplyResult:
+        """Close a ``PR_CREATED`` attempt from external PR evidence (plan 198).
+
+        One transaction: CAS ``PR_CREATED -> target_state``, the audit event
+        and, when the attempt is the article's current one, the article
+        projection. Any other attempt state is reported, never overwritten.
+        """
+        event_type = {"REJECTED": "rejected", "COMPLETED": "deployed"}.get(target_state)
+        if event_type is None:
+            raise ValueError(f"Unsupported reconciliation state: {target_state!r}")
+        with self._session() as session:
+            attempt = (
+                session.query(_PublicationAttemptModel)
+                .filter(_PublicationAttemptModel.id == attempt_id)
+                .first()
+            )
+            refusal = _reconciliation_state_refusal(attempt, target_state)
+            if refusal is not None:
+                return refusal
+            article = (
+                session.query(_ArticleModel)
+                .filter(_ArticleModel.id == attempt.article_id)
+                .first()
+            )
+            article_metadata, current_attempt = _reconciliation_is_current_attempt(
+                session, attempt, article
+            )
+            conflict = _callback_projection_conflict(
+                attempt,
+                article,
+                current_attempt=current_attempt,
+                target_state=target_state,
+            )
+            if conflict is not None:
+                return conflict
+            return _persist_correlated_publication_callback(
+                session,
+                attempt,
+                refinery_id=attempt.refinery_id,
+                pull_request_number=_pull_request_number(attempt.pr_url) or 0,
+                content_sha256=_pr_created_content_sha256(session, attempt.id),
+                target_state=target_state,
+                event_type=event_type,
+                callback_details=evidence,
+                deploy_url=deploy_url,
+                article=article,
+                article_metadata=article_metadata,
+                current_attempt=current_attempt,
+                occurred_at=occurred_at,
             )
 
     def record_correlated_check_passed(

@@ -19,8 +19,10 @@ Does NOT own:
 - Publishing without deploy evidence: a legacy-``completed`` article whose
   ``published_url`` is unset stays ``PR_CREATED`` and is reported
   actionable, never marked ``COMPLETED``.
-- GitHub/deployment network queries: evidence is the stored receipt, the
-  durable attempt row, and the legacy DB projection only.
+- GitHub/deployment network queries. Evidence is the stored receipt, the
+  durable attempt row and the legacy DB projection; optionally (plan 198) a
+  caller-injected ``pull_request_state`` reader supplies the PR's merge state,
+  so the network client stays at the edge.
 - Scheduling: invoked on demand by
   ``scripts/ops/reconcile_publication_attempts.py`` (no scheduler exists in
   this repo, same rationale as plan 4a's prune script).
@@ -30,7 +32,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Mapping, Optional
 
 from sqlalchemy import update
 
@@ -55,6 +57,9 @@ RUN_TYPE_PUBLICATION_RECONCILIATION = "publication_reconciliation"
 DEFAULT_STALE_MINUTES = 60
 DEFAULT_LIMIT = 100
 DEFAULT_RECEIPT_LIMIT = 500
+DEFAULT_SITE_URL = "https://noticiencias.com/"
+
+PullRequestStateReader = Callable[[str], Optional[Mapping[str, Any]]]
 
 ReconciliationOutcome = Literal[
     "completed",
@@ -98,8 +103,16 @@ class PublicationReconciliationWorkflow:
     per invocation (it is synchronous and request-scoped, unlike the
     long-lived run workflows)."""
 
-    def __init__(self, db_manager: Any) -> None:
+    def __init__(
+        self,
+        db_manager: Any,
+        *,
+        pull_request_state: PullRequestStateReader | None = None,
+        site_url: str = DEFAULT_SITE_URL,
+    ) -> None:
         self._db = db_manager
+        self._pull_request_state = pull_request_state
+        self._site_url = site_url
 
     # ------------------------------------------------------------------
     # entry point
@@ -300,6 +313,8 @@ class PublicationReconciliationWorkflow:
         )
         if repaired is not None:
             return repaired
+        if self._pull_request_state is not None:
+            return self._repair_from_pull_request(base, current, dry_run=dry_run)
 
         return ReconciliationAction(
             **base,
@@ -363,6 +378,53 @@ class PublicationReconciliationWorkflow:
                 finished_at=datetime.now(timezone.utc),
             )
         return ReconciliationAction(**base, outcome="rejected", detail=reason)
+
+    def _repair_from_pull_request(
+        self, base: dict[str, Any], current: Any, *, dry_run: bool
+    ) -> ReconciliationAction:
+        """Close the attempt from its PR's merge state (plan 198).
+
+        Merged -> ``COMPLETED`` (the frontend deploys its main branch);
+        closed unmerged -> ``REJECTED``; open or unreadable -> unchanged.
+        """
+        assert self._pull_request_state is not None
+        state = self._pull_request_state(current.pr_url) if current.pr_url else None
+        evidence = _pull_request_evidence(current.pr_url, state)
+        if evidence is None or evidence["outcome"] == "open":
+            reason = "unknown" if evidence is None else "still open"
+            return ReconciliationAction(
+                **base,
+                outcome="stale_pr_open",
+                detail=f"pull request state {reason}: {current.pr_url}",
+            )
+        merged = evidence["outcome"] == "merged"
+        refusal = (
+            None
+            if dry_run
+            else self._apply_pull_request_outcome(current.id, evidence, merged=merged)
+        )
+        if refusal is not None:
+            return ReconciliationAction(**base, outcome="stale_pr_open", detail=refusal)
+        return ReconciliationAction(
+            **base,
+            outcome="completed" if merged else "rejected",
+            detail=f"github: {evidence['outcome']} {current.pr_url}",
+        )
+
+    def _apply_pull_request_outcome(
+        self, attempt_id: int, evidence: dict[str, Any], *, merged: bool
+    ) -> str | None:
+        """Persist one PR outcome; returns a refusal detail, or None."""
+        result = self._db.lifecycle.apply_reconciled_pull_request_outcome(
+            attempt_id,
+            target_state="COMPLETED" if merged else "REJECTED",
+            evidence=evidence["details"],
+            deploy_url=self._site_url if merged else None,
+            occurred_at=evidence["occurred_at"],
+        )
+        if result.transitioned:
+            return None
+        return f"reconciliation refused: {result.reason}"
 
     def _current_attempt(self, article_id: int, attempt_id: int) -> Any | None:
         for candidate in self._db.lifecycle.get_publication_attempts_for_article(
@@ -452,3 +514,56 @@ class PublicationReconciliationWorkflow:
                     error_detail=error_detail,
                 )
             )
+
+
+def _parse_github_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _classify_closed_pull_request(
+    state: Mapping[str, Any],
+) -> tuple[str, datetime] | None:
+    """``(outcome, occurred_at)`` for a closed PR; None when ambiguous."""
+    if state.get("state") != "closed":
+        return None
+    if state.get("merged") is True:
+        merged_at = _parse_github_timestamp(state.get("merged_at"))
+        return ("merged", merged_at) if merged_at is not None else None
+    if state.get("merged") is False:
+        closed_at = _parse_github_timestamp(state.get("closed_at"))
+        return ("closed_unmerged", closed_at) if closed_at is not None else None
+    return None
+
+
+def _pull_request_evidence(
+    pr_url: str | None, state: Mapping[str, Any] | None
+) -> dict[str, Any] | None:
+    """Validate a PR state reading into reconciliation evidence.
+
+    Returns ``None`` for anything ambiguous, so a malformed or partial
+    reading can never produce a transition.
+    """
+    if not pr_url or not isinstance(state, Mapping):
+        return None
+    if state.get("state") == "open":
+        return {"outcome": "open"}
+    classified = _classify_closed_pull_request(state)
+    if classified is None:
+        return None
+    outcome, occurred_at = classified
+    details = {
+        "source": "github_reconciliation",
+        "pr_url": pr_url,
+        "merged_at": state.get("merged_at"),
+        "closed_at": state.get("closed_at"),
+        "merge_commit_sha": state.get("merge_commit_sha"),
+    }
+    if outcome == "closed_unmerged":
+        details["reason"] = "pull_request_closed_unmerged"
+    return {"outcome": outcome, "occurred_at": occurred_at, "details": details}
