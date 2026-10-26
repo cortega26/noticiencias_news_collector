@@ -58,6 +58,11 @@ test = [
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-timeout>=2.3.0",
+    "pytest-xdist>=3.6.0",       # ejecución paralela: pytest -n auto (plan 196)
+    "respx>=0.22.0",             # mocks deterministas de httpx (plan 196)
+    "time-machine>=2.16.0",      # congelar el reloj en tests (plan 196)
+    "import-linter>=2.1",        # contratos de capas: make lint-imports (plan 196)
+    "deptry>=0.23.0",            # dependencias no usadas/no declaradas (plan 196)
     # mypy-only stubs: kept out of [project].dependencies so Dockerfile.serving
     # no longer ships them in the runtime image (plan 145).
     "types-requests>=2.31.0",
@@ -296,3 +301,50 @@ skips = [
     "B603"
 ]
 targets = ["news_collector", "scripts"]
+
+# Contratos de capas (plan 196). Los módulos de política no hacen I/O de red:
+# ver docs/AGENTS.md. Ejecuta: make lint-imports
+# news_collector/validation queda fuera: es un paquete namespace (sin __init__.py)
+# y grimp no lo resuelve.
+[tool.importlinter]
+root_packages = ["news_collector"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Los módulos de política no importan clientes de red ni collectors"
+type = "forbidden"
+source_modules = [
+    "news_collector.scoring",
+    "news_collector.taxonomy",
+    "news_collector.editorial",
+]
+forbidden_modules = [
+    "requests",
+    "httpx",
+    "urllib3",
+    "aiohttp",
+    "feedparser",
+    "playwright",
+    "scrapling",
+    "news_collector.collectors",
+    "news_collector.serving",
+]
+# Solo imports directos: news_collector/__init__.py importa collectors y serving
+# de forma anticipada, así que todo submódulo los alcanza transitivamente.
+# Quitar esa carga anticipada permitiría endurecer este contrato (plan 196).
+allow_indirect_imports = true
+
+# Auditoría de dependencias (plan 196). Consultivo: make deps-check
+[tool.deptry]
+extend_exclude = ["archive", "temp.*", "scratch", "mutants", "build", "dist", "perf"]
+
+[tool.deptry.per_rule_ignores]
+# Herramientas de desarrollo/CI (se invocan por CLI o plugin, no por import) y
+# dependencias de runtime cargadas indirectamente (driver por DATABASE_URL,
+# formularios de FastAPI, servidor ASGI).
+DEP002 = [
+    "bandit", "pip-audit", "semgrep", "coverage", "hypothesis", "pytest",
+    "pytest-cov", "pytest-asyncio", "pytest-timeout", "pytest-xdist", "respx",
+    "time-machine", "import-linter", "deptry", "types-requests", "types-PyYAML",
+    "types-python-dateutil", "psycopg", "python-multipart", "uvicorn", "watchdog",
+]
