@@ -17,8 +17,8 @@ import sys
 
 sys.path.insert(0, str(ROOT))
 
-from src.scoring import feature_scorer
-from src.scoring.feature_scorer import FeatureBasedScorer
+from news_collector.scoring import feature_scorer
+from news_collector.scoring.feature_scorer import FeatureBasedScorer
 
 
 @dataclass
