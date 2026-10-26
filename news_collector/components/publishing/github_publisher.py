@@ -387,6 +387,53 @@ class GitHubPublisher:
                             "No force push was attempted."
                         ) from rebase_error
 
+    def get_pull_request_state(self, pr_url: str) -> dict[str, object] | None:
+        """Read a pull request's merge state from its html URL (plan 198).
+
+        Returns ``{"state", "merged", "merged_at", "closed_at",
+        "merge_commit_sha"}`` or ``None`` when the URL is not a GitHub pull
+        request URL or the API call fails, so callers treat "unknown" as
+        "no evidence" and never guess a transition.
+        """
+        parts = pr_url.strip().rstrip("/").split("/")
+        if (
+            len(parts) < 7
+            or parts[2] != "github.com"
+            or parts[-2] != "pull"
+            or not parts[-1].isdigit()
+        ):
+            return None
+        owner, repo_name, number = parts[3], parts[4], parts[-1]
+        # Without a token, an empty "Authorization: token " header is a 401;
+        # an anonymous read of a public repository succeeds.
+        headers = (
+            self.headers if self.github_token else {"Accept": self.headers["Accept"]}
+        )
+        try:
+            response = requests.get(
+                f"https://api.github.com/repos/{owner}/{repo_name}/pulls/{number}",
+                headers=headers,
+                timeout=15,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            logger.warning(
+                "Could not read pull request state for {}: {}",
+                pr_url,
+                type(exc).__name__,
+            )
+            return None
+        if not isinstance(payload, dict):
+            return None
+        return {
+            "state": payload.get("state"),
+            "merged": payload.get("merged_at") is not None,
+            "merged_at": payload.get("merged_at"),
+            "closed_at": payload.get("closed_at"),
+            "merge_commit_sha": payload.get("merge_commit_sha"),
+        }
+
     def ensure_pull_request_draft(self, repo_url: str, branch_name: str) -> None:
         """Read current remote review state before pushing changed article content."""
         owner, repo_name = repo_url.removesuffix(".git").rstrip("/").split("/")[-2:]
