@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery bootstrap-security docs-check docs-review toolchain-check lock-parity-check test-audit weak-tests-baseline weak-tests-check editorial-eval-install editorial-eval-replay
+.PHONY: bootstrap lint lint-fix fix-makefile-tabs type typecheck coverage-full test test-all test-integration test-e2e e2e perf audit security build clean help bump-version audit-todos audit-todos-baseline audit-todos-check docs-api docs format audit-issues config-docs config-docs-check docs-config-fields bootstrap-refinery test-refinery bootstrap-security docs-check docs-review toolchain-check lock-parity-check lint-imports deps-check test-parallel test-audit weak-tests-baseline weak-tests-check editorial-eval-install editorial-eval-replay
 
 VENV ?= .venv
 VENV_REFINERY ?= .venv-refinery
@@ -325,7 +325,7 @@ toolchain-check: bootstrap ## Fail when venv gate tools drift from the .pre-comm
 lock-parity-check: bootstrap ## Fail when the venv diverges from requirements.lock
 	@$(PYTHON_BIN) scripts/check_lock_parity.py
 
-verify-ci: lint type test weak-tests-check test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
+verify-ci: lint type test weak-tests-check test-integration test-e2e test-contracts test-boundaries security config-docs-check inventory-check docs-check plans-ledger-check toolchain-check lock-parity-check lint-imports ## Run all required non-deploy backend checks once (plan 041 canonical CI gate)
 
 plans-ledger-check: bootstrap ## Validate plans/README.md ledger (statuses, archiving, commit refs, row drift)
 	@$(PYTHON_BIN) scripts/validate_plans_ledger.py
@@ -350,6 +350,15 @@ coverage-full: bootstrap ## Run the union suite (unit + integration + e2e-marked
 
 test: bootstrap ## Run unit tests (excludes integration, pipeline E2E, and performance suites)
 	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --no-cov
+
+test-parallel: bootstrap ## Run the unit suite in parallel with pytest-xdist (same scope as `make test`)
+	@$(PYTEST) tests --ignore=tests/integration --ignore=tests/e2e_pipeline --ignore=tests/perf -m "not e2e and not perf" --no-cov -n auto
+
+lint-imports: bootstrap ## Enforce import-linter layer contracts from pyproject.toml (plan 196)
+	@$(VENV)/$(BIN_DIR)/lint-imports
+
+deps-check: bootstrap ## Advisory deptry audit: unused, missing and transitive dependencies (plan 196, not a CI gate)
+	@$(PYTHON_BIN) -m deptry . || true
 
 test-all: bootstrap ## Run all tests including slow e2e pipeline
 	# Keep unit, integration, pipeline E2E, and performance results separate.
@@ -505,8 +514,7 @@ llm-canary: bootstrap ## Real bounded LLM canary (needs keys; ARGS="--items 20 -
 review-local: bootstrap ## Local adversarial review of the working diff (Ollama, unlimited, advisory). NOT in CI. Usage: make review-local [ARGS="--ref origin/main --out /tmp/rev.md"]
 	@$(PYTHON_BIN) scripts/adversarial_review.py $(ARGS)
 
-test-timeshift: bootstrap ## Run tests with the clock +120 days to expose time-bomb tests (installs time-machine)
-	@$(PYTHON_BIN) -m pip install -q time-machine
+test-timeshift: bootstrap ## Run tests with the clock +120 days to expose time-bomb tests (time-machine comes from the test extra)
 	@PYTHONPATH=tests/_plugins:. $(PYTHON_BIN) -m pytest tests -q --no-cov -p time_shift_plugin --ignore=tests/e2e_pipeline
 
 test-audit: bootstrap ## Audit the test suite: coverage incl. noticiencias+scripts, weak tests, tests touching no code (slow: full run)

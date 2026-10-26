@@ -627,6 +627,12 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 | 191 | [Evidence-first editorial pipeline](191/spec.md) | P1 | L | 190 | PARTIAL — prompt/source fidelity, durable material/headline holds, review packets and versioned caches locally verified; parent integration and human semantic acceptance pending. See [evidence](191/evidence.md). |
 | 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | PARTIAL — implementation and DB-copy acceptance in [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382); final dependency review, merge and rollout pending. See [evidence](190/tests/results.md). |
 
+## Dev tooling (2026-10-25)
+
+| ID | Plan | Priority | Effort | Dependencies | Status |
+| --- | --- | --- | --- | --- | --- |
+| 196 | [Dev tooling: xdist, import-linter, respx, deptry, time-machine](196-dev-tooling.md) | P3 | S | None | IN_PROGRESS — test-extra tools hash-pinned in requirements-security.lock; `make lint-imports` contract kept and in verify-ci; deptry advisory. Pre-existing 20 config-weight test failures and deptry findings recorded in the plan. |
+
 ## Bounded CI repair (2026-10-24)
 
 | ID | Plan | Priority | Effort | Dependencies | Status |
