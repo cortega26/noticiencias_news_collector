@@ -40,6 +40,7 @@ see `scripts/validate_plans_ledger.py`.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 194 | [Synchronize local work and deliver admin dependency preflight](194/spec.md) | P1 | M | None | DONE — admin preflight merged in PR #392 (`ac5bd24b`), exact-head and main CI passed; 88 initial entries accounted for, 24 source refs preserved remotely, canonical mains and retained source checkouts clean/synchronized. Credential rotation remains an operator action. Evidence: [194/tests](194/tests/README.md). KEEP: source-preservation receipts support the retained operational audit. |
+| 197 | [Consolidate open work into a single backlog per repository](197/spec.md) | P3 | S | None | DONE — docs-only, merged in PR #401: `docs/BACKLOG.md` is the single open-work backlog; closed backlogs archived under `docs/archive/backlogs/`, references repointed; docs/ledger/inventory gates green. KEEP: points to the canonical backlog location. |
 
 ### Targeted technology adoption (2026-09-04)
 

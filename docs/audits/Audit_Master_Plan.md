@@ -54,10 +54,8 @@ Last updated: 2026-01-02
 - Findings F-0012 through F-0029 logged in [Findings_Ledger.md](Findings_Ledger.md).
 - Remediation tracked in [`remediation/`](remediation/README.md):
   - [plan.md](remediation/plan.md) — Strategy, horizons, risks
-  - [backlog.md](remediation/backlog.md) — **Source of truth for work tracking**
+  - [backlog.md](remediation/backlog.md) — record of the 16 remediation items (all closed); open work is tracked in [`docs/BACKLOG.md`](../BACKLOG.md)
   - [test-plan.md](remediation/test-plan.md) — Required tests per fix
 
 ## Next actions
-1) Execute Horizon A fixes (6 items, all `ready`). See [backlog.md](remediation/backlog.md).
-2) Unblock B-01 by merging A-04 first.
-3) After Horizon B, write C-01 and C-02 tests.
+All 16 remediation items are closed (see [backlog.md](remediation/backlog.md)). The only open finding, F-0024, and all other pending work are tracked in [`docs/BACKLOG.md`](../BACKLOG.md).

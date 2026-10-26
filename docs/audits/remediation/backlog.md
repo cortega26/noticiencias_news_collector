@@ -3,8 +3,8 @@
 **Last updated**: 2026-03-26 (Wave 3+4 execution)
 **Source**: [plan.md](plan.md) | Findings: [Findings_Ledger.md](../Findings_Ledger.md)
 
-> **This file is the source of truth for tracking remediation progress.**
-> Update Status as work proceeds. Do not delete completed items.
+> **Closed record.** All 16 items are done. Open work is tracked in [`docs/BACKLOG.md`](../../BACKLOG.md).
+> Do not delete completed items.
 
 ## Status key
 

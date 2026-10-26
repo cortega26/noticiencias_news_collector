@@ -3,7 +3,7 @@ Last updated: 2026-03-25
 
 ## Active remediation
 
-The current active remediation backlog is tracked in:
+Open work is tracked in **[`../BACKLOG.md`](../BACKLOG.md)**. The remediation record (all 16 items closed) is in:
 **[`remediation/backlog.md`](remediation/backlog.md)**
 
 See [`remediation/README.md`](remediation/README.md) for the full index.
@@ -15,8 +15,8 @@ See [`remediation/README.md`](remediation/README.md) for the full index.
 - See [Findings_Ledger.md](Findings_Ledger.md) for details.
 
 ### 2026-Q1 (Mar) — Findings F-0012 through F-0029
-- 18 findings open. Remediation in progress.
-- 4 S0 (stop-ship), 6 S1 (high), 8 S2 (medium).
+- 17 of 18 findings closed; F-0024 (S2) stays open and is tracked in [`../BACKLOG.md`](../BACKLOG.md).
+- Originally 4 S0 (stop-ship), 6 S1 (high), 8 S2 (medium).
 - Backlog: [`remediation/backlog.md`](remediation/backlog.md)
 - Plan: [`remediation/plan.md`](remediation/plan.md)
 
