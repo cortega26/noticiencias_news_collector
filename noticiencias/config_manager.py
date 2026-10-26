@@ -36,6 +36,7 @@ from noticiencias.config_schema import DEFAULT_CONFIG, Config, iter_field_docs
 DEFAULT_ENV_PREFIX = "NOTICIENCIAS"
 DEFAULT_CONFIG_FILENAME = "config.toml"
 DEFAULT_ENV_FILENAME = ".env"
+DEFAULT_ENV_PATH_OVERRIDE = "NOTICIENCIAS_DEFAULT_ENV_PATH"
 BACKUP_DIRNAME = "backups"
 
 
@@ -121,7 +122,11 @@ def _project_root() -> Path:
 
 def _default_paths() -> tuple[Path, Path]:
     root = _project_root()
-    return root / DEFAULT_CONFIG_FILENAME, root / DEFAULT_ENV_FILENAME
+    # NOTICIENCIAS_DEFAULT_ENV_PATH reemplaza el .env de respaldo del repo; la
+    # suite de tests lo usa para que un .env local no se filtre en sus configs.
+    env_override = os.environ.get(DEFAULT_ENV_PATH_OVERRIDE)
+    env_path = Path(env_override) if env_override else root / DEFAULT_ENV_FILENAME
+    return root / DEFAULT_CONFIG_FILENAME, env_path
 
 
 def default_config_path() -> Path:
