@@ -13,5 +13,5 @@
 
 ## Notas
 
-- Sin `GITHUB_TOKEN`, la cabecera `Authorization: token ` vacía provocaba 401; `get_pull_request_state` ahora hace lectura anónima (test incluido).
+- Sin `GITHUB_TOKEN`, la cabecera `Authorization` con token vacío provocaba 401; `get_pull_request_state` ahora hace lectura anónima (test incluido).
 - Dry-run real (2026-10-26): scanned=18, completed=16, rejected=2 (PR 288, 290), stale_pr_open=0.

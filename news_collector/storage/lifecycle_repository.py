@@ -508,6 +508,27 @@ def _reconciliation_is_current_attempt(
     return article_metadata, latest_id == attempt.id
 
 
+def _reconciliation_state_refusal(
+    attempt: Any | None, target_state: str
+) -> PublicationCallbackApplyResult | None:
+    """Refuse anything but a ``PR_CREATED`` attempt (plan 198)."""
+    if attempt is None:
+        return PublicationCallbackApplyResult(
+            matched=False, transitioned=False, reason="attempt_not_found"
+        )
+    if attempt.state == "PR_CREATED":
+        return None
+    return _callback_state_conflict(attempt, target_state) or (
+        PublicationCallbackApplyResult(
+            matched=True,
+            transitioned=False,
+            attempt_id=attempt.id,
+            state=attempt.state,
+            reason="attempt_not_in_flight",
+        )
+    )
+
+
 def _pr_created_content_sha256(session: Any, attempt_id: int) -> str:
     rows = (
         session.query(_PublicationEventModel)
@@ -935,19 +956,9 @@ class LifecycleRepository:
                 .filter(_PublicationAttemptModel.id == attempt_id)
                 .first()
             )
-            if attempt is None:
-                return PublicationCallbackApplyResult(
-                    matched=False, transitioned=False, reason="attempt_not_found"
-                )
-            if attempt.state != "PR_CREATED":
-                conflict = _callback_state_conflict(attempt, target_state)
-                return conflict or PublicationCallbackApplyResult(
-                    matched=True,
-                    transitioned=False,
-                    attempt_id=attempt.id,
-                    state=attempt.state,
-                    reason="attempt_not_in_flight",
-                )
+            refusal = _reconciliation_state_refusal(attempt, target_state)
+            if refusal is not None:
+                return refusal
             article = (
                 session.query(_ArticleModel)
                 .filter(_ArticleModel.id == attempt.article_id)

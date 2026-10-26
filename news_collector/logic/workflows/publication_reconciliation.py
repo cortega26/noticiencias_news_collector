@@ -390,39 +390,41 @@ class PublicationReconciliationWorkflow:
         assert self._pull_request_state is not None
         state = self._pull_request_state(current.pr_url) if current.pr_url else None
         evidence = _pull_request_evidence(current.pr_url, state)
-        if evidence is None:
+        if evidence is None or evidence["outcome"] == "open":
+            reason = "unknown" if evidence is None else "still open"
             return ReconciliationAction(
                 **base,
                 outcome="stale_pr_open",
-                detail=f"pull request state unknown: {current.pr_url}",
-            )
-        if evidence["outcome"] == "open":
-            return ReconciliationAction(
-                **base,
-                outcome="stale_pr_open",
-                detail=f"pull request still open: {current.pr_url}",
+                detail=f"pull request state {reason}: {current.pr_url}",
             )
         merged = evidence["outcome"] == "merged"
-        target_state = "COMPLETED" if merged else "REJECTED"
-        if not dry_run:
-            result = self._db.lifecycle.apply_reconciled_pull_request_outcome(
-                current.id,
-                target_state=target_state,
-                evidence=evidence["details"],
-                deploy_url=self._site_url if merged else None,
-                occurred_at=evidence["occurred_at"],
-            )
-            if not result.transitioned:
-                return ReconciliationAction(
-                    **base,
-                    outcome="stale_pr_open",
-                    detail=f"reconciliation refused: {result.reason}",
-                )
+        refusal = (
+            None
+            if dry_run
+            else self._apply_pull_request_outcome(current.id, evidence, merged=merged)
+        )
+        if refusal is not None:
+            return ReconciliationAction(**base, outcome="stale_pr_open", detail=refusal)
         return ReconciliationAction(
             **base,
             outcome="completed" if merged else "rejected",
             detail=f"github: {evidence['outcome']} {current.pr_url}",
         )
+
+    def _apply_pull_request_outcome(
+        self, attempt_id: int, evidence: dict[str, Any], *, merged: bool
+    ) -> str | None:
+        """Persist one PR outcome; returns a refusal detail, or None."""
+        result = self._db.lifecycle.apply_reconciled_pull_request_outcome(
+            attempt_id,
+            target_state="COMPLETED" if merged else "REJECTED",
+            evidence=evidence["details"],
+            deploy_url=self._site_url if merged else None,
+            occurred_at=evidence["occurred_at"],
+        )
+        if result.transitioned:
+            return None
+        return f"reconciliation refused: {result.reason}"
 
     def _current_attempt(self, article_id: int, attempt_id: int) -> Any | None:
         for candidate in self._db.lifecycle.get_publication_attempts_for_article(
@@ -524,6 +526,21 @@ def _parse_github_timestamp(value: Any) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
+def _classify_closed_pull_request(
+    state: Mapping[str, Any],
+) -> tuple[str, datetime] | None:
+    """``(outcome, occurred_at)`` for a closed PR; None when ambiguous."""
+    if state.get("state") != "closed":
+        return None
+    if state.get("merged") is True:
+        merged_at = _parse_github_timestamp(state.get("merged_at"))
+        return ("merged", merged_at) if merged_at is not None else None
+    if state.get("merged") is False:
+        closed_at = _parse_github_timestamp(state.get("closed_at"))
+        return ("closed_unmerged", closed_at) if closed_at is not None else None
+    return None
+
+
 def _pull_request_evidence(
     pr_url: str | None, state: Mapping[str, Any] | None
 ) -> dict[str, Any] | None:
@@ -536,16 +553,10 @@ def _pull_request_evidence(
         return None
     if state.get("state") == "open":
         return {"outcome": "open"}
-    if state.get("state") != "closed":
+    classified = _classify_closed_pull_request(state)
+    if classified is None:
         return None
-    merged_at = _parse_github_timestamp(state.get("merged_at"))
-    closed_at = _parse_github_timestamp(state.get("closed_at"))
-    if state.get("merged") is True and merged_at is not None:
-        outcome, occurred_at = "merged", merged_at
-    elif state.get("merged") is False and closed_at is not None:
-        outcome, occurred_at = "closed_unmerged", closed_at
-    else:
-        return None
+    outcome, occurred_at = classified
     details = {
         "source": "github_reconciliation",
         "pr_url": pr_url,
