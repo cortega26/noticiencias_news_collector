@@ -8,6 +8,13 @@ from datetime import datetime, timezone
 # pytest_configure hook runs. Without this, pytest would write test noise
 # into the production data/logs/collector.log.
 os.environ.setdefault("NEWS_COLLECTOR_TEST_MODE", "1")
+# Aísla la suite del .env local del repo: sin esto, sus overrides (p. ej. pesos
+# de scoring) se mezclan con las configs temporales de los tests. Los
+# subprocesos heredan la variable.
+os.environ.setdefault(
+    "NOTICIENCIAS_DEFAULT_ENV_PATH",
+    os.path.join(os.path.dirname(__file__), "_no_such_dir", ".env"),
+)
 
 import sqlite3
 
