@@ -98,7 +98,7 @@ Pillow 13 compatibility.
 - [`docs/ci.md`](docs/ci.md): workflow and gate reference.
 - [`docs/runbook.md`](docs/runbook.md): current operational alert runbook.
 - [`docs/audits/2026-04-source-of-truth-audit.md`](docs/audits/2026-04-source-of-truth-audit.md): historical April documentation audit.
-- [`docs/dev/source-of-truth-backlog.md`](docs/dev/source-of-truth-backlog.md): historical follow-up backlog; current plan statuses are in `plans/README.md`.
+- [`docs/BACKLOG.md`](docs/BACKLOG.md): the single backlog of open work; per-plan status lives in `plans/README.md`. Closed backlogs are archived in [`docs/archive/backlogs/`](docs/archive/backlogs/).
 
 ## Historical Material
 

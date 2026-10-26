@@ -32,7 +32,7 @@ This mattered because the previous document set made it too easy to misread comp
 ### Created
 
 - `docs/audits/2026-04-source-of-truth-audit.md`
-- `docs/dev/source-of-truth-backlog.md`
+- `docs/archive/backlogs/source-of-truth-backlog.md`
 
 ### Left Unchanged
 

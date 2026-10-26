@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-26T14:01:11.737276+00:00",
+  "generated_at": "2026-10-26T14:22:56.921808+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -116,6 +116,7 @@
     "docs/": [
       "AGENTS.md",
       "ARCHITECTURE.md",
+      "BACKLOG.md",
       "CHANGELOG.md",
       "EDITORIAL_EVALUATION.md",
       "EDITORIAL_EVALUATION_PROTOCOL.md",
@@ -291,6 +292,7 @@
       "194",
       "195",
       "196-dev-tooling.md",
+      "197",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1190,6 +1192,7 @@
     "data/reports/PRODUCTION_TRAINING_REPORT.md",
     "docs/AGENTS.md",
     "docs/ARCHITECTURE.md",
+    "docs/BACKLOG.md",
     "docs/CHANGELOG.md",
     "docs/EDITORIAL_EVALUATION.md",
     "docs/EDITORIAL_EVALUATION_PROTOCOL.md",
@@ -1214,6 +1217,8 @@
     "docs/adr/0010-llm-routing.md",
     "docs/adr/0011-local-publish-hosted-webhook-split.md",
     "docs/api_examples.md",
+    "docs/archive/backlogs/dev-BACKLOG.md",
+    "docs/archive/backlogs/source-of-truth-backlog.md",
     "docs/archive/s1_refactor/S1C_AUDIT.md",
     "docs/archive/s1_refactor/historical_walkthrough.md",
     "docs/audits/2026-04-source-of-truth-audit.md",
@@ -1245,7 +1250,6 @@
     "docs/config_fields.md",
     "docs/contracts_inventory.md",
     "docs/database_deployment.md",
-    "docs/dev/BACKLOG.md",
     "docs/dev/QUALITY.md",
     "docs/dev/QUALITY_BASELINE.md",
     "docs/dev/REFACTOR_PLAN.md",
@@ -1253,7 +1257,6 @@
     "docs/dev/TEST_GAPS.md",
     "docs/dev/TEST_SUITE_AUDIT.md",
     "docs/dev/pr_plan.md",
-    "docs/dev/source-of-truth-backlog.md",
     "docs/editorial_grounding_check.md",
     "docs/editorial_quality_system.md",
     "docs/faq.md",
@@ -1455,6 +1458,9 @@
     "plans/195/tests/semgrep-triage.md",
     "plans/195/todo.md",
     "plans/196-dev-tooling.md",
+    "plans/197/spec.md",
+    "plans/197/tests/README.md",
+    "plans/197/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

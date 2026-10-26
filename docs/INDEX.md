@@ -74,7 +74,8 @@ The development reports below are historical snapshots, not current measured bas
 | Static analysis findings | [`dev/STATIC_ANALYSIS.md`](dev/STATIC_ANALYSIS.md) |
 | Test gaps | [`dev/TEST_GAPS.md`](dev/TEST_GAPS.md) |
 | PR plan | [`dev/pr_plan.md`](dev/pr_plan.md) |
-| Historical source-of-truth backlog | [`dev/source-of-truth-backlog.md`](dev/source-of-truth-backlog.md) |
+| Backlog (único, trabajo abierto) | [`BACKLOG.md`](BACKLOG.md) |
+| Historical backlogs (closed) | [`archive/backlogs/`](archive/backlogs/) |
 
 ---
 

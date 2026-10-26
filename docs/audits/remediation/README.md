@@ -9,7 +9,7 @@
 | File | Purpose | Update frequency |
 |------|---------|-----------------|
 | [plan.md](plan.md) | Strategy, horizons, sequence, risks, what-not-to-do | Stable after approval; update if strategy changes |
-| [backlog.md](backlog.md) | **Source of truth** for tracking remediation work | Update Status/Owner as work progresses |
+| [backlog.md](backlog.md) | Record of remediation work (all items closed); open work is tracked in [`../../BACKLOG.md`](../../BACKLOG.md) | Closed |
 | [test-plan.md](test-plan.md) | Required tests and manual validations per fix | Update as tests are implemented |
 
 ## Reading order
