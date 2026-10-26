@@ -43,6 +43,7 @@ see `scripts/validate_plans_ledger.py`.
 | 197 | [Consolidate open work into a single backlog per repository](197/spec.md) | P3 | S | None | DONE — docs-only, merged in PR #401: `docs/BACKLOG.md` is the single open-work backlog; closed backlogs archived under `docs/archive/backlogs/`, references repointed; docs/ledger/inventory gates green. KEEP: points to the canonical backlog location. |
 | 198 | [Reconcile publication attempts from GitHub PR state](198/spec.md) | P1 | M | None | DONE — merged in PR #403: `reconcile_publication_attempts.py --github` closes stale PR_CREATED attempts from the PR merge state. Real run 2026-10-26: 16 COMPLETED, 2 REJECTED, second pass scanned=0. KEEP: operator reconciliation path for lost or uncorrelated frontend callbacks. |
 | 199 | [Headlines with a hook, without losing rigor](199/spec.md) | P1 | S | None | IN_PROGRESS — headline/headline_critic prompts: uncertainty via question, cautious verb or scoped subject; flat-headline anti-patterns; critic repairs keep the hook. Live probe on 6 unseen articles recorded in the todo. Frontend proposals for the 8 PR #345 titles pending owner review. |
+| 200 | [Per-stage models after Nemotron Super became unavailable](200/spec.md) | P0 | M | None | IN_PROGRESS — default -> Nemotron Ultra; independent fact-check chain (groq/gemini/cloudflare, Ollama last); preflight one-token model probe; Lightning rejected for prescoring by measurement. E2E re-run pending. |
 
 ### Targeted technology adoption (2026-09-04)
 

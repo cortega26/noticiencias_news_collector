@@ -514,7 +514,10 @@ timeout = 300
 
 [nvidia]
 api_key = ""
-model = "nvidia/nemotron-3-super-120b-a12b"
+# Plan 200 (2026-10-26): nemotron-3-super answers 404 "Function not found for
+# account" since 2026-10-20; Ultra is the strongest catalog model that answers
+# for this account (verified with a live call). See ADR-0010 addendum.
+model = "nvidia/nemotron-3-ultra-550b-a55b"
 base_url = "https://integrate.api.nvidia.com/v1"
 timeout = 300
 max_tokens = 32768
@@ -552,6 +555,11 @@ reasoning_effort = "low"
 # tight deadline). Unlisted purposes use the default order.
 [llm.purpose_chains]
 scoring = ["groq", "openrouter", "nvidia", "gemini", "cloudflare"]
+# Fact-check verification must not share the drafter's model (ADR / Phase 2c):
+# NVIDIA and OpenRouter both serve Nemotron Ultra, so they are excluded. Ollama
+# (`[ollama].fact_check_model`) stays the last resort. Plan 200: the local 80B
+# verifier was OOM-killed on every claim of the 2026-10-26 audit run.
+fact_check = ["groq", "gemini", "cloudflare"]
 #
 # Validated 2026-09-19 (JSON mode, Spanish, p50 ~2s vs NIM 4-21s). Skipped
 # (one warning) when GROQ_API_KEY is not set, e.g. in CI.

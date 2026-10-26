@@ -51,6 +51,17 @@ class NvidiaHealthChecker(LLMHealthChecker):
             )
 
         if healthy:
+            usable, probe_reason = provider.probe_model()
+            if not usable:
+                warning = (
+                    f"NVIDIA model {nvidia_model} is unavailable for this account "
+                    f"({probe_reason}); update [nvidia].model in config.toml"
+                )
+                if logger:
+                    logger.error(warning)
+                return HealthResult(
+                    healthy=False, disable_llm=True, error=warning, warning=warning
+                )
             if logger:
                 logger.info(f"NVIDIA NIM health check passed (model={nvidia_model}).")
             return HealthResult(healthy=True)

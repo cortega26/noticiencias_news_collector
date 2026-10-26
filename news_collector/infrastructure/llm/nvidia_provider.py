@@ -636,6 +636,34 @@ class NvidiaProvider:
         except requests.RequestException as exc:
             return False, redact_message(str(exc))
 
+    def probe_model(self, timeout_seconds: float = 20.0) -> tuple[bool, str]:
+        """One-token chat call to the configured model (plan 200).
+
+        ``/models`` lists catalog entries the account may not be able to call
+        (nemotron-3-super answered 404 "Function not found for account" for six
+        days while the listing stayed 200). Returns ``(False, reason)`` only for
+        configuration faults (401/403/404/422); timeouts and 5xx are transient
+        and return ``(True, reason)`` so they never block a run.
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._auth_headers(),
+                json={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": "ok"}],
+                    "max_tokens": 1,
+                },
+                timeout=timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            return True, f"probe_inconclusive: {redact_message(str(exc))}"
+        if response.status_code in (401, 403, 404, 422):
+            return False, f"http_{response.status_code}"
+        return True, (
+            "ok" if response.ok else f"probe_inconclusive: http_{response.status_code}"
+        )
+
     # ---- Degradation state ----
 
     def is_degraded(self) -> bool:

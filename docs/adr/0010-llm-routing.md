@@ -67,3 +67,31 @@ pass recorded 26/26 timeouts.
 
 This ADR's decision is unchanged: no default change, no Ultra wiring, GLM
 parked. Numbers and the full table: `reports/evaluation/llm-routing-2026-09.md`.
+
+## Addendum (2026-10-26) — forced default change (plan 200)
+
+`nvidia/nemotron-3-super-120b-a12b` answers 404 "Function … Not found for
+account" since 2026-10-20 while `/models` still lists it, so the preflight
+passed and every editorial call silently failed over for six days. The
+"no default change" decision above can no longer hold:
+
+1. **Default → `nvidia/nemotron-3-ultra-550b-a55b`.** Not a quality verdict
+   (the benchmark above still cannot evidence one); it is the strongest
+   catalog model that answers for this account (live calls, 2026-10-26).
+   Kimi-k2.6 and Mistral-large-2 answer 404; GLM-5.3, Step-5-preview,
+   DeepSeek-v4.1-flash and Gemma-4-31b timed out at 120–150 s.
+2. **Prescoring stays on the default model with `reasoning_effort = "low"`.**
+   Nemotron-3.5-Lightning was measured on 8 real 25-item batches × 2 runs with
+   the production PreScorer prompt: Top-5 agreement with Ultra 0.54 (Ultra
+   self-agreement 0.70, Lightning 0.62) and p50 63 s vs 17 s for Ultra. Not
+   adopted.
+3. **Fact-check verification gets its own chain** (`[llm.purpose_chains]
+   fact_check = ["groq", "gemini", "cloudflare"]`, Ollama last), excluding
+   every provider that serves the drafter's model, so the verifier stays
+   independent without a 50 GB local model (OOM-killed on every claim of the
+   audit run).
+4. **Preflight probes the configured model** with a one-token chat call;
+   401/403/404/422 stop the publication run with an explicit
+   "update [nvidia].model" message.
+5. The licence position in Decision 4 is unchanged and still applies to the
+   new default.
