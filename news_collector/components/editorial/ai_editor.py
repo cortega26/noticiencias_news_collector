@@ -820,14 +820,29 @@ class EditorAgent:
             fact_check_model_raw = resolved["editor"].model_id
         self.fact_check_model = fact_check_model_raw
 
-        # Dedicated OllamaProvider instance for fact-check verification —
-        # never routed through self.provider (which may resolve to a cloud
-        # provider for drafting).
-        self.fact_check_provider = OllamaProvider(
-            api_url=self.api_url,
-            model=self.fact_check_model,
-            timeout=3600,
-        )
+        # Dedicated fact-check provider, never self.provider (the drafter).
+        # Its chain comes from [llm.purpose_chains].fact_check, which must list
+        # only providers serving a model other than the drafter's (plan 200):
+        # the verifier stays independent while no longer depending on a local
+        # model that does not fit in memory. Ollama remains the last resort
+        # with `fact_check_model`; without a configured chain the verifier is
+        # Ollama-only, as before.
+        purpose_chains = getattr(getattr(cfg, "llm", None), "purpose_chains", None)
+        if isinstance(purpose_chains, dict) and purpose_chains.get("fact_check"):
+            self.fact_check_provider = get_provider(
+                purpose="fact_check",
+                config=cfg,
+                api_url=self.api_url,
+                model=self.fact_check_model,
+                timeout=600,
+                max_tokens=4096,
+            )
+        else:
+            self.fact_check_provider = OllamaProvider(
+                api_url=self.api_url,
+                model=self.fact_check_model,
+                timeout=3600,
+            )
 
         # Initialize unified provider
         # Note: ai_editor uses a higher timeout (3600s) and max_tokens (32768)
@@ -1968,7 +1983,7 @@ class EditorAgent:
 
     def _send_fact_check_prompt(self, prompt: str, system: str) -> dict[str, Any]:
         """Send one fact-check verification prompt to the dedicated
-        (non-drafting) Ollama provider and return the parsed JSON verdict.
+        (non-drafting) verifier provider and return the parsed JSON verdict.
 
         Kept as a thin, single-purpose seam (distinct from ``_send_prompt``,
         which talks to ``self.provider`` — the drafting provider, possibly
@@ -1984,7 +1999,8 @@ class EditorAgent:
         )
         if isinstance(response, dict):
             return response
-        return self.fact_check_provider._extract_json(str(response))
+        parsed: dict[str, Any] = self.fact_check_provider._extract_json(str(response))
+        return parsed
 
     def _verify_fact_check_claims(
         self,

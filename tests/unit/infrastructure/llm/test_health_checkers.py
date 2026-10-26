@@ -42,6 +42,7 @@ def test_cloud_checkers_ok_failed_and_error(checker, target, cfg_kwargs, label):
     logger = MagicMock()
     with patch(target) as provider_cls:
         provider_cls.return_value.check_health.return_value = (True, "ok")
+        provider_cls.return_value.probe_model.return_value = (True, "ok")
         assert checker().check(cfg, logger).healthy is True
 
         provider_cls.return_value.check_health.return_value = (False, "http_500")
@@ -151,3 +152,50 @@ def test_openai_compat_checker_with_logger_and_probe_exception(monkeypatch):
     monkeypatch.delenv("HEALTH_TEST_KEY")
     assert checker.check(cfg, logger).healthy is False
     assert logger.warning.called
+
+
+def test_nvidia_checker_fails_when_configured_model_is_unusable():
+    """Plan 200: /models listed the model while chat answered 404 for six days."""
+    cfg = _cfg(nvidia_key="k")
+    with patch(
+        "news_collector.infrastructure.llm.nvidia_provider.NvidiaProvider"
+    ) as provider_cls:
+        provider_cls.return_value.check_health.return_value = (True, "ok")
+        provider_cls.return_value.probe_model.return_value = (False, "http_404")
+        result = health.NvidiaHealthChecker().check(cfg, MagicMock())
+
+    assert result.healthy is False and result.disable_llm is True
+    assert "http_404" in result.error and "[nvidia].model" in result.error
+
+
+class _Resp:
+    def __init__(self, status: int) -> None:
+        self.status_code = status
+        self.ok = status < 400
+
+
+@pytest.mark.parametrize(
+    ("status", "usable"), [(200, True), (404, False), (401, False), (503, True)]
+)
+def test_probe_model_flags_only_configuration_faults(status, usable):
+    from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+    provider = NvidiaProvider(api_key="k", model="vendor/model")
+    with patch("requests.post", return_value=_Resp(status)) as post:
+        ok, reason = provider.probe_model(timeout_seconds=1)
+
+    assert ok is usable
+    assert post.call_args.kwargs["json"]["model"] == "vendor/model"
+    assert post.call_args.kwargs["json"]["max_tokens"] == 1
+    if not usable:
+        assert reason == f"http_{status}"
+
+
+def test_probe_model_treats_network_errors_as_inconclusive():
+    from news_collector.infrastructure.llm.nvidia_provider import NvidiaProvider
+
+    provider = NvidiaProvider(api_key="k", model="vendor/model")
+    with patch("requests.post", side_effect=requests.Timeout("slow")):
+        ok, reason = provider.probe_model(timeout_seconds=1)
+
+    assert ok is True and reason.startswith("probe_inconclusive")
