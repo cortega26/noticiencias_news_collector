@@ -6,6 +6,9 @@ current SLOs, accepted capacity or production evidence. See
 [`docs/performance_baselines.md`](../docs/performance_baselines.md) for the
 current retained performance test and its limits.
 
+`tools/perf/profile_collectors.py` se retiró el 2026-10-26: dependía de
+`AsyncRSSCollector`, eliminado del código. Sus referencias aquí son históricas.
+
 ## Fixtures & Methodology
 - Replay workloads using the new fixtures under `perf/fixtures/` to mimic mixed cached/uncached feeds and peak-hour spikes.
 - Benchmarks executed via `python tools/perf/profile_collectors.py` with latency instrumentation (avg/p50/p95) and CPU sampling.
