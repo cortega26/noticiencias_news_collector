@@ -631,7 +631,7 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 
 | ID | Plan | Priority | Effort | Dependencies | Status |
 | --- | --- | --- | --- | --- | --- |
-| 196 | [Dev tooling: xdist, import-linter, respx, deptry, time-machine](196-dev-tooling.md) | P3 | S | None | IN_PROGRESS — test-extra tools hash-pinned in requirements-security.lock; `make lint-imports` contract kept and in verify-ci; deptry advisory. Pre-existing 20 config-weight test failures and deptry findings recorded in the plan. |
+| 196 | [Dev tooling: xdist, import-linter, respx, deptry, time-machine](196-dev-tooling.md) | P3 | S | None | DONE — tools merged in PR #396 (hash-pinned in requirements-security.lock; `make test-parallel`, `make lint-imports` in verify-ci, advisory `make deps-check`). Follow-ups merged: #397 isolates tests from the local repo .env (fixes the 20 local-only failures), #398 drops unused scikit-learn/numpy and repairs two scripts, #399 removes dead tools/perf/profile_collectors.py. main: 4488 passed. KEEP: records why the import-linter contract is direct-only and excludes validation. |
 
 ## Bounded CI repair (2026-10-24)
 
