@@ -71,4 +71,16 @@ Criterios de aceptación:
 - [x] Regenerar locks; verificar `--check` y paridad
 - [x] Probar que el contrato detecta una violación
 - [x] Tests de humo en `tests/unit/tooling/`
-- [ ] PR y CI
+- [x] PR y CI (#396)
+
+## Cierre (2026-10-26)
+
+Hallazgos registrados arriba, resueltos en PRs posteriores:
+
+- Los 20 fallos solo ocurrían en local: el `.env` del repo se filtraba en las
+  configs temporales de los tests. Corregido en #397
+  (`NOTICIENCIAS_DEFAULT_ENV_PATH`).
+- deptry: `scikit-learn`/`numpy` quitadas y `score_delta.py`/
+  `weekly_quality_report.py` reparados en #398;
+  `tools/perf/profile_collectors.py` eliminado en #399. `spacy` y `psutil` se
+  mantienen como opcionales con guardia de `ImportError`.
