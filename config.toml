@@ -610,7 +610,8 @@ timeout = 120
 [image_autogen]
 # Plan 202: hero images for articles in waiting_for_image, generated with the
 # art director (prompt v2) and Codex imagegen on this machine's ChatGPT login.
-enabled = false
+# Enabled 2026-10-27 after the owner approved the 4-article comparison.
+enabled = true
 max_attempts = 2
 
 [llm_health]
