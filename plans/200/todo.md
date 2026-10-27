@@ -8,4 +8,4 @@
 - [x] Medición de preselección: Lightning descartado (coincidencia 0,54 vs 0,70; p50 63 s vs 17 s); se mantiene Ultra con razonamiento bajo
 - [x] Apéndice ADR-0010
 - [x] Gates y PR
-- [ ] Regenerar la copia del timer y repetir la publicación del 4021
+- [x] Regenerar la copia del timer y repetir la publicación del 4021 (PR frontend #357; 3941 en #358)

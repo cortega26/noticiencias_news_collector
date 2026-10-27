@@ -240,8 +240,20 @@ class ImageBriefStore:
                 return brief
         return None
 
-    def ready_for_article(self, article_id: str) -> bool:
-        """Read-only reconciler probe: rights, sidecar and actual bytes agree."""
+    def ready_for_article(self, article_id: str, slug: str | None = None) -> bool:
+        """Read-only reconciler probe: rights, sidecar and actual bytes agree.
+
+        When the checkpoint recorded its brief slug, only that brief counts:
+        another brief of the same article must never release the wait.
+        """
+        if slug:
+            try:
+                brief = self.load_brief(slug)
+            except ValueError:
+                return False
+            if brief is None or brief.article_id != str(article_id):
+                return False
+            return self.brief_ready(brief)
         return self.brief_ready(self.find_for_article(str(article_id), []))
 
     def brief_ready(self, brief: ImageBriefModel | None) -> bool:

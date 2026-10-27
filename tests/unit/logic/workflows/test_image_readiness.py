@@ -250,3 +250,15 @@ def test_readiness_rejects_asset_outside_upload_directory(tmp_path):
     external.write_bytes(image_bytes())
     store.save_brief(approved.model_copy(update={"uploaded_asset_path": str(external)}))
     assert not store.ready_for_article("3822")
+
+
+def test_checkpoint_slug_selects_its_own_brief(tmp_path):
+    """Plan 201: a ready brief under another slug cannot release the wait."""
+    store = ImageBriefStore(tmp_path)
+    stage(store, image_origin="ai_generated")  # slug pending-roots, ready
+    other = make_brief().model_copy(update={"slug": "pending-roots-v2"})
+    stage(store, brief=other)  # same article, no proven rights
+    assert store.ready_for_article("3822", "pending-roots")
+    assert not store.ready_for_article("3822", "pending-roots-v2")
+    assert not store.ready_for_article("3822", "missing-slug")
+    assert not store.ready_for_article("9999", "pending-roots")
