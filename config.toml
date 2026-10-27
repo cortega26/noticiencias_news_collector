@@ -607,6 +607,12 @@ timeout = 120
 
 # End-of-run LLM health report: how much prescoring/scoring the LLM really did vs
 # heuristic fallbacks, and a warning when a stage falls back too often.
+[image_autogen]
+# Plan 202: hero images for articles in waiting_for_image, generated with the
+# art director (prompt v2) and Codex imagegen on this machine's ChatGPT login.
+enabled = false
+max_attempts = 2
+
 [llm_health]
 enabled = true
 warn_heuristic_ratio = 0.5

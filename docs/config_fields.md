@@ -173,6 +173,12 @@
 | llm_health | LLMHealthConfig |  |  |  |  |
 | llm_health.enabled | bool | true | Print/export the per-run LLM health report. |  |  |
 | llm_health.warn_heuristic_ratio | float | 0.5 | Emit a degraded-run warning when more than this share of a stage's items fell back to heuristics while an LLM was in use. |  |  |
+| image_autogen | ImageAutogenConfig |  |  |  |  |
+| image_autogen.enabled | bool | false | Generate the hero image of articles parked in waiting_for_image with the art director and Codex imagegen (ChatGPT account). |  |  |
+| image_autogen.codex_bin | str | "codex" | Codex CLI executable. |  |  |
+| image_autogen.timeout_seconds | int | 900 | Limit per Codex call. |  |  |
+| image_autogen.max_attempts | int | 2 | Generations per article, ever. |  |  |
+| image_autogen.interval_seconds | int | 60 | Pause between queue scans. |  |  |
 | llm_endpoints | list | [] | Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig). |  |  |
 | editorial_auditor | EditorialAuditorConfig |  |  |  |  |
 | editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |
