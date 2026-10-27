@@ -1145,7 +1145,10 @@ class PublicationRunWorkflow:
             ]
             if (
                 pending
-                and not any(store.ready_for_article(cp.article_id) for cp in pending)
+                and not any(
+                    store.ready_for_article(cp.article_id, cp.image_brief_slug)
+                    for cp in pending
+                )
                 and not any(cp.status == "ready" for cp in checkpoints.values())
             ):
                 continue

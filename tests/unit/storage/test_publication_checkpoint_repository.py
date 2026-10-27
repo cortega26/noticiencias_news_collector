@@ -454,7 +454,7 @@ def test_shutdown_during_image_readiness_keeps_request_parked(
     workflow = PublicationRunWorkflow(manager, data_dir=tmp_path)
     dispatched = []
 
-    def ready_then_stop(_store, _article_id):
+    def ready_then_stop(_store, _article_id, _slug=None):
         workflow.stop_reconciler()
         return True
 

@@ -6,8 +6,8 @@
 - [x] Prompt `headline_critic`: rigor en `direct`, reparaciones que conservan el gancho
 - [x] Gates: test, lint, docs
 - [x] Prueba en vivo con 2–3 artículos (sin publicar)
-- [ ] PR backend y CI
-- [ ] PR frontend con 8 titulares propuestos (revisión del titular)
+- [x] PR backend y CI (#405, #406)
+- [x] PR frontend con 8 titulares (#356, aprobada e integrada)
 
 ## Prueba en vivo (2026-10-26, sin publicar)
 

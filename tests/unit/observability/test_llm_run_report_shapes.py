@@ -145,7 +145,8 @@ def test_format_run_report_no_activity_and_rescore_only():
         "",
         "LLM DE ESTA CORRIDA:",
         "-" * 40,
-        "Sin actividad de LLM (¿no configurado? scoring heurístico).",
+        "Sin actividad de LLM en esta corrida (borrador reanudado desde"
+        " checkpoint, LLM no configurado o scoring heurístico).",
     ]
     rescore = rr.build_run_report({"rescoring.heuristic.no_llm_by_policy": 5}, [])
     lines = rr.format_run_report(rescore).split("\n")

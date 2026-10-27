@@ -155,21 +155,27 @@ class PublicationCheckpointRepository:
                 if row is None or row.status != "waiting_for_image":
                     return False
                 previous = row.run_metadata or {}
-                result = session.execute(
-                    update(WorkflowRun)
-                    .where(
-                        WorkflowRun.id == run_id,
-                        WorkflowRun.status == "waiting_for_image",
-                        WorkflowRun.run_metadata == previous,
+                try:
+                    result = session.execute(
+                        update(WorkflowRun)
+                        .where(
+                            WorkflowRun.id == run_id,
+                            WorkflowRun.status == "waiting_for_image",
+                            WorkflowRun.run_metadata == previous,
+                        )
+                        .values(
+                            status="queued",
+                            run_metadata={**previous, "worker_pid": os.getpid()},
+                            heartbeat_at=datetime.now(timezone.utc),
+                            finished_at=None,
+                            updated_at=datetime.now(timezone.utc),
+                        )
                     )
-                    .values(
-                        status="queued",
-                        run_metadata={**previous, "worker_pid": os.getpid()},
-                        heartbeat_at=datetime.now(timezone.utc),
-                        finished_at=None,
-                        updated_at=datetime.now(timezone.utc),
-                    )
-                )
+                except IntegrityError:
+                    # Expected race: another publication holds the global slot.
+                    # Roll back here so get_session does not log it as an error.
+                    session.rollback()
+                    return False
                 return bool(result.rowcount == 1)
         except IntegrityError:
             return False  # another queued/running publication owns the global slot
