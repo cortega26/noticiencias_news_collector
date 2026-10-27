@@ -163,3 +163,99 @@ def test_checklist_includes_safe_area_and_no_text():
     assert any("central half" in i for i in items)
     assert any("no text" in i for i in items)
     assert "It does not show: dust storm look" in items
+
+
+# -- CodexImageTool with a fake `codex` binary ---------------------------------
+
+
+def fake_codex(tmp_path, body):
+    script = tmp_path / "bin" / "codex"
+    script.parent.mkdir()
+    script.write_text("#!/bin/sh\n" + body)
+    script.chmod(0o755)
+    return str(script)
+
+
+def write_png_script(review):
+    data = png().hex()
+    return (
+        'dir=""; while [ $# -gt 0 ]; do [ "$1" = "-C" ] && dir="$2"; shift; done\n'
+        f"printf '{data}' | xxd -r -p > \"$dir/hero.png\"\n"
+        + (f"printf '%s' '{review}' > \"$dir/review.json\"\n" if review else "")
+    )
+
+
+def test_codex_tool_returns_image_and_review(tmp_path):
+    from news_collector.logic.workflows.image_autogen import CodexImageTool
+
+    binary = fake_codex(
+        tmp_path, write_png_script('{"passed": false, "issues": ["cone"]}')
+    )
+    work = tmp_path / "work"
+    work.mkdir()
+    image = CodexImageTool(binary, 60).generate("prompt", ["a", "b"], work)
+    assert validate_hero(image.content) == (1600, 900)
+    assert image.passed_review is False and image.issues == ["cone"]
+    assert (work / "checklist.txt").read_text() == "a\nb"
+    assert (work / "prompt.txt").read_text() == "prompt"
+
+
+def test_codex_tool_without_review_is_unreviewed(tmp_path):
+    from news_collector.logic.workflows.image_autogen import CodexImageTool
+
+    binary = fake_codex(tmp_path, write_png_script(None))
+    work = tmp_path / "work"
+    work.mkdir()
+    assert CodexImageTool(binary, 60).generate("p", [], work).passed_review is False
+
+
+def test_codex_tool_fails_without_image(tmp_path):
+    from news_collector.logic.workflows.image_autogen import CodexImageTool
+
+    binary = fake_codex(tmp_path, "echo 'usage limit reached' >&2; exit 1\n")
+    work = tmp_path / "work"
+    work.mkdir()
+    with pytest.raises(RuntimeError, match="usage limit"):
+        CodexImageTool(binary, 60).generate("p", [], work)
+
+
+def test_codex_tool_requires_the_binary(tmp_path):
+    from news_collector.logic.workflows.image_autogen import CodexImageTool
+
+    with pytest.raises(RuntimeError, match="not found"):
+        CodexImageTool("no-such-codex-binary", 60).generate("p", [], tmp_path)
+
+
+def test_validate_hero_rejects_non_images():
+    with pytest.raises(ValueError, match="not a readable image"):
+        validate_hero(b"not an image")
+
+
+def test_review_issues_do_not_block_registration(tmp_path):
+    class ReviewedTool(FakeTool):
+        def generate(self, prompt, checklist, workdir):
+            super().generate(prompt, checklist, workdir)
+            return GeneratedImage(self.content, "hero.png", False, ["cone shape"])
+
+    store, gen = generator(tmp_path, [checkpoint()], ReviewedTool())
+    assert gen.run_once() == 1
+    assert store.ready_for_article("3941", "2026-10-24-nube-marciana")
+
+
+def test_background_loop_runs_and_stops(tmp_path):
+    import threading
+
+    from news_collector.logic.workflows.image_autogen import start_autogen_thread
+
+    calls = []
+    stop = threading.Event()
+
+    class Gen:
+        def run_once(self):
+            calls.append(1)
+            stop.set()
+            raise RuntimeError("scan failed")  # logged, loop survives until stop
+
+    thread = start_autogen_thread(Gen(), stop, 1)  # type: ignore[arg-type]
+    thread.join(timeout=5)
+    assert calls == [1] and not thread.is_alive()
