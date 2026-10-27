@@ -32,3 +32,11 @@
 - El log duplicado venía de dos servidores admin activos a la vez. Se resolvió
   reiniciando `make admin`: hoy hay un solo proceso. El claim en la base de
   datos ya impedía publicaciones dobles.
+
+## Fuentes "rotas" (revisión 2026-10-27)
+
+- `bair_blog`: el feed volvió (200, 10 entradas). Se retira la blacklist del
+  plan 105.
+- `nih_news`: sigue en 403 para clientes automáticos. Se mantiene en la blacklist.
+- `reddit_science`: `manual_only`, requiere credenciales OAuth que no están
+  configuradas. Se mantiene así.
