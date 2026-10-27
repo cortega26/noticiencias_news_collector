@@ -8,7 +8,8 @@
 - [x] Generador con Codex: autorrevisión contra notas de precisión, validación 16:9 ≥1200 px, registro `ai_generated`, tope de intentos
 - [x] Arranque en el servidor admin, detrás de `[image_autogen].enabled`
 - [x] Gates y PR
-- [ ] E2E con el próximo artículo que quede esperando imagen (activar `enabled = true`)
+- [x] E2E en carpeta aislada (coral, 2026-10-27): el primer intento agotó los 15 min en `/tmp` sin dejar registro; con carpeta propia y registro de fallos, imagen registrada en 162 s
+- [ ] Primer artículo real resuelto solo tras reiniciar `make admin`
 
 ## Pendiente conocido
 

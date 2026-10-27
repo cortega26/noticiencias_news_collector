@@ -71,7 +71,8 @@ def checklist_for(direction: ArtDirection) -> list[str]:
     return [
         *direction.accuracy_notes,
         f"The main subject is clearly visible: {direction.focal_subject}",
-        "The main subject sits whole inside the central half of the width.",
+        "The focal point that tells the story sits inside the central half of"
+        " the width; backgrounds and textures may fill the frame.",
         "There is no text, letter, number, label, logo or watermark.",
         *(f"It does not show: {item}" for item in direction.avoid),
     ]
@@ -91,6 +92,17 @@ def validate_hero(content: bytes) -> tuple[int, int]:
     if not MIN_ASPECT <= width / height <= MAX_ASPECT:
         raise ValueError(f"Generated image ratio {width}x{height} is not ~16:9")
     return width, height
+
+
+def _save_log(workdir: Path, stdout: Any, stderr: Any) -> None:
+    def text(value: Any) -> str:
+        if isinstance(value, bytes):
+            return value.decode("utf-8", "replace")
+        return value or ""
+
+    (workdir / "codex.log").write_text(
+        text(stdout) + "\n--- stderr ---\n" + text(stderr), encoding="utf-8"
+    )
 
 
 class CodexImageTool:
@@ -114,23 +126,30 @@ class CodexImageTool:
             subprocess.run(  # noqa: S603  # nosec B603 - fixed argv
                 [git, "init", "-q"], cwd=workdir, check=False, timeout=30
             )
-        result = subprocess.run(  # noqa: S603  # nosec B603 - fixed argv
-            [
-                binary,
-                "exec",
-                "--skip-git-repo-check",
-                "-s",
-                "workspace-write",
-                "-C",
-                str(workdir),
-                CODEX_INSTRUCTIONS,
-            ],
-            cwd=workdir,
-            capture_output=True,
-            text=True,
-            timeout=self.timeout_seconds,
-            check=False,
-        )
+        try:
+            result = subprocess.run(  # noqa: S603  # nosec B603 - fixed argv
+                [
+                    binary,
+                    "exec",
+                    "--skip-git-repo-check",
+                    "-s",
+                    "workspace-write",
+                    "-C",
+                    str(workdir),
+                    CODEX_INSTRUCTIONS,
+                ],
+                cwd=workdir,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as err:
+            _save_log(workdir, err.stdout, err.stderr)
+            raise RuntimeError(
+                f"Codex timed out after {self.timeout_seconds}s (log: {workdir})"
+            ) from err
+        _save_log(workdir, result.stdout, result.stderr)
         hero = workdir / "hero.png"
         if result.returncode != 0 or not hero.is_file():
             tail = (result.stderr or result.stdout or "").strip()[-300:]
@@ -229,8 +248,13 @@ class ImageAutoGenerator:
             self.provider_factory(), dict(cp.draft.frontmatter), cp.draft.content
         )
         prompt = render_prompt(direction)
-        with tempfile.TemporaryDirectory(prefix="nc-imagegen-") as tmp:
-            image = self.tool.generate(prompt, checklist_for(direction), Path(tmp))
+        # Codex works outside /tmp, in a folder kept only when it fails so the
+        # log can be inspected (see the attempt ledger's last_error).
+        work_root = self.state_dir / "work"
+        work_root.mkdir(parents=True, exist_ok=True)
+        workdir = Path(tempfile.mkdtemp(prefix=f"{brief.slug}-", dir=work_root))
+        image = self.tool.generate(prompt, checklist_for(direction), workdir)
+        shutil.rmtree(workdir, ignore_errors=True)
         width, height = validate_hero(image.content)
         if not image.passed_review:
             logger.warning(
