@@ -137,6 +137,7 @@ data/exports/*
 # briefs resolve at runtime via ImageBriefStore, never from git.
 data/image-briefs/
 data/image-uploads/
+data/image-autogen/
 temp/
 MagicMock/
 debug_output.txt
