@@ -116,7 +116,8 @@ $(BOOTSTRAP_REFINERY_STAMP): requirements-refinery.lock
 
 $(BOOTSTRAP_SECURITY_STAMP): requirements-semgrep.lock
 	@echo "[bootstrap-security] Creating isolated tool environment in $(VENV_SECURITY)"
-	@test -d $(VENV_SECURITY) || $(PYTHON) -m venv $(VENV_SECURITY)
+	@# A cached env whose interpreter link points to a removed Python is rebuilt.
+	@$(PYTHON_SECURITY) -c '' 2>/dev/null || $(PYTHON) -m venv --clear $(VENV_SECURITY)
 	@$(PYTHON_SECURITY) -m ensurepip --upgrade 2>/dev/null || true
 	@$(PYTHON_SECURITY) -m pip install --upgrade pip
 	@$(PYTHON_SECURITY) -m pip install --no-deps --require-hashes -r requirements-semgrep.lock

@@ -49,6 +49,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -69,7 +70,7 @@ jobs:
           # The tool env is defined solely by its own hash-pinned lock. A
           # restored stamp makes `make bootstrap-security` a no-op; a miss
           # rebuilds it from the lock.
-          key: venv-security-${{ runner.os }}-${{ hashFiles('requirements-semgrep.lock') }}
+          key: venv-security-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('requirements-semgrep.lock') }}
 
       - name: Provision semgrep tool environment
         run: |
