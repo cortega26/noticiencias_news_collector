@@ -259,3 +259,20 @@ def test_background_loop_runs_and_stops(tmp_path):
     thread = start_autogen_thread(Gen(), stop, 1)  # type: ignore[arg-type]
     thread.join(timeout=5)
     assert calls == [1] and not thread.is_alive()
+
+
+def test_codex_timeout_keeps_partial_log(tmp_path):
+    from news_collector.logic.workflows.image_autogen import CodexImageTool
+
+    binary = fake_codex(tmp_path, "echo 'generating'; sleep 5\n")
+    work = tmp_path / "work"
+    work.mkdir()
+    with pytest.raises(RuntimeError, match="timed out"):
+        CodexImageTool(binary, 1).generate("p", [], work)
+    assert "generating" in (work / "codex.log").read_text()
+
+
+def test_failed_generation_keeps_its_workdir_for_diagnosis(tmp_path):
+    _, gen = generator(tmp_path, [checkpoint()], FakeTool(error="boom"))
+    gen.run_once()
+    assert list((tmp_path / "image-autogen" / "work").iterdir())
