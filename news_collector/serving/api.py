@@ -208,6 +208,39 @@ def _config_cache_key() -> Tuple[Any, ...]:
     )
 
 
+def _start_image_autogen(workflow: Any) -> Any:
+    """Plan 202: start the hero-image generator when enabled in config."""
+    import threading
+
+    cfg = load_config().image_autogen
+    if not cfg.enabled:
+        return None
+    from news_collector.infrastructure.llm.factory import get_provider
+    from news_collector.logic.workflows.image_autogen import (
+        CodexImageTool,
+        ImageAutoGenerator,
+        start_autogen_thread,
+    )
+    from news_collector.logic.workflows.image_briefs import ImageBriefStore
+
+    generator = ImageAutoGenerator(
+        store=ImageBriefStore(workflow.data_dir),
+        checkpoints=workflow._checkpoints,
+        tool=CodexImageTool(cfg.codex_bin, cfg.timeout_seconds),
+        provider_factory=lambda: get_provider(
+            purpose="image_brief", timeout=300, max_tokens=4096
+        ),
+        state_dir=Path(workflow.data_dir) / "image-autogen",
+        max_attempts=cfg.max_attempts,
+    )
+    stop = threading.Event()
+    start_autogen_thread(generator, stop, cfg.interval_seconds)
+    logger.info(
+        "Image autogen enabled (Codex imagegen, max {} attempts)", cfg.max_attempts
+    )
+    return stop
+
+
 def _load_config_cached() -> Any:
     """``load_config()`` memoized for ``GET /v1/admin/config``.
 
@@ -1276,9 +1309,12 @@ def create_app(  # noqa: C901
                 recovered_pub,
             )
         publication_run_workflow.start_reconciler()
+        autogen_stop = _start_image_autogen(publication_run_workflow)
         try:
             yield
         finally:
+            if autogen_stop is not None:
+                autogen_stop.set()
             publication_run_workflow.stop_reconciler()
 
     app = FastAPI(title="Noticiencias API", version="1.0.0", lifespan=_lifespan)

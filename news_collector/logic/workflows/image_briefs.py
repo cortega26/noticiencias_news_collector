@@ -443,6 +443,8 @@ class ImageBriefStore:
         subject_scene: str,
         image_origin: str | None = None,
         generation_metadata: ImageGenerationMetadata | None = None,
+        generated_prompt: str | None = None,
+        prompt_version: str | None = None,
     ) -> ImageBriefModel:
         _validate_slug(brief.slug)
         if image_origin is not None and image_origin not in IMAGE_ORIGIN_VALUES:
@@ -496,13 +498,17 @@ class ImageBriefStore:
                 "asset_sha256": actual.sha256,
                 "asset_width": actual.width,
                 "asset_height": actual.height,
-                "generated_prompt": self.prompt_template.format(
+                # Plan 202: the art-directed prompt that produced the asset is
+                # kept as-is; manual uploads keep the v1 template.
+                "generated_prompt": generated_prompt
+                or self.prompt_template.format(
                     topic=topic.strip(),
                     news_angle=news_angle.strip(),
                     subject_scene=subject_scene.strip(),
                     scientific_domain=scientific_domain.strip(),
                     tone=brief.tone,
                 ),
+                "prompt_version": prompt_version or brief.prompt_version,
                 "updated_at": datetime.now(timezone.utc),
             }
         )

@@ -1111,6 +1111,28 @@ class LLMChainConfig(StrictModel):
     )
 
 
+class ImageAutogenConfig(StrictModel):
+    """Plan 202: automatic hero images for articles waiting for one."""
+
+    enabled: bool = Field(
+        default=False,
+        description=(
+            "Generate the hero image of articles parked in waiting_for_image "
+            "with the art director and Codex imagegen (ChatGPT account)."
+        ),
+    )
+    codex_bin: str = Field(default="codex", description="Codex CLI executable.")
+    timeout_seconds: int = Field(
+        default=900, ge=60, le=3600, description="Limit per Codex call."
+    )
+    max_attempts: int = Field(
+        default=2, ge=1, le=5, description="Generations per article, ever."
+    )
+    interval_seconds: int = Field(
+        default=60, ge=15, le=3600, description="Pause between queue scans."
+    )
+
+
 class LLMHealthConfig(StrictModel):
     """End-of-run LLM health report (see observability/llm_run_report.py)."""
 
@@ -1218,6 +1240,7 @@ class Config(StrictModel):
     )
     llm: LLMChainConfig = Field(default_factory=LLMChainConfig)
     llm_health: LLMHealthConfig = Field(default_factory=LLMHealthConfig)
+    image_autogen: ImageAutogenConfig = Field(default_factory=ImageAutogenConfig)
     llm_endpoints: list[LLMEndpointConfig] = Field(
         default_factory=list,
         description="Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig).",
