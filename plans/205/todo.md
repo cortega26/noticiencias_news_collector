@@ -11,5 +11,12 @@
 - [x] Prompts nuevos y salida con `reason` en `fact_check_verification`
 - [x] Tests de integración en `test_fact_check_verification.py`
 - [x] `make test`, `make lint`, `make type` (lint limpio; `make type` y 2 tests de `test_daily_publish.py` ya fallan en `main`, ajenos a este plan; el módulo nuevo pasa mypy)
-- [ ] Revisión independiente de spec frente a implementación
+- [x] Revisión independiente de spec frente a implementación. Corregido: traza
+      conservada también en rechazos (A8), aviso explícito si la caché de la
+      etapa 2 no se reemplaza (A6), fallos al rederivar → reintentable (A7),
+      test de gravedad indeterminada en la última ronda.
+- [ ] Seguimiento (fuera de alcance): el rechazo definitivo solo existe como
+      `error_code` del intento; ningún estado del artículo impide reprocesarlo.
+      Reprocesarlo es seguro (vuelve a pasar todos los controles), pero gasta
+      llamadas. Un plan siguiente puede marcar el artículo como descartado.
 - [ ] PR

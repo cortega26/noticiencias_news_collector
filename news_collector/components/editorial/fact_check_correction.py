@@ -115,18 +115,26 @@ def _labels(claims: list[DisputedClaim]) -> list[str]:
     return [claim.label for claim in claims]
 
 
+def _raise_with_record(
+    message: str, error_code: str, record: dict[str, Any]
+) -> NoReturn:
+    error = GeneratedArticleValidationError(message, error_code=error_code)
+    # The caller persists the trace even when the decision is negative (A8).
+    error.correction_record = record  # type: ignore[attr-defined]
+    raise error
+
+
 def _unpublishable(message: str, record: dict[str, Any]) -> NoReturn:
     record["decision"] = "unpublishable"
-    raise GeneratedArticleValidationError(
-        f"No se publica: {message}", error_code=UNPUBLISHABLE_ERROR_CODE
-    )
+    _raise_with_record(f"No se publica: {message}", UNPUBLISHABLE_ERROR_CODE, record)
 
 
 def _undecided(message: str, record: dict[str, Any]) -> NoReturn:
     record["decision"] = "undecided"
-    raise GeneratedArticleValidationError(
+    _raise_with_record(
         f"Verificación sin decisión (se reintentará): {message}",
-        error_code=UNDECIDED_ERROR_CODE,
+        UNDECIDED_ERROR_CODE,
+        record,
     )
 
 
@@ -241,10 +249,17 @@ def run_fact_check_correction(
         _decide_before_correcting(pending, severity, attempt, max_corrections, record)
 
         corrected_body = _correct_or_undecided(hooks, current.content, pending, record)
-        current = hooks.rederive(corrected_body)
-        current_verified = hooks.verify(
-            list(current.enrichment_fields.get("fact_check") or [])
-        )
+        try:
+            current = hooks.rederive(corrected_body)
+            current_verified = hooks.verify(
+                list(current.enrichment_fields.get("fact_check") or [])
+            )
+        except Exception as exc:  # etapas 5-6 sobre el cuerpo corregido
+            _undecided(
+                "falló la regeneración de titulares o enriquecimiento tras la "
+                f"corrección ({type(exc).__name__}: {exc})",
+                record,
+            )
         pending = disputed_claims(current_verified, hooks.reasons())
         for claim in pending:
             history.setdefault(claim.label, claim)

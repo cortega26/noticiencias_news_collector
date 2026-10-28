@@ -254,3 +254,57 @@ def test_disputed_claims_dedupes_and_ignores_malformed_items() -> None:
         DisputedClaim(WRONG, "motivo"),
         DisputedClaim("(sin descripción)", ""),
     ]
+
+
+def test_negative_decision_carries_the_full_trace() -> None:
+    fake = FakeHooks(severity=[SeverityJudgement(True, "El titular promete X")])
+
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        run_fact_check_correction(_article(), _disputed(WRONG), fake.hooks())
+
+    record = excinfo.value.correction_record  # type: ignore[attr-defined]
+    assert record["decision"] == "unpublishable"
+    assert record["severity"][0]["reason"] == "El titular promete X"
+    assert record["initial_disputed"][0]["label"] == WRONG
+
+
+def test_rederive_failure_is_retryable() -> None:
+    fake = FakeHooks()
+
+    def _boom(content: str) -> DerivedArticle:
+        raise ValueError("E_HEADLINE_EVIDENCE")
+
+    hooks = fake.hooks()
+    hooks = FactCheckCorrectionHooks(
+        verify=hooks.verify,
+        reasons=hooks.reasons,
+        judge_severity=hooks.judge_severity,
+        correct=hooks.correct,
+        rederive=_boom,
+        still_asserted=hooks.still_asserted,
+    )
+
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        run_fact_check_correction(_article(), _disputed(WRONG), hooks)
+
+    assert excinfo.value.error_code == UNDECIDED_ERROR_CODE
+    assert "regeneración" in str(excinfo.value)
+
+
+def test_undecided_severity_on_last_round_stays_retryable() -> None:
+    """Con afirmaciones pendientes tras el último intento, un juicio de
+    gravedad fallido no se convierte en rechazo definitivo."""
+    fake = FakeHooks(
+        severity=[
+            SeverityJudgement(False),
+            SeverityJudgement(False),
+            SeverityJudgement(None, "timeout"),
+        ],
+        verdicts=[{OK: "disputed"}, {OK: "disputed"}],
+    )
+
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        run_fact_check_correction(_article(), _disputed(WRONG), fake.hooks())
+
+    assert excinfo.value.error_code == UNDECIDED_ERROR_CODE
+    assert fake.corrections == 2

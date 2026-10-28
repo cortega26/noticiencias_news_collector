@@ -706,3 +706,17 @@ def test_plan_205_prompts_declare_their_output_contract() -> None:
     assert '"headline_affected"' in prompts["fact_check_severity"]["system"]
     assert '"still_asserted"' in prompts["fact_check_residual"]["system"]
     assert "No añadas hechos" in prompts["fact_check_correction"]["system"]
+
+
+def test_rejection_keeps_correction_trace_on_agent(tmp_path: Path) -> None:
+    agent = _pipeline_agent(tmp_path)
+    agent._send_fact_check_prompt = MagicMock(
+        side_effect=_routing_fact_check_stub(headline_affected=True)
+    )
+
+    with pytest.raises(GeneratedArticleValidationError):
+        agent.process_article(_base_article(id="fc-trace"), override_date="2026-03-02")
+
+    corrections = agent.last_source_support_verdict["corrections"]
+    assert corrections["decision"] == "unpublishable"
+    assert corrections["severity"][0]["headline_affected"] is True

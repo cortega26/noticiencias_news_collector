@@ -3175,26 +3175,37 @@ class EditorAgent:
         source_support_before_correction = dict(
             getattr(self, "last_source_support_verdict", None) or {}
         )
-        correction = run_fact_check_correction(
-            DerivedArticle(final_content, headlines, enrichment_fields),
-            verified_fact_check,
-            FactCheckCorrectionHooks(
-                verify=lambda claims: self._verify_fact_check_claims(
-                    claims, content, title, content_mode
+        try:
+            correction = run_fact_check_correction(
+                DerivedArticle(final_content, headlines, enrichment_fields),
+                verified_fact_check,
+                FactCheckCorrectionHooks(
+                    verify=lambda claims: self._verify_fact_check_claims(
+                        claims, content, title, content_mode
+                    ),
+                    reasons=lambda: dict(getattr(self, "last_fact_check_reasons", {})),
+                    judge_severity=lambda disputed, current_headlines: (
+                        self._judge_fact_check_severity(
+                            disputed, current_headlines, content, content_mode
+                        )
+                    ),
+                    correct=lambda body, disputed: self._correct_disputed_claims(
+                        body, disputed, content, editor_context
+                    ),
+                    rederive=_derive_publishable,
+                    still_asserted=self._claim_still_asserted,
                 ),
-                reasons=lambda: dict(getattr(self, "last_fact_check_reasons", {})),
-                judge_severity=lambda disputed, current_headlines: (
-                    self._judge_fact_check_severity(
-                        disputed, current_headlines, content, content_mode
-                    )
-                ),
-                correct=lambda body, disputed: self._correct_disputed_claims(
-                    body, disputed, content, editor_context
-                ),
-                rederive=_derive_publishable,
-                still_asserted=self._claim_still_asserted,
-            ),
-        )
+            )
+        except GeneratedArticleValidationError as exc:
+            # A8: a negative decision keeps its full trace (severity per
+            # round, attempts, residual check) instead of only the message.
+            record = getattr(exc, "correction_record", None)
+            if record is not None:
+                self.last_source_support_verdict = {
+                    **source_support_before_correction,
+                    "corrections": record,
+                }
+            raise
         if correction.corrected:
             final_content = correction.article.content
             headlines = correction.article.headlines
@@ -3207,6 +3218,16 @@ class EditorAgent:
             # and re-evaluates the corrected body on its own.
             self._write_editorial_cache_if_valid(cache_s2, final_content)
             cache_s2_5.unlink(missing_ok=True)
+            try:
+                cache_replaced = cache_s2.read_text(encoding="utf-8") == final_content
+            except OSError:
+                cache_replaced = False
+            if not cache_replaced:
+                logger.error(
+                    "Fact-check correction for {} could not replace the Stage 2 "
+                    "cache; a resume would re-run the correction loop.",
+                    article_id,
+                )
             self.last_source_support_verdict = {
                 **(getattr(self, "last_source_support_verdict", None) or {}),
                 "before_correction": source_support_before_correction,
