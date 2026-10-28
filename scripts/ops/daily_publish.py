@@ -162,7 +162,8 @@ def main(argv: list[str] | None = None) -> int:
             today=datetime.now().strftime("%Y-%m-%d"),
             collect=not args.no_collect,
         )
-    except requests.ConnectionError:
+    except (requests.ConnectionError, requests.Timeout):
+        # Also covers an API that accepts connections but never answers.
         print(f"Admin API not reachable at {cfg.api_url}", file=sys.stderr)
         return 2
     except DailyPublishError as err:

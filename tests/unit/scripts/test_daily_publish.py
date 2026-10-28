@@ -175,6 +175,24 @@ def test_main_reports_unreachable_api(monkeypatch, capsys):
     assert "not reachable" in capsys.readouterr().err
 
 
+def test_main_reports_hung_api(monkeypatch, capsys):
+    import requests
+
+    cfg = SimpleNamespace(
+        daily_publish=SimpleNamespace(
+            enabled=True, api_url="http://127.0.0.1:8000", **vars(CFG)
+        )
+    )
+    monkeypatch.setattr("noticiencias.config_manager.load_config", lambda: cfg)
+
+    def hang(*a, **k):
+        raise requests.ReadTimeout("no answer")
+
+    monkeypatch.setattr(dp.AdminClient, "_call", hang)
+    assert dp.main(["--no-collect"]) == 2
+    assert "not reachable" in capsys.readouterr().err
+
+
 def test_main_disabled_does_nothing(monkeypatch, capsys):
     cfg = SimpleNamespace(daily_publish=SimpleNamespace(enabled=False))
     monkeypatch.setattr("noticiencias.config_manager.load_config", lambda: cfg)
