@@ -57,6 +57,8 @@ class Candidate(BaseModel):
 
 class ArtDirection(BaseModel):
     candidates: list[Candidate] = Field(default_factory=list)
+    specific_object: str = "none"
+    how_generalized: str = ""
     visual_idea: str = Field(min_length=15)
     focal_subject: str = Field(min_length=10)
     setting: str = Field(min_length=5)
