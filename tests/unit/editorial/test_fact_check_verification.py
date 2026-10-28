@@ -476,7 +476,12 @@ class TestProcessArticleFactCheckIntegration:
         assert excinfo.value.error_code == "editorial_fact_check_disputed"
         assert "Afirmación cacheada con status viejo" in str(excinfo.value)
         agent._generate_enrichment_fields.assert_not_called()
-        agent._send_fact_check_prompt.assert_called_once()
+        # One verification of the single cached claim, then (plan 205) one
+        # severity judgement, whose malformed answer keeps the block retryable.
+        assert agent._send_fact_check_prompt.call_count == 2
+        first_prompt = agent._send_fact_check_prompt.call_args_list[0].args[0]
+        assert "Afirmación a verificar" in first_prompt
+        assert "se reintentará" in str(excinfo.value)
 
     def test_stage4_cache_hit_with_confirmed_verdict_publishes_normally(
         self, tmp_path: Path
@@ -529,3 +534,175 @@ class TestProcessArticleFactCheckIntegration:
         )
 
         assert "RESUMEN" in captured["prompt"]
+
+
+# ---------------------------------------------------------------------------
+# Plan 205: automatic correction after a verifier-disputed claim.
+# ---------------------------------------------------------------------------
+
+_CORRECTED_BODY = _LONG_BODY.replace(
+    "En conclusión,", "La fuente precisa el dato corregido. En conclusión,"
+)
+_FIRST_CLAIM = "Primera afirmación verificable"
+
+
+def _routing_fact_check_stub(
+    *, headline_affected: object = False, still_asserted: object = False
+):
+    """Route the verifier seam by prompt type: the initial verification
+    disputes the first claim; after a correction everything is confirmed."""
+    state = {"verifications": 0}
+
+    def _stub(prompt: str, system: str) -> dict:
+        if "## Artículo corregido" in prompt:
+            return {"still_asserted": still_asserted}
+        if "## Titular y entradilla" in prompt:
+            return {"headline_affected": headline_affected, "reason": "Motivo"}
+        state["verifications"] += 1
+        if state["verifications"] == 1 and _FIRST_CLAIM in prompt:
+            return {"status": "disputed", "reason": "La fuente dice otra cifra"}
+        return {"status": "confirmed", "reason": ""}
+
+    return _stub
+
+
+class TestAutomaticCorrectionIntegration:
+    def _agent(self, tmp_path: Path) -> tuple[EditorAgent, list[str]]:
+        agent = _pipeline_agent(tmp_path)
+        correction_prompts: list[str] = []
+
+        def _send_prompt(prompt: str, *a, **k) -> str:
+            if "## Artículo a corregir" in prompt:
+                correction_prompts.append(prompt)
+                return _CORRECTED_BODY
+            return _LONG_BODY
+
+        agent._send_prompt = _send_prompt
+        return agent, correction_prompts
+
+    def test_secondary_error_is_corrected_and_published(self, tmp_path: Path) -> None:
+        agent, correction_prompts = self._agent(tmp_path)
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_routing_fact_check_stub()
+        )
+
+        result = agent.process_article(
+            _base_article(id="fc-fix"), override_date="2026-03-02"
+        )
+
+        assert "La fuente precisa el dato corregido." in result
+        # The drafter got the disputed claim and the verifier's reason.
+        assert len(correction_prompts) == 1
+        assert _FIRST_CLAIM in correction_prompts[0]
+        assert "La fuente dice otra cifra" in correction_prompts[0]
+        # A resume must not recover the uncorrected body.
+        cache_s2 = agent._get_cache_path("fc-fix", EditorialStage.EDITORIAL)
+        assert "La fuente precisa el dato corregido." in cache_s2.read_text(
+            encoding="utf-8"
+        )
+        # The reason never reaches the frontend contract.
+        frontmatter = result.split("---")[1]
+        assert "La fuente dice otra cifra" not in frontmatter
+        assert "disputed" not in frontmatter
+        # Traceability for the operator.
+        assert "Correcciones automáticas" in agent.last_review_notes
+        assert (
+            agent.last_source_support_verdict["corrections"]["decision"] == "corrected"
+        )
+
+    def test_headline_contradiction_is_rejected_without_correcting(
+        self, tmp_path: Path
+    ) -> None:
+        agent, correction_prompts = self._agent(tmp_path)
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_routing_fact_check_stub(headline_affected=True)
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as excinfo:
+            agent.process_article(
+                _base_article(id="fc-headline"), override_date="2026-03-02"
+            )
+
+        assert excinfo.value.error_code == "editorial_fact_check_unpublishable"
+        assert str(excinfo.value).startswith("No se publica:")
+        assert _FIRST_CLAIM in str(excinfo.value)
+        assert correction_prompts == []
+
+    def test_claim_still_in_corrected_body_is_never_published(
+        self, tmp_path: Path
+    ) -> None:
+        agent, correction_prompts = self._agent(tmp_path)
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_routing_fact_check_stub(still_asserted=True)
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as excinfo:
+            agent.process_article(
+                _base_article(id="fc-residual"), override_date="2026-03-02"
+            )
+
+        assert excinfo.value.error_code == "editorial_fact_check_unpublishable"
+        assert len(correction_prompts) == 2
+
+    def test_malformed_severity_answer_stays_retryable(self, tmp_path: Path) -> None:
+        agent, correction_prompts = self._agent(tmp_path)
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_routing_fact_check_stub(headline_affected="no")
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as excinfo:
+            agent.process_article(
+                _base_article(id="fc-undecided"), override_date="2026-03-02"
+            )
+
+        assert excinfo.value.error_code == "editorial_fact_check_disputed"
+        assert correction_prompts == []
+
+    def test_correction_failing_technical_review_stays_retryable(
+        self, tmp_path: Path
+    ) -> None:
+        agent, _ = self._agent(tmp_path)
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_routing_fact_check_stub()
+        )
+        original_critic = agent._critic_pass
+        agent._critic_pass = lambda content: (
+            (False, "texto truncado", True)
+            if "dato corregido" in content
+            else original_critic(content)
+        )
+
+        with pytest.raises(GeneratedArticleValidationError) as excinfo:
+            agent.process_article(
+                _base_article(id="fc-technical"), override_date="2026-03-02"
+            )
+
+        assert excinfo.value.error_code == "editorial_fact_check_disputed"
+        assert "revisión técnica" in str(excinfo.value)
+
+    def test_verifier_reason_is_kept_out_of_claim_dicts(self) -> None:
+        agent = EditorAgent("http://example", "model")
+        agent._send_fact_check_prompt = MagicMock(
+            return_value={"status": "disputed", "reason": "x" * 900}
+        )
+
+        result = agent._verify_fact_check_claims(
+            [{"label": "A", "status": "needs_review"}], "Fuente.", "T", "full_text"
+        )
+
+        assert result == [{"label": "A", "status": "disputed"}]
+        assert agent.last_fact_check_reasons == {"A": "x" * 500}
+
+
+def test_plan_205_prompts_declare_their_output_contract() -> None:
+    import yaml
+
+    prompts = yaml.safe_load(
+        (Path(__file__).resolve().parents[3] / "config" / "prompts.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert '"reason"' in prompts["fact_check_verification"]["system"]
+    assert '"headline_affected"' in prompts["fact_check_severity"]["system"]
+    assert '"still_asserted"' in prompts["fact_check_residual"]["system"]
+    assert "No añadas hechos" in prompts["fact_check_correction"]["system"]
