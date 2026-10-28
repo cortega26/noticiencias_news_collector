@@ -614,6 +614,13 @@ timeout = 120
 enabled = true
 max_attempts = 2
 
+[daily_publish]
+# Plan 203: one article a day for 4 weeks from 2026-10-28, focus topics chosen
+# by the owner (health/biology and technology/AI). The timer runs
+# scripts/ops/daily_publish.py; every article still lands as a frontend PR.
+enabled = true
+categories = ["medicine", "biology", "technology", "artificial_intelligence"]
+
 [llm_health]
 enabled = true
 warn_heuristic_ratio = 0.5

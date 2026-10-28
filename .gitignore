@@ -198,3 +198,4 @@ news_collector/config/sources.yaml.lock
 # Plan 167: pinned sparse frontend checkout used by CI's integration job to run
 # the cross-repo publication-callback contract tests.
 .ci/
+data/daily-publish/

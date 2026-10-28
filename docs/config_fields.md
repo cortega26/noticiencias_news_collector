@@ -179,6 +179,12 @@
 | image_autogen.timeout_seconds | int | 900 | Limit per Codex call. |  |  |
 | image_autogen.max_attempts | int | 2 | Generations per article, ever. |  |  |
 | image_autogen.interval_seconds | int | 60 | Pause between queue scans. |  |  |
+| daily_publish | DailyPublishConfig |  |  |  |  |
+| daily_publish.enabled | bool | false | Let scripts/ops/daily_publish.py publish. |  |  |
+| daily_publish.api_url | str | "http://127.0.0.1:8000" | Admin API base URL. |  |  |
+| daily_publish.categories | list | ["medicine", "biology", "technology", "artificial_intelligence"] | Focus topics; only these categories are candidates. |  |  |
+| daily_publish.min_score | float | 0.0 | Below this final score nothing is published that day. |  |  |
+| daily_publish.collect_timeout_minutes | int | 45 | Wait limit for the collection run. |  |  |
 | llm_endpoints | list | [] | Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig). |  |  |
 | editorial_auditor | EditorialAuditorConfig |  |  |  |  |
 | editorial_auditor.enabled | bool | true | Enable the editorial auditor. |  |  |
