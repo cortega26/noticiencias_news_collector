@@ -1,0 +1,24 @@
+[Unit]
+Description=Noticiencias admin stack: API, image reconciler/generator and GUI (plan 203)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHON_BIN=.venv/bin/python
+# Fixed ports so the daily publisher finds the API at 127.0.0.1:8000.
+Environment=API_PORT=8000
+Environment=GUI_PORT=4321
+# Codex (image generation) and gh live in ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/bash scripts/dev/admin_stack.sh
+Restart=on-failure
+RestartSec=30
+KillMode=control-group
+TimeoutStopSec=60
+SyslogIdentifier=noticiencias-admin
+
+[Install]
+WantedBy=default.target

@@ -1133,6 +1133,35 @@ class ImageAutogenConfig(StrictModel):
     )
 
 
+class DailyPublishConfig(StrictModel):
+    """Plan 203: one article a day from the focus topics."""
+
+    enabled: bool = Field(
+        default=False, description="Let scripts/ops/daily_publish.py publish."
+    )
+    api_url: str = Field(
+        default="http://127.0.0.1:8000", description="Admin API base URL."
+    )
+    categories: list[str] = Field(
+        default_factory=lambda: [
+            "medicine",
+            "biology",
+            "technology",
+            "artificial_intelligence",
+        ],
+        description="Focus topics; only these categories are candidates.",
+    )
+    min_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Below this final score nothing is published that day.",
+    )
+    collect_timeout_minutes: int = Field(
+        default=45, ge=5, le=240, description="Wait limit for the collection run."
+    )
+
+
 class LLMHealthConfig(StrictModel):
     """End-of-run LLM health report (see observability/llm_run_report.py)."""
 
@@ -1241,6 +1270,7 @@ class Config(StrictModel):
     llm: LLMChainConfig = Field(default_factory=LLMChainConfig)
     llm_health: LLMHealthConfig = Field(default_factory=LLMHealthConfig)
     image_autogen: ImageAutogenConfig = Field(default_factory=ImageAutogenConfig)
+    daily_publish: DailyPublishConfig = Field(default_factory=DailyPublishConfig)
     llm_endpoints: list[LLMEndpointConfig] = Field(
         default_factory=list,
         description="Extra OpenAI-compatible LLM endpoints (see LLMEndpointConfig).",

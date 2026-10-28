@@ -1,0 +1,12 @@
+[Unit]
+Description=Publish one Noticiencias article from the focus topics (plan 203)
+After=noticiencias-admin.service
+Wants=noticiencias-admin.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/carlos/VS_Code_Projects/products/noticiencias/noticiencias_news_collector/.venv/bin/python scripts/ops/daily_publish.py
+TimeoutStartSec=60min
+SyslogIdentifier=noticiencias-daily-publish

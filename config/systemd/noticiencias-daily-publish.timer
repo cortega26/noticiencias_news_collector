@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Noticiencias publication, 07:30 local (plan 203)
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
