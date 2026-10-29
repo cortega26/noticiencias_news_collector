@@ -842,6 +842,61 @@ class TestRefineryEngine(unittest.TestCase):
         self.engine.writer.write_article.assert_not_called()
 
     @patch("news_collector.logic.workflows.refinery_engine.datetime")
+    def test_unpublishable_decision_removes_article_from_candidates(
+        self, mock_dt_refinery
+    ):
+        """Plan 205: `editorial_fact_check_unpublishable` is final, so the
+        engine records the rejection in the DB; the retryable
+        `editorial_fact_check_disputed` never does."""
+        mock_dt_refinery.now.return_value.strftime.return_value = "2026-01-01"
+        mock_dt_refinery.now.return_value.isoformat.return_value = "2026-05-10T12:00:00"
+
+        from news_collector.components.editorial.ai_editor import (
+            GeneratedArticleValidationError,
+        )
+
+        article = {
+            "id": "131",
+            "title": "Unpublishable article",
+            "url": "http://x",
+            "summary": "This is a sufficiently long summary for fact-check gate testing.",
+            "image_url": "https://example.com/test-image-7.png",
+            "image_alt": "Fotografía de prueba para la suite.",
+            "source_id": "src",
+            "source_name": "src",
+            "category": "cat",
+            "published_date": __import__("datetime").datetime(2024, 1, 1),
+            "source_metadata": {},
+        }
+        self.mock_db.get_canonical_slug.return_value = None
+        self.engine.writer.write_article = MagicMock()
+
+        for code, expect_rejection in (
+            ("editorial_fact_check_disputed", False),
+            ("editorial_fact_check_unpublishable", True),
+        ):
+            self.mock_db.reject_article_editorially.reset_mock()
+            self.mock_editor.process_article.side_effect = (
+                GeneratedArticleValidationError(
+                    f"No se publica: {code}", error_code=code
+                )
+            )
+            with tempfile.TemporaryDirectory() as tmpdir:
+                result = self.engine.process_single_article(
+                    article, MagicMock(), Path(tmpdir)
+                )
+            self.assertFalse(result)
+            if expect_rejection:
+                self.mock_db.reject_article_editorially.assert_called_once_with(
+                    131,
+                    error_code="editorial_fact_check_unpublishable",
+                    reason="No se publica: editorial_fact_check_unpublishable",
+                )
+            else:
+                self.mock_db.reject_article_editorially.assert_not_called()
+        self.engine.writer.write_article.assert_not_called()
+
+    @patch("news_collector.logic.workflows.refinery_engine.datetime")
     def test_process_single_article_proceeds_past_editor_refinement_on_v2_success(
         self, mock_dt_refinery
     ):

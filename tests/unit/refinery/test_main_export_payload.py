@@ -13,6 +13,9 @@ class _DummyDB:
     def is_article_published(self, _article_id: int) -> bool:
         return False
 
+    def is_article_editorially_rejected(self, _article_id: int) -> bool:
+        return False
+
 
 def test_load_export_articles_backfills_source_id_from_source_name(tmp_path):
     source_id, source_cfg = next(
@@ -222,6 +225,11 @@ class _IdentityDB:
     def is_article_published(self, _article_id):
         return False
 
+    def is_article_editorially_rejected(self, _article_id):
+        if self._raise:
+            raise RuntimeError("db down")
+        return False
+
     def get_article_by_id(self, _article_id):
         if self._raise:
             raise RuntimeError("db down")
@@ -327,3 +335,21 @@ def test_export_identity_non_numeric_process_id_untouched(tmp_path):
         process_id="Tornado science article",
     )
     assert len(articles) == 1
+
+
+def test_load_export_articles_skips_editorial_rejections_even_by_id(tmp_path):
+    """Plan 205: the export on disk may predate the rejection; the loader
+    re-checks the DB and never returns a rejected article, even when it is
+    requested explicitly by id."""
+
+    class _RejectingDB(_DummyDB):
+        def is_article_editorially_rejected(self, article_id: int) -> bool:
+            return article_id == 160
+
+    export_path = tmp_path / "latest_articles.json"
+    export_path.write_text(
+        json.dumps({"articles": [{"id": 160, "title": "Rechazado"}]}),
+        encoding="utf-8",
+    )
+
+    assert _load_export_articles(export_path, _RejectingDB(), process_id="160") == []

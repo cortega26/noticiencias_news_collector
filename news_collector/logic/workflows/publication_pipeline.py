@@ -413,11 +413,32 @@ def _load_export_articles(  # noqa: C901
             numeric_id = int(art_id)
             if not process_id and db_manager.is_article_in_flight_or_done(numeric_id):
                 continue
+            # Plan 205: a final editorial rejection never re-enters, not even
+            # by explicit id — the export on disk may predate the rejection.
+            if _is_editorially_rejected(db_manager, numeric_id):
+                logger.info(
+                    "Skipping article {}: editorially rejected (plan 205).",
+                    numeric_id,
+                )
+                continue
         except ValueError:
             # Fallback or skip if ID is not numeric (rare/legacy)
             pass
         articles.append(art)
     return articles
+
+
+def _is_editorially_rejected(db_manager: DatabaseManager, article_id: int) -> bool:
+    """Plan 205 candidate guard. Fails open like the identity guard: a DB
+    hiccup must not abort the whole batch, and a rejected article that slips
+    through still faces every editorial check again."""
+    try:
+        return bool(db_manager.is_article_editorially_rejected(article_id))
+    except Exception as exc:
+        logger.warning(
+            "Editorial-rejection lookup failed for article {}: {}", article_id, exc
+        )
+        return False
 
 
 def _select_export_articles(

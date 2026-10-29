@@ -438,3 +438,60 @@ def test_clear_all_articles(db_manager):
     cleared = db_manager.articles.clear_all_articles()
     assert cleared == 2
     assert db_manager.articles.get_pending_articles() == []
+
+
+def test_editorial_rejection_leaves_candidates_and_is_queryable(db_manager):
+    """Plan 205: a final "no se publica" moves the article to `rejected` with
+    its reason, and it no longer appears among export candidates."""
+    saved = db_manager.articles.save_article(_payload("https://x.com/rejected"))
+    article_id = int(saved.id)
+    with db_manager.get_session() as session:
+        from news_collector.storage.models import Article
+
+        row = session.get(Article, article_id)
+        row.processing_status = "completed"
+        row.final_score = 0.99
+        session.commit()
+
+    assert db_manager.articles.is_article_editorially_rejected(article_id) is False
+    assert article_id in {
+        a.id for a in db_manager.articles.get_articles_by_score(limit=50)
+    }
+
+    assert db_manager.reject_article_editorially(
+        article_id,
+        error_code="editorial_fact_check_unpublishable",
+        reason="No se publica: la fuente contradice el titular.",
+    )
+
+    assert db_manager.is_article_editorially_rejected(article_id) is True
+    article = db_manager.articles.get_article_by_id(article_id)
+    assert article.processing_status == "rejected"
+    assert article.error_message.startswith("No se publica")
+    rejection = article.article_metadata["editorial_rejection"]
+    assert rejection["error_code"] == "editorial_fact_check_unpublishable"
+    assert rejection["previous_status"] == "completed"
+    assert article_id not in {
+        a.id for a in db_manager.articles.get_articles_by_score(limit=50)
+    }
+
+
+def test_editorial_rejection_never_touches_in_flight_or_missing(db_manager):
+    saved = db_manager.articles.save_article(_payload("https://x.com/inflight"))
+    article_id = int(saved.id)
+    assert db_manager.articles.mark_article_publishing(article_id, "feat/x")
+
+    assert (
+        db_manager.reject_article_editorially(
+            article_id, error_code="editorial_fact_check_unpublishable", reason="x"
+        )
+        is False
+    )
+    assert db_manager.is_article_editorially_rejected(article_id) is False
+    assert (
+        db_manager.reject_article_editorially(
+            99999, error_code="editorial_fact_check_unpublishable", reason="x"
+        )
+        is False
+    )
+    assert db_manager.is_article_editorially_rejected(99999) is False

@@ -44,6 +44,13 @@ from news_collector.components.editorial.editorial_publication_artifact import (
     prepare_editorial_draft,
 )
 from news_collector.components.editorial.editorial_stages import EditorialStage
+from news_collector.components.editorial.fact_check_correction import (
+    DerivedArticle,
+    DisputedClaim,
+    FactCheckCorrectionHooks,
+    SeverityJudgement,
+    run_fact_check_correction,
+)
 from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.editorial.category_resolver import EditorialCategoryResolver
 from news_collector.editorial.draft_identity import editorial_text_sha256
@@ -126,6 +133,11 @@ _LLM_EPILOGUE_LINE_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
+
+
+# Plan 205: verifier reasons travel into the correction prompt and the
+# rejection message; bound them so a chatty model cannot bloat either.
+_FACT_CHECK_REASON_MAX_CHARS = 500
 
 
 def _sample_for_critic(content: str, max_chars: int = 2000) -> str:
@@ -2035,6 +2047,10 @@ class EditorAgent:
             "claims_checked": 0,
             "issues": [],
         }
+        # Plan 205: the verifier's short reason per claim label. Kept out of
+        # the claim dicts on purpose — `fact_check` items are a frontend
+        # contract ({label, status}) and the reason never reaches frontmatter.
+        self.last_fact_check_reasons: dict[str, str] = {}
         if not claims:
             return []
 
@@ -2112,6 +2128,11 @@ class EditorAgent:
                     )
                 else:
                     self.last_source_support_verdict["claims_checked"] += 1
+                    reason = str(result.get("reason") or "").strip()
+                    if reason:
+                        self.last_fact_check_reasons[label] = reason[
+                            :_FACT_CHECK_REASON_MAX_CHARS
+                        ]
             except Exception as e:
                 logger.error(
                     "Fact-check verification failed for claim {!r}: {}", label, e
@@ -2123,6 +2144,163 @@ class EditorAgent:
             verified.append({**claim, "status": status})
 
         return verified
+
+    @staticmethod
+    def _format_disputed_claims(disputed: list[DisputedClaim]) -> str:
+        return "\n".join(
+            f"- Afirmación: {claim.label}\n"
+            f"  Motivo del verificador: {claim.reason or '(no indicado)'}"
+            for claim in disputed
+        )
+
+    def _judge_fact_check_severity(
+        self,
+        disputed: list[DisputedClaim],
+        headlines: dict[str, Any],
+        source_content: str,
+        content_mode: str,
+    ) -> SeverityJudgement:
+        """Plan 205: does a disputed claim contradict what the headline promises?
+
+        Runs on the independent verifier, never on the drafter: the model that
+        wrote the error must not be the one deciding it is minor. Any
+        infrastructure failure or malformed answer returns ``None`` (undecided)
+        so it can never become a terminal rejection or a silent publish.
+        """
+        system_prompt = self.prompts.get("fact_check_severity", {}).get("system", "")
+        if not system_prompt:
+            return SeverityJudgement(
+                None, "prompt 'fact_check_severity' no configurado"
+            )
+        is_summary = content_mode in ("summary_only", "summary_fallback")
+        headline_block = (
+            f"Titular: {headlines.get('direct') or headlines.get('title') or ''}\n"
+            f"Entradilla: {headlines.get('excerpt') or ''}"
+        )
+        context = (
+            "## Titular y entradilla del artículo\n\n"
+            f"{_format_untrusted_block(headline_block, 'TITULAR_NO_CONFIABLE')}\n\n"
+            "## Afirmaciones que la fuente contradice\n\n"
+            f"{_format_untrusted_block(self._format_disputed_claims(disputed), 'AFIRMACIONES_NO_CONFIABLES')}\n\n"
+            "## Contenido fuente original"
+            f"{' (ES UN RESUMEN, no el artículo completo)' if is_summary else ''}"
+            "\n\n"
+            f"{_format_untrusted_block(_sample_for_critic(source_content or '', max_chars=6000), 'FUENTE_NO_CONFIABLE')}"
+        )
+        try:
+            result = self._send_fact_check_prompt(
+                context, _system_with_untrusted_data_policy(system_prompt)
+            )
+        except Exception as exc:
+            logger.error("Fact-check severity judgement failed: {}", exc)
+            return SeverityJudgement(None, f"{type(exc).__name__}: {exc}")
+        affected = result.get("headline_affected") if isinstance(result, dict) else None
+        reason = (
+            str(result.get("reason") or "").strip()[:_FACT_CHECK_REASON_MAX_CHARS]
+            if isinstance(result, dict)
+            else ""
+        )
+        if not isinstance(affected, bool):
+            logger.warning(
+                "Fact-check severity judgement returned no boolean "
+                "'headline_affected' ({!r}); treating as undecided.",
+                result,
+            )
+            return SeverityJudgement(None, "respuesta sin 'headline_affected' booleano")
+        logger.info(
+            "Fact-check severity: headline_affected={} for {} claim(s). {}",
+            affected,
+            len(disputed),
+            reason,
+        )
+        return SeverityJudgement(affected, reason)
+
+    def _correct_disputed_claims(
+        self,
+        content: str,
+        disputed: list[DisputedClaim],
+        source_content: str,
+        context: dict | None,
+    ) -> str:
+        """Plan 205: rewrite only what the source contradicts.
+
+        Drafting model with the source, the disputed claims and the verifier's
+        reasons. The result must keep a publishable body and pass the same
+        technical review (Stage 3) that any editorial repair passes.
+        """
+        system_prompt = self.prompts.get("fact_check_correction", {}).get("system", "")
+        if not system_prompt:
+            raise GeneratedArticleValidationError(
+                "prompt 'fact_check_correction' no configurado",
+                error_code="editorial_fact_check_disputed",
+            )
+        prompt = (
+            "## Afirmaciones que la fuente contradice\n\n"
+            f"{_format_untrusted_block(self._format_disputed_claims(disputed), 'AFIRMACIONES_NO_CONFIABLES')}\n\n"
+            "## Contexto situacional\n\n"
+            f"{self._format_editor_context_block(context)}\n\n"
+            "## Contenido fuente original\n\n"
+            f"{_format_untrusted_block(_sample_for_critic(source_content or '', max_chars=8000), 'FUENTE_NO_CONFIABLE')}\n\n"
+            "## Artículo a corregir\n\n"
+            f"{_format_untrusted_block(content, 'ARTICULO_BASE_NO_CONFIABLE')}"
+        )
+        logger.info(
+            "Correcting {} disputed claim(s) against the source.", len(disputed)
+        )
+        corrected = self._extract_markdown_content(
+            self._send_prompt(
+                prompt,
+                system=_system_with_untrusted_data_policy(system_prompt),
+                model=self.editor_model,
+            )
+        )
+        if not _extract_publishable_body(corrected or ""):
+            raise GeneratedArticleValidationError(
+                "la corrección no produjo un cuerpo publicable",
+                error_code="editorial_fact_check_disputed",
+            )
+        technical = self._critic_pass(corrected)
+        if not technical[0]:
+            raise GeneratedArticleValidationError(
+                f"la corrección no supera la revisión técnica: {technical[1]}",
+                error_code="editorial_fact_check_disputed",
+            )
+        return corrected
+
+    def _claim_still_asserted(self, content: str, claim: DisputedClaim) -> bool | None:
+        """Plan 205 residual check: does the corrected body still assert it?
+
+        Guards against a regenerated ``fact_check`` that merely omits the
+        wrong claim while the body keeps it. ``None`` means undecided.
+        """
+        system_prompt = self.prompts.get("fact_check_residual", {}).get("system", "")
+        if not system_prompt:
+            return None
+        context = (
+            "## Afirmación contradicha por la fuente\n\n"
+            f"{_format_untrusted_block(claim.label, 'AFIRMACION_NO_CONFIABLE')}\n\n"
+            "## Artículo corregido\n\n"
+            f"{_format_untrusted_block(content, 'ARTICULO_NO_CONFIABLE')}"
+        )
+        try:
+            result = self._send_fact_check_prompt(
+                context, _system_with_untrusted_data_policy(system_prompt)
+            )
+        except Exception as exc:
+            logger.error(
+                "Fact-check residual check failed for {!r}: {}", claim.label, exc
+            )
+            return None
+        asserted = result.get("still_asserted") if isinstance(result, dict) else None
+        if not isinstance(asserted, bool):
+            logger.warning(
+                "Fact-check residual check returned no boolean 'still_asserted' "
+                "({!r}) for {!r}; treating as undecided.",
+                result,
+                claim.label,
+            )
+            return None
+        return asserted
 
     def _editorial_output_repair_reason(self, markdown: str) -> str | None:
         body = _extract_publishable_body(markdown)
@@ -2831,116 +3009,136 @@ class EditorAgent:
                     editorial_outcome.failure_reason,
                 )
 
-        # --- STAGE 5: Metadata & Headlines (+ Headline Critic gate) ---
-        print("\n--- STAGE 5: Metadata & Headlines ---")
-        # Stage 5 is fast enough relative to others, and depends on final content structure.
-        # We could cache it, but usually we want to regenerate headlines if we tweak code.
-        # For now, we won't cache Stage 5 to allow easier re-runs of the final formatting.
-        # The orchestrator runs the headline writer and then gates the result
-        # through prompts.yaml::headline_critic (fidelity gancho-cuerpo +
-        # línea roja de sensacionalismo) with up to 2 retries.
-        self._headline_review_cache = self._get_cache_path(
-            article_id, EditorialStage.HEADLINE_CRITIC_REVIEW
-        )
-        if self._headline_review_cache.exists():
-            try:
-                stored_headline_review = json.loads(
-                    self._headline_review_cache.read_text(encoding="utf-8")
-                ).get("verdict")
-                if isinstance(stored_headline_review, dict) and (
-                    stored_headline_review.get("fidelity_pass") is False
-                    or stored_headline_review.get("sensationalism_pass") is False
-                ):
-                    self.last_headline_verdict = stored_headline_review
-            except (OSError, ValueError, AttributeError) as exc:
-                logger.warning("Ignoring unusable headline review artifact: {}", exc)
-        headlines = self._generate_headlines_with_critic(final_content)
+        # Stages 5 and 6 derive headlines and enrichment from the body. They
+        # live in a closure because the plan-205 fact-check correction loop
+        # re-runs them on every corrected body.
+        def _derive_publishable(  # noqa: C901
+            final_content: str,
+        ) -> DerivedArticle:
+            # --- STAGE 5: Metadata & Headlines (+ Headline Critic gate) ---
+            print("\n--- STAGE 5: Metadata & Headlines ---")
+            # Stage 5 is fast enough relative to others, and depends on final content structure.
+            # We could cache it, but usually we want to regenerate headlines if we tweak code.
+            # For now, we won't cache Stage 5 to allow easier re-runs of the final formatting.
+            # The orchestrator runs the headline writer and then gates the result
+            # through prompts.yaml::headline_critic (fidelity gancho-cuerpo +
+            # línea roja de sensacionalismo) with up to 2 retries.
+            self._headline_review_cache = self._get_cache_path(
+                article_id, EditorialStage.HEADLINE_CRITIC_REVIEW
+            )
+            if self._headline_review_cache.exists():
+                try:
+                    stored_headline_review = json.loads(
+                        self._headline_review_cache.read_text(encoding="utf-8")
+                    ).get("verdict")
+                    if isinstance(stored_headline_review, dict) and (
+                        stored_headline_review.get("fidelity_pass") is False
+                        or stored_headline_review.get("sensationalism_pass") is False
+                    ):
+                        self.last_headline_verdict = stored_headline_review
+                except (OSError, ValueError, AttributeError) as exc:
+                    logger.warning(
+                        "Ignoring unusable headline review artifact: {}", exc
+                    )
+            headlines = self._generate_headlines_with_critic(final_content)
 
-        # Deterministic headline tripwires from the voice contract (plan 065):
-        # advisory warnings only — the headline critic (LLM) stays the judge.
-        for issue in check_headline(headlines.get("direct", "")):
-            logger.warning(f"Headline readability [{issue.code}]: {issue.message}")
+            # Deterministic headline tripwires from the voice contract (plan 065):
+            # advisory warnings only — the headline critic (LLM) stays the judge.
+            for issue in check_headline(headlines.get("direct", "")):
+                logger.warning(f"Headline readability [{issue.code}]: {issue.message}")
 
-        # Deterministic spillover tripwire (plan 079, Codex P2): lone
-        # English words the translation critic misses. Advisory only.
-        for spill in check_english_spillover(final_content):
-            logger.warning(f"Prose language [{spill.code}]: {spill.message}")
+            # Deterministic spillover tripwire (plan 079, Codex P2): lone
+            # English words the translation critic misses. Advisory only.
+            for spill in check_english_spillover(final_content):
+                logger.warning(f"Prose language [{spill.code}]: {spill.message}")
 
-        # Deterministic voice-tic lint (spec-editorial-quality-lifts L3):
-        # banned openings/muletillas the editorial critic judges
-        # nondeterministically. Advisory only.
-        for tic in check_voice_tics(final_content):
-            logger.warning(f"Voice tics [{tic.code}]: {tic.message}")
+            # Deterministic voice-tic lint (spec-editorial-quality-lifts L3):
+            # banned openings/muletillas the editorial critic judges
+            # nondeterministically. Advisory only.
+            for tic in check_voice_tics(final_content):
+                logger.warning(f"Voice tics [{tic.code}]: {tic.message}")
 
-        # Deterministic health guarantee-language check
-        # (spec-editorial-quality-lifts L4): therapeutic overgeneralizations
-        # in health-scope prose. Advisory only; the fact-check verifier
-        # stays the judge.
-        for guarantee in find_guarantee_language(final_content):
-            logger.warning(f"Health guarantee [{guarantee.code}]: {guarantee.message}")
-
-        # --- DETERMINISTIC REPAIR LAYER ---
-        final_content, headlines = self._repair_output(
-            final_content, headlines, len(input_text)
-        )
-        validate_generated_article_markdown(final_content)
-
-        # --- STAGE 6: Editorial Enrichment Fields ---
-        print("\n--- STAGE 6: Editorial Enrichment Fields ---")
-        self._enrichment_body_revision = editorial_text_sha256(final_content)[:24]
-        cache_s4 = self._get_cache_path(article_id, EditorialStage.ENRICHMENT)
-
-        def _enrichment_cache_is_usable(cached: Any) -> TypeGuard[dict]:
-            """A Stage 6 cache artifact is usable only when it carries every
-            V2-required enrichment field. A cache with an empty ``sources``
-            list (LLM omitted it, per prompt) would otherwise fail the V2
-            frontmatter gate on every run, blocking publication forever
-            without ever regenerating the artifact."""
-            if not isinstance(cached, dict):
-                return False
-            return all(cached.get(key) for key in _V2_REQUIRED_ENRICHMENT_FIELDS)
-
-        def _load_enrichment_cache() -> dict | None:
-            print(f"(Loaded from cache: {cache_s4})")
-            try:
-                cached_enrichment = json.loads(cache_s4.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"Invalid enrichment cache, regenerating: {e}")
-                return None
-            if cached_enrichment is None:
-                return None
-            if not _enrichment_cache_is_usable(cached_enrichment):
+            # Deterministic health guarantee-language check
+            # (spec-editorial-quality-lifts L4): therapeutic overgeneralizations
+            # in health-scope prose. Advisory only; the fact-check verifier
+            # stays the judge.
+            for guarantee in find_guarantee_language(final_content):
                 logger.warning(
-                    "Incomplete enrichment cache ignored (missing required V2 "
-                    "fields); regenerating."
+                    f"Health guarantee [{guarantee.code}]: {guarantee.message}"
                 )
-                return None
-            return cached_enrichment
 
-        def _persist_enrichment_cache(fields: dict) -> None:
-            try:
-                cache_s4.write_text(
-                    json.dumps(fields, ensure_ascii=False),
-                    encoding="utf-8",
-                )
-            except Exception as _e:
-                logger.warning(f"Failed to persist enrichment cache: {_e}")
+            # --- DETERMINISTIC REPAIR LAYER ---
+            final_content, headlines = self._repair_output(
+                final_content, headlines, len(input_text)
+            )
+            validate_generated_article_markdown(final_content)
 
-        enrichment_result = run_cached_stage(
-            EditorialStage.ENRICHMENT,
-            CachedStageHooks(
-                load_cached=_load_enrichment_cache,
-                generate=lambda: self._generate_enrichment_fields(
-                    final_content,
-                    title,
-                    source_url=source_url or "",
-                    source_name=source_name or "",
+            # --- STAGE 6: Editorial Enrichment Fields ---
+            print("\n--- STAGE 6: Editorial Enrichment Fields ---")
+            self._enrichment_body_revision = editorial_text_sha256(final_content)[:24]
+            cache_s4 = self._get_cache_path(article_id, EditorialStage.ENRICHMENT)
+
+            def _enrichment_cache_is_usable(cached: Any) -> TypeGuard[dict]:
+                """A Stage 6 cache artifact is usable only when it carries every
+                V2-required enrichment field. A cache with an empty ``sources``
+                list (LLM omitted it, per prompt) would otherwise fail the V2
+                frontmatter gate on every run, blocking publication forever
+                without ever regenerating the artifact."""
+                if not isinstance(cached, dict):
+                    return False
+                return all(cached.get(key) for key in _V2_REQUIRED_ENRICHMENT_FIELDS)
+
+            def _load_enrichment_cache() -> dict | None:
+                print(f"(Loaded from cache: {cache_s4})")
+                try:
+                    cached_enrichment = json.loads(cache_s4.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.warning(f"Invalid enrichment cache, regenerating: {e}")
+                    return None
+                if cached_enrichment is None:
+                    return None
+                if not _enrichment_cache_is_usable(cached_enrichment):
+                    logger.warning(
+                        "Incomplete enrichment cache ignored (missing required V2 "
+                        "fields); regenerating."
+                    )
+                    return None
+                return cached_enrichment
+
+            def _persist_enrichment_cache(fields: dict) -> None:
+                try:
+                    cache_s4.write_text(
+                        json.dumps(fields, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                except Exception as _e:
+                    logger.warning(f"Failed to persist enrichment cache: {_e}")
+
+            enrichment_result = run_cached_stage(
+                EditorialStage.ENRICHMENT,
+                CachedStageHooks(
+                    load_cached=_load_enrichment_cache,
+                    generate=lambda: self._generate_enrichment_fields(
+                        final_content,
+                        title,
+                        source_url=source_url or "",
+                        source_name=source_name or "",
+                    ),
+                    persist=_persist_enrichment_cache,
                 ),
-                persist=_persist_enrichment_cache,
-            ),
-            cache_present=cache_s4.exists(),
-        )
-        enrichment_fields = enrichment_result.value
+                cache_present=cache_s4.exists(),
+            )
+            enrichment_fields = enrichment_result.value
+            return DerivedArticle(
+                content=final_content,
+                headlines=headlines,
+                enrichment_fields=enrichment_fields,
+            )
+
+        derived = _derive_publishable(final_content)
+        final_content = derived.content
+        headlines = derived.headlines
+        enrichment_fields = derived.enrichment_fields
 
         # --- STAGE 7: Fact-Check Verification (Phase 2c) ---
         # Runs unconditionally here, after BOTH the cache-hit and cache-miss
@@ -2964,6 +3162,86 @@ class EditorAgent:
             content_mode,
         )
         enrichment_fields["fact_check"] = verified_fact_check
+
+        # --- STAGE 7b: Automatic correction (plan 205) ---
+        # A verifier-disputed claim no longer stops here waiting for a human.
+        # The policy loop either returns a corrected article (body, headlines
+        # and fact_check re-derived and re-verified) or raises a binary
+        # decision: `editorial_fact_check_unpublishable` (the error is what
+        # the headline promises, or it survives the bounded corrections) or
+        # the retryable `editorial_fact_check_disputed` when infrastructure
+        # prevented a decision. `_enforce_fact_check_gate` below stays as the
+        # last line of defense.
+        source_support_before_correction = dict(
+            getattr(self, "last_source_support_verdict", None) or {}
+        )
+        try:
+            correction = run_fact_check_correction(
+                DerivedArticle(final_content, headlines, enrichment_fields),
+                verified_fact_check,
+                FactCheckCorrectionHooks(
+                    verify=lambda claims: self._verify_fact_check_claims(
+                        claims, content, title, content_mode
+                    ),
+                    reasons=lambda: dict(getattr(self, "last_fact_check_reasons", {})),
+                    judge_severity=lambda disputed, current_headlines: (
+                        self._judge_fact_check_severity(
+                            disputed, current_headlines, content, content_mode
+                        )
+                    ),
+                    correct=lambda body, disputed: self._correct_disputed_claims(
+                        body, disputed, content, editor_context
+                    ),
+                    rederive=_derive_publishable,
+                    still_asserted=self._claim_still_asserted,
+                ),
+            )
+        except GeneratedArticleValidationError as exc:
+            # A8: a negative decision keeps its full trace (severity per
+            # round, attempts, residual check) instead of only the message.
+            record = getattr(exc, "correction_record", None)
+            if record is not None:
+                self.last_source_support_verdict = {
+                    **source_support_before_correction,
+                    "corrections": record,
+                }
+            raise
+        if correction.corrected:
+            final_content = correction.article.content
+            headlines = correction.article.headlines
+            enrichment_fields = correction.article.enrichment_fields
+            verified_fact_check = correction.verified_fact_check
+            enrichment_fields["fact_check"] = verified_fact_check
+            # A resume must never fall back to the uncorrected body: replace
+            # the Stage 2 cache and drop the technical checkpoint, which was
+            # bound to the old text. The editorial checkpoint is hash-bound
+            # and re-evaluates the corrected body on its own.
+            self._write_editorial_cache_if_valid(cache_s2, final_content)
+            cache_s2_5.unlink(missing_ok=True)
+            try:
+                cache_replaced = cache_s2.read_text(encoding="utf-8") == final_content
+            except OSError:
+                cache_replaced = False
+            if not cache_replaced:
+                logger.error(
+                    "Fact-check correction for {} could not replace the Stage 2 "
+                    "cache; a resume would re-run the correction loop.",
+                    article_id,
+                )
+            self.last_source_support_verdict = {
+                **(getattr(self, "last_source_support_verdict", None) or {}),
+                "before_correction": source_support_before_correction,
+            }
+            logger.info(
+                "Fact-check correction applied for {} after {} attempt(s).",
+                article_id,
+                len(correction.record.get("attempts", [])),
+            )
+        if correction.record.get("decision") != "clean":
+            self.last_source_support_verdict = {
+                **(getattr(self, "last_source_support_verdict", None) or {}),
+                "corrections": correction.record,
+            }
 
         # 3. Assemble Final Artifact (typed stage, plan 060 Phase 7c-4)
         prepared = prepare_editorial_draft(
@@ -3002,6 +3280,12 @@ class EditorAgent:
                     getattr(self, "last_source_support_verdict", None),
                     ensure_ascii=False,
                     indent=2,
+                )
+                + (
+                    "\n\nCorrecciones automáticas por verificación de respaldo:\n\n"
+                    + json.dumps(correction.record, ensure_ascii=False, indent=2)
+                    if correction.corrected
+                    else ""
                 )
                 + "\n\nAporte observado y asuntos pendientes:\n\n"
                 + json.dumps(self.last_critic_verdict, ensure_ascii=False, indent=2)
