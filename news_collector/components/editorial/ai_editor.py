@@ -140,6 +140,92 @@ _LLM_EPILOGUE_LINE_RE = re.compile(
 _FACT_CHECK_REASON_MAX_CHARS = 500
 
 
+# Plan 206: the verifier must see the passage it checks. 40k characters
+# covers the p99 of recent sources (32.6k); above it the source is sampled.
+FACT_CHECK_SOURCE_MAX_CHARS = 40_000
+# Claims verified per call; one call per article in practice.
+FACT_CHECK_CLAIMS_PER_CALL = 12
+_FACT_CHECK_STATUSES = ("confirmed", "uncertain", "disputed")
+
+
+def _source_for_verification(source_content: str | None) -> str:
+    """Full source for the verifier, sampled only above the hard cap."""
+    text = source_content or ""
+    if len(text) <= FACT_CHECK_SOURCE_MAX_CHARS:
+        return text
+    logger.warning(
+        "Fact-check source truncated: {} chars > {}; sampling beginning, "
+        "middle and end.",
+        len(text),
+        FACT_CHECK_SOURCE_MAX_CHARS,
+    )
+    return _sample_for_critic(text, max_chars=FACT_CHECK_SOURCE_MAX_CHARS)
+
+
+def _raw_fact_check_verdicts(result: Any, ids: list[str]) -> list[Any] | str:
+    """The verdict list, or a problem description when there is none."""
+    if not isinstance(result, dict):
+        return "Respuesta de respaldo no es un objeto JSON"
+    raw = result.get("verdicts")
+    if raw is None and len(ids) == 1 and "status" in result:
+        raw = [{**result, "id": ids[0]}]
+    if not isinstance(raw, list):
+        return "Respuesta de respaldo sin 'verdicts'"
+    return raw
+
+
+def _parse_fact_check_verdicts(
+    result: Any, ids: list[str]
+) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """Map verifier verdicts by claim id (plan 206).
+
+    Returns ``{id: {"status", "reason"}}`` plus the problems found. Missing,
+    duplicated, unknown ids and unrecognized statuses are left out, so the
+    caller fails them open to ``uncertain``. A single-claim batch also
+    accepts the flat ``{"status", "reason"}`` shape.
+    """
+    raw = _raw_fact_check_verdicts(result, ids)
+    if isinstance(raw, str):
+        return {}, [raw]
+
+    problems: list[str] = []
+    wanted = set(ids)
+    seen: dict[str, int] = {}
+    parsed: dict[str, dict[str, str]] = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("id", "")).strip()
+        if cid not in wanted:
+            problems.append(f"Veredicto con id desconocido: {cid or '(vacío)'}")
+            continue
+        seen[cid] = seen.get(cid, 0) + 1
+        status = str(item.get("status", "")).strip().lower()
+        if status not in _FACT_CHECK_STATUSES:
+            logger.warning(
+                "Fact-check verifier returned unrecognized status {!r} for {}; "
+                "defaulting to 'uncertain'.",
+                status,
+                cid,
+            )
+            problems.append("Respuesta de respaldo no reconocida")
+            continue
+        parsed[cid] = {
+            "status": status,
+            "reason": str(item.get("reason") or "").strip()[
+                :_FACT_CHECK_REASON_MAX_CHARS
+            ],
+        }
+    for cid, count in seen.items():
+        if count > 1:
+            problems.append(f"Veredicto duplicado: {cid}")
+            parsed.pop(cid, None)
+    missing = [cid for cid in ids if cid not in seen]
+    if missing:
+        problems.append(f"Sin veredicto para: {', '.join(missing)}")
+    return parsed, problems
+
+
 def _sample_for_critic(content: str, max_chars: int = 2000) -> str:
     """
     Return a representative sample of the content for critic evaluation.
@@ -2083,67 +2169,114 @@ class EditorAgent:
             ]
 
         is_summary = content_mode in ("summary_only", "summary_fallback")
-        source_sample = _sample_for_critic(source_content, max_chars=6000)
+        source_text = _source_for_verification(source_content)
+        verdict = self.last_source_support_verdict
+        verdict["verification_status"] = "reviewed"
 
-        verified: list[dict] = []
-        self.last_source_support_verdict["verification_status"] = "reviewed"
+        # Plan 206: one call per batch of claims, all against the full source.
+        # Empty labels never reach the model; malformed items are dropped.
+        statuses: list[str | None] = []
+        pending: list[tuple[int, str]] = []
         for claim in claims:
             if not isinstance(claim, dict):
                 continue
             label = str(claim.get("label", "")).strip()
-            if not label:
-                self.last_source_support_verdict["verification_status"] = "unverified"
-                self.last_source_support_verdict["issues"].append("Afirmación vacía")
-                verified.append({**claim, "status": "uncertain"})
-                continue
+            statuses.append(None)
+            if label:
+                pending.append((len(statuses) - 1, label))
+            else:
+                verdict["verification_status"] = "unverified"
+                verdict["issues"].append("Afirmación vacía")
+                statuses[-1] = "uncertain"
+        valid_claims = [claim for claim in claims if isinstance(claim, dict)]
 
-            context = (
-                "## Afirmación a verificar (en español)\n\n"
-                f"{_format_untrusted_block(label, 'AFIRMACION_NO_CONFIABLE')}\n\n"
-                "## Título del artículo\n\n"
-                f"{_format_untrusted_block(article_title, 'TITULO_NO_CONFIABLE')}\n\n"
-                "## Contenido fuente original"
-                f"{' (ES UN RESUMEN, no el artículo completo)' if is_summary else ''}"
-                "\n\n"
-                f"{_format_untrusted_block(source_sample, 'FUENTE_NO_CONFIABLE')}"
+        for offset in range(0, len(pending), FACT_CHECK_CLAIMS_PER_CALL):
+            batch = pending[offset : offset + FACT_CHECK_CLAIMS_PER_CALL]
+            batch_statuses = self._verify_claim_batch(
+                [label for _, label in batch],
+                source_text,
+                article_title,
+                is_summary,
+                system_prompt,
             )
-            try:
-                result = self._send_fact_check_prompt(
-                    context, _system_with_untrusted_data_policy(system_prompt)
-                )
-                status = str(result.get("status", "")).strip().lower()
-                if status not in ("confirmed", "uncertain", "disputed"):
-                    logger.warning(
-                        "Fact-check verifier returned unrecognized status "
-                        "{!r} for claim {!r}; defaulting to 'uncertain'.",
-                        status,
-                        label,
-                    )
-                    status = "uncertain"
-                    self.last_source_support_verdict["verification_status"] = (
-                        "unverified"
-                    )
-                    self.last_source_support_verdict["issues"].append(
-                        "Respuesta de respaldo no reconocida"
-                    )
-                else:
-                    self.last_source_support_verdict["claims_checked"] += 1
-                    reason = str(result.get("reason") or "").strip()
-                    if reason:
-                        self.last_fact_check_reasons[label] = reason[
-                            :_FACT_CHECK_REASON_MAX_CHARS
-                        ]
-            except Exception as e:
-                logger.error(
-                    "Fact-check verification failed for claim {!r}: {}", label, e
-                )
-                status = "uncertain"
-                self.last_source_support_verdict["verification_status"] = "unverified"
-                self.last_source_support_verdict["issues"].append(type(e).__name__)
+            for (position, _), status in zip(batch, batch_statuses, strict=True):
+                statuses[position] = status
 
-            verified.append({**claim, "status": status})
+        if verdict["verification_status"] == "unverified":
+            unverified = sum(1 for status in statuses if status == "uncertain")
+            logger.warning(
+                "Fact-check verification incomplete: {} of {} claim(s) left "
+                "'uncertain' without a verdict ({}).",
+                unverified,
+                len(statuses),
+                "; ".join(verdict["issues"]) or "sin detalle",
+            )
+        return [
+            {**claim, "status": status or "uncertain"}
+            for claim, status in zip(valid_claims, statuses, strict=True)
+        ]
 
-        return verified
+    def _verify_claim_batch(
+        self,
+        labels: list[str],
+        source_text: str,
+        article_title: str,
+        is_summary: bool,
+        system_prompt: str,
+    ) -> list[str]:
+        """Verify up to ``FACT_CHECK_CLAIMS_PER_CALL`` claims in one call.
+
+        Claims travel with ids (``c1``…) and verdicts are matched by id, never
+        by label. Any verdict that cannot be matched fails open to
+        ``uncertain`` and is recorded in ``issues``.
+        """
+        verdict = self.last_source_support_verdict
+        ids = [f"c{i + 1}" for i in range(len(labels))]
+        claims_block = json.dumps(
+            [
+                {"id": cid, "afirmacion": label}
+                for cid, label in zip(ids, labels, strict=True)
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+        context = (
+            "## Afirmaciones a verificar (en español)\n\n"
+            f"{_format_untrusted_block(claims_block, 'AFIRMACIONES_NO_CONFIABLES')}\n\n"
+            "## Título del artículo\n\n"
+            f"{_format_untrusted_block(article_title, 'TITULO_NO_CONFIABLE')}\n\n"
+            "## Contenido fuente original"
+            f"{' (ES UN RESUMEN, no el artículo completo)' if is_summary else ''}"
+            "\n\n"
+            f"{_format_untrusted_block(source_text, 'FUENTE_NO_CONFIABLE')}"
+        )
+        try:
+            result = self._send_fact_check_prompt(
+                context, _system_with_untrusted_data_policy(system_prompt)
+            )
+        except Exception as exc:
+            logger.error(
+                "Fact-check verification failed for {} claim(s): {}", len(labels), exc
+            )
+            verdict["verification_status"] = "unverified"
+            verdict["issues"].append(type(exc).__name__)
+            return ["uncertain"] * len(labels)
+
+        by_id, problems = _parse_fact_check_verdicts(result, ids)
+        statuses: list[str] = []
+        for cid, label in zip(ids, labels, strict=True):
+            entry = by_id.get(cid)
+            if entry is None:
+                statuses.append("uncertain")
+                continue
+            statuses.append(entry["status"])
+            verdict["claims_checked"] += 1
+            if entry["reason"]:
+                self.last_fact_check_reasons[label] = entry["reason"]
+        if problems:
+            verdict["verification_status"] = "unverified"
+            verdict["issues"].extend(problems)
+        return statuses
 
     @staticmethod
     def _format_disputed_claims(disputed: list[DisputedClaim]) -> str:
@@ -2185,7 +2318,7 @@ class EditorAgent:
             "## Contenido fuente original"
             f"{' (ES UN RESUMEN, no el artículo completo)' if is_summary else ''}"
             "\n\n"
-            f"{_format_untrusted_block(_sample_for_critic(source_content or '', max_chars=6000), 'FUENTE_NO_CONFIABLE')}"
+            f"{_format_untrusted_block(_source_for_verification(source_content), 'FUENTE_NO_CONFIABLE')}"
         )
         try:
             result = self._send_fact_check_prompt(
@@ -2240,7 +2373,7 @@ class EditorAgent:
             "## Contexto situacional\n\n"
             f"{self._format_editor_context_block(context)}\n\n"
             "## Contenido fuente original\n\n"
-            f"{_format_untrusted_block(_sample_for_critic(source_content or '', max_chars=8000), 'FUENTE_NO_CONFIABLE')}\n\n"
+            f"{_format_untrusted_block(_source_for_verification(source_content), 'FUENTE_NO_CONFIABLE')}\n\n"
             "## Artículo a corregir\n\n"
             f"{_format_untrusted_block(content, 'ARTICULO_BASE_NO_CONFIABLE')}"
         )

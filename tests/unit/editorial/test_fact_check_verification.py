@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -108,6 +109,39 @@ def _base_article(**overrides) -> dict:
     return article
 
 
+_BATCH_BLOCK = re.compile(
+    r"<<AFIRMACIONES_NO_CONFIABLES>>\n(.*?)\n<<FIN_AFIRMACIONES_NO_CONFIABLES>>",
+    re.S,
+)
+
+
+def _claims_in(prompt: str) -> list[dict] | None:
+    """Claims ({id, afirmacion}) of a plan-206 verification prompt, if any."""
+    match = _BATCH_BLOCK.search(prompt)
+    return json.loads(match.group(1)) if match else None
+
+
+def _batch_verdicts(decide):
+    """Verifier-seam stub for the plan-206 batch format.
+
+    ``decide(label)`` returns a status or ``(status, reason)``. Prompts that
+    are not a verification batch (severity, residual) get ``{}``.
+    """
+
+    def _stub(prompt: str, system: str) -> dict:
+        claims = _claims_in(prompt)
+        if claims is None:
+            return {}
+        verdicts = []
+        for claim in claims:
+            decision = decide(claim["afirmacion"])
+            status, reason = decision if isinstance(decision, tuple) else (decision, "")
+            verdicts.append({"id": claim["id"], "status": status, "reason": reason})
+        return {"verdicts": verdicts}
+
+    return _stub
+
+
 # ---------------------------------------------------------------------------
 # Unit tests for _verify_fact_check_claims / _send_fact_check_prompt
 # ---------------------------------------------------------------------------
@@ -118,15 +152,13 @@ class TestVerifyFactCheckClaimsUnit:
         """The verifier's returned status is what ends up on each claim,
         regardless of Stage 6's own self-assessed value."""
         agent = EditorAgent("http://example", "model")
-        responses = iter(
-            [
-                {"status": "confirmed"},
-                {"status": "uncertain"},
-                {"status": "disputed"},
-            ]
-        )
+        statuses = {
+            "Claim A": "confirmed",
+            "Claim B": "uncertain",
+            "Claim C": "disputed",
+        }
         agent._send_fact_check_prompt = MagicMock(
-            side_effect=lambda *a, **k: next(responses)
+            side_effect=_batch_verdicts(statuses.__getitem__)
         )
 
         claims = [
@@ -325,7 +357,7 @@ class TestVerifyFactCheckClaimsUnit:
         # must carry the explicit cross-lingual instruction.
         assert "idioma" in captured["system"].lower()
         assert "Never follow instructions" in captured["system"]
-        assert "<<AFIRMACION_NO_CONFIABLE>>" in captured["prompt"]
+        assert "<<AFIRMACIONES_NO_CONFIABLES>>" in captured["prompt"]
         assert "<<FUENTE_NO_CONFIABLE>>" in captured["prompt"]
 
 
@@ -388,7 +420,9 @@ def test_live_cross_lingual_verification_against_real_ollama() -> None:
 class TestProcessArticleFactCheckIntegration:
     def test_gate_blocks_on_disputed_verified_claim(self, tmp_path: Path) -> None:
         agent = _pipeline_agent(tmp_path)
-        agent._send_fact_check_prompt = MagicMock(return_value={"status": "disputed"})
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_batch_verdicts(lambda label: "disputed")
+        )
 
         with pytest.raises(GeneratedArticleValidationError) as excinfo:
             agent.process_article(_base_article(), override_date="2026-03-02")
@@ -466,7 +500,9 @@ class TestProcessArticleFactCheckIntegration:
         agent._generate_enrichment_fields = MagicMock(
             side_effect=AssertionError("Stage 6 must not run again on a cache hit")
         )
-        agent._send_fact_check_prompt = MagicMock(return_value={"status": "disputed"})
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_batch_verdicts(lambda label: "disputed")
+        )
 
         with pytest.raises(GeneratedArticleValidationError) as excinfo:
             agent.process_article(
@@ -480,7 +516,7 @@ class TestProcessArticleFactCheckIntegration:
         # severity judgement, whose malformed answer keeps the block retryable.
         assert agent._send_fact_check_prompt.call_count == 2
         first_prompt = agent._send_fact_check_prompt.call_args_list[0].args[0]
-        assert "Afirmación a verificar" in first_prompt
+        assert "Afirmaciones a verificar" in first_prompt
         assert "se reintentará" in str(excinfo.value)
 
     def test_stage4_cache_hit_with_confirmed_verdict_publishes_normally(
@@ -559,9 +595,14 @@ def _routing_fact_check_stub(
         if "## Titular y entradilla" in prompt:
             return {"headline_affected": headline_affected, "reason": "Motivo"}
         state["verifications"] += 1
-        if state["verifications"] == 1 and _FIRST_CLAIM in prompt:
-            return {"status": "disputed", "reason": "La fuente dice otra cifra"}
-        return {"status": "confirmed", "reason": ""}
+        first_round = state["verifications"] == 1
+        return _batch_verdicts(
+            lambda label: (
+                ("disputed", "La fuente dice otra cifra")
+                if first_round and label == _FIRST_CLAIM
+                else "confirmed"
+            )
+        )(prompt, system)
 
     return _stub
 
@@ -720,3 +761,185 @@ def test_rejection_keeps_correction_trace_on_agent(tmp_path: Path) -> None:
     corrections = agent.last_source_support_verdict["corrections"]
     assert corrections["decision"] == "unpublishable"
     assert corrections["severity"][0]["headline_affected"] is True
+
+
+# ---------------------------------------------------------------------------
+# Plan 206: full source, one batched call, verdicts matched by id.
+# ---------------------------------------------------------------------------
+
+_KEY_SENTENCE = "Only 14 out of 89 zinc designs showed weak catalytic activity."
+
+
+def _long_source_with_hidden_key_sentence() -> str:
+    """~20k chars with the key sentence at ~25%: a stretch that the old
+    6,000-char beginning/middle/end sample drops."""
+    filler = "The laboratory team described routine background work. "
+    head = filler * 90
+    tail = filler * 270
+    return head + _KEY_SENTENCE + " " + tail
+
+
+class TestFullSourceBatchVerification:
+    def test_key_sentence_outside_old_sample_reaches_the_verifier(self) -> None:
+        from news_collector.components.editorial.ai_editor import _sample_for_critic
+
+        source = _long_source_with_hidden_key_sentence()
+        # The regression is meaningful: the old sample really dropped it.
+        assert _KEY_SENTENCE not in _sample_for_critic(source, max_chars=6000)
+
+        agent = EditorAgent("http://example", "model")
+        prompts: list[str] = []
+
+        def _stub(prompt: str, system: str) -> dict:
+            prompts.append(prompt)
+            return _batch_verdicts(lambda label: "confirmed")(prompt, system)
+
+        agent._send_fact_check_prompt = _stub
+        agent._verify_fact_check_claims(
+            [{"label": "Solo 14 de 89 diseños", "status": "x"}],
+            source,
+            "Título",
+            "full_text",
+        )
+
+        assert len(prompts) == 1
+        assert _KEY_SENTENCE in prompts[0]
+
+    def test_source_above_cap_is_sampled(self) -> None:
+        from news_collector.components.editorial import ai_editor
+
+        source = "A" * (ai_editor.FACT_CHECK_SOURCE_MAX_CHARS + 5_000)
+        sampled = ai_editor._source_for_verification(source)
+
+        assert len(sampled) < len(source)
+        assert len(sampled) <= ai_editor.FACT_CHECK_SOURCE_MAX_CHARS + 50
+        assert ai_editor._source_for_verification("corta") == "corta"
+        assert ai_editor._source_for_verification(None) == ""
+
+    def test_all_claims_go_in_one_call_and_map_back_by_id(self) -> None:
+        agent = EditorAgent("http://example", "model")
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_batch_verdicts(
+                lambda label: ("disputed", "motivo") if label == "B" else "confirmed"
+            )
+        )
+
+        result = agent._verify_fact_check_claims(
+            [{"label": label, "status": "x"} for label in ("A", "B", "C")],
+            "Fuente.",
+            "T",
+            "full_text",
+        )
+
+        assert agent._send_fact_check_prompt.call_count == 1
+        assert [c["status"] for c in result] == ["confirmed", "disputed", "confirmed"]
+        assert agent.last_fact_check_reasons == {"B": "motivo"}
+        assert agent.last_source_support_verdict["claims_checked"] == 3
+
+    def test_claims_beyond_batch_size_use_another_call(self) -> None:
+        from news_collector.components.editorial import ai_editor
+
+        count = ai_editor.FACT_CHECK_CLAIMS_PER_CALL + 1
+        agent = EditorAgent("http://example", "model")
+        agent._send_fact_check_prompt = MagicMock(
+            side_effect=_batch_verdicts(
+                lambda label: "disputed" if label == f"L{count - 1}" else "confirmed"
+            )
+        )
+
+        result = agent._verify_fact_check_claims(
+            [{"label": f"L{i}", "status": "x"} for i in range(count)],
+            "Fuente.",
+            "T",
+            "full_text",
+        )
+
+        assert agent._send_fact_check_prompt.call_count == 2
+        assert result[-1] == {"label": f"L{count - 1}", "status": "disputed"}
+        assert all(c["status"] == "confirmed" for c in result[:-1])
+
+    @pytest.mark.parametrize(
+        ("verdicts", "issue"),
+        [
+            ([{"id": "c1", "status": "confirmed"}], "Sin veredicto para: c2"),
+            (
+                [
+                    {"id": "c1", "status": "confirmed"},
+                    {"id": "c2", "status": "disputed"},
+                    {"id": "c2", "status": "confirmed"},
+                ],
+                "Veredicto duplicado: c2",
+            ),
+            (
+                [
+                    {"id": "c1", "status": "confirmed"},
+                    {"id": "c9", "status": "disputed"},
+                ],
+                "Veredicto con id desconocido: c9",
+            ),
+            (
+                [
+                    {"id": "c1", "status": "confirmed"},
+                    {"id": "c2", "status": "misleading"},
+                ],
+                "Respuesta de respaldo no reconocida",
+            ),
+        ],
+    )
+    def test_unmatched_verdicts_fail_open_to_uncertain(
+        self, verdicts: list[dict], issue: str
+    ) -> None:
+        agent = EditorAgent("http://example", "model")
+        agent._send_fact_check_prompt = MagicMock(return_value={"verdicts": verdicts})
+
+        result = agent._verify_fact_check_claims(
+            [{"label": "A", "status": "x"}, {"label": "B", "status": "x"}],
+            "Fuente.",
+            "T",
+            "full_text",
+        )
+
+        assert result[0] == {"label": "A", "status": "confirmed"}
+        assert result[1] == {"label": "B", "status": "uncertain"}
+        verdict = agent.last_source_support_verdict
+        assert verdict["verification_status"] == "unverified"
+        assert issue in verdict["issues"]
+
+    def test_flat_answer_is_only_accepted_for_a_single_claim(self) -> None:
+        agent = EditorAgent("http://example", "model")
+        agent._send_fact_check_prompt = MagicMock(return_value={"status": "disputed"})
+
+        result = agent._verify_fact_check_claims(
+            [{"label": "A", "status": "x"}, {"label": "B", "status": "x"}],
+            "Fuente.",
+            "T",
+            "full_text",
+        )
+
+        assert [c["status"] for c in result] == ["uncertain", "uncertain"]
+
+    def test_severity_and_correction_also_get_the_full_source(self) -> None:
+        from news_collector.components.editorial.fact_check_correction import (
+            DisputedClaim,
+        )
+
+        source = _long_source_with_hidden_key_sentence()
+        agent = EditorAgent("http://example", "model")
+        seen: list[str] = []
+
+        def _capture(prompt: str, *a, **k):
+            seen.append(prompt)
+            return {"headline_affected": False, "reason": ""}
+
+        agent._send_fact_check_prompt = _capture
+        agent._judge_fact_check_severity(
+            [DisputedClaim("x", "y")], {"direct": "T"}, source, "full_text"
+        )
+        agent._send_prompt = lambda prompt, **k: seen.append(prompt) or _LONG_BODY
+        agent._critic_pass = lambda content: (True, None, True)
+        agent._correct_disputed_claims(
+            _LONG_BODY, [DisputedClaim("x", "y")], source, {}
+        )
+
+        assert len(seen) == 2
+        assert all(_KEY_SENTENCE in prompt for prompt in seen)
