@@ -175,7 +175,7 @@ def test_main_reports_unreachable_api(monkeypatch, capsys):
     assert "not reachable" in capsys.readouterr().err
 
 
-def test_main_reports_hung_api(monkeypatch, capsys):
+def test_main_reports_hung_api(monkeypatch, capsys, tmp_path):
     import requests
 
     cfg = SimpleNamespace(
@@ -189,6 +189,8 @@ def test_main_reports_hung_api(monkeypatch, capsys):
         raise requests.ReadTimeout("no answer")
 
     monkeypatch.setattr(dp.AdminClient, "_call", hang)
+    # A real run today leaves a marker in data/; never read it here.
+    monkeypatch.setattr(dp, "MARKER_DIR", tmp_path)
     assert dp.main(["--no-collect"]) == 2
     assert "not reachable" in capsys.readouterr().err
 

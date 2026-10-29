@@ -3,7 +3,7 @@
 - [x] Diagnóstico del bloqueo actual (`_enforce_fact_check_gate`, etapa 7)
 - [x] Spec
 - [x] Módulo de política `fact_check_correction.py` + tests unitarios
-- [ ] `_verify_fact_check_claims` guarda motivos (`last_fact_check_reasons`)
+- [x] `_verify_fact_check_claims` guarda motivos (`last_fact_check_reasons`)
 - [x] Hooks del `EditorAgent`: gravedad, corrección, control residual
 - [x] Refactor de etapas 5 y 6 en `_derive_publishable` y conexión del bucle
 - [x] Caché de la etapa 2 reemplazada tras corregir; checkpoint técnico invalidado

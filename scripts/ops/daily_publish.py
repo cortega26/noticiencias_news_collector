@@ -160,6 +160,8 @@ def main(argv: list[str] | None = None) -> int:
             client,
             cfg,
             today=datetime.now().strftime("%Y-%m-%d"),
+            # Read at call time: the `run` default is bound at definition.
+            marker_dir=MARKER_DIR,
             collect=not args.no_collect,
         )
     except (requests.ConnectionError, requests.Timeout):
