@@ -62,11 +62,6 @@ case "$ADMIN_STACK_MODE" in
   *) die "ADMIN_STACK_MODE='$ADMIN_STACK_MODE' debe ser reuse, restart, heal o status" ;;
 esac
 
-if [[ "$ADMIN_STACK_MODE" == reuse || "$ADMIN_STACK_MODE" == restart ]]; then
-  [[ -x "$python_bin" ]] || die "python interpreter not found at '$python_bin' — run 'make bootstrap' first"
-  bash scripts/dev/check_admin_dependencies.sh
-fi
-
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && { exec 3>&- 3<&-; return 0; } || return 1; }
 
 valid_port() { [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 && $1 <= 65535 )); }
@@ -230,7 +225,20 @@ diagnose_existing_stack() {
   esac
 }
 
+check_start_prerequisites() {
+  [[ -x "$python_bin" ]] || die "python interpreter not found at '$python_bin' — run 'make bootstrap' first"
+  bash scripts/dev/check_admin_dependencies.sh
+}
+
+# Reutilizar un stack sano no exige dependencias locales; arrancar uno sí.
+# En restart se comprueban antes de detener el stack actual, para no
+# dejarlo apagado si después no se puede levantar el nuevo.
+[[ "$ADMIN_STACK_MODE" == restart ]] && check_start_prerequisites
+
 diagnose_existing_stack
+
+# Aquí solo se llega para arrancar un stack nuevo.
+[[ "$ADMIN_STACK_MODE" == restart ]] || check_start_prerequisites
 
 valid_port "$API_PORT" || die "API_PORT='$API_PORT' is not a valid TCP port (1-65535)"
 valid_port "$GUI_PORT" || die "GUI_PORT='$GUI_PORT' is not a valid TCP port (1-65535)"
