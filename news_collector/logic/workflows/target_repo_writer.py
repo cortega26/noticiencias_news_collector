@@ -59,17 +59,19 @@ class TargetRepoWriter:
     # Public interface
     # ------------------------------------------------------------------
 
-    def write_image_asset(self, *, target_dir: Path, asset: PendingImageAsset) -> Path:
-        """Atomically write one staged hero image inside the target checkout."""
-        filename = asset.filename
+    @staticmethod
+    def _validate_image_filename(filename: str) -> None:
         if (
-            not filename
-            or filename in {".", ".."}
+            filename in {"", ".", ".."}
             or Path(filename).name != filename
-            or "/" in filename
             or "\\" in filename
         ):
             raise ValueError(f"Unsafe image asset filename: {filename!r}")
+
+    def write_image_asset(self, *, target_dir: Path, asset: PendingImageAsset) -> Path:
+        """Atomically write one staged hero image inside the target checkout."""
+        filename = asset.filename
+        self._validate_image_filename(filename)
 
         assets_dir = target_dir / "src" / "assets" / "images"
         assets_dir.mkdir(parents=True, exist_ok=True)

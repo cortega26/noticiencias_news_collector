@@ -40,9 +40,7 @@ def _configure_git_identity(repo: git.Repo) -> None:
         config.set_value("user", "email", "integration@example.invalid")
 
 
-def test_image_is_materialized_after_clean_branch_setup_and_pushed_locally(
-    tmp_path: Path,
-):
+def _create_clean_target_checkout(tmp_path: Path) -> tuple[git.Repo, Path, git.Repo]:
     bare_path = tmp_path / "origin.git"
     bare_repo = git.Repo.init(bare_path, bare=True)
     seed_path = tmp_path / "seed"
@@ -61,16 +59,13 @@ def test_image_is_materialized_after_clean_branch_setup_and_pushed_locally(
     target_repo = git.Repo.clone_from(str(bare_path), target_dir)
     _configure_git_identity(target_repo)
     assert not target_repo.is_dirty(untracked_files=True)
+    return bare_repo, target_dir, target_repo
 
-    database = MagicMock()
-    publisher = _CleanCheckoutPublisher()
-    pr_orchestrator = SimpleNamespace(
-        ensure_draft_branch=lambda *_args, **_kwargs: None,
-        create_pr=lambda **_kwargs: SimpleNamespace(
-            pr_url="https://example.invalid/pull/1"
-        ),
-    )
-    request = PublicationRequest(
+
+def _build_publication_request(
+    tmp_path: Path, target_dir: Path, target_repo: git.Repo
+) -> PublicationRequest:
+    return PublicationRequest(
         article={"id": "42", "title": "Test publication"},
         article_id="42",
         numeric_id=42,
@@ -87,6 +82,21 @@ def test_image_is_materialized_after_clean_branch_setup_and_pushed_locally(
             filename="hero.png", content=b"original-editorial-image"
         ),
     )
+
+
+def test_image_is_materialized_after_clean_branch_setup_and_pushed_locally(
+    tmp_path: Path,
+):
+    bare_repo, target_dir, target_repo = _create_clean_target_checkout(tmp_path)
+    database = MagicMock()
+    publisher = _CleanCheckoutPublisher()
+    pr_orchestrator = SimpleNamespace(
+        ensure_draft_branch=lambda *_args, **_kwargs: None,
+        create_pr=lambda **_kwargs: SimpleNamespace(
+            pr_url="https://example.invalid/pull/1"
+        ),
+    )
+    request = _build_publication_request(tmp_path, target_dir, target_repo)
     stages = _Stages()
 
     outcome = TargetRepoPublicationWorkflow().publish(
