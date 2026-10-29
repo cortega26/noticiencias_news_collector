@@ -39,6 +39,9 @@ from typing import Any, Callable, Dict, List, Optional, cast
 
 from news_collector.components.editorial.ai_editor import EditorAgent
 from news_collector.components.editorial.auditor import EditorialAuditor
+from news_collector.components.editorial.fact_check_correction import (
+    UNPUBLISHABLE_ERROR_CODE,
+)
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts import PublicationAttemptStageResult
 from news_collector.contracts.editorial_draft import EditorialDraft
@@ -908,6 +911,34 @@ class RefineryEngine:
             )
         return True
 
+    def _record_editorial_rejection(
+        self, article_id: str, error_code: str, reason: str
+    ) -> None:
+        """Plan 205: a final "do not publish" leaves the candidate pool.
+
+        The decision is already final and recorded in the attempt; failing to
+        persist the status must not hide it, but it is logged as an error
+        because the article would otherwise be offered again.
+        """
+        try:
+            numeric_id = int(article_id)
+        except (TypeError, ValueError):
+            logger.warning(
+                "Editorial rejection not persisted: non-numeric article id {!r}.",
+                article_id,
+            )
+            return
+        try:
+            self.db.reject_article_editorially(
+                numeric_id, error_code=error_code, reason=reason
+            )
+        except Exception as exc:
+            logger.error(
+                "Could not persist editorial rejection for article {}: {}",
+                article_id,
+                exc,
+            )
+
     def _refine_article(
         self,
         article: Dict[str, Any],
@@ -956,6 +987,8 @@ class RefineryEngine:
                     error=str(ve),
                 )
                 run.persist_attempt(False)
+                if error_code == UNPUBLISHABLE_ERROR_CODE:
+                    self._record_editorial_rejection(article_id, error_code, str(ve))
                 return None
             if "Translation Guardrail" in str(ve):
                 logger.warning(f"Blocked by Editorial Policy (Critic): {ve}")

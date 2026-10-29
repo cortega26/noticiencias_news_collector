@@ -15,8 +15,7 @@
       conservada también en rechazos (A8), aviso explícito si la caché de la
       etapa 2 no se reemplaza (A6), fallos al rederivar → reintentable (A7),
       test de gravedad indeterminada en la última ronda.
-- [ ] Seguimiento (fuera de alcance): el rechazo definitivo solo existe como
-      `error_code` del intento; ningún estado del artículo impide reprocesarlo.
-      Reprocesarlo es seguro (vuelve a pasar todos los controles), pero gasta
-      llamadas. Un plan siguiente puede marcar el artículo como descartado.
+- [x] Fase 2: el rechazo definitivo se guarda en la base (`rejected` +
+      `editorial_rejection`) y sale de todas las fuentes de candidatos
+      (exportación, lista de publicables del admin, cargador del pipeline).
 - [ ] PR

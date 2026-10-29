@@ -1540,6 +1540,7 @@ def test_admin_articles_marks_export_candidates_publishable(
             (503, True, "completed", "https://noticiencias.com/x", None),  # deployed
             (504, True, "publishing", None, None),  # open PR
             (505, True, "completed", None, datetime.now(timezone.utc)),  # deployed
+            (506, True, "rejected", None, None),  # plan 205: final rejection
         ]
         for aid, _in_export, pstatus, purl, pat in fixtures:
             session.add(
@@ -1560,7 +1561,7 @@ def test_admin_articles_marks_export_candidates_publishable(
     export = tmp_path / "latest_articles.json"
     export.write_text(
         json.dumps(
-            {"articles": [{"id": i, "score": 0.9} for i in (501, 503, 504, 505)]}
+            {"articles": [{"id": i, "score": 0.9} for i in (501, 503, 504, 505, 506)]}
         ),
         "utf-8",
     )
@@ -1585,6 +1586,15 @@ def test_admin_articles_marks_export_candidates_publishable(
     assert rows[503]["publishable"] is False  # already has a published_url
     assert rows[505]["publishable"] is False  # already has a published_at
     assert publishing[504]["publishable"] is False  # open PR
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        rejected = {
+            r["id"]: r
+            for r in api_client.get(
+                "/v1/admin/articles?status=rejected", headers=_admin_headers()
+            ).json()["data"]
+        }
+    # Still listed in the stale export, but a rejection never comes back.
+    assert rejected[506]["publishable"] is False
 
     # The virtual `?status=publishable` filter returns exactly the candidates
     # (in the shortlist, not in flight / deployed) regardless of their real

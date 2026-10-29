@@ -575,6 +575,73 @@ class ArticleRepository:
                 or article.published_at is not None
             )
 
+    def reject_article_editorially(
+        self, article_id: int, *, error_code: str, reason: str
+    ) -> bool:
+        """Plan 205: a final editorial "do not publish" decision.
+
+        Moves the article to ``processing_status = "rejected"`` and records
+        ``article_metadata["editorial_rejection"]``. Every candidate source
+        then drops it: the export only takes ``completed`` rows, rescoring
+        only walks ``completed`` rows, and the admin shortlist plus the
+        publication loader check :meth:`is_article_editorially_rejected`.
+
+        Never touches an article with an open PR (``publishing``) or a real
+        deploy: those belong to the publication lifecycle, not to this
+        decision. Returns True only when the row was transitioned.
+        """
+        with self._session() as session:
+            article = session.query(Article).filter(Article.id == article_id).first()
+            if article is None:
+                logger.warning(
+                    "Editorial rejection skipped: article {} not found.", article_id
+                )
+                return False
+            if (
+                article.processing_status == "publishing"
+                or article.published_url is not None
+                or article.published_at is not None
+            ):
+                logger.warning(
+                    "Editorial rejection skipped: article {} is in flight or "
+                    "published (status={}).",
+                    article_id,
+                    article.processing_status,
+                )
+                return False
+            metadata = dict(article.article_metadata or {})
+            metadata["editorial_rejection"] = {
+                "error_code": error_code,
+                "reason": reason,
+                "previous_status": article.processing_status,
+                "rejected_at": datetime.now(timezone.utc).isoformat(),
+            }
+            article.article_metadata = metadata
+            article.processing_status = "rejected"
+            article.error_message = reason
+            session.add(article)
+        logger.info(
+            "Article {} editorially rejected ({}); removed from candidates.",
+            article_id,
+            error_code,
+        )
+        return True
+
+    def is_article_editorially_rejected(self, article_id: int) -> bool:
+        """True when a plan-205 editorial rejection is recorded and still holds."""
+        with self._session() as session:
+            row = (
+                session.query(Article.processing_status, Article.article_metadata)
+                .filter(Article.id == article_id)
+                .first()
+            )
+        if row is None:
+            return False
+        status, metadata = row
+        return status == "rejected" and bool(
+            isinstance(metadata, dict) and metadata.get("editorial_rejection")
+        )
+
     def articles_in_flight_or_done(self, article_ids: list[int]) -> set[int]:
         """Batch version of :meth:`is_article_in_flight_or_done`."""
         if not article_ids:

@@ -211,12 +211,47 @@ Cambiar `prompts.yaml` cambia `_cache_revision` y, por tanto, invalida una vez
 las cachés editoriales existentes (comportamiento ya conocido y aceptado al
 editar prompts).
 
+## Fase 2: un artículo rechazado no vuelve a candidatos
+
+Pedido del propietario tras la fase 1: la decisión "no se publica" debe ser
+definitiva también para la selección de candidatos.
+
+- **B1.** `ArticleRepository.reject_article_editorially(id, error_code,
+  reason)` (y su delegado en `DatabaseManager`) pasa el artículo a
+  `processing_status = "rejected"`, guarda el motivo en `error_message` y
+  `article_metadata["editorial_rejection"] = {error_code, reason,
+  previous_status, rejected_at}`. No toca artículos con PR abierto
+  (`publishing`) ni ya publicados.
+- **B2.** `RefineryEngine._refine_article` lo llama solo con
+  `editorial_fact_check_unpublishable`; el reintentable
+  `editorial_fact_check_disputed` nunca rechaza. Un fallo al persistir se
+  registra como error, sin ocultar la decisión.
+- **B3.** Fuentes de candidatos:
+  - exportación (`latest_articles.json`) y reevaluación de puntajes: ya solo
+    toman `completed`, así que el artículo sale en la siguiente exportación;
+  - lista "publicables" del admin (`?status=publishable` y el campo
+    `publishable`, que usa el publicador diario): excluye `rejected` aunque la
+    exportación en disco sea anterior al rechazo;
+  - cargador del pipeline (`_load_export_articles`): vuelve a consultar la base
+    y omite el rechazo incluso cuando se pide por id. Si la consulta falla,
+    deja pasar el artículo (igual que la guarda de identidad del plan 071),
+    porque igualmente volvería a pasar por todas las verificaciones.
+- **B4.** El artículo sigue visible en el admin con `?status=rejected` y su
+  motivo en `error_message`.
+
+Verificación de la fase 2: tests en
+`tests/unit/storage/test_article_repository_coverage.py`,
+`tests/unit/logic/workflows/test_refinery_engine.py`,
+`tests/unit/refinery/test_main_export_payload.py` y
+`tests/test_serving_admin_api.py`.
+
 ## Fuera de alcance
 
 - Cambiar el panel admin: ya muestra el texto de la excepción; los mensajes
   nuevos están escritos para leerse ahí.
-- Marcar en la base de datos el artículo como descartado: hoy no existe ese
-  estado editorial terminal y la decisión queda en `error_code` del intento.
+- Revertir un rechazo desde el admin: si alguna vez hace falta, basta con
+  devolver `processing_status` a `completed` y borrar
+  `article_metadata["editorial_rejection"]`.
 - Cambiar el contrato del frontend.
 
 ## Verificación
