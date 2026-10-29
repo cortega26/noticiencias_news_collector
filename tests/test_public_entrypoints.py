@@ -31,11 +31,28 @@ class TestPublicEntrypoints:
         # Verify it is callable
         assert callable(bootstrap_system)
 
-        # We need to mock requests to avoid actual network calls and potential failures if offline
+        from news_collector.infrastructure.llm.health import (
+            HealthResult,
+            LLMHealthChecker,
+        )
+
+        class _HealthyChecker(LLMHealthChecker):
+            def check(self, config, logger):
+                return HealthResult(healthy=True)
+
+        # Hermetic: with a provider key in the environment (e.g. a local
+        # NVIDIA_API_KEY) the real checker probes the provider over the
+        # network, so the outcome would depend on the network, not the code.
         with patch.dict(os.environ, {"NOTICIENCIAS_LLM_NO_WARN": "0"}, clear=False):
-            with patch(
-                "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
-                return_value={"default": "llama3.3:latest"},
+            with (
+                patch(
+                    "news_collector.infrastructure.llm.model_registry.preflight_ollama_models",
+                    return_value={"default": "llama3.3:latest"},
+                ),
+                patch(
+                    "news_collector.infrastructure.llm.health.resolve_health_checker",
+                    return_value=_HealthyChecker(),
+                ),
             ):
                 warnings = bootstrap_system()
 
