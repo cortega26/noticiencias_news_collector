@@ -2,34 +2,32 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PUBLISH_PHASES,
+  collectPhaseLabel,
+  collectStepLabel,
   currentPhaseIndex,
+  describeProgressAges,
   describeEta,
   formatDuration,
   parseServerTime,
+  publicationStepLabel,
   secondsSinceLastSign,
 } from './publishProgress';
 
-describe('currentPhaseIndex', () => {
-  it('starts at the first phase with no stages', () => {
-    expect(currentPhaseIndex([])).toBe(0);
-    expect(currentPhaseIndex(undefined)).toBe(0);
+describe('server-reported phase and step labels', () => {
+  it('uses the backend phase position instead of inferring from completed markers', () => {
+    expect(currentPhaseIndex({ phase_index: 1 })).toBe(1);
+    expect(currentPhaseIndex({ phase_index: 5 })).toBe(PUBLISH_PHASES.length - 1);
+    expect(currentPhaseIndex(null)).toBe(0);
   });
 
-  it('moves one past the furthest marker reached, ignoring minor stages', () => {
-    expect(currentPhaseIndex(['identity_resolved'])).toBe(1);
-    expect(currentPhaseIndex(['identity_resolved', 'editor_refinement'])).toBe(2);
-    expect(
-      currentPhaseIndex([
-        'identity_resolved',
-        'editor_refinement',
-        'frontmatter_guard',
-        'text_hygiene',
-      ])
-    ).toBe(3);
+  it('renders the active publication backend step', () => {
+    expect(publicationStepLabel('frontend_publication_validation')).toBe('Validando el sitio');
+    expect(publicationStepLabel('unknown_backend_step')).toBe('unknown_backend_step');
   });
 
-  it('never runs past the last phase', () => {
-    expect(currentPhaseIndex(PUBLISH_PHASES.map((p) => p.marker))).toBe(PUBLISH_PHASES.length - 1);
+  it('labels collection phases and steps from backend progress', () => {
+    expect(collectPhaseLabel('scoring')).toBe('Puntuación');
+    expect(collectStepLabel('session_report')).toBe('Preparando informe');
   });
 });
 
@@ -74,5 +72,14 @@ describe('secondsSinceLastSign', () => {
     const now = Date.UTC(2026, 8, 29, 12, 1, 0);
     expect(secondsSinceLastSign(now, '2026-09-29T12:00:00', '2026-09-29T12:00:50Z', null)).toBe(10);
     expect(secondsSinceLastSign(now, null, undefined)).toBeNull();
+  });
+});
+
+describe('describeProgressAges', () => {
+  it('shows the stage-update age separately from the worker heartbeat age', () => {
+    const now = Date.UTC(2026, 8, 29, 12, 1, 0);
+    expect(describeProgressAges(now, '2026-09-29T12:00:32Z', '2026-09-29T12:00:00Z')).toBe(
+      'fase actualizada hace 28 s · señal del worker hace 1:00'
+    );
   });
 });

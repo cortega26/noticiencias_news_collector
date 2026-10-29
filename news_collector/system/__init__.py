@@ -257,6 +257,7 @@ class NewsCollectorSystem:
         sources_filter: Optional[List[str]] = None,
         dry_run: bool = False,
         trace_id: Optional[str] = None,
+        progress_callback=None,
     ) -> Dict[str, Any]:
         """
         Ejecuta un ciclo completo de recolección de noticias.
@@ -274,7 +275,7 @@ class NewsCollectorSystem:
         from news_collector.system import pipeline
 
         return await pipeline.run_cycle_orchestration(
-            self, sources_filter, dry_run, trace_id
+            self, sources_filter, dry_run, trace_id, progress_callback
         )
 
     def get_top_articles(

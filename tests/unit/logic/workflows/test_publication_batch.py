@@ -178,6 +178,7 @@ def test_run_batch_success_merges_pr_urls_per_item(
     assert ids == [11, 12]
     assert kwargs.pop("skip_visuals") is False
     assert callable(kwargs.pop("stage_listener"))
+    assert callable(kwargs.pop("progress_listener"))
     assert callable(kwargs.pop("on_item_start"))
     assert kwargs.pop("checkpoint_run_id") == run_id
     assert kwargs.pop("checkpoint_repository") is workflow._checkpoints
@@ -363,9 +364,11 @@ def test_wrapper_reports_item_start_and_forwards_stage_listener(monkeypatch) -> 
     )
 
     forwarded: list = []
+    progress_forwarded: list = []
 
     def fake(**kw):
         forwarded.append(kw.get("stage_listener"))
+        progress_forwarded.append(kw.get("progress_listener"))
         return {"status": "success", "processed_count": 1}
 
     monkeypatch.setattr(
@@ -374,10 +377,13 @@ def test_wrapper_reports_item_start_and_forwards_stage_listener(monkeypatch) -> 
     )
     starts: list = []
     listener = object()
+    progress_listener = object()
     run_publication_batch(
         [7, 8],
         stage_listener=listener,
+        progress_listener=progress_listener,
         on_item_start=lambda i, n, aid: starts.append((i, n, aid)),
     )
     assert starts == [(0, 2, 7), (1, 2, 8)]
     assert forwarded == [listener, listener]
+    assert progress_forwarded == [progress_listener, progress_listener]

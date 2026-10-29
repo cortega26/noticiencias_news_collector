@@ -49,6 +49,7 @@ from typing import Any, Literal
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
 from news_collector.logic.workflows.publication_attempts import read_publication_attempt
 from news_collector.storage.models import WorkflowRun
@@ -464,6 +465,7 @@ class PublicationRunWorkflow:
                 article_url=article_url,
                 skip_visuals=False,
                 stage_listener=self._stage_listener(run_id),
+                progress_listener=self._progress_listener(run_id),
                 checkpoint_run_id=run_id,
                 checkpoint_repository=self._checkpoints,
             )
@@ -474,10 +476,13 @@ class PublicationRunWorkflow:
                 article_url=article_url,
             )
             if result.get("status") == "waiting_for_image":
+                self._set_progress_status(run_id, "completed")
                 self._checkpoints.park(run_id, summary)
             elif result.get("status") == "success" and result.get("processed_count", 0):
+                self._set_progress_status(run_id, "completed")
                 self.complete(run_id, summary=summary)
             else:
+                self._set_progress_status(run_id, "failed")
                 self.fail(
                     run_id,
                     error_code=str(result.get("error_code") or "publication_failed"),
@@ -490,6 +495,7 @@ class PublicationRunWorkflow:
                 )
         except Exception as exc:  # pragma: no cover - failure path
             logger.error("Publication run {} failed: {}", run_id, exc)
+            self._set_progress_status(run_id, "failed")
             self.fail(run_id, error_code="publication_failed", error_detail=str(exc))
         finally:
             stop_heartbeat.set()
@@ -528,6 +534,7 @@ class PublicationRunWorkflow:
                 article_ids,
                 skip_visuals=False,
                 stage_listener=self._stage_listener(run_id),
+                progress_listener=self._progress_listener(run_id),
                 on_item_start=lambda index, count, _id: self._reset_progress(
                     run_id, item_index=index, item_count=count
                 ),
@@ -582,10 +589,13 @@ class PublicationRunWorkflow:
                 "items": items,
             }
             if batch.get("waiting_for_image_count", 0):
+                self._set_progress_status(run_id, "completed")
                 self._checkpoints.park(run_id, summary)
             elif batch.get("status") in ("success", "partial"):
+                self._set_progress_status(run_id, "completed")
                 self.complete(run_id, summary=summary)
             else:
+                self._set_progress_status(run_id, "failed")
                 self.fail(
                     run_id,
                     error_code=str(batch.get("error_code") or "batch_failed"),
@@ -596,6 +606,7 @@ class PublicationRunWorkflow:
                 )
         except Exception as exc:
             logger.error("Publication batch run {} failed: {}", run_id, exc)
+            self._set_progress_status(run_id, "failed")
             self.fail(
                 run_id,
                 error_code="batch_failed",
@@ -733,6 +744,15 @@ class PublicationRunWorkflow:
 
         return listener
 
+    def _progress_listener(self, run_id: int) -> Any:
+        def listener(progress: AdminRunProgress) -> None:
+            try:
+                self.record_progress(run_id, progress)
+            except Exception as exc:  # progress is advisory
+                logger.warning("Could not record progress for run {}: {}", run_id, exc)
+
+        return listener
+
     def _write_progress(self, run_id: int, update_fn: Any) -> None:
         """Read-modify-write `run_metadata['progress']`. Advisory: a failure is
         logged and never affects the run."""
@@ -755,9 +775,45 @@ class PublicationRunWorkflow:
 
     def _reset_progress(self, run_id: int, *, item_index: int, item_count: int) -> None:
         def reset(progress: dict[str, Any]) -> None:
-            progress.update(stages=[], item_index=item_index, item_count=item_count)
+            progress.update(
+                stages=[],
+                item_index=item_index,
+                item_count=item_count,
+                phase_key=None,
+                phase_index=None,
+                phase_count=None,
+                step_key=None,
+                step_status=None,
+            )
 
-        self._write_progress(run_id, reset)
+        try:
+            self._write_progress(run_id, reset)
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not reset progress for run {}: {}", run_id, exc)
+
+    def record_progress(self, run_id: int, progress: AdminRunProgress) -> None:
+        """Persist the current backend phase/step without replacing batch data."""
+        fields = progress.model_dump(exclude_unset=True)
+
+        def merge(current: dict[str, Any]) -> None:
+            current.update(fields)
+
+        try:
+            self._write_progress(run_id, merge)
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not record progress for run {}: {}", run_id, exc)
+
+    def _set_progress_status(
+        self, run_id: int, step_status: Literal["completed", "failed"]
+    ) -> None:
+        def update_status(progress: dict[str, Any]) -> None:
+            if progress.get("step_key"):
+                progress["step_status"] = step_status
+
+        try:
+            self._write_progress(run_id, update_status)
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not finish progress for run {}: {}", run_id, exc)
 
     def record_progress_stage(self, run_id: int, name: str) -> None:
         def append(progress: dict[str, Any]) -> None:

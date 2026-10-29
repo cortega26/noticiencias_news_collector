@@ -193,6 +193,17 @@ AdminRunStatus = Literal[
 AdminPublicationRunStatus = AdminRunStatus | Literal["waiting_for_image"]
 
 
+class AdminRunProgress(BaseModel):
+    """Latest advisory workflow phase and backend step."""
+
+    phase_key: Optional[str] = None
+    phase_index: Optional[int] = None
+    phase_count: Optional[int] = None
+    step_key: Optional[str] = None
+    step_status: Optional[Literal["running", "completed", "failed"]] = None
+    updated_at: Optional[str] = None
+
+
 class AdminCollectStatus(BaseModel):
     """Status of the most recent (or a named) collection run."""
 
@@ -203,6 +214,8 @@ class AdminCollectStatus(BaseModel):
     error: Optional[str] = None
     summary: Dict[str, Any] = Field(default_factory=dict)
     active: bool = False
+    progress: Optional[AdminRunProgress] = None
+    heartbeat_at: Optional[str] = None
 
 
 class AdminCollectStarted(BaseModel):
@@ -235,13 +248,12 @@ class AdminPublishStarted(BaseModel):
     detail: str
 
 
-class AdminPublishProgress(BaseModel):
+class AdminPublishProgress(AdminRunProgress):
     """Live progress of an in-flight publication run (advisory)."""
 
     stages: List[str] = Field(default_factory=list)
     item_index: int = 0
     item_count: int = 1
-    updated_at: Optional[str] = None
 
 
 class AdminPublishStatus(BaseModel):

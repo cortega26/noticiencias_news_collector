@@ -27,9 +27,38 @@ Failure modes:
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.system import observability
+from news_collector.utils.logger import get_logger
+
+logger = get_logger().create_module_logger(__name__)
+
+
+def _notify_progress(
+    callback: Optional[Callable[[AdminRunProgress], None]],
+    *,
+    phase_key: str,
+    phase_index: int,
+    phase_count: int,
+    step_key: str,
+    step_status: str,
+) -> None:
+    if callback is None:
+        return
+    try:
+        callback(
+            AdminRunProgress(
+                phase_key=phase_key,
+                phase_index=phase_index,
+                phase_count=phase_count,
+                step_key=step_key,
+                step_status=step_status,  # type: ignore[arg-type]
+            )
+        )
+    except Exception as exc:  # progress is advisory and cannot stop collection
+        logger.warning("Collection progress callback failed on {}: {}", step_key, exc)
 
 
 async def run_cycle_orchestration(
@@ -37,6 +66,7 @@ async def run_cycle_orchestration(
     sources_filter: Optional[List[str]] = None,
     dry_run: bool = False,
     trace_id: Optional[str] = None,
+    progress_callback: Optional[Callable[[AdminRunProgress], None]] = None,
 ) -> Dict[str, Any]:
     """
     Ejecuta un ciclo completo de recolección de noticias.
@@ -69,11 +99,39 @@ async def run_cycle_orchestration(
             session_logger, trace_id, session_id, len(sources_to_process)
         )
 
-        collection_results = await system._execute_collection(
-            sources_to_process,
-            dry_run,
-            session_id=session_id,
-            trace_id=trace_id,
+        phase_count = 5 if dry_run else 6
+        _notify_progress(
+            progress_callback,
+            phase_key="collection",
+            phase_index=1,
+            phase_count=phase_count,
+            step_key="source_collection",  # gitleaks:allow (progress step identifier, not a credential)
+            step_status="running",
+        )
+        try:
+            collection_results = await system._execute_collection(
+                sources_to_process,
+                dry_run,
+                session_id=session_id,
+                trace_id=trace_id,
+            )
+        except Exception:
+            _notify_progress(
+                progress_callback,
+                phase_key="collection",
+                phase_index=1,
+                phase_count=phase_count,
+                step_key="source_collection",  # gitleaks:allow (progress step identifier, not a credential)
+                step_status="failed",
+            )
+            raise
+        _notify_progress(
+            progress_callback,
+            phase_key="collection",
+            phase_index=1,
+            phase_count=phase_count,
+            step_key="source_collection",  # gitleaks:allow (progress step identifier, not a credential)
+            step_status="completed",
         )
 
         # Observability: Outcomes (Metrics + Logs)
@@ -81,7 +139,34 @@ async def run_cycle_orchestration(
             system.logger, system.metrics, collection_results, session_id, trace_id
         )
 
-        validation_results = system._execute_validation(collection_results, dry_run)
+        _notify_progress(
+            progress_callback,
+            phase_key="validation",
+            phase_index=2,
+            phase_count=phase_count,
+            step_key="validation",
+            step_status="running",
+        )
+        try:
+            validation_results = system._execute_validation(collection_results, dry_run)
+        except Exception:
+            _notify_progress(
+                progress_callback,
+                phase_key="validation",
+                phase_index=2,
+                phase_count=phase_count,
+                step_key="validation",
+                step_status="failed",
+            )
+            raise
+        _notify_progress(
+            progress_callback,
+            phase_key="validation",
+            phase_index=2,
+            phase_count=phase_count,
+            step_key="validation",
+            step_status="completed",
+        )
 
         # Trace: Validation
         observability.trace_validation_completed(
@@ -92,18 +177,100 @@ async def run_cycle_orchestration(
             validation_results.get("rejected_count", 0),
         )
 
-        scoring_results = await system._execute_scoring(collection_results, dry_run)
+        _notify_progress(
+            progress_callback,
+            phase_key="scoring",
+            phase_index=3,
+            phase_count=phase_count,
+            step_key="scoring",
+            step_status="running",
+        )
+        try:
+            scoring_results = await system._execute_scoring(collection_results, dry_run)
+        except Exception:
+            _notify_progress(
+                progress_callback,
+                phase_key="scoring",
+                phase_index=3,
+                phase_count=phase_count,
+                step_key="scoring",
+                step_status="failed",
+            )
+            raise
+        _notify_progress(
+            progress_callback,
+            phase_key="scoring",
+            phase_index=3,
+            phase_count=phase_count,
+            step_key="scoring",
+            step_status="completed",
+        )
 
         # Trace: Scoring
         observability.trace_scoring_completed(
             session_logger, trace_id, session_id, scoring_results.get("statistics", {})
         )
 
-        final_selection = system._execute_final_selection(
-            scoring_results, collection_results, dry_run=dry_run
+        _notify_progress(
+            progress_callback,
+            phase_key="selection",
+            phase_index=4,
+            phase_count=phase_count,
+            step_key="final_selection",
+            step_status="running",
         )
-        final_report = system._generate_session_report(
-            collection_results, scoring_results, final_selection, session_id
+        try:
+            final_selection = system._execute_final_selection(
+                scoring_results, collection_results, dry_run=dry_run
+            )
+        except Exception:
+            _notify_progress(
+                progress_callback,
+                phase_key="selection",
+                phase_index=4,
+                phase_count=phase_count,
+                step_key="final_selection",
+                step_status="failed",
+            )
+            raise
+        _notify_progress(
+            progress_callback,
+            phase_key="selection",
+            phase_index=4,
+            phase_count=phase_count,
+            step_key="final_selection",
+            step_status="completed",
+        )
+
+        _notify_progress(
+            progress_callback,
+            phase_key="selection",
+            phase_index=4,
+            phase_count=phase_count,
+            step_key="session_report",
+            step_status="running",
+        )
+        try:
+            final_report = system._generate_session_report(
+                collection_results, scoring_results, final_selection, session_id
+            )
+        except Exception:
+            _notify_progress(
+                progress_callback,
+                phase_key="selection",
+                phase_index=4,
+                phase_count=phase_count,
+                step_key="session_report",
+                step_status="failed",
+            )
+            raise
+        _notify_progress(
+            progress_callback,
+            phase_key="selection",
+            phase_index=4,
+            phase_count=phase_count,
+            step_key="session_report",
+            step_status="completed",
         )
 
         system.logger.log_performance_metrics(

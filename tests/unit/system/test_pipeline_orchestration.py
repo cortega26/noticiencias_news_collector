@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.system.pipeline import run_cycle_orchestration
 
 
@@ -134,6 +135,93 @@ def test_run_cycle_orchestration_happy_path() -> None:
     assert "collection_cycle.start" in event_names
     assert "collection_cycle.completed" in event_names
     assert ("perf", "CICLO COMPLETO") in system.logger.events
+
+
+def test_run_cycle_orchestration_reports_backend_steps_and_contains_listener_errors() -> (
+    None
+):
+    system = _FakeSystem()
+    progress: list[AdminRunProgress] = []
+    failed_once = False
+
+    def listener(update: AdminRunProgress) -> None:
+        nonlocal failed_once
+        progress.append(update)
+        if not failed_once:
+            failed_once = True
+            raise RuntimeError("progress store unavailable")
+
+    report = asyncio.run(
+        run_cycle_orchestration(system, dry_run=True, progress_callback=listener)
+    )
+
+    assert report["summary"]["sources_processed"] == 1
+    assert [
+        (
+            item.phase_key,
+            item.phase_index,
+            item.phase_count,
+            item.step_key,
+            item.step_status,
+        )
+        for item in progress
+    ] == [
+        ("collection", 1, 5, "source_collection", "running"),
+        ("collection", 1, 5, "source_collection", "completed"),
+        ("validation", 2, 5, "validation", "running"),
+        ("validation", 2, 5, "validation", "completed"),
+        ("scoring", 3, 5, "scoring", "running"),
+        ("scoring", 3, 5, "scoring", "completed"),
+        ("selection", 4, 5, "final_selection", "running"),
+        ("selection", 4, 5, "final_selection", "completed"),
+        ("selection", 4, 5, "session_report", "running"),
+        ("selection", 4, 5, "session_report", "completed"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("stage", "phase_key", "step_key"),
+    [
+        ("validation", "validation", "validation"),
+        ("scoring", "scoring", "scoring"),
+        ("selection", "selection", "final_selection"),
+        ("report", "selection", "session_report"),
+    ],
+)
+def test_run_cycle_orchestration_marks_failed_backend_step(
+    stage: str, phase_key: str, step_key: str
+) -> None:
+    system = _FakeSystem()
+    progress: list[AdminRunProgress] = []
+    failure = ValueError(f"simulated {stage} failure")
+
+    def fail_stage(*args: Any, **kwargs: Any) -> None:
+        raise failure
+
+    if stage == "scoring":
+
+        async def fail_scoring(*args: Any, **kwargs: Any) -> None:
+            raise failure
+
+        system._execute_scoring = fail_scoring  # type: ignore[method-assign]
+    elif stage == "validation":
+        system._execute_validation = fail_stage  # type: ignore[method-assign]
+    elif stage == "selection":
+        system._execute_final_selection = fail_stage  # type: ignore[method-assign]
+    else:
+        system._generate_session_report = fail_stage  # type: ignore[method-assign]
+
+    with pytest.raises(ValueError, match=f"simulated {stage} failure"):
+        asyncio.run(
+            run_cycle_orchestration(
+                system, dry_run=True, progress_callback=progress.append
+            )
+        )
+
+    failed_updates = [item for item in progress if item.step_status == "failed"]
+    assert [(item.phase_key, item.step_key) for item in failed_updates] == [
+        (phase_key, step_key)
+    ]
 
 
 def test_run_cycle_orchestration_requires_initialized_system() -> None:
