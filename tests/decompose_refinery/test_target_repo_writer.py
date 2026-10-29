@@ -16,7 +16,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
+from news_collector.logic.workflows.target_repo_writer import (
+    PendingImageAsset,
+    TargetRepoWriter,
+)
 
 MANIFEST_FILENAME = "refinery_manifest.json"
 
@@ -51,6 +54,24 @@ def target_dir(tmp_path) -> Path:
 
 
 class TestWriteArticle:
+    def test_image_asset_is_written_atomically_inside_target_checkout(
+        self, writer, target_dir
+    ):
+        image = PendingImageAsset(filename="hero.png", content=b"hero-image")
+
+        result = writer.write_image_asset(target_dir=target_dir, asset=image)
+
+        assert result == target_dir / "src/assets/images/hero.png"
+        assert result.read_bytes() == b"hero-image"
+        assert list(result.parent.glob("*.tmp")) == []
+        assert list(result.parent.glob(".hero.png.*.tmp")) == []
+
+    def test_image_asset_rejects_path_traversal(self, writer, target_dir):
+        image = PendingImageAsset(filename="../outside.png", content=b"bad")
+
+        with pytest.raises(ValueError, match="Unsafe image asset filename"):
+            writer.write_image_asset(target_dir=target_dir, asset=image)
+
     def test_write_01_file_created_with_correct_content(
         self, writer, posts_dir, target_dir, tmp_path
     ):

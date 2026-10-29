@@ -33,6 +33,7 @@ import contextlib
 import json
 import os
 import re
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, cast
@@ -84,7 +85,10 @@ from news_collector.logic.workflows.target_repo_publication import (
     PublicationRequest,
     TargetRepoPublicationWorkflow,
 )
-from news_collector.logic.workflows.target_repo_writer import TargetRepoWriter
+from news_collector.logic.workflows.target_repo_writer import (
+    PendingImageAsset,
+    TargetRepoWriter,
+)
 from news_collector.storage.publication_checkpoint_repository import (
     PublicationCheckpointRepository,
 )
@@ -168,6 +172,7 @@ class _PublicationRun:
         self.output_filename: str | None = None
         self.pr_url: str | None = None
         self.validation_summary_path: str | None = None
+        self.pending_image_asset: PendingImageAsset | None = None
 
     def record_stage(self, name: str, success: bool, **details: Any) -> None:
         self.stages.append(
@@ -948,14 +953,37 @@ class RefineryEngine:
     ) -> bool:
         # preferred_slug is used for image-asset naming; only relevant when identity is stable.
         image_preferred_slug = identity.final_slug if not identity.is_new else None
-        img_resolution = self.image_handler.resolve(
-            article=article,
-            article_id=article_id,
-            canonical_date=identity.canonical_date,
-            preferred_slug=image_preferred_slug,
-            target_dir=target_dir,
-            download_fn=self._download_image,
-        )
+        with tempfile.TemporaryDirectory(
+            prefix="noticiencias-image-stage-"
+        ) as staging_dir:
+            img_resolution = self.image_handler.resolve(
+                article=article,
+                article_id=article_id,
+                canonical_date=identity.canonical_date,
+                preferred_slug=image_preferred_slug,
+                target_dir=Path(staging_dir),
+                download_fn=self._download_image,
+            )
+            pending_image_asset = None
+            image_url = img_resolution.image_url or ""
+            local_image_prefix = "~/assets/images/"
+            if img_resolution.resolved and image_url.startswith(local_image_prefix):
+                filename = image_url.removeprefix(local_image_prefix)
+                if (
+                    not filename
+                    or Path(filename).name != filename
+                    or "/" in filename
+                    or "\\" in filename
+                ):
+                    raise ValueError("Resolved image has an unsafe local asset path")
+                staged_image_path = (
+                    Path(staging_dir) / "src" / "assets" / "images" / filename
+                )
+                if staged_image_path.is_file():
+                    pending_image_asset = PendingImageAsset(
+                        filename=filename,
+                        content=staged_image_path.read_bytes(),
+                    )
         if not img_resolution.resolved:
             if self.checkpoint_repository is not None:
                 brief = self.image_briefs.find_for_article(article_id, [])
@@ -982,6 +1010,7 @@ class RefineryEngine:
             run.persist_attempt(False)
             return False
         run.record_stage("image_resolution", True, image_url=img_resolution.image_url)
+        run.pending_image_asset = pending_image_asset
         article["image_url"] = img_resolution.image_url
         if img_resolution.image_alt:
             article["image_alt"] = img_resolution.image_alt
@@ -1296,6 +1325,7 @@ class RefineryEngine:
                 target_repo_obj=target_repo_obj,
                 target_dir=target_dir,
                 attempts_dir=self.publication_attempts_dir,
+                pending_image_asset=run.pending_image_asset,
             ),
             PublicationDeps(
                 writer=self.writer,

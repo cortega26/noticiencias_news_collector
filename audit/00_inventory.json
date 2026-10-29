@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-29T19:52:54.220143+00:00",
+  "generated_at": "2026-10-29T22:07:25.251938+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -302,6 +302,9 @@
       "204",
       "205",
       "206",
+      "207",
+      "207-admin-run-progress-sync",
+      "208",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1494,6 +1497,13 @@
     "plans/205/todo.md",
     "plans/206/spec.md",
     "plans/206/todo.md",
+    "plans/207-admin-run-progress-sync/spec.md",
+    "plans/207-admin-run-progress-sync/tests/README.md",
+    "plans/207-admin-run-progress-sync/todo.md",
+    "plans/207/README.md",
+    "plans/208/spec.md",
+    "plans/208/tests/README.md",
+    "plans/208/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

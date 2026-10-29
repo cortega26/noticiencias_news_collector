@@ -29,6 +29,12 @@ see `scripts/validate_plans_ledger.py`.
 
 ## Execution order & status
 
+### Target-repository image staging (2026-10-29)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 208 | [Keep resolved images outside the target checkout until branch setup](208/spec.md) | P1 | M | None | DONE — resolved images stay outside the checkout until the article branch exists; branch failures release their attempt-owned publishing marker. Focused workflow tests, local bare-Git publication simulation, `make verify-ci`, and `make quality-gate` passed. No external push, PR, or deployment. KEEP: isolated local review handoff; not committed, pushed, or deployed. |
+
 ### Admin run progress synchronization (2026-10-29)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
