@@ -243,6 +243,7 @@ class TestLoadExportArticles:
     def _db(self, **kwargs):
         db = MagicMock()
         db.is_article_in_flight_or_done.return_value = kwargs.get("in_flight", False)
+        db.is_article_editorially_rejected.return_value = kwargs.get("rejected", False)
         return db
 
     def test_unreadable_export_returns_empty(self, tmp_path):

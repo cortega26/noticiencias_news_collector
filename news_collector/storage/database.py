@@ -688,6 +688,16 @@ class DatabaseManager:
     def articles_in_flight_or_done(self, article_ids: list[int]) -> set[int]:
         return self.articles.articles_in_flight_or_done(article_ids)
 
+    def reject_article_editorially(
+        self, article_id: int, *, error_code: str, reason: str
+    ) -> bool:
+        return self.articles.reject_article_editorially(
+            article_id, error_code=error_code, reason=reason
+        )
+
+    def is_article_editorially_rejected(self, article_id: int) -> bool:
+        return self.articles.is_article_editorially_rejected(article_id)
+
     def published_ids_in(self, article_ids: list[int]) -> set[int]:
         return self.articles.published_ids_in(article_ids)
 

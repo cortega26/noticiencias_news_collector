@@ -646,7 +646,7 @@ def _build_admin_list_item(
     # published article is exactly what an editor wants to publish.
     publishable = (
         export_score is not None
-        and (row.processing_status or "") != "publishing"
+        and (row.processing_status or "") not in ("publishing", "rejected")
         and row.published_url is None
         and row.published_at is None
     )
@@ -1681,7 +1681,10 @@ def create_app(  # noqa: C901
                 # in SQLAlchemy 2.x — an empty export yields an empty page.
                 query = query.filter(
                     Article.id.in_(tuple(export_scores)),
-                    Article.processing_status != "publishing",
+                    # Plan 205: `rejected` (final editorial decision or closed
+                    # PR) never returns to the shortlist, even while an older
+                    # export on disk still lists it.
+                    Article.processing_status.notin_(("publishing", "rejected")),
                     Article.published_url.is_(None),
                     Article.published_at.is_(None),
                 )

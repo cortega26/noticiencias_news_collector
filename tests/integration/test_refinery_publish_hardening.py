@@ -14,6 +14,9 @@ class _DummyDB:
     def is_article_published(self, _article_id: int) -> bool:
         return False
 
+    def is_article_editorially_rejected(self, _article_id: int) -> bool:
+        return False
+
 
 def _build_engine_with_mocks(data_dir: Path):
     mock_db = MagicMock()
