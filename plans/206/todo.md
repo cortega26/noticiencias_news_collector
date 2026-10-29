@@ -17,4 +17,4 @@
 - [ ] Seguimiento: una afirmación inventada que la fuente no menciona
       ("probado en pacientes con alzhéimer") queda en `uncertain` y no bloquea.
       Es la regla 4 del prompt; cambiarla es una decisión editorial aparte.
-- [ ] PR
+- [x] PR #420
