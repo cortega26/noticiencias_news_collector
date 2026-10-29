@@ -99,14 +99,18 @@ class TestRefineryEngine(unittest.TestCase):
         """Plan 169: the publisher receives the brief's provenance."""
         from news_collector.logic.workflows.image_handler import ImageResolution
 
-        self.engine.image_handler.resolve = MagicMock(
-            return_value=ImageResolution(
+        def resolve_image(**kwargs):
+            assets_dir = kwargs["target_dir"] / "src/assets/images"
+            assets_dir.mkdir(parents=True)
+            (assets_dir / "staged.png").write_bytes(b"image-bytes")
+            return ImageResolution(
                 resolved=True,
                 image_url="~/assets/images/staged.png",
                 image_alt="Descripción",
                 image_origin="ai_generated",
             )
-        )
+
+        self.engine.image_handler.resolve = MagicMock(side_effect=resolve_image)
         run = MagicMock()
         identity = SimpleNamespace(
             final_slug="2026-01-01-test", is_new=False, canonical_date="2026-01-01"
@@ -119,6 +123,56 @@ class TestRefineryEngine(unittest.TestCase):
 
         self.assertTrue(resolved)
         self.assertEqual(article["image_origin"], "ai_generated")
+        self.assertEqual(run.pending_image_asset.filename, "staged.png")
+        self.assertEqual(run.pending_image_asset.content, b"image-bytes")
+
+    def test_image_resolution_stages_asset_outside_target_checkout(self):
+        """Resolving a ready brief cannot dirty the target Git checkout."""
+        from news_collector.logic.workflows.image_handler import ImageResolution
+
+        with tempfile.TemporaryDirectory() as target_dir_str:
+            target_dir = Path(target_dir_str)
+            observed: dict[str, Path] = {}
+
+            def resolve_image(**kwargs):
+                staging_dir = kwargs["target_dir"]
+                observed["staging_dir"] = staging_dir
+                staged_path = staging_dir / "src/assets/images/brief.png"
+                staged_path.parent.mkdir(parents=True)
+                staged_path.write_bytes(b"verified-editorial-image")
+                return ImageResolution(
+                    resolved=True,
+                    image_url="~/assets/images/brief.png",
+                    image_alt="Una imagen editorial",
+                    image_origin="ai_generated",
+                )
+
+            self.engine.image_handler.resolve = MagicMock(side_effect=resolve_image)
+            run = SimpleNamespace(
+                record_stage=MagicMock(),
+                persist_attempt=MagicMock(),
+                pending_image_asset=None,
+            )
+            identity = SimpleNamespace(
+                final_slug="2026-01-01-test",
+                is_new=False,
+                canonical_date="2026-01-01",
+            )
+            article = {"title": "Test"}
+
+            resolved = self.engine._resolve_article_image(
+                article, "3724", identity, target_dir, run
+            )
+
+            self.assertTrue(resolved)
+            self.assertNotEqual(observed["staging_dir"], target_dir)
+            self.assertFalse((target_dir / "src/assets/images").exists())
+            self.assertEqual(
+                run.pending_image_asset.content, b"verified-editorial-image"
+            )
+            self.assertEqual(article["image_url"], "~/assets/images/brief.png")
+            self.assertEqual(article["image_alt"], "Una imagen editorial")
+            self.assertEqual(article["image_origin"], "ai_generated")
 
     def test_image_resolution_failure_names_missing_source_reason(self):
         """Plan 168: a message-less unresolved image still names the cause."""
@@ -660,11 +714,13 @@ class TestRefineryEngine(unittest.TestCase):
             result = self.engine.process_single_article(article, mock_repo, target_dir)
 
             self.assertTrue(result)
-            self.engine._download_image.assert_called_once_with(
-                "https://example.com/test.png",
-                "2024-01-01-test-title-with-metadata-image",
-                target_dir,
+            self.engine._download_image.assert_called_once()
+            download_url, download_slug, staging_dir = (
+                self.engine._download_image.call_args.args
             )
+            self.assertEqual(download_url, "https://example.com/test.png")
+            self.assertEqual(download_slug, "2024-01-01-test-title-with-metadata-image")
+            self.assertNotEqual(staging_dir, target_dir)
             editor_payload = self.mock_editor.process_article.call_args.args[0]
             self.assertEqual(
                 editor_payload["image_url"],

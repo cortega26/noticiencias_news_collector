@@ -17,6 +17,9 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
 
@@ -30,6 +33,14 @@ from news_collector.logic.workflows.published_content_utils import (
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("TargetRepoWriter")
+
+
+@dataclass(frozen=True)
+class PendingImageAsset:
+    """Image bytes resolved outside the target checkout, ready to materialize."""
+
+    filename: str
+    content: bytes
 
 
 class TargetRepoWriter:
@@ -47,6 +58,51 @@ class TargetRepoWriter:
     # ------------------------------------------------------------------
     # Public interface
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_image_filename(filename: str) -> None:
+        if (
+            filename in {"", ".", ".."}
+            or Path(filename).name != filename
+            or "\\" in filename
+        ):
+            raise ValueError(f"Unsafe image asset filename: {filename!r}")
+
+    def write_image_asset(self, *, target_dir: Path, asset: PendingImageAsset) -> Path:
+        """Atomically write one staged hero image inside the target checkout."""
+        filename = asset.filename
+        self._validate_image_filename(filename)
+
+        assets_dir = target_dir / "src" / "assets" / "images"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        resolved_target_dir = target_dir.resolve()
+        resolved_assets_dir = assets_dir.resolve()
+        resolved_target = (assets_dir / filename).resolve()
+        try:
+            resolved_assets_dir.relative_to(resolved_target_dir)
+            resolved_target.relative_to(resolved_assets_dir)
+        except ValueError as err:
+            raise ValueError("Image asset path escapes the target checkout") from err
+
+        staged_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=resolved_assets_dir,
+                prefix=f".{filename}.",
+                suffix=".tmp",
+                delete=False,
+            ) as staged_file:
+                staged_path = Path(staged_file.name)
+                staged_file.write(asset.content)
+            os.replace(staged_path, resolved_target)
+        except OSError:
+            if staged_path is not None:
+                with suppress(OSError):
+                    staged_path.unlink(missing_ok=True)
+            raise
+
+        return resolved_target
 
     def write_article(
         self,

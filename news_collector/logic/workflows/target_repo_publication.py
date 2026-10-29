@@ -32,6 +32,7 @@ from news_collector.logic.workflows.frontend_publication_validation import (
     validate_post_frontmatter_fast,
 )
 from news_collector.logic.workflows.publication_attempts import artifact_name
+from news_collector.logic.workflows.target_repo_writer import PendingImageAsset
 from news_collector.utils.logger import get_logger
 from news_collector.validation.publication_repairs import repair_post_content
 
@@ -87,6 +88,7 @@ class PublicationRequest:
     target_repo_obj: Any
     target_dir: Path
     attempts_dir: Path
+    pending_image_asset: PendingImageAsset | None = None
 
 
 @dataclass(frozen=True)
@@ -141,20 +143,50 @@ class TargetRepoPublicationWorkflow:
 
         output_filename = request.output_filename
         publication_attempt_id = uuid4().hex
-        branch_name, publishing_token = (
-            _run_progress_step(  # gitleaks:allow (run-scoped branch-name marker, not a credential)
-                progress_listener,
-                "pr",
-                "publication_branch_creation",
-                lambda: self._create_publication_branch(
-                    request,
-                    deps,
-                    output_filename,
-                    record_stage,
-                    publication_attempt_id=publication_attempt_id,
-                ),
+        publishing_token = f"content/update-{output_filename.replace('.md', '')}"
+        try:
+            branch_name, publishing_token = (
+                _run_progress_step(  # gitleaks:allow (run-scoped branch-name marker, not a credential)
+                    progress_listener,
+                    "pr",
+                    "publication_branch_creation",
+                    lambda: self._create_publication_branch(
+                        request,
+                        deps,
+                        output_filename,
+                        record_stage,
+                        publication_attempt_id=publication_attempt_id,
+                    ),
+                )
             )
-        )
+        except Exception:
+            self._release_publishing_state(
+                request,
+                deps,
+                record_stage,
+                reason="branch_setup_failed",
+                branch_name=publishing_token,
+                publication_attempt_id=publication_attempt_id,
+            )
+            raise
+
+        if request.pending_image_asset is not None and not _run_progress_step(
+            progress_listener,
+            "pr",
+            "publication_image_write",
+            lambda: self._write_image_asset(request, deps, record_stage),
+            succeeded=bool,
+        ):
+            self._release_publishing_state(
+                request,
+                deps,
+                record_stage,
+                reason="image_write_failed",
+                branch_name=publishing_token,
+                publication_attempt_id=publication_attempt_id,
+            )
+            return PublicationOutcome(success=False, branch_name=branch_name)
+
         if not _run_progress_step(
             progress_listener,
             "pr",
@@ -317,6 +349,25 @@ class TargetRepoPublicationWorkflow:
         )
         record_stage("branch_created", True, branch_name=branch_name)
         return branch_name, expected_branch
+
+    def _write_image_asset(
+        self,
+        request: PublicationRequest,
+        deps: PublicationDeps,
+        record_stage: StageRecorder,
+    ) -> bool:
+        """Materialize the resolved image only after the checkout is branched."""
+        asset = request.pending_image_asset
+        if asset is None:
+            return True
+        try:
+            deps.writer.write_image_asset(target_dir=request.target_dir, asset=asset)
+        except (OSError, ValueError) as exc:
+            logger.error("Cannot write resolved image asset: {}", exc)
+            record_stage("image_asset_written", False, error=str(exc))
+            return False
+        record_stage("image_asset_written", True, filename=asset.filename)
+        return True
 
     def _write_post(
         self,

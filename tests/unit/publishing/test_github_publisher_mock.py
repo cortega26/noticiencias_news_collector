@@ -585,11 +585,15 @@ def test_cleanup_on_failure_reports_cleanup_error(publisher, mock_repo):
         "_ensure_clean_exit_state",
         side_effect=RuntimeError("cleanup boom"),
     ):
-        with pytest.raises(RuntimeError, match="Cleanup verification failed"):
+        with pytest.raises(
+            RuntimeError, match="Cleanup verification failed"
+        ) as failure:
             with publisher._cleanup_on_failure(
                 repo=mock_repo, branch_name="feat/b", env=None, operation="Push"
             ):
                 raise ValueError("original failure")
+    assert isinstance(failure.value.__cause__, ValueError)
+    assert str(failure.value.__cause__) == "original failure"
 
 
 def test_cleanup_dir_removes_existing_directory(publisher, tmp_path):

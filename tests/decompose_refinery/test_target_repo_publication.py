@@ -19,12 +19,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from news_collector.contracts.publication_validation import PublicationValidationSummary
 from news_collector.logic.workflows.target_repo_publication import (
     PublicationDeps,
     PublicationRequest,
     TargetRepoPublicationWorkflow,
 )
+from news_collector.logic.workflows.target_repo_writer import PendingImageAsset
 
 MODULE = "news_collector.logic.workflows.target_repo_publication"
 
@@ -105,6 +108,69 @@ def _publication_attempt_id(deps) -> str:
 
 
 class TestHappyPath:
+    def test_image_is_written_after_branch_creation_and_before_post(
+        self, tmp_path: Path
+    ):
+        request = _request(
+            tmp_path,
+            pending_image_asset=PendingImageAsset(
+                filename="hero.png", content=b"editorial-image"
+            ),
+        )
+        events: list[str] = []
+        deps = _deps()
+        deps.git.create_branch.side_effect = lambda *args, **kwargs: (
+            events.append("branch") or "content/update-2024-01-25-test"
+        )
+        deps.writer.write_image_asset.side_effect = lambda **kwargs: events.append(
+            "image"
+        )
+
+        def write_article(**kwargs):
+            events.append("post")
+            post_path = Path(kwargs["posts_dir"]) / kwargs["output_filename"]
+            post_path.write_text(kwargs["content"], encoding="utf-8")
+
+        deps.writer.write_article.side_effect = write_article
+
+        outcome = _publish(request, deps, StageLog())
+
+        assert outcome.success is True
+        assert events == ["branch", "image", "post"]
+        deps.writer.write_image_asset.assert_called_once_with(
+            target_dir=request.target_dir,
+            asset=request.pending_image_asset,
+        )
+
+    def test_image_write_failure_releases_state_without_writing_post(
+        self, tmp_path: Path
+    ):
+        request = _request(
+            tmp_path,
+            pending_image_asset=PendingImageAsset(
+                filename="hero.png", content=b"editorial-image"
+            ),
+        )
+        deps = _deps()
+        deps.writer.write_image_asset.side_effect = OSError("disk full")
+        stages = StageLog()
+
+        outcome = _publish(request, deps, stages)
+
+        assert outcome.success is False
+        assert outcome.branch_name == "content/update-2024-01-25-test"
+        assert stages.get("image_asset_written")[0][1] is False
+        assert stages.get("image_asset_written")[0][2]["error"] == "disk full"
+        deps.writer.write_article.assert_not_called()
+        deps.git.commit_and_push.assert_not_called()
+        deps.db.release_article_publishing.assert_called_once_with(
+            42,
+            reason="image_write_failed",
+            failure_class=None,
+            branch_name="content/update-2024-01-25-test",
+            publication_attempt_id=_publication_attempt_id(deps),
+        )
+
     def test_progress_listener_reports_active_target_repo_steps(self, tmp_path: Path):
         request = _request(tmp_path)
         deps = _deps()
@@ -612,6 +678,27 @@ class TestSelfHealingRepair:
 
 
 class TestPublishingMark:
+    def test_branch_failure_releases_only_the_current_publishing_attempt(
+        self, tmp_path: Path
+    ):
+        request = _request(tmp_path)
+        deps = _deps()
+        deps.git.create_branch.side_effect = RuntimeError("branch setup failed")
+        stages = StageLog()
+
+        with pytest.raises(RuntimeError, match="branch setup failed"):
+            _publish(request, deps, stages)
+
+        publication_attempt_id = _publication_attempt_id(deps)
+        deps.db.release_article_publishing.assert_called_once_with(
+            42,
+            reason="branch_setup_failed",
+            failure_class=None,
+            branch_name="content/update-2024-01-25-test",
+            publication_attempt_id=publication_attempt_id,
+        )
+        assert "publishing_state_released" in stages.names
+
     def test_marks_publishing_before_branch_creation(self, tmp_path: Path):
         request = _request(tmp_path)
         events: list[str] = []
