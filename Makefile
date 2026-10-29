@@ -163,7 +163,7 @@ admin-dev: ## Run ONLY the admin GUI (default :4321, proxying /v1/* at the API p
 	fi'
 	@cd apps/admin && ADMIN_API_TARGET="$(or $(ADMIN_API_TARGET),http://localhost:$(or $(API_PORT),8000))" npm run dev -- --port $(or $(GUI_PORT),4321)
 
-admin: ## Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both.
+admin: ## Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both. If a healthy stack (e.g. the systemd service) already runs it is reused; ADMIN_STACK_MODE=restart|heal|status changes that (plan 204).
 	@PYTHON_BIN="$(PYTHON_BIN)" bash scripts/dev/admin_stack.sh
 
 admin-build: ## Type-check and build the Refinery admin GUI to apps/admin/dist/

@@ -11,6 +11,9 @@ Environment=PYTHON_BIN=.venv/bin/python
 # Fixed ports so the daily publisher finds the API at 127.0.0.1:8000.
 Environment=API_PORT=8000
 Environment=GUI_PORT=4321
+# El servicio manda en 8000/4321: si encuentra un `make admin` manual, lo
+# reemplaza en vez de reutilizarlo y quedar inactivo (plan 204).
+Environment=ADMIN_STACK_MODE=restart
 # Codex (image generation) and gh live in ~/.local/bin; node/npm come from nvm
 # (update the version here if nvm switches it).
 Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v24.19.0/bin:/usr/local/bin:/usr/bin:/bin
