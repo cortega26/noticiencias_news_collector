@@ -38,6 +38,40 @@ from news_collector.validation.publication_repairs import repair_post_content
 logger = get_logger().create_module_logger("TargetRepoPublication")
 
 StageRecorder = Callable[..., None]
+ProgressListener = Callable[[str, str, str], None]
+
+
+def _notify_progress(
+    listener: ProgressListener | None,
+    phase_key: str,
+    step_key: str,
+    step_status: str,
+) -> None:
+    if listener is None:
+        return
+    try:
+        listener(phase_key, step_key, step_status)
+    except Exception as exc:  # progress is advisory; never block publishing
+        logger.warning("Progress listener failed on {}: {}", step_key, exc)
+
+
+def _run_progress_step(
+    listener: ProgressListener | None,
+    phase_key: str,
+    step_key: str,
+    action: Callable[[], Any],
+    *,
+    succeeded: Callable[[Any], bool] | None = None,
+) -> Any:
+    _notify_progress(listener, phase_key, step_key, "running")
+    try:
+        result = action()
+    except Exception:
+        _notify_progress(listener, phase_key, step_key, "failed")
+        raise
+    ok = succeeded(result) if succeeded is not None else True
+    _notify_progress(listener, phase_key, step_key, "completed" if ok else "failed")
+    return result
 
 
 @dataclass(frozen=True)
@@ -96,6 +130,7 @@ class TargetRepoPublicationWorkflow:
         request: PublicationRequest,
         deps: PublicationDeps,
         record_stage: StageRecorder,
+        progress_listener: ProgressListener | None = None,
     ) -> PublicationOutcome:
         if not request.output_filename:
             logger.error(
@@ -106,14 +141,27 @@ class TargetRepoPublicationWorkflow:
 
         output_filename = request.output_filename
         publication_attempt_id = uuid4().hex
-        branch_name, publishing_token = self._create_publication_branch(
-            request,
-            deps,
-            output_filename,
-            record_stage,
-            publication_attempt_id=publication_attempt_id,
+        branch_name, publishing_token = (
+            _run_progress_step(  # gitleaks:allow (run-scoped branch-name marker, not a credential)
+                progress_listener,
+                "pr",
+                "publication_branch_creation",
+                lambda: self._create_publication_branch(
+                    request,
+                    deps,
+                    output_filename,
+                    record_stage,
+                    publication_attempt_id=publication_attempt_id,
+                ),
+            )
         )
-        if not self._write_post(request, deps, output_filename, record_stage):
+        if not _run_progress_step(
+            progress_listener,
+            "pr",
+            "publication_post_write",
+            lambda: self._write_post(request, deps, output_filename, record_stage),
+            succeeded=bool,
+        ):
             self._release_publishing_state(
                 request,
                 deps,
@@ -123,8 +171,14 @@ class TargetRepoPublicationWorkflow:
                 publication_attempt_id=publication_attempt_id,
             )
             return PublicationOutcome(success=False, branch_name=branch_name)
-        validation = self._validate_post_frontend(
-            request, output_filename, record_stage
+        validation = _run_progress_step(
+            progress_listener,
+            "validate",
+            "frontend_publication_validation",
+            lambda: self._validate_post_frontend(
+                request, output_filename, record_stage
+            ),
+            succeeded=lambda result: result.ok,
         )
         if not validation.ok:
             self._release_publishing_state(
@@ -144,7 +198,12 @@ class TargetRepoPublicationWorkflow:
             )
         post_path = request.target_dir / "src/content/posts" / output_filename
         try:
-            content_sha256 = hashlib.sha256(post_path.read_bytes()).hexdigest()
+            content_sha256 = _run_progress_step(
+                progress_listener,
+                "validate",
+                "publication_content_fingerprint",
+                lambda: hashlib.sha256(post_path.read_bytes()).hexdigest(),
+            )
         except OSError as exc:
             logger.error(
                 "Cannot fingerprint publication artifact {}: {}",
@@ -170,14 +229,27 @@ class TargetRepoPublicationWorkflow:
             True,
             content_sha256=content_sha256,
         )
-        self._commit_and_push(request, deps, output_filename, branch_name, record_stage)
-        pr_url = self._create_pr(
-            request,
-            deps,
-            output_filename,
-            branch_name,
-            publication_attempt_id=publication_attempt_id,
-            content_sha256=content_sha256,
+        _run_progress_step(
+            progress_listener,
+            "pr",
+            "commit_and_push",
+            lambda: self._commit_and_push(
+                request, deps, output_filename, branch_name, record_stage
+            ),
+        )
+        pr_url = _run_progress_step(
+            progress_listener,
+            "pr",
+            "pull_request_creation",
+            lambda: self._create_pr(
+                request,
+                deps,
+                output_filename,
+                branch_name,
+                publication_attempt_id=publication_attempt_id,
+                content_sha256=content_sha256,
+            ),
+            succeeded=bool,
         )
         if not pr_url:
             logger.error("Failed to create PR.")

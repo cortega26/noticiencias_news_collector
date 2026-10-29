@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-26T22:58:24.594405+00:00",
+  "generated_at": "2026-10-29T19:52:54.220143+00:00",
   "python_version": "3.13.12",
   "top_level_inventory": {
     ".agent/": [
@@ -296,6 +296,12 @@
       "198",
       "199",
       "200",
+      "201",
+      "202",
+      "203",
+      "204",
+      "205",
+      "206",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -630,7 +636,7 @@
     },
     {
       "target": "admin",
-      "description": "Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both."
+      "description": "Run the full Refinery admin stack (API + GUI). Busy default ports auto-bump (API 8000→…, GUI 4321→…); explicit API_PORT=/GUI_PORT= are strict. One Ctrl+C stops both. If a healthy stack (e.g. the systemd service) already runs it is reused; ADMIN_STACK_MODE=restart|heal|status changes that (plan 204)."
     },
     {
       "target": "admin-build",
@@ -1289,7 +1295,9 @@
     "docs/strategic_features.md",
     "docs/testing.md",
     "docs/tools_audit_issues.md",
+    "news_collector/editorial/prompts/editorial_image_art_director_v2.md",
     "news_collector/editorial/prompts/editorial_image_prompt_v1.md",
+    "news_collector/editorial/prompts/editorial_image_prompt_v2.md",
     "news_collector/taxonomy/README.md",
     "perf/bench.md",
     "plans/048-spike-curated-enrichment-registry.md",
@@ -1470,6 +1478,22 @@
     "plans/199/todo.md",
     "plans/200/spec.md",
     "plans/200/todo.md",
+    "plans/201/spec.md",
+    "plans/201/tests/README.md",
+    "plans/201/todo.md",
+    "plans/202/spec.md",
+    "plans/202/todo.md",
+    "plans/203/spec.md",
+    "plans/203/tests/README.md",
+    "plans/203/todo.md",
+    "plans/204/spec.md",
+    "plans/204/tests/README.md",
+    "plans/204/todo.md",
+    "plans/205/spec.md",
+    "plans/205/tests/README.md",
+    "plans/205/todo.md",
+    "plans/206/spec.md",
+    "plans/206/todo.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",

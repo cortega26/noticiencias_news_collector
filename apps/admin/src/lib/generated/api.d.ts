@@ -1022,6 +1022,9 @@ export interface components {
             error?: string | null;
             /** Finished At */
             finished_at?: string | null;
+            /** Heartbeat At */
+            heartbeat_at?: string | null;
+            progress?: components["schemas"]["AdminRunProgress"] | null;
             /** Run Id */
             run_id?: string | null;
             /** Started At */
@@ -1292,8 +1295,18 @@ export interface components {
              * @default 0
              */
             item_index: number;
+            /** Phase Count */
+            phase_count?: number | null;
+            /** Phase Index */
+            phase_index?: number | null;
+            /** Phase Key */
+            phase_key?: string | null;
             /** Stages */
             stages?: string[];
+            /** Step Key */
+            step_key?: string | null;
+            /** Step Status */
+            step_status?: ("running" | "completed" | "failed") | null;
             /** Updated At */
             updated_at?: string | null;
         };
@@ -1712,6 +1725,24 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /**
+         * AdminRunProgress
+         * @description Latest advisory workflow phase and backend step.
+         */
+        AdminRunProgress: {
+            /** Phase Count */
+            phase_count?: number | null;
+            /** Phase Index */
+            phase_index?: number | null;
+            /** Phase Key */
+            phase_key?: string | null;
+            /** Step Key */
+            step_key?: string | null;
+            /** Step Status */
+            step_status?: ("running" | "completed" | "failed") | null;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /**
          * AdminSourceHealthEnvelope

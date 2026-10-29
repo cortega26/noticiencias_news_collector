@@ -44,6 +44,7 @@ from news_collector.components.editorial.fact_check_correction import (
 )
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts import PublicationAttemptStageResult
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.contracts.publication_checkpoint import (
     CheckpointIdentity,
@@ -93,6 +94,15 @@ if "TYPE_CHECKING":
     from news_collector.storage.database import DatabaseManager
 
 logger = get_logger().create_module_logger("RefineryEngine")
+
+PUBLICATION_PHASE_INDEX = {
+    "prep": 0,
+    "editor": 1,
+    "audit": 2,
+    "image": 3,
+    "validate": 4,
+    "pr": 5,
+}
 
 # Removing duplicate import if it exists further down
 
@@ -336,6 +346,7 @@ class RefineryEngine:
         # `record_stage` with (article_id, stage_name, success). Advisory only —
         # a listener failure is logged and never alters the publication.
         self.stage_listener: Optional[Callable[[str, str, bool], None]] = None
+        self.progress_listener: Optional[Callable[[AdminRunProgress], None]] = None
 
         self.writer = TargetRepoWriter()
         self.identity_resolver = PublicationIdentityResolver(
@@ -491,6 +502,41 @@ class RefineryEngine:
         except Exception as exc:  # progress is advisory; never break publishing
             logger.warning("Stage listener failed on {}: {}", name, exc)
 
+    def _notify_progress(self, phase_key: str, step_key: str, step_status: str) -> None:
+        listener = self.progress_listener
+        if listener is None:
+            return
+        try:
+            listener(
+                AdminRunProgress(
+                    phase_key=phase_key,
+                    phase_index=PUBLICATION_PHASE_INDEX[phase_key],
+                    phase_count=len(PUBLICATION_PHASE_INDEX),
+                    step_key=step_key,
+                    step_status=step_status,  # type: ignore[arg-type]
+                )
+            )
+        except Exception as exc:  # progress is advisory; never break publishing
+            logger.warning("Progress listener failed on {}: {}", step_key, exc)
+
+    def _run_progress_step(
+        self,
+        phase_key: str,
+        step_key: str,
+        action: Callable[[], Any],
+        *,
+        succeeded: Callable[[Any], bool] | None = None,
+    ) -> Any:
+        self._notify_progress(phase_key, step_key, "running")
+        try:
+            result = action()
+        except Exception:
+            self._notify_progress(phase_key, step_key, "failed")
+            raise
+        ok = succeeded(result) if succeeded is not None else True
+        self._notify_progress(phase_key, step_key, "completed" if ok else "failed")
+        return result
+
     def process_single_article(
         self, article: Dict[str, Any], target_repo_obj: Any, target_dir: Path
     ) -> bool:
@@ -525,19 +571,33 @@ class RefineryEngine:
 
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
-        identity = self._resolve_identity(article_id, article, posts_dir, run)
+        identity = self._run_progress_step(
+            "prep",
+            "identity_resolution",
+            lambda: self._resolve_identity(article_id, article, posts_dir, run),
+        )
 
         # 2. AI Processing
         # We pass canonical_date to ensure the frontmatter matches our filename expectation
         logger.info(f"Processing with intended date: {identity.canonical_date}")
 
-        if not self._resolve_article_image(
-            article, article_id, identity, target_dir, run
+        if not self._run_progress_step(
+            "image",
+            "image_resolution",
+            lambda: self._resolve_article_image(
+                article, article_id, identity, target_dir, run
+            ),
+            succeeded=bool,
         ):
             return False
 
-        refinement = self._refine_article(
-            article, article_id, identity.canonical_date, run
+        refinement = self._run_progress_step(
+            "editor",
+            "editor_refinement",
+            lambda: self._refine_article(
+                article, article_id, identity.canonical_date, run
+            ),
+            succeeded=lambda value: value is not None,
         )
         if refinement is None:
             return False
@@ -549,8 +609,13 @@ class RefineryEngine:
             article_id, refined_content, identity, posts_dir, run
         )
 
-        if not self._enforce_publication_gates(
-            article_id, refined_content, identity, run
+        if not self._run_progress_step(
+            "audit",
+            "editorial_publication_gates",
+            lambda: self._enforce_publication_gates(
+                article_id, refined_content, identity, run
+            ),
+            succeeded=bool,
         ):
             return False
 
@@ -628,7 +693,11 @@ class RefineryEngine:
             return True
         posts_dir = target_dir / "src/content/posts"
         fingerprint = editorial_fingerprint(article, self._draft_settings())
-        identity = self._resolve_identity(article_id, article, posts_dir, run)
+        identity = self._run_progress_step(
+            "prep",
+            "identity_resolution",
+            lambda: self._resolve_identity(article_id, article, posts_dir, run),
+        )
         if checkpoint is not None and checkpoint.fingerprint == fingerprint:
             draft = checkpoint.draft
             draft.assert_sealed()
@@ -646,8 +715,13 @@ class RefineryEngine:
             )
             run.record_stage("editor_refinement", True, reused_checkpoint=True)
         else:
-            refinement = self._refine_revision(
-                article, article_id, identity.canonical_date, fingerprint, run
+            refinement = self._run_progress_step(
+                "editor",
+                "editor_refinement",
+                lambda: self._refine_revision(
+                    article, article_id, identity.canonical_date, fingerprint, run
+                ),
+                succeeded=lambda value: value is not None,
             )
             if refinement is None:
                 return False
@@ -657,8 +731,13 @@ class RefineryEngine:
             identity = self._finalize_output_identity(
                 article_id, refined_content, identity, posts_dir, run
             )
-        if not self._enforce_publication_gates(
-            article_id, refined_content, identity, run
+        if not self._run_progress_step(
+            "audit",
+            "editorial_publication_gates",
+            lambda: self._enforce_publication_gates(
+                article_id, refined_content, identity, run
+            ),
+            succeeded=bool,
         ):
             return False
         draft = EditorialDraft.model_validate(
@@ -672,8 +751,13 @@ class RefineryEngine:
             fingerprint=fingerprint,
         )
         repository.save(run_id, checkpoint)
-        if not self._resolve_article_image(
-            article, article_id, identity, target_dir, run
+        if not self._run_progress_step(
+            "image",
+            "image_resolution",
+            lambda: self._resolve_article_image(
+                article, article_id, identity, target_dir, run
+            ),
+            succeeded=bool,
         ):
             assert self._last_waiting is not None
             repository.save(
@@ -1192,6 +1276,15 @@ class RefineryEngine:
         """Delegate the target-repo stages to TargetRepoPublicationWorkflow
         (plan 060 Phase 7b), then keep the engine-owned side effects — audit
         scheduling and attempt persistence — in the historical order."""
+        progress_kwargs = (
+            {
+                "progress_listener": lambda phase_key, step_key, step_status: self._notify_progress(
+                    phase_key, step_key, step_status
+                )
+            }
+            if self.progress_listener is not None
+            else {}
+        )
         outcome = self.publication_workflow.publish(
             PublicationRequest(
                 article=article,
@@ -1211,6 +1304,7 @@ class RefineryEngine:
                 db=self.db,
             ),
             record_stage=run.record_stage,
+            **progress_kwargs,
         )
         run.branch_name = outcome.branch_name
         run.pr_url = outcome.pr_url

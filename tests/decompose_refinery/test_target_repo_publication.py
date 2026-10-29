@@ -81,7 +81,7 @@ def _deps(**overrides) -> PublicationDeps:
     return PublicationDeps(**defaults)
 
 
-def _publish(request, deps, stages: StageLog):
+def _publish(request, deps, stages: StageLog, progress_listener=None):
     if deps.writer.write_article.side_effect is None:
 
         def write_article_fixture(**kwargs) -> None:
@@ -90,7 +90,9 @@ def _publish(request, deps, stages: StageLog):
                 post_path.write_text(kwargs["content"], encoding="utf-8")
 
         deps.writer.write_article.side_effect = write_article_fixture
-    return TargetRepoPublicationWorkflow().publish(request, deps, stages)
+    return TargetRepoPublicationWorkflow().publish(
+        request, deps, stages, progress_listener=progress_listener
+    )
 
 
 def _publication_attempt_id(deps) -> str:
@@ -103,6 +105,35 @@ def _publication_attempt_id(deps) -> str:
 
 
 class TestHappyPath:
+    def test_progress_listener_reports_active_target_repo_steps(self, tmp_path: Path):
+        request = _request(tmp_path)
+        deps = _deps()
+        stages = StageLog()
+        progress: list[tuple[str, str, str]] = []
+
+        outcome = _publish(
+            request,
+            deps,
+            stages,
+            lambda phase, step, status: progress.append((phase, step, status)),
+        )
+
+        assert outcome.success is True
+        assert progress == [
+            ("pr", "publication_branch_creation", "running"),
+            ("pr", "publication_branch_creation", "completed"),
+            ("pr", "publication_post_write", "running"),
+            ("pr", "publication_post_write", "completed"),
+            ("validate", "frontend_publication_validation", "running"),
+            ("validate", "frontend_publication_validation", "completed"),
+            ("validate", "publication_content_fingerprint", "running"),
+            ("validate", "publication_content_fingerprint", "completed"),
+            ("pr", "commit_and_push", "running"),
+            ("pr", "commit_and_push", "completed"),
+            ("pr", "pull_request_creation", "running"),
+            ("pr", "pull_request_creation", "completed"),
+        ]
+
     def test_without_frontend_workspace_skips_validation(self, tmp_path: Path):
         request = _request(tmp_path)
         deps = _deps()

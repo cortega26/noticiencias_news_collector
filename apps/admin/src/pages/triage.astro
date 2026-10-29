@@ -236,10 +236,14 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   import {
     PUBLISH_PHASES,
     STALL_AFTER_SECONDS,
+    collectPhaseLabel,
+    collectStepLabel,
     currentPhaseIndex,
+    describeProgressAges,
     describeEta,
     formatDuration,
     parseServerTime,
+    publicationStepLabel,
     secondsSinceLastSign,
   } from '../lib/publishProgress';
   import {
@@ -248,7 +252,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     shouldPollPublish,
     renderWaitingPublication,
   } from '../lib/publishWaiting';
-  import type { AdminCollectStarted, AdminPublishStarted, AdminPublishStatus } from '../lib/types';
+  import type {
+    AdminCollectStarted,
+    AdminCollectStatus,
+    AdminPublishStarted,
+    AdminPublishStatus,
+  } from '../lib/types';
   import type { AdminArticleDetail, AdminArticleListItem, ArticleStatus } from '../lib/types';
 
   const STATUSES: ArticleStatus[] = [
@@ -801,6 +810,35 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     collectStatusEl.classList.remove('hidden');
   }
 
+  function collectProgressText(runId: string, st: AdminCollectStatus): string {
+    if (st.status === 'queued') return `En cola… (${runId})`;
+
+    const p = st.progress;
+    const phase = collectPhaseLabel(p?.phase_key);
+    const position =
+      p?.phase_index !== null && p?.phase_index !== undefined && p.phase_count
+        ? `Fase ${p.phase_index + 1}/${p.phase_count} · `
+        : '';
+    const stepLabel = collectStepLabel(p?.step_key);
+    const step =
+      stepLabel && p?.step_status === 'running'
+        ? ` · ${stepLabel}`
+        : stepLabel && p?.step_status === 'failed'
+          ? ` · Falló: ${stepLabel}`
+          : '';
+    const started = parseServerTime(st.started_at);
+    const elapsed = started ? formatDuration((Date.now() - started) / 1000) : '0:00';
+    const ages = describeProgressAges(Date.now(), p?.updated_at, st.heartbeat_at);
+    return [
+      `Recopilando… (${runId})`,
+      `${position}${phase}${step}`,
+      `transcurrido ${elapsed}`,
+      ages,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
   async function pollCollect(runId: string) {
     window.clearInterval(pollTimer);
     // A collection run writes files; with `uvicorn --reload` that can bounce
@@ -813,7 +851,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         const st = await getCollectStatus(runId);
         transientFailures = 0;
         if (st.status === 'running' || st.status === 'queued') {
-          renderCollectStatus(`Recopilando… (${runId}) — inicio ${st.started_at ?? 'ahora'}`);
+          renderCollectStatus(collectProgressText(runId, st));
           return;
         }
         window.clearInterval(pollTimer);
@@ -994,36 +1032,49 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     const now = Date.now();
     const p = st.progress;
     const itemCount = p?.item_count ?? 1;
-    const idx = st.status === 'queued' ? 0 : currentPhaseIndex(p?.stages);
+    const idx = currentPhaseIndex(p);
     const phase = PUBLISH_PHASES[idx];
     const started = parseServerTime(st.started_at);
     const elapsed = started ? (now - started) / 1000 : 0;
-    const quiet = secondsSinceLastSign(now, st.heartbeat_at, p?.updated_at, st.started_at);
-    const stalled = retrying !== null || (quiet !== null && quiet > STALL_AFTER_SECONDS);
+    const heartbeatAge = secondsSinceLastSign(now, st.heartbeat_at);
+    const stalled =
+      st.status === 'running' &&
+      (retrying !== null || (heartbeatAge !== null && heartbeatAge > STALL_AFTER_SECONDS));
 
     const item = itemCount > 1 ? `Artículo ${(p?.item_index ?? 0) + 1}/${itemCount} · ` : '';
+    const step =
+      st.status === 'running' && p?.step_status === 'running' && p.step_key
+        ? ` · ${publicationStepLabel(p.step_key)}`
+        : p?.step_status === 'failed' && p.step_key
+          ? ` · Falló: ${publicationStepLabel(p.step_key)}`
+          : '';
     const phaseText =
       st.status === 'queued'
         ? 'En cola…'
-        : `${item}Fase ${idx + 1}/${PUBLISH_PHASES.length} · ${phase.label}`;
+        : `${item}Fase ${idx + 1}/${PUBLISH_PHASES.length} · ${phase.label}${step}`;
     const phaseEl = root.querySelector('[data-pp="phase"]');
     if (phaseEl && phaseEl.textContent !== phaseText) phaseEl.textContent = phaseText;
 
     const timeEl = root.querySelector('[data-pp="time"]');
-    if (timeEl)
-      timeEl.textContent = `${formatDuration(elapsed)} · ${describeEta(elapsed, st.typical_seconds, itemCount)}`;
+    if (timeEl && st.status === 'queued') {
+      timeEl.textContent = 'en cola';
+    } else if (timeEl) {
+      const estimate = describeEta(elapsed, st.typical_seconds, itemCount);
+      timeEl.textContent = `${formatDuration(elapsed)} · ${st.typical_seconds ? 'estimación orientativa · ' : ''}${estimate}`;
+    }
 
+    const activeStep = st.status === 'running' && p?.step_status === 'running';
     root.querySelectorAll('.pp-bar li').forEach((li, i) => {
       li.classList.toggle('done', i < idx);
-      li.classList.toggle('now', i === idx && st.status !== 'queued');
+      li.classList.toggle('now', i === idx && activeStep);
     });
 
     let meta = `proceso ${runId}`;
     if (retrying) meta += ` · API fuera de alcance, reintentando (${retrying})`;
-    else if (quiet !== null)
-      meta += stalled
-        ? ` · sin señales hace ${formatDuration(quiet)}; puede estar colgado`
-        : ` · última señal hace ${Math.round(quiet)} s`;
+    const ages = describeProgressAges(now, p?.updated_at, st.heartbeat_at);
+    if (ages) meta += ` · ${ages}`;
+    if (stalled && heartbeatAge !== null)
+      meta += ` · worker sin heartbeat hace ${formatDuration(heartbeatAge)}; puede estar colgado`;
     const metaEl = root.querySelector('[data-pp="meta"]');
     if (metaEl) metaEl.textContent = meta;
     root.classList.toggle('pp-stalled', stalled);

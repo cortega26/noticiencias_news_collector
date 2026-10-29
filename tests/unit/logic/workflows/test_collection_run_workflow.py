@@ -22,6 +22,7 @@ from typing import Any
 import pytest
 from sqlalchemy import select
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.logic.workflows.collection_run_workflow import CollectionRunWorkflow
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Base, WorkflowRun
@@ -422,7 +423,18 @@ class _FakeSystem:
     def initialize(self) -> bool:
         return self._initialize_ok
 
-    async def run_collection_cycle(self, dry_run: bool = False):
+    async def run_collection_cycle(self, dry_run: bool = False, progress_callback=None):
+        self.progress_callback = progress_callback
+        if progress_callback is not None:
+            progress_callback(
+                AdminRunProgress(
+                    phase_key="selection",
+                    phase_index=4,
+                    phase_count=5 if dry_run else 6,
+                    step_key="session_report",
+                    step_status="completed",
+                )
+            )
         if self._cycle_error is not None:
             raise self._cycle_error
         return self._cycle_result
@@ -455,6 +467,11 @@ def test_run_completes_and_exports_when_not_dry_run(
     status = workflow.get_status(result.run_id)
     assert status.run_status == "succeeded"
     assert status.summary == {"sources_processed": 5}
+    assert status.progress is not None
+    assert status.progress["phase_key"] == "export"
+    assert status.progress["phase_index"] == 5
+    assert status.progress["phase_count"] == 6
+    assert status.progress["step_status"] == "completed"
 
 
 def test_run_keeps_the_shared_db_open_for_its_bookkeeping_writes(
@@ -496,6 +513,30 @@ def test_run_skips_export_when_dry_run(db_manager, workflow, monkeypatch) -> Non
     assert fake.export_called is False
     status = workflow.get_status(result.run_id)
     assert status.run_status == "succeeded"
+    assert status.progress is not None
+    assert status.progress["phase_key"] == "selection"
+    assert status.progress["phase_count"] == 5
+    assert status.progress["step_key"] == "session_report"
+
+
+def test_progress_write_failure_does_not_interrupt_collection(
+    workflow, monkeypatch
+) -> None:
+    fake = _FakeSystem(cycle_result={"sources_processed": 2})
+    monkeypatch.setattr(
+        "news_collector.system.create_system", lambda *a, **k: fake, raising=False
+    )
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    monkeypatch.setattr(
+        workflow,
+        "_write_progress",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("progress db down")),
+    )
+
+    run_id = workflow.start(dry_run=True).run_id
+    workflow._run(run_id, True)
+
+    assert workflow.get_status(run_id).run_status == "succeeded"
 
 
 def test_run_fails_when_system_initialize_returns_false(

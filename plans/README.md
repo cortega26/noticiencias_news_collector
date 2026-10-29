@@ -29,6 +29,12 @@ see `scripts/validate_plans_ledger.py`.
 
 ## Execution order & status
 
+### Admin run progress synchronization (2026-10-29)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 207 | [Admin run progress follows backend activity](207-admin-run-progress-sync/spec.md) | P1 | M | None | DONE — collection/publication progress is persisted and shown from backend lifecycle events; required backend/admin checks and bounded SQLite/fake-adapter workflow tests passed on isolated `feat/admin-run-progress-sync-20261029` (base `20f941f5`). Not committed, pushed, merged, or deployed. KEEP: implementation and verification evidence remain the local review handoff. |
+
 ### Security and Quality remediation (2026-10-25)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
@@ -635,7 +641,7 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 | ID | Plan | Priority | Effort | Dependencies | Status |
 | --- | --- | --- | --- | --- | --- |
 | 191 | [Evidence-first editorial pipeline](191/spec.md) | P1 | L | 190 | PARTIAL — prompt/source fidelity, durable material/headline holds, review packets and versioned caches locally verified; parent integration and human semantic acceptance pending. See [evidence](191/evidence.md). |
-| 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | DONE — [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382) merged 2026-10-22 (`011119ea`) with Pillow 13.0.0 in all four locks and green CI (reconciled 2026-10-28). Live OCI rollout not verified (no SSH); frontend canary PR #336 still needs editorial approval. See [evidence](190/tests/results.md). |
+| 190 | [Image-independent editorial processing](190/spec.md) | P1 | L | 168, 169, 177 | DONE — KEEP: referenced by active Plan 191; retain the historical spec and evidence. [PR #382](https://github.com/cortega26/noticiencias_news_collector/pull/382) merged 2026-10-22 (`011119ea`) with Pillow 13.0.0 in all four locks and green CI (reconciled 2026-10-28). Live OCI rollout not verified (no SSH); frontend canary PR #336 still needs editorial approval. See [evidence](190/tests/results.md). |
 
 ## Dev tooling (2026-10-25)
 

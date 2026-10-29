@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.logic.workflows.publication_run_workflow import (
     PublicationRunWorkflow,
 )
@@ -320,9 +321,11 @@ def test_run_calls_pipeline_entry_point_with_expected_kwargs(
     workflow._run(run_id, 42, None)
 
     listener = seen.pop("stage_listener")
+    progress_listener = seen.pop("progress_listener")
     assert seen.pop("checkpoint_run_id") == run_id
     assert seen.pop("checkpoint_repository") is workflow._checkpoints
     assert callable(listener)
+    assert callable(progress_listener)
     assert seen == {"process_id": "42", "article_url": None, "skip_visuals": False}
 
 
@@ -469,6 +472,15 @@ def test_stage_listener_records_progress_while_running(
     snapshots: list[dict] = []
 
     def fake_pipeline(**kw):
+        kw["progress_listener"](
+            AdminRunProgress(
+                phase_key="image",
+                phase_index=3,
+                phase_count=6,
+                step_key="image_resolution",  # gitleaks:allow (progress step identifier, not a credential)
+                step_status="running",
+            )
+        )
         kw["stage_listener"]("42", "image_resolution", True)
         kw["stage_listener"]("42", "editor_refinement", True)
         snapshots.append(workflow.get_status(run_id).progress)
@@ -487,6 +499,10 @@ def test_stage_listener_records_progress_while_running(
     assert progress["item_index"] == 0
     assert progress["item_count"] == 1
     assert progress["updated_at"]
+    assert progress["phase_key"] == "image"
+    assert progress["phase_index"] == 3
+    assert progress["step_key"] == "image_resolution"
+    assert progress["step_status"] == "running"
 
 
 def test_progress_write_failure_never_breaks_the_run(workflow, monkeypatch) -> None:
@@ -495,6 +511,42 @@ def test_progress_write_failure_never_breaks_the_run(workflow, monkeypatch) -> N
 
     monkeypatch.setattr(workflow._db, "get_session", boom)
     workflow.record_progress_stage(999, "image_resolution")  # must not raise
+    workflow.record_progress(
+        999,
+        AdminRunProgress(
+            phase_key="image",
+            phase_index=3,
+            phase_count=6,
+            step_key="image_resolution",  # gitleaks:allow (progress step identifier, not a credential)
+            step_status="running",
+        ),
+    )
+
+
+def test_reset_progress_clears_previous_batch_item_step(
+    db_manager, workflow, monkeypatch
+) -> None:
+    monkeypatch.setattr(workflow, "_dispatch", lambda *a, **k: None)
+    run_id = workflow.start(article_id=42).run_id
+    workflow.record_progress(
+        run_id,
+        AdminRunProgress(
+            phase_key="editor",
+            phase_index=1,
+            phase_count=6,
+            step_key="editor_refinement",  # gitleaks:allow (progress step identifier, not a credential)
+            step_status="completed",
+        ),
+    )
+
+    workflow._reset_progress(run_id, item_index=1, item_count=2)
+
+    progress = workflow.get_status(run_id).progress
+    assert progress["item_index"] == 1
+    assert progress["item_count"] == 2
+    assert progress["phase_key"] is None
+    assert progress["step_key"] is None
+    assert progress["step_status"] is None
 
 
 def test_typical_seconds_is_median_of_recent_single_runs(db_manager, workflow) -> None:

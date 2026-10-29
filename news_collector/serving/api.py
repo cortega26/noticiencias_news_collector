@@ -110,6 +110,7 @@ from news_collector.contracts.admin import (
     AdminQualityRunItem,
     AdminQualityStageItem,
     AdminRejectRequest,
+    AdminRunProgress,
     AdminRunStatus,
     AdminSourceHealthEnvelope,
     AdminSourceListEnvelope,
@@ -2046,6 +2047,14 @@ def create_app(  # noqa: C901
             error=result.error_detail,
             summary=result.summary,
             active=active,
+            progress=(
+                AdminRunProgress.model_validate(result.progress)
+                if result.progress and result.run_status in ("queued", "running")
+                else None
+            ),
+            heartbeat_at=(
+                result.heartbeat_at.isoformat() if result.heartbeat_at else None
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -2153,7 +2162,9 @@ def create_app(  # noqa: C901
             image_reason=summary.get("image_reason"),
             progress=(
                 AdminPublishProgress.model_validate(result.progress)
-                if result.progress and not waiting
+                if result.progress
+                and result.run_status in ("queued", "running")
+                and not waiting
                 else None
             ),
             heartbeat_at=(

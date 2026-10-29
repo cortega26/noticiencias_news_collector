@@ -176,7 +176,13 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   `queued`/`running`/`succeeded`/`failed`/`cancelled`/`interrupted`. Startup recovery interrupts queued runs and running runs whose lease has expired.
   Starting a new run also recovers expired running leases, without recovering
   queued rows that may belong to an in-flight dispatch. A missing heartbeat
-  is stale only when `started_at` is older than the lease cutoff.
+  is stale only when `started_at` is older than the lease cutoff. The status
+  response exposes `heartbeat_at` and typed advisory `progress` from the same
+  run row. Collection phases follow execution: initialization, collection,
+  validation, scoring, selection/reporting, then export; dry runs omit export
+  and report five phases. Each snapshot includes its phase position, active
+  backend step, step state and `updated_at`. The stage update age and worker
+  heartbeat age are separate signals in `/triage`.
 - publication trigger/status (`/v1/admin/publish`, `/v1/admin/publish/batch`,
   `GET /v1/admin/publish/status?run_id=`) is durable in `workflow_runs`
   (Plan 060 Phase 4c) and single-flight; an unrecognized run id returns 404.
@@ -196,12 +202,17 @@ The serving layer exposes public reads and authenticated admin workflow dispatch
   `waiting_for_image`. `processed_count` counts PR successes; zero PRs with
   pending images is not an execution error.
   While a run is queued/running `AdminPublishStatus` also carries **advisory
-  live progress**: the article's recorded Refinery stage names
-  (`progress.stages`, fed by the `RefineryEngine.stage_listener` hook),
-  `progress.item_index`/`item_count` for batch runs, the lease
-  `heartbeat_at`, and `typical_seconds` (median wall time of the most recent
-  successful single-article runs, batch runs excluded in SQL before the
-  sample cap — the admin GUI's ETA baseline). Recording progress is
+  live progress**: `progress.phase_key`/`phase_index` identify one of the six
+  overview phases; `step_key`/`step_status` report the current backend action;
+  `updated_at` timestamps that snapshot. The article's recorded Refinery stage
+  names (`progress.stages`, fed by the `RefineryEngine.stage_listener` hook)
+  and `progress.item_index`/`item_count` for batch runs remain available. A
+  batch item reset clears its active phase/step before the next item starts.
+  The lease `heartbeat_at` stays independent from the progress timestamp.
+  `typical_seconds` remains the median wall time of recent successful
+  single-article runs, with batches excluded before the sample cap; `/triage`
+  labels the resulting whole-run estimate as orientative. Queued, waiting and
+  terminal runs do not present an active backend step. Recording progress is
   deliberately non-blocking: a listener or progress-write failure is logged
   and can never alter the publication outcome (LAW-B7).
 - webhook inbox (ADR-0011): `GET /v1/admin/webhook/receipts?after_id=&limit=`

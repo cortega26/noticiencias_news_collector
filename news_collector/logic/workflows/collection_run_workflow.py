@@ -46,6 +46,7 @@ from typing import Any, Literal
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.logic.workflows._run_metadata import json_safe as _json_safe
 from news_collector.storage.models import WorkflowRun
 from news_collector.utils.logger import get_logger
@@ -90,6 +91,7 @@ class CollectionRunStatusResult:
     error_code: str | None = None
     error_detail: str | None = None
     summary: dict[str, Any] = field(default_factory=dict)
+    progress: dict[str, Any] | None = None
 
 
 class CollectionRunWorkflow:
@@ -222,22 +224,55 @@ class CollectionRunWorkflow:
             name=f"collect-{run_id}-heartbeat",
         )
         heartbeat_thread.start()
+        phase_count = 5 if dry_run else 6
         try:
             from news_collector.system import create_system
 
+            self.record_progress(
+                run_id,
+                AdminRunProgress(
+                    phase_key="initialization",
+                    phase_index=0,
+                    phase_count=phase_count,
+                    step_key="system_initialization",  # gitleaks:allow (progress step identifier, not a credential)
+                    step_status="running",
+                ),
+            )
             system = create_system()
             if not system.initialize():
+                self._set_progress_status(run_id, "failed")
                 raise RuntimeError("System initialization failed")
+            self._set_progress_status(run_id, "completed")
 
             async def _cycle():
                 try:
-                    summary = await system.run_collection_cycle(dry_run=dry_run)
+                    summary = await system.run_collection_cycle(
+                        dry_run=dry_run,
+                        progress_callback=lambda progress: self.record_progress(
+                            run_id, progress
+                        ),
+                    )
                     if not dry_run:
-                        await asyncio.to_thread(
-                            system.export_latest_articles,
-                            file_path="data/exports/latest_articles.json",
-                            limit=50,
+                        self.record_progress(
+                            run_id,
+                            AdminRunProgress(
+                                phase_key="export",
+                                phase_index=5,
+                                phase_count=phase_count,
+                                step_key="latest_articles_export",  # gitleaks:allow (progress step identifier, not a credential)
+                                step_status="running",
+                            ),
                         )
+                        try:
+                            await asyncio.to_thread(
+                                system.export_latest_articles,
+                                file_path="data/exports/latest_articles.json",
+                                limit=50,
+                            )
+                        except Exception:
+                            self._set_progress_status(run_id, "failed")
+                            raise
+                        self._set_progress_status(run_id, "completed")
                     return summary
                 finally:
                     # close_db=False: build_database() hands back the
@@ -253,6 +288,7 @@ class CollectionRunWorkflow:
             self.complete(run_id, summary=summary or {})
         except Exception as exc:  # pragma: no cover - failure path
             logger.error("Collection run {} failed: {}", run_id, exc)
+            self._set_progress_status(run_id, "failed")
             self.fail(run_id, error_code="collection_failed", error_detail=str(exc))
         finally:
             stop_heartbeat.set()
@@ -321,6 +357,49 @@ class CollectionRunWorkflow:
                 )
             )
             return bool(result.rowcount == 1)
+
+    def record_progress(self, run_id: int, progress: AdminRunProgress) -> None:
+        """Persist one advisory phase/step snapshot without affecting the run."""
+        fields = progress.model_dump(exclude_unset=True)
+
+        def merge(current: dict[str, Any]) -> None:
+            current.update(fields)
+
+        try:
+            self._write_progress(run_id, merge)
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not record progress for run {}: {}", run_id, exc)
+
+    def _set_progress_status(
+        self, run_id: int, step_status: Literal["completed", "failed"]
+    ) -> None:
+        def update_status(progress: dict[str, Any]) -> None:
+            if progress.get("step_key"):
+                progress["step_status"] = step_status
+
+        try:
+            self._write_progress(run_id, update_status)
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not finish progress for run {}: {}", run_id, exc)
+
+    def _write_progress(self, run_id: int, update_fn: Any) -> None:
+        """Update `run_metadata.progress`; failures remain advisory."""
+        try:
+            with self._db.get_session() as session:
+                row = session.get(WorkflowRun, run_id)
+                if row is None:
+                    return
+                metadata = (
+                    dict(row.run_metadata) if isinstance(row.run_metadata, dict) else {}
+                )
+                current = metadata.get("progress")
+                progress = dict(current) if isinstance(current, dict) else {}
+                update_fn(progress)
+                progress["updated_at"] = datetime.now(timezone.utc).isoformat()
+                metadata["progress"] = progress
+                row.run_metadata = metadata
+        except Exception as exc:  # progress is advisory
+            logger.warning("Could not record progress for run {}: {}", run_id, exc)
 
     def complete(self, run_id: int, *, summary: dict[str, Any]) -> bool:
         """CAS transition running -> succeeded.
@@ -585,6 +664,12 @@ class CollectionRunWorkflow:
                 error_code=row.error_code,
                 error_detail=row.error_detail,
                 summary=summary if isinstance(summary, dict) else {},
+                progress=(
+                    metadata.get("progress")
+                    if isinstance(metadata, dict)
+                    and isinstance(metadata.get("progress"), dict)
+                    else None
+                ),
             )
 
     @staticmethod

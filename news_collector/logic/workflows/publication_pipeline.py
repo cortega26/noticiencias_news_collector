@@ -26,7 +26,7 @@ import asyncio
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import git
 from noticiencias.config_manager import load_config
@@ -34,6 +34,7 @@ from noticiencias.config_manager import load_config
 from news_collector.components.editorial import EditorAgent
 from news_collector.components.publishing import GitHubPublisher
 from news_collector.contracts.adapters import adapt_export_article_to_collector_payload
+from news_collector.contracts.admin import AdminRunProgress
 from news_collector.infrastructure.llm.model_registry import resolve_ollama_stage_models
 from news_collector.logic.workflows.manual_ingest import ManualUrlIngestService
 from news_collector.logic.workflows.refinery_engine import RefineryEngine
@@ -43,6 +44,31 @@ from news_collector.system.bootstrap import preflight_llm_provider
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("Orchestrator")
+
+
+def _notify_progress(
+    listener: Optional[Callable[[AdminRunProgress], None]],
+    *,
+    phase_key: str,
+    phase_index: int,
+    step_key: str,
+    step_status: str,
+) -> None:
+    if listener is None:
+        return
+    try:
+        listener(
+            AdminRunProgress(
+                phase_key=phase_key,
+                phase_index=phase_index,
+                phase_count=6,
+                step_key=step_key,
+                step_status=step_status,  # type: ignore[arg-type]
+            )
+        )
+    except Exception as exc:  # progress is advisory; never block publication
+        logger.warning("Progress listener failed on {}: {}", step_key, exc)
+
 
 # Repo root resolved from this file's package location
 # (news_collector/logic/workflows/ -> parents[3]); the legacy UI entrypoint
@@ -573,6 +599,7 @@ def run_publication_pipeline(  # noqa: C901
     process_new_content=False,
     dry_run=False,
     stage_listener=None,
+    progress_listener=None,
     checkpoint_run_id: int | None = None,
     checkpoint_repository=None,
 ):
@@ -597,6 +624,14 @@ def run_publication_pipeline(  # noqa: C901
     Returns:
         dict: Execution capabilities summary or status.
     """
+    _notify_progress(
+        progress_listener,
+        phase_key="prep",
+        phase_index=0,
+        step_key="publication_pipeline_setup",  # gitleaks:allow (progress step identifier, not a credential)
+        step_status="running",
+    )
+
     from news_collector.observability import llm_run_stats
     from news_collector.storage.publication_checkpoint_repository import (
         PublicationCheckpointRepository,
@@ -703,6 +738,7 @@ def run_publication_pipeline(  # noqa: C901
         contract_validator=validate_collector_payload,
     )
     engine.stage_listener = stage_listener
+    engine.progress_listener = progress_listener
 
     try:
         source_dir = SOURCE_DIR
@@ -964,6 +1000,14 @@ def run_publication_pipeline(  # noqa: C901
                 "processed_count": 0,
             }
 
+        _notify_progress(
+            progress_listener,
+            phase_key="prep",
+            phase_index=0,
+            step_key="publication_pipeline_setup",  # gitleaks:allow (progress step identifier, not a credential)
+            step_status="completed",
+        )
+
         try:
             if articles_to_process:
                 summary = engine.process_articles(
@@ -1049,6 +1093,7 @@ def run_publication_batch(  # noqa: C901 - explicit per-item replay, error and w
     *,
     skip_visuals: bool = False,
     stage_listener: Any = None,
+    progress_listener: Any = None,
     on_item_start: Any = None,
     checkpoint_run_id: int | None = None,
     checkpoint_repository=None,
@@ -1092,6 +1137,7 @@ def run_publication_batch(  # noqa: C901 - explicit per-item replay, error and w
                 process_id=str(article_id),
                 skip_visuals=skip_visuals,
                 stage_listener=stage_listener,
+                progress_listener=progress_listener,
                 **(
                     {
                         "checkpoint_run_id": checkpoint_run_id,

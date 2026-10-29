@@ -26,7 +26,10 @@ every article follows every optional stage.
    died (dev-server reload, crash) is recovered to `interrupted` as soon as
    the next process starts, instead of blocking new runs until the lease
    timeout. A conflict response reports the active run, and the admin banner
-   shows the terminal state and error detail.
+   shows the terminal state and error detail. While running, `/triage` reports
+   the current backend phase and step from the same run metadata, plus elapsed
+   time, progress-update age and worker-heartbeat age. Normal collection has
+   six phases; dry runs omit the export phase. Collection progress has no ETA.
 5. Export remains a supported boundary for the legacy Streamlit path.
    `ExportContractV2` is the preferred contract, but the collector CLI's
    `--export-json` still serializes a V1 artifact; legacy Refinery handles it.
@@ -40,9 +43,12 @@ exactly one article ID or URL. See `docs/PIPELINE_CONTRACTS.md` for status,
 conflict and lease-recovery semantics.
 
 While a run is queued/running, `GET /v1/admin/publish/status` also exposes
-advisory live progress for the admin GUI: the article's completed Refinery
-stages, its position in a batch, the lease heartbeat, and an ETA derived from
-the most recent successful single-article runs. It is observability only —
+advisory live progress for the admin GUI: the current one of six overview
+phases, the active backend step, completed Refinery stages, and the article's
+position in a batch. A new batch item clears the previous item's active step.
+The status includes separate progress-update and worker-heartbeat timestamps.
+The ETA is an orientative whole-run estimate based on the historical median
+duration of successful single-article runs. Progress is observability only —
 recording it (or failing to) can never block or change a publication.
 
 Frontend acknowledgments (`publish_complete`) are delivered to the hosted

@@ -52,6 +52,23 @@ class TestRefineryEngine(unittest.TestCase):
             return_value="~/assets/images/test-image.png"
         )
 
+    def test_progress_callback_failure_does_not_interrupt_publication_step(self):
+        def fail(_progress):
+            raise RuntimeError("progress callback unavailable")
+
+        completed: list[str] = []
+        self.engine.progress_listener = fail
+
+        result = self.engine._run_progress_step(
+            "editor",
+            "editor_refinement",
+            lambda: completed.append("editor") or True,
+            succeeded=bool,
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(completed, ["editor"])
+
     def tearDown(self):
         self.auditor_patch.stop()
         self.git_patch.stop()

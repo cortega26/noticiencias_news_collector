@@ -1039,7 +1039,9 @@ def test_admin_collect_starts_and_status_lifecycle(
             started.set()
             return True
 
-        async def run_collection_cycle(self, dry_run: bool = False):
+        async def run_collection_cycle(
+            self, dry_run: bool = False, progress_callback=None
+        ):
             release.wait(timeout=10)
             return {"status": "ok", "sources_processed": 3}
 
@@ -1114,7 +1116,9 @@ def test_admin_collect_concurrent_start_yields_one_202_one_409(
         def initialize(self) -> bool:
             return True
 
-        async def run_collection_cycle(self, dry_run: bool = False):
+        async def run_collection_cycle(
+            self, dry_run: bool = False, progress_callback=None
+        ):
             release.wait(timeout=10)
             return {"status": "ok"}
 
@@ -1175,6 +1179,43 @@ def test_admin_collect_status_unknown_run_id_returns_404_not_latest(
 
     assert response.status_code == 404
     assert response.json()["run_id"] is None
+
+
+def test_admin_collect_status_exposes_progress_and_worker_heartbeat(
+    api_client: TestClient, db_manager: DatabaseManager
+) -> None:
+    now = datetime.now(timezone.utc)
+    progress = {
+        "phase_key": "scoring",
+        "phase_index": 3,
+        "phase_count": 6,
+        "step_key": "scoring",
+        "step_status": "running",
+        "updated_at": now.isoformat(),
+    }
+    with db_manager.get_session() as session:
+        row = WorkflowRun(
+            run_type="collection",
+            status="running",
+            started_at=now,
+            heartbeat_at=now,
+            run_metadata={"progress": progress},
+        )
+        session.add(row)
+        session.flush()
+        run_id = row.id
+
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/collect/status",
+            params={"run_id": str(run_id)},
+            headers=_admin_headers(),
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["heartbeat_at"] is not None
+    assert body["progress"] == progress
 
 
 def test_admin_collect_status_non_numeric_run_id_returns_404(
@@ -4091,6 +4132,90 @@ def test_admin_publish_waiting_has_no_running_progress_or_eta(
     assert body["typical_seconds"] is None
     for key, value in summary.items():
         assert body[key] == value
+
+
+def test_admin_publish_status_exposes_backend_phase_and_active_step(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStatusResult,
+        PublicationRunWorkflow,
+    )
+
+    now = datetime.now(timezone.utc)
+    progress = {
+        "phase_key": "editor",
+        "phase_index": 1,
+        "phase_count": 6,
+        "step_key": "editor_refinement",  # gitleaks:allow (progress step identifier, not a credential)
+        "step_status": "running",
+        "stages": ["identity_resolved"],
+        "item_index": 0,
+        "item_count": 1,
+        "updated_at": now.isoformat(),
+    }
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "get_status",
+        lambda self, run_id: PublicationRunStatusResult(
+            status="found",
+            run_id=123,
+            run_status="running",
+            started_at=now,
+            heartbeat_at=now,
+            progress=progress,
+        ),
+    )
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/publish/status?run_id=123", headers=_admin_headers()
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["progress"]["phase_key"] == "editor"
+    assert body["progress"]["phase_index"] == 1
+    assert body["progress"]["step_key"] == "editor_refinement"
+    assert body["progress"]["step_status"] == "running"
+    assert body["progress"]["stages"] == ["identity_resolved"]
+    assert body["heartbeat_at"] is not None
+
+
+def test_admin_publish_terminal_status_has_no_active_progress(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from news_collector.logic.workflows.publication_run_workflow import (
+        PublicationRunStatusResult,
+        PublicationRunWorkflow,
+    )
+
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(
+        PublicationRunWorkflow,
+        "get_status",
+        lambda self, run_id: PublicationRunStatusResult(
+            status="found",
+            run_id=124,
+            run_status="succeeded",
+            started_at=now,
+            finished_at=now,
+            progress={
+                "phase_key": "pr",
+                "phase_index": 5,
+                "phase_count": 6,
+                "step_key": "pull_request_creation",  # gitleaks:allow (progress step identifier, not a credential)
+                "step_status": "running",
+            },
+        ),
+    )
+    with patch.dict(os.environ, {"ADMIN_API_KEY": "dev-admin-token"}):
+        response = api_client.get(
+            "/v1/admin/publish/status?run_id=124", headers=_admin_headers()
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["active"] is False
+    assert response.json()["progress"] is None
 
 
 def test_admin_lifespan_starts_and_stops_publication_reconciler(
