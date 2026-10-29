@@ -18,4 +18,4 @@
 - [x] Fase 2: el rechazo definitivo se guarda en la base (`rejected` +
       `editorial_rejection`) y sale de todas las fuentes de candidatos
       (exportación, lista de publicables del admin, cargador del pipeline).
-- [ ] PR
+- [x] PR #418
