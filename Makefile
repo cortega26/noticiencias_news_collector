@@ -87,6 +87,9 @@ $(BOOTSTRAP_STAMP): requirements.lock requirements-security.lock
 	@$(PYTHON_BIN) -m pip install --no-deps --require-hashes -r requirements-security.lock
 	@# Gate tools are pinned to the pre-commit revisions; the single source of
 	@# truth is .pre-commit-config.yaml and `make toolchain-check` fails on drift.
+	@# virtualenv (via pre-commit) older than 21.15 caps filelock<4 and silently
+	@# downgraded the lock's patched filelock to a vulnerable 3.x; keep them in
+	@# step with requirements-security.lock.
 	@$(PYTHON_BIN) -m pip install \
 		"ruff==0.14.14" \
 		"black==26.1.0" \
@@ -95,6 +98,8 @@ $(BOOTSTRAP_STAMP): requirements.lock requirements-security.lock
 		"pdoc==15.0.4" \
 		"mypy==2.4.0" \
 		pre-commit \
+		"virtualenv>=21.15.1" \
+		"filelock==4.2.4" \
 		types-requests \
 		"types-PyYAML==6.0.12.20250915" \
 		"types-python-dateutil==2.9.0.20260124"
