@@ -42,7 +42,7 @@ class DailyPublishError(RuntimeError):
 
 
 class AdminClient:
-    def __init__(self, base_url: str, token: str = "", session: Any = None):
+    def __init__(self, base_url: str, token: str | None = None, session: Any = None):
         self.base_url = base_url.rstrip("/")
         self.session = session or requests.Session()
         if token:  # a development-tier admin accepts local calls without one
