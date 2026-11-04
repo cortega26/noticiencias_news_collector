@@ -29,6 +29,12 @@ see `scripts/validate_plans_ledger.py`.
 
 ## Execution order & status
 
+### Editorial verification reliability (2026-11-03)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 209 | [Incomplete source verification](209/spec.md) | P0 | M | 205 | TODO — verifier failures and partial responses can be reported as `uncertain`; resume and frontmatter overrides also need coverage. Design and regression tests remain pending; this plan does not claim the publication gate is fixed. |
+
 ### Target-repository image staging (2026-10-29)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
