@@ -146,6 +146,9 @@ def test_client_sends_token_only_when_set():
     open_dev = FakeSession()
     dp.AdminClient("http://h:1", session=open_dev).post("/b", {"y": 2})
     assert "Authorization" not in open_dev.headers
+    empty_token = FakeSession()
+    dp.AdminClient("http://h:1", "", session=empty_token).get("/a")
+    assert "Authorization" not in empty_token.headers
 
 
 def test_client_raises_on_http_errors_but_not_conflict():
