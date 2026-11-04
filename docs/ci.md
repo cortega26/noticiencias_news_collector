@@ -106,6 +106,9 @@ sender change; do not let the workflow track `main`.
 
 The same workflow also runs `npm-audit` (Node24, contents-read only): full
 `npm audit --include=dev --audit-level=low` against `apps/admin` and `tools/editorial_eval`.
+Both development toolchains override `minimatch` to version 11; the offline
+editorial evaluation also overrides `glob` to version 14. Verify the admin
+OpenAPI generator and offline replay when changing these resolutions.
 These commands audit committed lockfiles without installing or executing the
 optional replay tool. Both include development dependencies and fail on
 reported vulnerabilities; Python quality gates alone do not cover npm trees.
