@@ -52,7 +52,7 @@ def main():
     time.sleep(3)
     print(" GO.\n")
 
-    model_name = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+    model_name = os.getenv("OLLAMA_MODEL", "qwen3-next:80b-a3b-instruct-q4_K_M")
     agent = EditorAgent(
         api_url=os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate"),
         model=model_name,
