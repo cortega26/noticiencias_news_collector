@@ -34,7 +34,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Generate release notes
         id: notes
-        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const tag = "${{ steps.vars.outputs.tag }}";
@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "${{ steps.notes.outputs.body_base64 }}" | base64 --decode > release-notes.md
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
       - name: Update changelog
