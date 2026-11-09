@@ -331,7 +331,7 @@ def test_compat_provider_payload_headers_and_model_resolution():
         extra_headers={"HTTP-Referer": "https://noticiencias.com"},
     )
     payload = provider._prepare_payload(
-        "hi", "sys", json_mode=True, model="llama3.2:latest"
+        "hi", "sys", json_mode=True, model="qwen3-next:80b-a3b-instruct-q4_K_M"
     )
     assert payload["model"] == "served-model"  # Ollama-style tags are ignored
     assert payload["response_format"] == {"type": "json_object"}

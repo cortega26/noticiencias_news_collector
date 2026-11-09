@@ -392,7 +392,7 @@ def test_update_article_audit_status_dual_writes_editorial_decision(db_manager):
         "looks good",
         attempts=2,
         timeout_seconds=30,
-        model="llama3.2",
+        model="qwen3-next:80b-a3b-instruct-q4_K_M",
         endpoint="local",
     )
 
@@ -406,7 +406,7 @@ def test_update_article_audit_status_dual_writes_editorial_decision(db_manager):
     assert row.details["legacy_state"] == "audit_passed"
     assert row.details["attempts"] == 2
     assert row.details["timeout_seconds"] == 30
-    assert row.details["model"] == "llama3.2"
+    assert row.details["model"] == "qwen3-next:80b-a3b-instruct-q4_K_M"
     assert row.details["endpoint"] == "local"
 
 

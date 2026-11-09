@@ -75,7 +75,7 @@ class GeminiProvider:
         """Accept only Gemini-family names (Ollama-style tags stripped).
 
         The chain forwards the caller's model override to every provider; a name
-        that belongs to another provider ("nvidia/nemotron-...", "llama3.2") would
+        that belongs to another provider ("nvidia/nemotron-...", "qwen3-next:80b-a3b-instruct-q4_K_M") would
         404 here, so anything that is not Gemini/Gemma falls back to ``self.model``.
         """
         name = model.lower().removeprefix("models/")

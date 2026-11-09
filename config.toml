@@ -77,7 +77,7 @@ workers = 1
 reranker_seed = 1337
 source_cap_percentage = 0.5
 topic_cap_percentage = 0.6
-llm_model = "llama3.2"
+llm_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 rescore_days_back = 14
 candidate_max_age_days = 30
 llm_cycle_budget_seconds = 600
@@ -506,7 +506,7 @@ model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 timeout = 7200
 translator_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 editor_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
-headlines_model = "llama3.2:latest"
+headlines_model = "qwen3-next:80b-a3b-instruct-q4_K_M"
 
 [gemini]
 model = "gemini-2.5-flash"

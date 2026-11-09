@@ -122,7 +122,7 @@ def test_resolved_map_covers_all_registered_stages(tmp_path: Path):
         config_body=(
             "[ollama]\n"
             'model = "llama3.3:70b"\n'
-            'translator_model = "llama3.2:7b"\n'
+            'translator_model = "qwen3.5:4b-q4_K_M"\n'
             'editor_model = "qwen2.5:14b"\n'
             'headlines_model = "mistral:7b"\n'
             "[scoring]\n"
@@ -182,7 +182,7 @@ def test_pinned_mode_env_applies_to_resolver(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("NOTICIENCIAS_LLM_PINNED", "1")
     bad = {
         "ollama": {"model": "llama3.3:latest"},
-        "scoring": {"llm_model": "llama3.2:32b"},
+        "scoring": {"llm_model": "qwen3.5:4b-q4_K_M"},
     }
     with pytest.raises(InvalidModelIdError) as excinfo:
         resolve_ollama_model_map(bad)
@@ -236,10 +236,10 @@ def test_no_warn_passes_with_explicit_stage_map(
         config_body=(
             "[ollama]\n"
             'model = "llama3.3:70b"\n'
-            'translator_model = "llama3.2:7b"\n'
+            'translator_model = "qwen3.5:4b-q4_K_M"\n'
             'editor_model = "qwen2.5:14b"\n'
             'headlines_model = "mistral:7b"\n'
-            'enrichment_model = "llama3.2:3b"\n'
+            'enrichment_model = "qwen3.5:2b"\n'
             "[scoring]\n"
             'llm_model = "llama3.1:8b"\n'
         ),

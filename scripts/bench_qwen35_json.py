@@ -41,7 +41,7 @@ def run_json_benchmark():
         # We only care about headlines_model for this test, as it's the one doing the JSON/Pydantic validation
         agent = EditorAgent(
             api_url="http://localhost:11434/api/generate",
-            model="llama3.2:latest",  # Dummy base
+            model="qwen3-next:80b-a3b-instruct-q4_K_M",  # Dummy base
             headlines_model=model_name,
         )
 

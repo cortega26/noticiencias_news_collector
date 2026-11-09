@@ -86,7 +86,7 @@ class TestConfigSummary:
             "model": "qwen2.5:32b",
             "translator_model": "qwen2.5:32b",
             "editor_model": "qwen2.5:32b",
-            "headlines_model": "llama3.2:latest",
+            "headlines_model": "qwen3-next:80b-a3b-instruct-q4_K_M",
         }
         r_trans, r_edit, r_head = self._compute_summary_models(
             nvidia, ollama_cfg, base_model_sel="qwen2.5:32b"
@@ -102,7 +102,7 @@ class TestConfigSummary:
             "model": "qwen2.5:32b",
             "translator_model": "qwen2.5:32b",
             "editor_model": "qwen2.5:32b",
-            "headlines_model": "llama3.2:latest",
+            "headlines_model": "qwen3-next:80b-a3b-instruct-q4_K_M",
         }
         r_trans, r_edit, r_head = self._compute_summary_models(
             gemini, ollama_cfg, base_model_sel="qwen2.5:32b"
@@ -118,14 +118,14 @@ class TestConfigSummary:
             "model": "qwen2.5:32b",
             "translator_model": "qwen2.5:32b",
             "editor_model": "qwen2.5:32b",
-            "headlines_model": "llama3.2:latest",
+            "headlines_model": "qwen3-next:80b-a3b-instruct-q4_K_M",
         }
         r_trans, r_edit, r_head = self._compute_summary_models(
             ollama, ollama_cfg, base_model_sel="qwen2.5:32b"
         )
         assert r_trans == "qwen2.5:32b"
         assert r_edit == "qwen2.5:32b"
-        assert r_head == "llama3.2:latest"
+        assert r_head == "qwen3-next:80b-a3b-instruct-q4_K_M"
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ class TestEditorAgentModelRouting:
                 model="qwen2.5:32b",
                 translator_model="qwen2.5:32b",
                 editor_model="qwen2.5:32b",
-                headlines_model="llama3.2:latest",
+                headlines_model="qwen3-next:80b-a3b-instruct-q4_K_M",
             )
             agent.cache_dir = tmp_path / "editor-cache"
             agent.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -219,8 +219,8 @@ class TestEditorAgentModelRouting:
         assert "qwen2.5:32b" in agent.model
         assert "qwen2.5:32b" in agent.translator_model
         assert "qwen2.5:32b" in agent.editor_model
-        # headlines_model was passed as "llama3.2:latest"
-        assert "llama3.2:latest" in agent.headlines_model
+        # headlines_model was passed as "qwen3-next:80b-a3b-instruct-q4_K_M"
+        assert "qwen3-next:80b-a3b-instruct-q4_K_M" in agent.headlines_model
 
     def test_fact_check_model_independent_of_nvidia_routing(self, tmp_path):
         """Phase 2c regression: fact_check_model must stay on the Ollama-side

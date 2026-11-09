@@ -65,7 +65,9 @@ def _wire(monkeypatch, limiter=None):
 
 def _provider(**kw):
     return OllamaProvider(
-        api_url="http://ollama.test:11434", model="llama3.2:latest", **kw
+        api_url="http://ollama.test:11434",
+        model="qwen3-next:80b-a3b-instruct-q4_K_M",
+        **kw,
     )
 
 
@@ -320,11 +322,13 @@ def test_health_and_model_listing(monkeypatch):
     monkeypatch.setattr(
         pv.requests,
         "get",
-        lambda *_a, **_k: _Resp(200, {"models": [{"name": "llama3.2:latest"}]}),
+        lambda *_a, **_k: _Resp(
+            200, {"models": [{"name": "qwen3-next:80b-a3b-instruct-q4_K_M"}]}
+        ),
     )
     assert p.check_health() == (True, "ok")
-    assert p.list_models() == ["llama3.2:latest"]
-    assert p.check_model_exists("llama3.2:latest") is True
+    assert p.list_models() == ["qwen3-next:80b-a3b-instruct-q4_K_M"]
+    assert p.check_model_exists("qwen3-next:80b-a3b-instruct-q4_K_M") is True
     monkeypatch.setattr(pv.requests, "get", lambda *_a, **_k: _Resp(500))
     assert p.check_health() == (False, "http_500")
     assert p.list_models() == []

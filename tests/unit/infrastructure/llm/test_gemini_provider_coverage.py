@@ -355,7 +355,11 @@ def test_foreign_provider_model_names_fall_back_to_the_gemini_default():
     """The chain forwards the caller's override to every provider: an NVIDIA/other
     name used to reach Gemini and 404 (wasted attempt before every failover)."""
     p = _provider()
-    for foreign in ("nvidia/nemotron-3-super-120b-a12b", "gpt-oss-120b", "llama3.2"):
+    for foreign in (
+        "nvidia/nemotron-3-super-120b-a12b",
+        "gpt-oss-120b",
+        "qwen3-next:80b-a3b-instruct-q4_K_M",
+    ):
         assert p._resolve_model(foreign) == "gemini-2.5-flash"
     assert p._resolve_model("models/gemini-3.1-flash-lite") == (
         "models/gemini-3.1-flash-lite"

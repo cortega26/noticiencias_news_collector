@@ -1438,7 +1438,7 @@ with tab1:
                 "qwen3-next:80b-a3b-instruct-q4_K_M",
                 "qwen2.5:32b",
                 "qwen2.5:14b",
-                "llama3.2:latest",
+                "qwen3.5:4b-q4_K_M",
                 "mistral:latest",
                 "phi4:latest",
             ]
@@ -1451,7 +1451,7 @@ with tab1:
             if is_heavy_model(current_base):
                 st.warning(
                     f"⚠️ El modelo base `{current_base}` requiere mucha RAM. "
-                    "Considera `llama3.2:latest` en máquinas sin GPU."
+                    "Considera un modelo más ligero en máquinas con poca RAM."
                 )
 
             base_model_sel = st.selectbox(
@@ -1498,11 +1498,13 @@ with tab1:
 
             if col_p1.button(
                 "🚀 Producción (CPU)",
-                help="Qwen3 Next en traducir/editar — llama3.2 solo para titulares. Sin GPU requerida.",
+                help="Qwen3 Next en todas las fases, titulares incluidos. Sin GPU requerida.",
             ):
                 for k in ("model", "translator_model", "editor_model"):
                     config_data["ollama"][k] = "qwen3-next:80b-a3b-instruct-q4_K_M"
-                config_data["ollama"]["headlines_model"] = "llama3.2:latest"
+                config_data["ollama"][
+                    "headlines_model"
+                ] = "qwen3-next:80b-a3b-instruct-q4_K_M"
                 _result = save_toml_config(config_data)
                 render_save_result(_result, "Preset Producción (CPU) aplicado.")
                 if _result["success"]:
@@ -1515,7 +1517,7 @@ with tab1:
                 config_data["ollama"]["model"] = "qwen2.5:14b"
                 config_data["ollama"]["translator_model"] = "qwen2.5:14b"
                 config_data["ollama"]["editor_model"] = "qwen2.5:14b"
-                config_data["ollama"]["headlines_model"] = "llama3.2:latest"
+                config_data["ollama"]["headlines_model"] = "qwen2.5:14b"
                 _result = save_toml_config(config_data)
                 render_save_result(_result, "Preset Calidad (GPU) aplicado.")
                 if _result["success"]:
@@ -1811,13 +1813,24 @@ with tab2:
             st.subheader("🧠 IA de Scoring")
             # Read from Config
             scoring_cfg = config_data.get("scoring", {})
-            current_scoring_model = scoring_cfg.get("llm_model", "llama3.2")
+            current_scoring_model = scoring_cfg.get(
+                "llm_model", "qwen3-next:80b-a3b-instruct-q4_K_M"
+            )
 
             new_scoring_model = st.selectbox(
-                "Modelo para Clasificación (Rápido)",
-                ["llama3.2", "mistral", "llama3.1:8b"],
-                index=0 if "3.2" in current_scoring_model else 0,
-                help="Usar un modelo más pequeño/rápido para la fase de recolección.",
+                "Modelo para Clasificación",
+                [
+                    "qwen3-next:80b-a3b-instruct-q4_K_M",
+                    "qwen3.5:4b-q4_K_M",
+                    "mistral",
+                    "llama3.1:8b",
+                ],
+                index=0,
+                help=(
+                    "Modelo para puntuar artículos en la recolección. Qwen3 Next "
+                    "evita cargar un segundo modelo en memoria; uno más pequeño es "
+                    "más rápido pero menos fiable."
+                ),
             )
 
             if new_scoring_model != current_scoring_model:

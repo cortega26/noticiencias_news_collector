@@ -103,7 +103,9 @@ def test_resolve_health_checker_priority():
 
 
 def test_get_provider_includes_gemini_and_overrides_ollama_style_model():
-    chain = get_provider(config=_cfg(None, "g"), model="llama3.2:latest")
+    chain = get_provider(
+        config=_cfg(None, "g"), model="qwen3-next:80b-a3b-instruct-q4_K_M"
+    )
     names = [p.__class__.__name__ for p in chain.providers]
     assert names == ["GeminiProvider", "OllamaProvider"]
     assert chain.providers[0].model == "gemini-2.5-flash"

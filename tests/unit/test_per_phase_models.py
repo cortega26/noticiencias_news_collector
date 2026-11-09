@@ -24,8 +24,8 @@ def _mock_min_length_config():
 
 def test_config_validation():
     # Valid names
-    OllamaConfig(model="llama3.2")
-    OllamaConfig(model="llama3.2:latest")
+    OllamaConfig(model="qwen3-next:80b-a3b-instruct-q4_K_M")
+    OllamaConfig(model="qwen3-next:80b-a3b-instruct-q4_K_M")
     OllamaConfig(model="my-custom-model.123")
 
     # Invalid names
@@ -118,7 +118,7 @@ def test_translation_pipeline_preserves_payload_shape_and_provenance(
         model="llama3.3:latest",
         translator_model="mistral:7b",
         editor_model="qwen2.5:14b",
-        headlines_model="llama3.2:latest",
+        headlines_model="qwen3-next:80b-a3b-instruct-q4_K_M",
     )
     agent.cache_dir = tmp_path / "cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -226,7 +226,7 @@ def test_provenance_comment_is_single_and_idempotent(monkeypatch, tmp_path):
         model="llama3.3:latest",
         translator_model="mistral:7b",
         editor_model="qwen2.5:14b",
-        headlines_model="llama3.2:latest",
+        headlines_model="qwen3-next:80b-a3b-instruct-q4_K_M",
     )
     agent.cache_dir = tmp_path / "cache"
     agent.cache_dir.mkdir(parents=True, exist_ok=True)

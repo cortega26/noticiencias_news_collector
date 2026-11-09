@@ -165,7 +165,10 @@ class TestBasics:
 
     def test_resolve_model_ollama_name_no_tag_replaced(self):
         provider = _provider()
-        assert provider._resolve_model("llama3.2") == provider.model
+        assert (
+            provider._resolve_model("qwen3-next:80b-a3b-instruct-q4_K_M")
+            == provider.model
+        )
         assert provider._resolve_model("mistral-small") == provider.model
 
     def test_resolve_model_unknown_passthrough(self):
