@@ -53,6 +53,10 @@ from news_collector.contracts.publication_checkpoint import (
 )
 from news_collector.contracts.publication_validation import PublicationFailureClass
 from news_collector.editorial.draft_identity import editorial_fingerprint
+from news_collector.editorial.evidence_gate import (
+    GATE_ERROR_CODE as EVIDENCE_GATE_ERROR_CODE,
+)
+from news_collector.editorial.evidence_gate import evaluate_evidence_gate
 from news_collector.editorial.grounding import (
     build_source_text,
     check_grounding,
@@ -618,7 +622,7 @@ class RefineryEngine:
             "audit",
             "editorial_publication_gates",
             lambda: self._enforce_publication_gates(
-                article_id, refined_content, identity, run
+                article_id, refined_content, identity, run, article=article
             ),
             succeeded=bool,
         ):
@@ -740,7 +744,7 @@ class RefineryEngine:
             "audit",
             "editorial_publication_gates",
             lambda: self._enforce_publication_gates(
-                article_id, refined_content, identity, run
+                article_id, refined_content, identity, run, article=article
             ),
             succeeded=bool,
         ):
@@ -1260,6 +1264,8 @@ class RefineryEngine:
         refined_content: str,
         identity: PublicationIdentity,
         run: "_PublicationRun",
+        *,
+        article: Dict[str, Any],
     ) -> bool:
         # --- POLICY ENFORCEMENT: AUDITOR CHECK ---
         # OBJECTIVE: Enforce Policy BEFORE Persistence (Writing File / Manifest / Git)
@@ -1285,11 +1291,68 @@ class RefineryEngine:
             return False
         run.record_stage("frontmatter_guard", True)
 
+        # Plan 212: every path to the frontend (fresh draft or resumed
+        # checkpoint) passes here, before any branch, commit or PR exists.
+        if not self._enforce_evidence_gate(article, refined_content, run):
+            return False
+
         # Persist canonical slug AFTER policy approval (B-02 / F-0018)
         # Only needed for new articles; P1/P2 identities already have DB entries.
         if identity.is_new and run.final_slug:
             self.identity_resolver.register_slug(article_id, run.final_slug)
         return True
+
+    def _enforce_evidence_gate(
+        self, article: Dict[str, Any], refined_content: Any, run: "_PublicationRun"
+    ) -> bool:
+        """Block drafts whose specifics the ingested evidence does not contain.
+
+        Unlike the advisory grounding stage this is a gate: a defect in the
+        checker itself blocks (fail closed) instead of letting the draft through.
+        Non-string content (mock editors) has nothing to check.
+        """
+        if not isinstance(refined_content, str):
+            return True
+        article_id = article.get("id")
+        try:
+            decision = evaluate_evidence_gate(
+                refined_content, build_source_text(article)
+            )
+        except Exception as exc:  # noqa: BLE001 - a gate must fail closed
+            logger.error(
+                f"Evidence gate failed for {article_id}; blocking (fail closed): {exc!r}"
+            )
+            message = f"Evidence gate could not run: {exc!r}"
+            self._last_blocked_error = {
+                "error": message,
+                "message": message,
+                "error_code": EVIDENCE_GATE_ERROR_CODE,
+            }
+            run.record_stage(
+                "evidence_gate",
+                False,
+                error_code=EVIDENCE_GATE_ERROR_CODE,
+                reason="checker_error",
+                error=repr(exc),
+            )
+            run.persist_attempt(False)
+            return False
+        run.record_stage(
+            "evidence_gate", not decision.blocked, **decision.stage_details()
+        )
+        if not decision.blocked:
+            return True
+        message = decision.message()
+        logger.warning(
+            f"Blocked before publish ({EVIDENCE_GATE_ERROR_CODE}): {message}"
+        )
+        self._last_blocked_error = {
+            "error": message,
+            "message": message,
+            "error_code": EVIDENCE_GATE_ERROR_CODE,
+        }
+        run.persist_attempt(False)
+        return False
 
     def _publish_to_target_repo(
         self,

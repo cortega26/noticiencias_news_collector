@@ -296,6 +296,11 @@ def _fold(text: str) -> str:
     return _GROUPED_SPACE_RE.sub("", folded)
 
 
+def fold_text(text: str) -> str:
+    """Public alias of the folding used for source comparison (plan 212)."""
+    return _fold(text)
+
+
 def _number_forms(token: str) -> set[str]:
     """Readings of a numeric token (Spanish and English separators)."""
     if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", token):

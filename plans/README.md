@@ -33,6 +33,7 @@ see `scripts/validate_plans_ledger.py`.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
+| 212 | [Evidence gate before opening the PR](212/spec.md) | P0 | M | None | IN_PROGRESS — phase 1: deterministic gate that blocks drafts with unsupported figures, acronyms, DOIs or vague quantities (fails closed on thin evidence and checker errors) on the fresh and resumed paths; 4 of 6 observed defective drafts blocked, no false positive on the corrected ones. Pending: phase 2 bounded rewrite (needs `llm-canary`), phase 3 preprint full text, phase 4 claim verification (209). |
 | 209 | [Incomplete source verification](209/spec.md) | P0 | M | 205 | TODO — verifier failures and partial responses can be reported as `uncertain`; resume and frontmatter overrides also need coverage. Design and regression tests remain pending; this plan does not claim the publication gate is fixed. |
 
 ### Development dependency audit (2026-11-03)
