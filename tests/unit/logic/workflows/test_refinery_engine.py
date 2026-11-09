@@ -287,6 +287,10 @@ class TestRefineryEngine(unittest.TestCase):
             "title": "Test valid title",
             "url": "http://x",
             "summary": "This is a sufficiently long summary for refinery validation.",
+            # Evidence long enough (and containing the 5 % figure) that the
+            # plan-212 evidence gate has nothing to flag: this test is about
+            # typography, not grounding.
+            "content": "The measured effect was a 5 percent increase. " * 40,
             "image_url": "https://example.com/test-image.png",
             "image_alt": "Fotografía de prueba para la suite.",
             "source_id": "src",
@@ -371,17 +375,19 @@ class TestRefineryEngine(unittest.TestCase):
         self.assertEqual(details["findings"][0]["kind"], "number")
         self.assertIn("95", details["findings"][0]["detail"])
 
+        # Plan 212: thin evidence fails closed. The advisory grounding stage
+        # still skips (nothing to compare), but the evidence gate blocks the
+        # draft because its figure cannot be grounded in a too-short source.
         self.mock_git.create_pull_request.reset_mock()
         ok, stages = run("fuente corta")
-        self.assertTrue(ok)
-        self.assertNotIn(
-            "Verificación de grounding",
-            self.mock_git.create_pull_request.call_args.kwargs["body"],
-        )
+        self.assertFalse(ok)
+        self.mock_git.create_pull_request.assert_not_called()
         self.assertTrue(stages["grounding"]["success"])
         self.assertEqual(
             stages["grounding"]["details"]["skipped_reason"], "source_too_short"
         )
+        self.assertFalse(stages["evidence_gate"]["success"])
+        self.assertTrue(stages["evidence_gate"]["details"]["short_source"])
 
     def test_grounding_failure_never_blocks_and_is_recorded(self):
         from news_collector.logic.workflows.refinery_engine import RefineryEngine
