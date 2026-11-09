@@ -6,6 +6,7 @@ from news_collector.editorial.evidence_gate import (
     DEFAULT_THRESHOLD,
     GATE_ERROR_CODE,
     SHORT_SOURCE_CHARS,
+    EvidenceGateDecision,
     evaluate_evidence_gate,
 )
 
@@ -162,4 +163,6 @@ def test_stage_details_are_bounded_and_serializable():
 
 def test_odd_markdown_never_raises():
     for text in ("", "---\n---\n", "sin frontmatter ni cifras", "```code 99```"):
-        evaluate_evidence_gate(text, _source())
+        decision = evaluate_evidence_gate(text, _source())
+        assert isinstance(decision, EvidenceGateDecision)
+        assert decision.blocked is False
