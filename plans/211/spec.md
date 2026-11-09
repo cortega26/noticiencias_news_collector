@@ -10,7 +10,7 @@ del pipeline detectó:
 |---|---|---|
 | DOI y título de paper inventados (404), fecha de fuente de 2024 en una nota de 2026, "fuente" que era la portada de una universidad | #406 | `sources` no se contrasta con la evidencia ingerida |
 | Afirmaciones del equipo, disputadas por una experta, marcadas `confirmed` ("más antigua y sólida", "explica el sesgo sexual") | #406, #402 | `fact_check` confirma lenguaje categórico aun con nota de incertidumbre |
-| Cuerpo con métodos, contexto y detalles que la fuente ingerida (solo resumen y autores) no contiene | #402, #398 | Parcial: `grounding.py` (consultivo) cubre cifras y alcance; el prompt de enriquecimiento se endurece |
+| Cuerpo con métodos, contexto y detalles que la fuente ingerida (solo resumen y autores) no contiene | #402, #398 | Parcial: `grounding.py` (consultivo) cubre cifras y alcance; un endurecimiento del prompt se probó y se descartó (ver «Prompt de enriquecimiento») |
 | Línea de titular suelta al inicio del cuerpo | #398, #391 | Sin compuerta de estructura del cuerpo |
 | `#etiqueta` en el cuerpo (rompe una prueba del frontend) | #391 | Solo se detectaba en el frontend |
 | Nombre de persona distinto entre frontmatter y cuerpo (Valeriy/Pavlo) | #391 | Sin consistencia frontmatter-cuerpo |
@@ -50,10 +50,28 @@ módulos de política) y cableado en `prepare_editorial_draft`
    `find_second_person_address`. Se registran con `logger.warning` y se anexan a
    `grounding_notes`. Las cifras, el alcance y las exageraciones sin respaldo ya los
    cubre `editorial/grounding.py` (consultivo) y no se duplican aquí.
-5. **Prompt de enriquecimiento** (`config/prompts.yaml`) — `sources` solo con URLs
-   presentes en el texto proporcionado o la fuente del artículo; nunca inventar
-   DOI, títulos ni fechas; `date` solo si el texto la da; `fact_check`: usar
-   `uncertain` para afirmaciones que la fuente atribuye a los autores.
+## Prompt de enriquecimiento: probado y descartado
+
+Se intentó endurecer `config/prompts.yaml` (`sources` solo con URLs presentes en el
+texto, nunca inventar DOI/títulos/fechas, `uncertain` para atribuciones). **No se
+incluye.** Una prueba A/B real (2026-11-09) ejecutó `_generate_enrichment_fields`
+con `qwen3-next:80b-a3b-instruct-q4_K_M` (el modelo de producción para
+enriquecimiento), prompt actual vs. endurecido, 2 repeticiones sobre los cuerpos
+originales de #407 y #408 (8 llamadas, todas con JSON válido):
+
+| | Prompt actual | Prompt endurecido |
+|---|---|---|
+| #407, `sources` | 1 y 1 (solo la fuente original) | 2 y 2: una URL de Cambridge inventada en **ambas** corridas |
+| #408, `sources` | 1 y 1 | 1 y 1 |
+| `fact_check` atribuido marcado `confirmed` | 1 de 4 corridas | 1 de 4 corridas |
+
+La muestra es pequeña (2 por celda, un modelo), así que no es concluyente, pero no
+hay señal a favor del prompt endurecido y la única diferencia visible lo
+empeora: el modelo produjo más fuentes inventadas antes del filtro. La regla 1
+(`ground_sources`) descartó esas URLs inventadas en las 2 corridas, de modo que la
+protección efectiva es la regla determinista. Se retoma el prompt solo con una
+evaluación mayor (más corridas y más artículos) y, al cambiar la cadena LLM, con
+`make llm-canary`.
 
 ## Fuera de alcance
 

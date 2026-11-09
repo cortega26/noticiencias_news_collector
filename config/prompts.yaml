@@ -991,13 +991,9 @@ enrichment:
 
     6. **sources**: Una lista de fuentes citadas o referenciadas en el artículo.
        Cada entrada tiene `title` (título del paper, informe o comunicado), `url`
-       (URL de la fuente), `publisher` (opcional: editorial, journal o
-       institución), `date` (opcional: fecha de publicación en formato ISO).
-       Mínimo 1 fuente; máximo 5. Incluye solo fuentes cuyo `url` aparezca
-       literalmente en el texto proporcionado, más la propia fuente del artículo.
-       Nunca inventes ni completes de memoria un DOI, un título, una URL ni una
-       fecha, y no listes la portada de una institución (p. ej. el dominio de una
-       universidad) como fuente. Omite `date` si el texto no la indica.
+       (URL de la fuente original si está disponible en el artículo), `publisher`
+       (opcional: editorial, journal o institución), `date` (opcional: fecha de
+       publicación en formato ISO). Mínimo 1 fuente; máximo 5.
 
     ---
 
@@ -1019,11 +1015,6 @@ enrichment:
     - `fact_check` no es una certificación independiente: usa `uncertain` para
       interpretaciones, hipótesis, evidencia parcial o limitaciones no resueltas.
       `confirmed` exige respaldo explícito con el mismo alcance y calificadores.
-      Una afirmación que el texto atribuye a los autores del estudio («según el
-      equipo», «proponen», «afirman») o que otra persona experta discute no es
-      `confirmed`: usa `uncertain` y conserva la atribución en `label`. Lo mismo
-      para superlativos («la más antigua», «la primera») y verbos causales
-      («explica», «demuestra») que solo sostiene el propio estudio.
     - No derives confianza alta de una única noticia ni inventes revisión por
       pares, representatividad o confirmación independiente. La incertidumbre
       de cuerpo, resumen, glosario y paneles debe coincidir.
