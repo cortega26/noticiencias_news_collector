@@ -29,6 +29,14 @@ from news_collector.contracts.editorial_draft import EditorialDraft
 from news_collector.contracts.frontend_schema import AstroPost
 from news_collector.editorial.health_scope import is_health_scope
 from news_collector.editorial.hero_alt import resolve_hero_alt_text
+from news_collector.editorial.source_integrity import (
+    downgrade_unattributed_certainty,
+    find_name_inconsistencies,
+    find_second_person_address,
+    ground_sources,
+    strip_leading_headline_line,
+    strip_stray_hashtags,
+)
 from news_collector.editorial.uncertainty import (
     find_unvalidated_capability_claims,
     resolve_uncertainty_counterweight,
@@ -109,6 +117,9 @@ class PublicationArtifactInput:
     source_name: str | None
     source_url: str | None
     required_enrichment_fields: tuple[str, ...]
+    # Ingested source text the generated sources and claims are checked against
+    # (plan 211). Empty means "no evidence supplied": source grounding is skipped.
+    evidence_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -392,6 +403,118 @@ def _enforce_overclaim_gate(
         )
 
 
+def _ground_generated_sources(
+    model_dict: dict[str, Any], data: PublicationArtifactInput
+) -> list[str]:
+    """Contrast generated ``sources`` with the ingested evidence (plan 211)."""
+    sources = model_dict.get("sources")
+    manual = isinstance(data.raw_text, dict) and bool(data.raw_text.get("sources"))
+    if manual or not data.evidence_text.strip() or not isinstance(sources, list):
+        return []
+    grounding = ground_sources(
+        [s for s in sources if isinstance(s, dict)],
+        source_url=data.source_url,
+        source_title=data.title,
+        source_publisher=data.source_name,
+        evidence_text=data.evidence_text,
+        article_date=model_dict.get("date"),
+    )
+    if not grounding.changed:
+        return []
+    model_dict["sources"] = grounding.sources
+    notes: list[str] = []
+    if grounding.dropped:
+        notes.append(
+            "Fuentes descartadas por no estar en la evidencia ingerida: "
+            + " | ".join(grounding.dropped)
+        )
+    if grounding.dates_removed:
+        notes.append(
+            "Fechas de fuente omitidas por inverosímiles: "
+            + " | ".join(grounding.dates_removed)
+        )
+    if grounding.primary_added:
+        notes.append("Se añadió la fuente primaria del artículo.")
+    return notes
+
+
+def _lower_categorical_claims(
+    model_dict: dict[str, Any], *, caveated: bool
+) -> list[str]:
+    fact_check = model_dict.get("fact_check")
+    if not isinstance(fact_check, list):
+        return []
+    lowered, downgraded = downgrade_unattributed_certainty(
+        [f for f in fact_check if isinstance(f, dict)],
+        requires_uncertainty_note=caveated,
+    )
+    if not downgraded:
+        return []
+    model_dict["fact_check"] = lowered
+    return [
+        "Afirmaciones categóricas bajadas de confirmed a uncertain: "
+        + " | ".join(downgraded)
+    ]
+
+
+def _sanitize_body(final_content: str) -> tuple[str, list[str]]:
+    notes: list[str] = []
+    body, hashtags = strip_stray_hashtags(final_content)
+    if hashtags:
+        notes.append(f"Se quitaron {hashtags} #etiqueta(s) del cuerpo.")
+    body, loose_headline = strip_leading_headline_line(body)
+    if loose_headline:
+        notes.append(f"Se quitó una línea de titular suelta: {loose_headline!r}")
+    return body, notes
+
+
+def _reader_facing_strings(model_dict: dict[str, Any]) -> list[str]:
+    strings: list[str] = []
+    for key in ("summary_points", "why_it_matters", "excerpt", "title"):
+        value = model_dict.get(key)
+        values = value if isinstance(value, list) else [value]
+        strings.extend(v for v in values if isinstance(v, str))
+    return strings
+
+
+def _advisory_integrity_notes(model_dict: dict[str, Any], body: str) -> list[str]:
+    notes: list[str] = []
+    names = find_name_inconsistencies(_reader_facing_strings(model_dict), body)
+    if names:
+        notes.append(
+            "Nombres del frontmatter ausentes del cuerpo: " + " | ".join(names)
+        )
+    second_person = {s.lower() for s in find_second_person_address(body)}
+    if second_person:
+        notes.append(
+            "Interpelación al lector en segunda persona: "
+            + ", ".join(sorted(second_person))
+        )
+    return notes
+
+
+def _apply_source_integrity(
+    model_dict: dict[str, Any],
+    data: PublicationArtifactInput,
+    *,
+    requires_uncertainty_note: bool,
+) -> tuple[str, str]:
+    """Repair or flag source/claim defects (plan 211); return ``(body, notes)``.
+
+    Operator-supplied ``sources`` in ``raw_text`` are never touched. The
+    verifier-driven ``disputed`` gate is not affected: it reads
+    ``verified_fact_check``.
+    """
+    notes = _ground_generated_sources(model_dict, data)
+    notes += _lower_categorical_claims(model_dict, caveated=requires_uncertainty_note)
+    body, body_notes = _sanitize_body(data.final_content)
+    notes += body_notes
+    notes += _advisory_integrity_notes(model_dict, body)
+    for note in notes:
+        logger.warning("Source integrity (plan 211): {}", note)
+    return body, " ".join(notes)
+
+
 def _enforce_v2_completeness_gate(
     model_dict: dict[str, Any],
     required_enrichment_fields: tuple[str, ...],
@@ -511,6 +634,18 @@ def prepare_editorial_draft(
             model_dict, data.headlines
         )
 
+        body, integrity_notes = _apply_source_integrity(
+            model_dict,
+            data,
+            requires_uncertainty_note=requires_uncertainty_note
+            or bool(uncertainty_note),
+        )
+        if integrity_notes:
+            grounding_notes = (
+                f"{grounding_notes}\n{integrity_notes}".strip()
+                if grounding_notes
+                else integrity_notes
+            )
         _enforce_overclaim_gate(
             model_dict,
             data,
@@ -523,9 +658,7 @@ def prepare_editorial_draft(
 
         model_dict = hooks.normalize_frontmatter(model_dict)
         content = hooks.strip_emojis(
-            hooks.upsert_source_identity(
-                data.final_content, data.source_id, data.source_name
-            )
+            hooks.upsert_source_identity(body, data.source_id, data.source_name)
         )
         return EditorialDraft(
             article_id=data.article_id,

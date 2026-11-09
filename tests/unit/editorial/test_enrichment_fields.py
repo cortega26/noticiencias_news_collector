@@ -541,7 +541,9 @@ class TestPoisonedStage4Cache:
                 "id": "demo",
                 "title": "Poisoned Cache Demo",
                 "summary": "Resumen " * 20,
-                "content": "Contenido " * 200,
+                # The regenerated source's DOI must occur in the ingested text
+                # (plan 211); otherwise it is replaced by the primary source.
+                "content": "Contenido " * 200 + " https://doi.org/10.1038/example",
                 "url": "https://example.com/source",
                 "image_url": "https://example.com/hero.webp",
                 "image_alt": "Imagen del estudio",

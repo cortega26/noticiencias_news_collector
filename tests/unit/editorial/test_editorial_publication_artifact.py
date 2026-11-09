@@ -403,3 +403,96 @@ def test_assembly_validates_metadata_after_emoji_stripping() -> None:
             image_origin="ai_generated",
             hooks=_hooks(strip_emojis=lambda text: text.replace("🌱", "")),
         )
+
+
+# --- Plan 211: source and claim integrity wiring ---------------------------
+
+_EVIDENCE = "Texto ingerido de la fuente. Ver https://example.com/article para más."
+
+
+def test_ungrounded_sources_are_dropped_and_primary_source_replaces_them() -> None:
+    enrichment = _enrichment()
+    enrichment["sources"] = [
+        {"title": "Inventada", "url": "https://doi.org/10.1073/pnas.0000000000"},
+        {"title": "Portada", "url": "https://www.curtin.edu.au"},
+    ]
+
+    result = run_publication_artifact_stage(
+        _input(enrichment_fields=enrichment, evidence_text=_EVIDENCE), _hooks()
+    )
+
+    assert [s["url"] for s in result.frontmatter["sources"]] == [
+        "https://example.com/article"
+    ]
+
+
+def test_sources_are_untouched_without_evidence_or_with_manual_sources() -> None:
+    no_evidence = run_publication_artifact_stage(_input(), _hooks())
+    assert no_evidence.frontmatter["sources"][0]["url"] == "https://example.com/fuente"
+
+    manual = run_publication_artifact_stage(
+        _input(
+            raw_text={
+                "id": "article-1",
+                "sources": [{"title": "Manual", "url": "https://example.org/m"}],
+            },
+            evidence_text=_EVIDENCE,
+        ),
+        _hooks(),
+    )
+    assert manual.frontmatter["sources"] == [
+        {"title": "Manual", "url": "https://example.org/m"}
+    ]
+
+
+def test_categorical_confirmed_claim_is_downgraded_under_an_uncertainty_note() -> None:
+    enrichment = _enrichment()
+    enrichment["confidence"] = "Limitada — preprint sin revisión por pares"
+    enrichment["fact_check"] = [
+        {"label": "El mecanismo explica el sesgo sexual", "status": "confirmed"}
+    ]
+
+    result = run_publication_artifact_stage(
+        _input(
+            enrichment_fields=enrichment,
+            verified_fact_check=enrichment["fact_check"],
+            headlines={
+                "direct": "Título directo",
+                "excerpt": "Resumen del artículo listo para SEO.",
+                "tags": ["ciencia"],
+                "requires_uncertainty_note": True,
+                "uncertainty_note": "Es un preprint sin revisión por pares.",
+            },
+        ),
+        _hooks(),
+    )
+
+    assert result.frontmatter["requires_uncertainty_note"] is True
+    assert result.frontmatter["fact_check"][0]["status"] == "uncertain"
+
+
+def test_disputed_verdict_still_blocks_after_integrity_rules() -> None:
+    with pytest.raises(GeneratedArticleValidationError) as excinfo:
+        run_publication_artifact_stage(
+            _input(
+                verified_fact_check=[{"label": "Explica X", "status": "disputed"}],
+                evidence_text=_EVIDENCE,
+            ),
+            _hooks(),
+        )
+
+    assert excinfo.value.error_code == "editorial_fact_check_disputed"
+
+
+def test_body_is_sanitized_before_it_is_sealed() -> None:
+    body = (
+        "**Titular suelto sin punto**\n\nPrimer párrafo con #etiqueta suelta.\n\n"
+        "## Sección\n\nTexto.\n"
+    )
+
+    result = run_publication_artifact_stage(_input(final_content=body), _hooks())
+
+    assert "Titular suelto" not in result.markdown
+    assert "#etiqueta" not in result.markdown
+    assert "Primer párrafo con etiqueta suelta." in result.markdown
+    assert "## Sección" in result.markdown
