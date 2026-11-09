@@ -3397,6 +3397,7 @@ class EditorAgent:
                 source_name=source_name,
                 source_url=source_url,
                 required_enrichment_fields=_V2_REQUIRED_ENRICHMENT_FIELDS,
+                evidence_text=content,
             ),
             PublicationArtifactHooks(
                 normalize_frontmatter=self._normalize_frontmatter_for_yaml,
