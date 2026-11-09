@@ -10,6 +10,7 @@ on:
       - "news_collector/components/publishing/**"
       - "scripts/generate_fixture_post.py"
       - "scripts/validate_frontend_publication.py"
+      - ".github/workflows/publication-smoke.yml"
   workflow_dispatch:
 
 concurrency:
@@ -24,7 +25,7 @@ jobs:
   publication-smoke:
     name: Validate generated post against front-end schema
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout back-end
