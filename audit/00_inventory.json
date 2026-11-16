@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-04T00:33:52.198397+00:00",
-  "python_version": "3.13.12",
+  "generated_at": "2026-11-16T13:18:18.451610+00:00",
+  "python_version": "3.13.18",
   "top_level_inventory": {
     ".agent/": [
       "rules"
@@ -307,6 +307,10 @@
       "208",
       "209",
       "210",
+      "211",
+      "212",
+      "213-publication-smoke-timeout.md",
+      "214-replace-llama32-with-qwen3-next.md",
       "README.md",
       "ROADMAP.md",
       "archive"
@@ -1512,6 +1516,14 @@
     "plans/210/spec.md",
     "plans/210/tests/README.md",
     "plans/210/todo.md",
+    "plans/211/spec.md",
+    "plans/211/tests/README.md",
+    "plans/211/todo.md",
+    "plans/212/spec.md",
+    "plans/212/tests/README.md",
+    "plans/212/todo.md",
+    "plans/213-publication-smoke-timeout.md",
+    "plans/214-replace-llama32-with-qwen3-next.md",
     "plans/README.md",
     "plans/ROADMAP.md",
     "plans/archive/001-externalize-committed-secrets.md",
