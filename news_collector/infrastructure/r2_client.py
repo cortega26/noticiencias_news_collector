@@ -233,14 +233,11 @@ class R2ReportClient:
 
         result_info = body.get("result_info")
         next_cursor: Optional[str] = None
-        if isinstance(result_info, dict):
+        if isinstance(result_info, dict) and result_info.get("is_truncated") is True:
             candidate = result_info.get("cursor")
-            if (
-                result_info.get("is_truncated") is True
-                and isinstance(candidate, str)
-                and candidate
-            ):
-                next_cursor = candidate
+            if not isinstance(candidate, str) or not candidate:
+                raise R2TransportError("r2 truncated listing has no cursor")
+            next_cursor = candidate
         return R2KeyPage(keys=tuple(keys), next_cursor=next_cursor)
 
     # -- object body --------------------------------------------------

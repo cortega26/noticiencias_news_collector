@@ -180,11 +180,20 @@ CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_R2_API_TOKEN=… \
   python scripts/reconcile_reader_reports.py --since 2026-10-01 --limit 100
 ```
 
+Read `continuation_status` in the JSON summary. With `more`, pass
+`--cursor '<resume_cursor>'` on the next invocation. With `retry_page`,
+retry using the returned cursor after addressing the per-object failure. A
+null retry cursor means start without `--cursor`. Keep the bucket, prefix,
+and `--since` filter the same when resuming. `complete` marks the end of
+the listing. `list_error` accompanies exit 1 and identifies the page to
+retry after fixing the listing failure. A dry run never writes, so start
+a committing import at the beginning of the range you want to persist.
+
 The token needs Workers R2 Storage Edición on the account; set the vars in
 `.env` (placeholders in `.env.example`). Reconciling is idempotent by the
 Worker report UUID: running it twice yields exactly one row per report and
-counts duplicates instead of failing. Exit 0 is a completed pass (invalid
-records and duplicates are a report, not a failure); exit 1 is a run-level
+counts duplicates instead of failing. Exit 0 means the pass produced a summary without a listing failure,
+including partial passes and per-record outcomes; exit 1 is a run-level
 failure (bad `--since`/`--limit`, listing failure); exit 2 means missing
 credentials and performs zero I/O. The `submitted_at` column comes from
 additive Alembic migration `d2e3f4a5b6c7`.

@@ -37,11 +37,14 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import func, update
+from sqlalchemy.orm import Session
 
 from news_collector.utils.logger import get_logger
 
+from .article_repository import set_pr_created_projection
 from .models import PUBLICATION_EVENT_TYPE_VALUES
 from .models import Article as _ArticleModel
 from .models import EditorialDecision as _EditorialDecisionModel
@@ -761,6 +764,195 @@ class LifecycleRepository:
     # ------------------------------------------------------------------
     # publication_attempts — append-only inserts + CAS transition
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _lock_pre_pr_article(session: Any, article_id: int) -> Any:
+        article = session.get(_ArticleModel, article_id)
+        if article is None or article.processing_status != "publishing":
+            return None
+        metadata = article.article_metadata or {}
+        if metadata.get("publication") or not metadata.get("publishing_branch"):
+            return None
+        # SQLite has no row-level SELECT FOR UPDATE. A guarded write acquires
+        # the writer lock and rejects changes since the current read.
+        locked = session.execute(
+            update(_ArticleModel)
+            .where(
+                _ArticleModel.id == article_id,
+                _ArticleModel.processing_status == "publishing",
+                _ArticleModel.article_metadata == article.article_metadata,
+            )
+            .values(article_metadata=article.article_metadata)
+            .execution_options(synchronize_session=False)
+        )
+        return article if locked.rowcount == 1 else None
+
+    @staticmethod
+    def _recovery_rows(
+        session: Session, article_id: int
+    ) -> list[_PublicationAttemptModel]:
+        return (
+            session.query(_PublicationAttemptModel)
+            .filter(_PublicationAttemptModel.article_id == article_id)
+            .order_by(
+                _PublicationAttemptModel.attempt_number.desc(),
+                _PublicationAttemptModel.id.desc(),
+            )
+            .all()
+        )
+
+    def adopt_legacy_recovery(
+        self, article_id: int, branch: str, digest: str, started_at: str | None
+    ) -> str | None:
+        with self._session() as session:
+            article = self._lock_pre_pr_article(session, article_id)
+            if article is None:
+                return None
+            metadata = dict(article.article_metadata)
+            if (
+                metadata.get("publishing_branch"),
+                metadata.get("publishing_started_at"),
+            ) != (branch, started_at):
+                return None
+            rows = self._recovery_rows(session, article_id)
+            return self._adopt_recovery_row(session, article, rows, branch, digest)
+
+    def _adopt_recovery_row(
+        self,
+        session: Session,
+        article: _ArticleModel,
+        rows: list[_PublicationAttemptModel],
+        branch: str,
+        digest: str,
+    ) -> str | None:
+        if rows and not self._has_one_current_publishing_row(rows):
+            return None
+        metadata = dict(article.article_metadata or {})
+        token = metadata.get("publication_attempt_id")
+        if token:
+            if rows and self._matches_adopted_recovery(
+                rows[0], metadata, branch, token, digest
+            ):
+                return str(token)
+            return None
+
+        row = (
+            rows[0]
+            if rows
+            else _PublicationAttemptModel(
+                article_id=article.id,
+                refinery_id=str(article.id),
+                attempt_number=1,
+                state="PUBLISHING",
+                started_at=datetime.now(timezone.utc),
+            )
+        )
+        return self._claim_tokenless_recovery(session, article, row, branch, digest)
+
+    @staticmethod
+    def _has_one_current_publishing_row(rows: list[_PublicationAttemptModel]) -> bool:
+        return (
+            rows[0].state == "PUBLISHING"
+            and sum(row.state == "PUBLISHING" for row in rows) == 1
+        )
+
+    def _matches_adopted_recovery(
+        self,
+        row: _PublicationAttemptModel,
+        metadata: dict,
+        branch: str,
+        token: str,
+        digest: str,
+    ) -> bool:
+        return metadata.get(
+            "legacy_recovery_sha256"
+        ) == digest and self._matches_recovery_row(row, branch, token, digest)
+
+    @staticmethod
+    def _claim_tokenless_recovery(
+        session: Session,
+        article: _ArticleModel,
+        row: _PublicationAttemptModel,
+        branch: str,
+        digest: str,
+    ) -> str | None:
+        details = dict(row.details or {})
+        if (
+            details.get("publication_attempt_id")
+            or row.branch_name not in (None, branch)
+            or row.pr_url
+            or row.refinery_id != str(article.id)
+        ):
+            return None
+        token = uuid4().hex
+        details.update(publication_attempt_id=token, content_sha256=digest)
+        row.details = details
+        row.branch_name = branch
+        article.article_metadata = {
+            **(article.article_metadata or {}),
+            "publication_attempt_id": token,
+            "legacy_recovery_sha256": digest,
+        }
+        session.add(row)
+        return token
+
+    @staticmethod
+    def _matches_recovery_row(row: Any, branch: str, token: str, digest: str) -> bool:
+        details = row.details or {}
+        return (
+            row.state == "PUBLISHING"
+            and row.branch_name == branch
+            and row.pr_url is None
+            and details.get("publication_attempt_id") == token
+            and details.get("content_sha256") == digest
+        )
+
+    def finish_legacy_recovery(self, article_id: int, token: str, pr_url: str) -> bool:
+        with self._session() as session:
+            article = self._lock_pre_pr_article(session, article_id)
+            if article is None:
+                return False
+            metadata = dict(article.article_metadata)
+            digest = metadata.get("legacy_recovery_sha256")
+            if not digest or metadata.get("publication_attempt_id") != token:
+                return False
+            rows = self._recovery_rows(session, article_id)
+            if not rows or not self._matches_recovery_row(
+                rows[0], metadata["publishing_branch"], token, digest
+            ):
+                return False
+            row = rows[0]
+            changed = session.execute(
+                update(_PublicationAttemptModel)
+                .where(
+                    _PublicationAttemptModel.id == row.id,
+                    _PublicationAttemptModel.state == "PUBLISHING",
+                    _PublicationAttemptModel.pr_url.is_(None),
+                    _PublicationAttemptModel.details == row.details,
+                )
+                .values(state="PR_CREATED", pr_url=pr_url)
+                .execution_options(synchronize_session=False)
+            )
+            if changed.rowcount != 1:
+                return False
+            refinery_id = str(article_id)
+            set_pr_created_projection(metadata, pr_url, refinery_id, token, digest)
+            metadata.pop("legacy_recovery_sha256", None)
+            article.article_metadata = metadata
+            session.add(
+                _PublicationEventModel(
+                    publication_attempt_id=row.id,
+                    event_type="pr_created",
+                    occurred_at=datetime.now(timezone.utc),
+                    details={
+                        "pr_url": pr_url,
+                        "refinery_id": refinery_id,
+                        "publication_attempt_id": token,
+                        "content_sha256": digest,
+                    },
+                )
+            )
+            return True
 
     def record_publication_attempt(
         self,

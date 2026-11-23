@@ -25,12 +25,15 @@ Failure modes:
 - Logs warnings if there are no untracked or modified files to commit.
 """
 
+import base64
 import contextlib
+import hashlib
 import os
 import shutil
 import tempfile
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 import git
 import requests
@@ -450,6 +453,110 @@ class GitHubPublisher:
                     "Existing article PR is ready for review; return it to draft "
                     "before changing its content and request renewed human review."
                 )
+
+    def get_or_create_recovery_pr(
+        self,
+        *,
+        repo_url: str,
+        branch_name: str,
+        title: str,
+        body: str,
+        output_filename: str,
+        content_sha256: str,
+    ) -> str:
+        owner, repo = repo_url.rstrip("/").removesuffix(".git").split("/")[-2:]
+        full_name = f"{owner}/{repo}"
+        api = f"https://api.github.com/repos/{full_name}"
+        base = self.base_branch
+        matches = self._lookup_recovery_prs(api, owner, branch_name)
+        if matches:
+            pull = matches[0]
+        else:
+            # Prove the branch currently carries the saved artifact before opening
+            # a draft. Verify again against the immutable head returned by GitHub.
+            self._verify_recovery_artifact(
+                api, branch_name, output_filename, content_sha256
+            )
+            created = requests.post(
+                f"{api}/pulls",
+                json={
+                    "head": branch_name,
+                    "base": base,
+                    "title": title,
+                    "body": body,
+                    "draft": True,
+                },
+                headers=self.headers,
+                timeout=15,
+            )
+            created.raise_for_status()
+            pull = created.json()
+        return self._verify_recovery_pr(
+            pull, api, full_name, branch_name, base, output_filename, content_sha256
+        )
+
+    def _lookup_recovery_prs(
+        self, api: str, owner: str, branch_name: str
+    ) -> list[dict]:
+        pulls = requests.get(
+            f"{api}/pulls",
+            params={
+                "head": f"{owner}:{branch_name}",
+                "state": "all",
+                "per_page": "100",
+            },
+            headers=self.headers,
+            timeout=15,
+        )
+        pulls.raise_for_status()
+        matches = pulls.json()
+        if not isinstance(matches, list) or len(matches) > 1:
+            raise ValueError("Ambiguous recovery PR lookup")
+        return list(matches)
+
+    def _verify_recovery_pr(
+        self,
+        pull: dict,
+        api: str,
+        full_name: str,
+        branch: str,
+        base: str,
+        filename: str,
+        digest: str,
+    ) -> str:
+        head, target = pull["head"], pull["base"]
+        url = pull["html_url"]
+        expected_url = f"https://github.com/{full_name}/pull/{pull['number']}"
+        if (
+            head["ref"] != branch
+            or target["ref"] != base
+            or head["repo"]["full_name"].lower() != full_name.lower()
+            or target["repo"]["full_name"].lower() != full_name.lower()
+            or not isinstance(url, str)
+            or url.lower() != expected_url.lower()
+        ):
+            raise ValueError(
+                "Recovery PR does not match the expected repository and branch"
+            )
+        self._verify_recovery_artifact(api, head["sha"], filename, digest)
+        return url
+
+    def _verify_recovery_artifact(
+        self, api: str, ref: str, filename: str, digest: str
+    ) -> None:
+        response = requests.get(
+            f"{api}/contents/src/content/posts/{quote(filename, safe='')}",
+            params={"ref": ref},
+            headers=self.headers,
+            timeout=15,
+        )
+        response.raise_for_status()
+        artifact = response.json()
+        if artifact.get("encoding") != "base64":
+            raise ValueError("Recovery artifact is unavailable")
+        content = base64.b64decode("".join(artifact["content"].split()), validate=True)
+        if hashlib.sha256(content).hexdigest() != digest:
+            raise ValueError("Recovery artifact does not match the stored fingerprint")
 
     def create_pull_request(
         self,

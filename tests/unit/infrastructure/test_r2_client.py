@@ -259,6 +259,13 @@ class TestListReportKeys:
         assert page.keys == ("a.json", "b.json")
         assert page.next_cursor == "NEXT"
 
+    def test_truncated_page_without_cursor_fails(self) -> None:
+        client, _ = _client(
+            [_FakeResponse(payload=_listing_body(["a.json"], is_truncated=True))]
+        )
+        with pytest.raises(R2TransportError, match="truncated listing has no cursor"):
+            client.list_report_keys()
+
     def test_untruncated_page_has_no_next_cursor(self) -> None:
         client, _ = _client(
             [_FakeResponse(payload=_listing_body(["a.json"], is_truncated=False))],

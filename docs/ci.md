@@ -100,6 +100,7 @@ sender change; do not let the workflow track `main`.
 - `make quality-ci` — Ruff, scoped mypy/test coverage, Bandit and pip-audit report gates; Semgrep uses the shared `make semgrep-audit` target with official `p/python`, `p/security-audit` and `p/secrets` profiles and metrics disabled and strict scan-error handling; findings remain advisory, while technical scanner failures fail the gate
 - `make quality-gate` — snapshot-first quality gate (no LLM)
 - `make security-dev` — audits `requirements-security.lock` and `requirements-refinery.lock` through the shared `scripts/security_gate.py` policy. The security lock is semgrep-free and the allowlist is empty (plan 156 retired the `GHSA-84m7-p3x7-pcfv` exception); semgrep now lives in its own hash-pinned tool lock installed only into `.venv-security`
+- The runtime, Refinery, and security locks share the Soup Sieve pin. The standalone Semgrep tool lock also carries the patched Soup Sieve. Its remaining audit findings are constrained by upstream Semgrep requirements for MCP, OpenTelemetry, and wcmatch.
 - gitleaks secret scan (binary downloaded in CI; locally `make security` runs it when installed and fails with an explicit message when it is missing — set `SKIP_SECRET_SCAN=1` to skip that leg deliberately). The CI pin lives in `GITLEAKS_VERSION` in `.github/workflows/quality.yml`; use the same version locally.
 - the uploaded `quality-reports` artifact no longer contains the raw gitleaks report: `scripts/sanitize_gitleaks_report.py` writes a copy with the matched `Secret`/`Match` values replaced by a marker, and only that copy (plus the gate status file in the scanned reports directory) is uploaded. The raw report stays on the runner for the gate step. That matters on a public repository, where anyone with read access can download artifacts.
 - Plan 160 fixes the gitleaks 8.30 run: `.gitleaks-baseline.json` is refreshed with the pinned CI binary and the test-fixture path is allowlisted.
@@ -337,3 +338,7 @@ trial run validates the suite on Ubuntu 26.
   The baseline pins known historical debt (see issue #249) — new secrets must never be
   added to it; the correct fix for a baseline entry is rotation + history purge, after
   which the entry is deleted.
+
+### Reader report URL fixture
+
+Collector CI copies `../noticiencias/tests/fixtures/reader-report-url-contract.json` from the same frontend checkout as the publication schema. Land the fixture in the frontend before enabling the Collector CI requirement. With `CI_EXPECTED_FRONTEND_SCHEMA=1`, the Collector test requires the fixture.

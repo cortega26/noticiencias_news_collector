@@ -127,6 +127,7 @@ def run_reconciliation(
     since: Optional[datetime] = None,
     dry_run: bool = False,
     feed: Optional[R2ReportClient] = None,
+    cursor: Optional[str] = None,
 ) -> ReconciliationSummary:
     """One idempotent reconciliation pass (injectable feed for tests)."""
     parsed_feed: R2ReportClient = feed or R2ReportClient(credentials)
@@ -140,6 +141,7 @@ def run_reconciliation(
             prefix=prefix,
             limit=limit,
             since=since,
+            cursor=cursor,
         )
     finally:
         if feed is None:
@@ -172,6 +174,8 @@ def _summary_payload(summary: ReconciliationSummary) -> Dict[str, Any]:
         "fetch_failed": summary.fetch_failed,
         "persist_failed": summary.persist_failed,
         "truncated": summary.truncated,
+        "continuation_status": summary.continuation_status,
+        "resume_cursor": summary.resume_cursor,
         "fatal": summary.fatal,
         "by_reason": by_reason,
         "outcomes": outcomes,
@@ -196,6 +200,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--prefix",
         default=DEFAULT_PREFIX,
         help=f"R2 key prefix to scan (default: {DEFAULT_PREFIX!r}).",
+    )
+    parser.add_argument(
+        "--cursor", help="Resume at the opaque cursor returned by an earlier pass."
     )
     parser.add_argument(
         "--since",
@@ -239,6 +246,7 @@ def main() -> int:
             credentials=credentials,
             limit=args.limit,
             prefix=args.prefix,
+            cursor=args.cursor,
             since=since,
             dry_run=args.dry_run,
         )

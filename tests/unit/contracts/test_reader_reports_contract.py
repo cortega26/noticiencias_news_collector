@@ -7,6 +7,10 @@ email.
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -198,3 +202,35 @@ def test_report_identity_shape_and_validation() -> None:
         ReportIdentity(status="unresolved", reason="")
     with pytest.raises(ValidationError):
         ReportIdentity(status="unresolved", reason="r", unknown="x")
+
+
+_SHARED_URL_FIXTURE = (
+    Path(__file__).resolve().parents[4]
+    / "noticiencias"
+    / "tests"
+    / "fixtures"
+    / "reader-report-url-contract.json"
+)
+
+
+@pytest.fixture(scope="module")
+def shared_url_cases():
+    if not _SHARED_URL_FIXTURE.is_file():
+        if os.environ.get("CI_EXPECTED_FRONTEND_SCHEMA") == "1":
+            pytest.fail(f"Missing shared reader-report fixture: {_SHARED_URL_FIXTURE}")
+        pytest.skip(f"Frontend fixture unavailable: {_SHARED_URL_FIXTURE}")
+    return json.loads(_SHARED_URL_FIXTURE.read_text(encoding="utf-8"))
+
+
+def test_shared_worker_url_contract(shared_url_cases) -> None:
+    assert shared_url_cases
+    for case in shared_url_cases:
+        payload = {"problem_type": "content_factual", case["field"]: case["value"]}
+        if case["valid"]:
+            report = ReaderReportPayload.model_validate(payload)
+            expected = None if case["value"] == "" else case["value"]
+            assert getattr(report, case["field"]) == expected, case["name"]
+        else:
+            with pytest.raises(ValidationError) as exc:
+                ReaderReportPayload.model_validate(payload)
+            assert exc.value.errors()[0]["loc"] == (case["field"],), case["name"]

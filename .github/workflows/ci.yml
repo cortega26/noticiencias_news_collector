@@ -52,6 +52,7 @@ jobs:
             src/schemas/post.ts
             src/schemas/post.schema.json
             tests/fixtures/publication-contract-corpus/
+            tests/fixtures/reader-report-url-contract.json
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
@@ -60,6 +61,7 @@ jobs:
           cp .tmp/frontend-schema/src/schemas/post.ts ../noticiencias/src/schemas/post.ts
           cp .tmp/frontend-schema/src/schemas/post.schema.json ../noticiencias/src/schemas/post.schema.json
           cp -R .tmp/frontend-schema/tests/fixtures/publication-contract-corpus/. ../noticiencias/tests/fixtures/publication-contract-corpus/
+          cp .tmp/frontend-schema/tests/fixtures/reader-report-url-contract.json ../noticiencias/tests/fixtures/
           rm -rf .tmp/frontend-schema
       - name: Type check and unit coverage
         env:
@@ -195,6 +197,7 @@ jobs:
             src/schemas/post.ts
             src/schemas/post.schema.json
             tests/fixtures/publication-contract-corpus/
+            tests/fixtures/reader-report-url-contract.json
           sparse-checkout-cone-mode: false
       - name: Make frontend schema available at expected path
         run: |
@@ -203,6 +206,7 @@ jobs:
           cp .tmp/frontend-schema/src/schemas/post.ts ../noticiencias/src/schemas/post.ts
           cp .tmp/frontend-schema/src/schemas/post.schema.json ../noticiencias/src/schemas/post.schema.json
           cp -R .tmp/frontend-schema/tests/fixtures/publication-contract-corpus/. ../noticiencias/tests/fixtures/publication-contract-corpus/
+          cp .tmp/frontend-schema/tests/fixtures/reader-report-url-contract.json ../noticiencias/tests/fixtures/
           rm -rf .tmp/frontend-schema
       - name: Run unit tests
         env:

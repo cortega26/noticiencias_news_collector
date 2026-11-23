@@ -496,16 +496,97 @@ class TestOrchestrationMatrix:
             resolve_identity=lambda url: UNRESOLVED_IDENTITY,
             persist_report=lambda intake, identity: PersistOutcome(status="created"),
             prefix="reports/",
-            limit=3,
+            limit=2,
         )
 
-        assert summary.listed == 4  # both pages seen
-        assert summary.created == 3
+        assert summary.created == 2
         assert summary.truncated is True
-        assert feed.list_calls == [
-            {"prefix": "reports/", "limit": 3, "cursor": None},
-            {"prefix": "reports/", "limit": 1, "cursor": "1"},
-        ]
+        assert summary.continuation_status == "more"
+        assert summary.resume_cursor == "1"
+
+        resumed = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="created"),
+            limit=2,
+            cursor=summary.resume_cursor,
+        )
+        assert [outcome.key for outcome in resumed.outcomes] == keys[2:]
+        assert resumed.continuation_status == "complete"
+        assert resumed.resume_cursor is None
+
+    def test_oversized_page_does_not_skip_unprocessed_keys(self) -> None:
+        feed = _FakeFeed({}, page_split=(("a", "b"),))
+        summary = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="created"),
+            limit=1,
+        )
+        assert summary.processed == 0
+        assert summary.continuation_status == "list_error"
+        assert summary.fatal == "list_page_too_large"
+
+    def test_write_failure_retries_current_page(self) -> None:
+        feed = _FakeFeed(
+            {"a": _record_body(), "b": _record_body()},
+            page_split=(("a",), ("b",)),
+        )
+        summary = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="db_failed"),
+            cursor="1",
+        )
+        assert summary.persist_failed == 1
+        assert summary.fetch_failed == 0
+        assert summary.continuation_status == "retry_page"
+        assert summary.resume_cursor == "1"
+
+        resumed = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="created"),
+            cursor=summary.resume_cursor,
+        )
+        assert [outcome.key for outcome in resumed.outcomes] == ["b"]
+        assert resumed.created == 1
+        assert resumed.continuation_status == "complete"
+
+    def test_first_page_transport_failure_stops_before_next_page(self) -> None:
+        feed = _FakeFeed(
+            {"b": _record_body()},
+            page_split=(("a", "b"), ("c",)),
+            transport_failures=frozenset({"a"}),
+        )
+        summary = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="created"),
+        )
+        assert [outcome.key for outcome in summary.outcomes] == ["a", "b"]
+        assert summary.created == 1
+        assert summary.fetch_failed == 1
+        assert summary.continuation_status == "retry_page"
+        assert summary.resume_cursor is None
+
+    def test_repeated_cursor_stops_before_processing_page(self, monkeypatch) -> None:
+        feed = _FakeFeed({})
+        monkeypatch.setattr(
+            feed,
+            "list_report_keys",
+            lambda **kwargs: R2KeyPage(keys=("a",), next_cursor="repeat"),
+        )
+        summary = reconcile_report_objects(
+            feed=feed,
+            resolve_identity=lambda url: UNRESOLVED_IDENTITY,
+            persist_report=lambda intake, identity: PersistOutcome(status="created"),
+            cursor="repeat",
+        )
+        assert summary.processed == 0
+        assert summary.continuation_status == "list_error"
+        assert summary.fatal == "list_cursor_repeated"
+        assert summary.resume_cursor == "repeat"
 
     def test_limit_reached_exact_end_is_not_truncated(self) -> None:
         keys = [f"reports/2026-10-19/{i}.json" for i in range(2)]

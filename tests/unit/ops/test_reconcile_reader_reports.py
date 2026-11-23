@@ -288,6 +288,40 @@ class TestMainExitCodes:
         else:
             monkeypatch.setattr(script, "load_r2_credentials", lambda: CREDENTIALS)
 
+    def test_main_continues_with_the_previous_cursor(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path, capsys: pytest.CaptureFixture
+    ) -> None:
+        next_id = "4fe0a2f8-1d0e-4b6a-9c1e-2f5a6b7c8d90"
+        next_key = f"reports/2026-10-19/{next_id}.json"
+        feed = _FakeFeed(
+            {REPORT_KEY: _record_body(), next_key: _record_body(id=next_id)}
+        )
+
+        def list_one(*, prefix, limit, cursor):
+            assert (prefix, limit) == ("reports/", 1)
+            assert cursor in (None, "opaque")
+            if cursor is None:
+                return R2KeyPage(keys=(REPORT_KEY,), next_cursor="opaque")
+            return R2KeyPage(keys=(next_key,), next_cursor=None)
+
+        monkeypatch.setattr(feed, "list_report_keys", list_one)
+        self._patch(monkeypatch, tmp_path, feed)
+        args = ["reconcile_reader_reports.py", "--limit", "1"]
+        monkeypatch.setattr("sys.argv", args)
+        assert script.main() == 0
+        first = json.loads(capsys.readouterr().out)
+        assert first["continuation_status"] == "more"
+        assert first["resume_cursor"] == "opaque"
+        assert first["outcomes"][0]["key"] == REPORT_KEY
+
+        monkeypatch.setattr("sys.argv", [*args, "--cursor", first["resume_cursor"]])
+        assert script.main() == 0
+        second = json.loads(capsys.readouterr().out)
+        assert second["continuation_status"] == "complete"
+        assert second["resume_cursor"] is None
+        assert second["outcomes"][0]["key"] == next_key
+        assert _total_counts(tmp_path) == (2, 2)
+
     def test_main_missing_creds_exits_2_before_any_io(
         self,
         monkeypatch: pytest.MonkeyPatch,

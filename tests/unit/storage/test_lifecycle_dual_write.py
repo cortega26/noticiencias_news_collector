@@ -12,10 +12,15 @@ production code uses.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from datetime import datetime, timezone
+from unittest.mock import Mock
 
 import pytest
 
+from news_collector.components.publishing.github_publisher import GitHubPublisher
+from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, Base
 
@@ -526,3 +531,148 @@ def test_replayed_callback_appends_no_second_event(db_manager):
     events = _events_for(db_manager, article_id)
     assert [e.event_type for e in events] == ["pr_created", "rejected"]
     assert events[1].details == {"reason": "once"}
+
+
+def test_legacy_recovery_reuses_durable_identity_and_finalizes_once(db_manager):
+    article_id = _save_article(db_manager, "recovered")
+    branch = "content/update-recovered"
+    digest = "a" * 64
+    url = "https://github.com/org/repo/pull/39"
+    assert db_manager.mark_article_publishing(article_id, branch)
+    lifecycle = db_manager.lifecycle
+    started = db_manager.get_publishing_state(article_id)["publishing_started_at"]
+    attempt = lifecycle.adopt_legacy_recovery(article_id, branch, digest, started)
+    assert attempt
+    assert (
+        lifecycle.adopt_legacy_recovery(article_id, branch, digest, started) == attempt
+    )
+    assert (
+        lifecycle.adopt_legacy_recovery(article_id, branch, "b" * 64, started) is None
+    )
+    assert lifecycle.finish_legacy_recovery(article_id, attempt, url)
+    assert not lifecycle.finish_legacy_recovery(article_id, attempt, url)
+    [row] = lifecycle.get_publication_attempts_for_article(article_id)
+    assert row.state == "PR_CREATED"
+    assert row.pr_url == url
+    events = lifecycle.get_publication_events_for_attempt(row.id)
+    assert [event.event_type for event in events].count("pr_created") == 1
+    with db_manager.get_session() as session:
+        meta = session.get(Article, article_id).article_metadata
+        assert meta["publication_attempt_id"] == attempt
+        assert meta["publication"]["content_sha256"] == digest
+
+
+@pytest.fixture
+def interrupted_recovery(db_manager, tmp_path, monkeypatch):
+    article_id = _save_article(db_manager, "interrupted")
+    branch = "content/update-interrupted"
+    pr_url = "https://github.com/org/repo/pull/39"
+    artifact = tmp_path / "src/content/posts/interrupted.md"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_bytes(b"Exact recovery content\n")
+    encoded = base64.b64encode(artifact.read_bytes()).decode()
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    assert db_manager.mark_article_publishing(article_id, branch)
+
+    with db_manager.get_session() as session:
+        row = session.get(Article, article_id)
+        row.article_metadata = {
+            **row.article_metadata,
+            "publishing_started_at": "2020-01-01T00:00:00+00:00",
+        }
+
+    repository = {"full_name": "org/repo"}
+    pull = {
+        "number": 39,
+        "html_url": pr_url,
+        "head": {"ref": branch, "sha": "immutable-head", "repo": repository},
+        "base": {"ref": "main", "repo": repository},
+    }
+    post = Mock(return_value=Mock(json=Mock(return_value=pull)))
+    monkeypatch.setattr("requests.post", post)
+
+    remote_pulls = [pull]
+
+    def get(url, **_):
+        payload = (
+            (remote_pulls if post.called else [])
+            if url.endswith("/pulls")
+            else {"encoding": "base64", "content": encoded}
+        )
+        return Mock(json=Mock(return_value=payload))
+
+    monkeypatch.setattr("requests.get", get)
+    publisher = GitHubPublisher(github_token="fixture", base_branch="main")
+    orchestrator = PROrchestrator(
+        publisher, db_manager, {"target_repo_url": "https://github.com/org/repo"}
+    )
+    args = dict(
+        numeric_id=article_id,
+        article_id=str(article_id),
+        article={},
+        target_dir=tmp_path,
+    )
+    return orchestrator, args, artifact, digest, pr_url, post, remote_pulls
+
+
+def test_recovery_reuses_remote_pr_after_local_failure(
+    db_manager, monkeypatch, interrupted_recovery
+):
+    from unittest.mock import Mock
+
+    orchestrator, args, artifact, digest, pr_url, post, remote_pulls = (
+        interrupted_recovery
+    )
+    article_id = args["numeric_id"]
+    with monkeypatch.context() as failed_write:
+        failed_write.setattr(
+            db_manager.lifecycle, "finish_legacy_recovery", Mock(return_value=False)
+        )
+        pending = orchestrator.attempt_recovery(**args)
+    assert pending.recovery_pending and pending.pr_url == pr_url
+    state = db_manager.get_publishing_state(article_id)
+    assert state["publication_attempt_id"]
+    assert state["legacy_recovery_sha256"] == digest
+    artifact.unlink()
+    remote_pulls.append(remote_pulls[0])
+    assert orchestrator.attempt_recovery(**args).recovery_pending
+    assert _events_for(db_manager, article_id) == []
+    remote_pulls.pop()
+
+    recovered = orchestrator.attempt_recovery(**args)
+    assert recovered.recovered and recovered.pr_url == pr_url
+    post.assert_called_once()
+    assert post.call_args.kwargs["json"]["draft"] is True
+    assert [event.event_type for event in _events_for(db_manager, article_id)] == [
+        "pr_created"
+    ]
+    result = db_manager.lifecycle.apply_correlated_publication_callback(
+        refinery_id=str(article_id),
+        pull_request_number=39,
+        content_sha256=digest,
+        target_state="COMPLETED",
+        callback_details={},
+        deploy_url="https://noticiencias.com",
+    )
+    assert result.matched and result.transitioned and result.article_updated
+
+
+def test_legacy_adoption_refuses_ambiguous_rows(db_manager):
+    article_id = _save_article(db_manager, "ambiguous")
+    branch = "content/update-ambiguous"
+    assert db_manager.mark_article_publishing(article_id, branch)
+    db_manager.lifecycle.record_publication_attempt(
+        article_id,
+        refinery_id=str(article_id),
+        state="PUBLISHING",
+        started_at=datetime.now(timezone.utc),
+        branch_name=branch,
+    )
+    started = db_manager.get_publishing_state(article_id)["publishing_started_at"]
+    assert (
+        db_manager.lifecycle.adopt_legacy_recovery(
+            article_id, branch, "a" * 64, started
+        )
+        is None
+    )
+    assert db_manager.get_publishing_state(article_id)["publication_attempt_id"] is None

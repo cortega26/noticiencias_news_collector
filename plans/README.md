@@ -676,3 +676,27 @@ untracked) — every plan carries a drift check against its `Planned at` commit.
 | ID | Plan | Priority | Effort | Dependencies | Status |
 | --- | --- | --- | --- | --- | --- |
 | 193 | [Admin Happy DOM security gate](193-admin-happy-dom-security.md) | P1 | S | None | PARTIAL — local audit/admin/baseline/security/docs gates verified; independent final review and integration pending. See plan results and existing Semgrep caveat. |
+
+## Auditoría del workspace del 22 de noviembre de 2026
+
+Base Collector `ffebfc9b3c8ff91cd001b3e2cc1c085ab6acbfc6`. El [informe de auditoría](audit-2026-11-22.md) incluye los hallazgos de ambos componentes y enlaza el trabajo del frontend.
+
+| Plan | Trabajo | Prioridad | Esfuerzo | Dependencias | Estado |
+| --- | --- | --- | --- | --- | --- |
+| 215 | [Gates de dependencias](215/spec.md) | P1 | M | — | PARTIAL — locks de aplicación reparados; restricciones upstream de Semgrep pendientes |
+| 216 | [Identidad de acciones de Triage](216/spec.md) | P1 | M | — | TODO |
+| 217 | [Evidencia y reconciliación de despliegue](217/spec.md) | P1 | M | Coordinar con frontend 024 | TODO |
+| 218 | [Límites previos al parser](218/spec.md) | P1 | M | — | TODO |
+| 219 | [Contexto Docker sin datos locales](219/spec.md) | P1 | S–M | — | TODO |
+
+Priorizar 215 para recuperar los gates. El resto puede prepararse en paralelo en ramas aisladas. En 217, la entrega con nueva evidencia debe funcionar antes de retirar el cierre por merge del plan 198.
+
+### Segunda selección del 23 de noviembre de 2026
+
+| Plan | Trabajo | Hallazgo | Prioridad | Esfuerzo | Estado |
+| --- | --- | --- | --- | --- | --- |
+| 220 | [Recuperación de intentos históricos de publicación](220/spec.md) | C05 | P1 | M | DONE (local) — KEEP: contrato de recuperación y evidencia |
+| 221 | [Continuación de la importación de reportes](221/spec.md) | C08 | P1 | M | DONE (local) — KEEP: contrato operativo de continuación y evidencia |
+| 222 | [Contrato de URLs de reportes](222/spec.md) | C09 | P2 | S–M | PARTIAL — verificado localmente; integración pendiente |
+
+Coordinar 220 con 217 si coinciden cambios en las transiciones de publicación. En 222, coordinar el Worker con 021 e integrar primero el fixture del frontend. La [segunda selección del frontend](../../noticiencias/plans/README.md#segunda-selección-del-23-de-noviembre-de-2026) incluye además los planes 026 y 027.
