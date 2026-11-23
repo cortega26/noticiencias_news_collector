@@ -21,7 +21,6 @@ El panel solo habilita acciones sobre un detalle que corresponde a la selección
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- apps/admin/src/pages/triage.astro apps/admin/src/lib`. Si el panel dejó de ser dueño de la identidad o ahora dispone de integración de navegador oficial, adaptar la prueba antes de editar. Actualizar la fila 216 con evidencia del SHA.
 
-
 ## Evidencia local de implementación
 
 Cambios locales verificados sobre `7ed42e008525fd6be66351f6ed8014930015b585`. Pasaron 102 tests del Admin, incluido el script real en Happy DOM con cinco casos de selección, paginación, autenticación y acciones obsoletas. También pasaron lint, Astro check, build y el contrato OpenAPI.

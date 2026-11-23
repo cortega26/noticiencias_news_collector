@@ -20,7 +20,6 @@ El contexto y las capas del colector incluyen solo los archivos de aplicación n
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- .dockerignore Dockerfile Dockerfile.serving docker-compose.yml .github/workflows/ci.yml docs/ci.md`. Si un archivo requerido por el runtime es local e irreproducible, documentar su provisión por entorno antes de alterar el contexto. Evitar cualquier prueba que empaquete el checkout de operación. Actualizar la fila 219.
 
-
 ## Evidencia local de implementación
 
 Se construyeron las dos imágenes en un árbol efímero de `7ed42e008525fd6be66351f6ed8014930015b585` con los cambios del plan y fixtures ficticios. La exportación del contexto conservó los módulos Python anidados, migraciones, configuración y scripts. Excluyó bases SQLite, logs, configuración local, copias y archivos dentro de directorios de dependencias. Se comprobó la ausencia de los archivos ficticios dentro de ambas imágenes y la ejecución del Collector como usuario no root.

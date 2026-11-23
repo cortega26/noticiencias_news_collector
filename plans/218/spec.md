@@ -20,7 +20,6 @@ El webhook y el upload de imágenes aplican sus controles al cuerpo antes de que
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- news_collector/serving/api.py news_collector/serving/admin_images.py tests/unit/serving docs/PIPELINE_CONTRACTS.md`. Si el control abre una diferencia en el contrato de upload o necesita tocar rutas fuera del alcance, caracterizar el consumidor y revisar el plan antes de ampliar. Registrar el resultado en la fila 218.
 
-
 ## Evidencia local de implementación
 
 Verificado con cambios locales sobre `7ed42e008525fd6be66351f6ed8014930015b585`. Pasaron 74 casos focalizados, 9 pruebas de integración de los endpoints y 4.670 unitarias. También pasaron quality, los gates de contratos y límites del sistema, la validación de documentación y el chequeo del OpenAPI del Admin.

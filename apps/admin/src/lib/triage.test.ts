@@ -1,3 +1,4 @@
+import { ok } from 'node:assert/strict';
 import { runInThisContext } from 'node:vm';
 import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -63,8 +64,14 @@ function start() {
   }, {});
 }
 
+function requireElement<T extends HTMLElement>(selector: string, parent: ParentNode = document): T {
+  const element = parent.querySelector<T>(selector);
+  ok(element, `Missing fixture element ${selector}`);
+  return element;
+}
+
 function click(selector: string) {
-  document.querySelector<HTMLButtonElement>(selector)!.click();
+  requireElement<HTMLButtonElement>(selector).click();
 }
 
 function key(key: string, init: KeyboardEventInit = {}, target: EventTarget = document) {
@@ -73,8 +80,13 @@ function key(key: string, init: KeyboardEventInit = {}, target: EventTarget = do
   return event;
 }
 
-const detail = () => document.getElementById('detail')!;
-const queue = () => document.getElementById('queue')!;
+function detail() {
+  return requireElement('#detail');
+}
+
+function queue() {
+  return requireElement('#queue');
+}
 
 describe('Triage selection and queue identity', () => {
   beforeEach(() => {
@@ -82,7 +94,11 @@ describe('Triage selection and queue identity', () => {
     vi.spyOn(window, 'addEventListener');
     vi.spyOn(document, 'addEventListener');
     window.sessionStorage.clear();
-    document.body.innerHTML = `<div id="auth-gate" class="hidden"></div>${markup}`;
+    const fixture = new DOMParser().parseFromString(markup, 'text/html');
+    const gate = document.createElement('div');
+    gate.id = 'auth-gate';
+    gate.className = 'hidden';
+    document.body.replaceChildren(gate, ...Array.from(fixture.body.childNodes));
     api.listArticles.mockResolvedValue(page([article(1), article(2)]));
     api.getArticle.mockImplementation(async (id: number) => article(id));
     api.updateAuditStatus.mockResolvedValue({ status: 'ok', detail: 'Audit saved' });
@@ -106,7 +122,7 @@ describe('Triage selection and queue identity', () => {
     );
     start();
     await vi.waitFor(() => expect(detail().textContent).toContain('Article 1'));
-    const oldButton = detail().querySelector<HTMLButtonElement>('[data-action="audit-pass"]')!;
+    const oldButton = requireElement<HTMLButtonElement>('[data-action="audit-pass"]', detail());
     click('[data-id="2"]');
     expect(detail().textContent).toContain('Cargando');
     expect(detail().querySelector('[data-action]')).toBeNull();
@@ -160,9 +176,11 @@ describe('Triage selection and queue identity', () => {
       .mockResolvedValueOnce(page([article(2)], 'rejected-next'))
       .mockReturnValueOnce(more.promise);
     start();
-    Array.from(document.querySelectorAll<HTMLButtonElement>('#status-filter button'))
-      .find((button) => button.textContent === 'Rechazados')!
-      .click();
+    const rejected = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('#status-filter button')
+    ).find((button) => button.textContent === 'Rechazados');
+    ok(rejected, 'Missing rejected status option');
+    rejected.click();
     await vi.waitFor(() => expect(queue().textContent).toContain('Article 2'));
     old.resolve(page([article(1)], 'ready-next'));
     await old.promise;
@@ -179,7 +197,7 @@ describe('Triage selection and queue identity', () => {
   });
 
   it('reloads on first login and ignores shortcuts while gated, editing, or modified', async () => {
-    const gate = document.getElementById('auth-gate')!;
+    const gate = requireElement('#auth-gate');
     api.listArticles.mockRejectedValueOnce(
       Object.assign(new Error('Login'), { name: 'AuthError' })
     );
