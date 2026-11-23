@@ -20,3 +20,9 @@ Los lockfiles con hashes y los dos lockfiles npm pasan los gates reales con depe
 4. Ejecutar `make quality`, `make security-dev` y `make docs-check`, volver a consultar los seis lockfiles y verificar por separado que Semgrep inicia y ejecuta el gate documentado. Revisar el diff de versiones y registrar qué paquetes justifican cambios secundarios. La línea base de auditoría incluye 97 tests de Admin, typecheck y build estático, además de los bloqueos reproducidos por los scanners. Los gates tras actualizar dependencias son aceptación pendiente.
 
 Detener la actualización si el único camino disponible altera las comparaciones del replay, el contrato del Admin o el parseo HTML. Documentar la incompatibilidad y volver a medir el alcance. Cerrar con evidencia de CI del SHA entregado y actualizar la fila 215.
+
+## Evidencia del 23 de noviembre de 2026
+
+El PR de entrega 437 reprodujo los fallos de Astro y Soup Sieve sobre locks que coincidían con main. Se resolvieron los tres locks Python de aplicación con Soup Sieve 4.0 y los locks npm con Astro 7.4.7 y Promptfoo 0.126.0, incluidas las resoluciones transitivas auditadas. Los cinco locks pasaron sus auditorías. Pasaron 97 tests de Admin, typecheck, contrato y build, 40 tests del colector HTML, la paridad de 62 dependencias y el replay con su control negativo de salida 100. Los cuatro locks Python se regeneraron sin diferencias después de preparar el índice.
+
+Semgrep instaló y completó su scan con el pin actualizado de Soup Sieve. Su auditoría de dependencias sigue abierta. La última versión publicada fija MCP 1.29.0 y restringe OpenTelemetry y wcmatch a familias anteriores a las correcciones. Mantener la política existente y reevaluar al publicar Semgrep una versión compatible.

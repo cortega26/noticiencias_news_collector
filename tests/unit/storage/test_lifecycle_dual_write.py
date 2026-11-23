@@ -12,10 +12,15 @@ production code uses.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from datetime import datetime, timezone
+from unittest.mock import Mock
 
 import pytest
 
+from news_collector.components.publishing.github_publisher import GitHubPublisher
+from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
 from news_collector.storage.database import DatabaseManager
 from news_collector.storage.models import Article, Base
 
@@ -557,16 +562,8 @@ def test_legacy_recovery_reuses_durable_identity_and_finalizes_once(db_manager):
         assert meta["publication"]["content_sha256"] == digest
 
 
-def test_recovery_reuses_remote_pr_after_local_failure(
-    db_manager, tmp_path, monkeypatch
-):
-    import base64
-    import hashlib
-    from unittest.mock import Mock
-
-    from news_collector.components.publishing.github_publisher import GitHubPublisher
-    from news_collector.logic.workflows.pr_orchestrator import PROrchestrator
-
+@pytest.fixture
+def interrupted_recovery(db_manager, tmp_path, monkeypatch):
     article_id = _save_article(db_manager, "interrupted")
     branch = "content/update-interrupted"
     pr_url = "https://github.com/org/repo/pull/39"
@@ -615,6 +612,18 @@ def test_recovery_reuses_remote_pr_after_local_failure(
         article={},
         target_dir=tmp_path,
     )
+    return orchestrator, args, artifact, digest, pr_url, post, remote_pulls
+
+
+def test_recovery_reuses_remote_pr_after_local_failure(
+    db_manager, monkeypatch, interrupted_recovery
+):
+    from unittest.mock import Mock
+
+    orchestrator, args, artifact, digest, pr_url, post, remote_pulls = (
+        interrupted_recovery
+    )
+    article_id = args["numeric_id"]
     with monkeypatch.context() as failed_write:
         failed_write.setattr(
             db_manager.lifecycle, "finish_legacy_recovery", Mock(return_value=False)
@@ -625,7 +634,7 @@ def test_recovery_reuses_remote_pr_after_local_failure(
     assert state["publication_attempt_id"]
     assert state["legacy_recovery_sha256"] == digest
     artifact.unlink()
-    remote_pulls.append(pull)
+    remote_pulls.append(remote_pulls[0])
     assert orchestrator.attempt_recovery(**args).recovery_pending
     assert _events_for(db_manager, article_id) == []
     remote_pulls.pop()

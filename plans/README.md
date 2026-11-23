@@ -683,7 +683,7 @@ Base Collector `ffebfc9b3c8ff91cd001b3e2cc1c085ab6acbfc6`. El [informe de audito
 
 | Plan | Trabajo | Prioridad | Esfuerzo | Dependencias | Estado |
 | --- | --- | --- | --- | --- | --- |
-| 215 | [Gates de dependencias](215/spec.md) | P1 | M | — | TODO |
+| 215 | [Gates de dependencias](215/spec.md) | P1 | M | — | PARTIAL — locks de aplicación reparados; restricciones upstream de Semgrep pendientes |
 | 216 | [Identidad de acciones de Triage](216/spec.md) | P1 | M | — | TODO |
 | 217 | [Evidencia y reconciliación de despliegue](217/spec.md) | P1 | M | Coordinar con frontend 024 | TODO |
 | 218 | [Límites previos al parser](218/spec.md) | P1 | M | — | TODO |

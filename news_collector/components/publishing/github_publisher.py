@@ -468,6 +468,36 @@ class GitHubPublisher:
         full_name = f"{owner}/{repo}"
         api = f"https://api.github.com/repos/{full_name}"
         base = self.base_branch
+        matches = self._lookup_recovery_prs(api, owner, branch_name)
+        if matches:
+            pull = matches[0]
+        else:
+            # Prove the branch currently carries the saved artifact before opening
+            # a draft. Verify again against the immutable head returned by GitHub.
+            self._verify_recovery_artifact(
+                api, branch_name, output_filename, content_sha256
+            )
+            created = requests.post(
+                f"{api}/pulls",
+                json={
+                    "head": branch_name,
+                    "base": base,
+                    "title": title,
+                    "body": body,
+                    "draft": True,
+                },
+                headers=self.headers,
+                timeout=15,
+            )
+            created.raise_for_status()
+            pull = created.json()
+        return self._verify_recovery_pr(
+            pull, api, full_name, branch_name, base, output_filename, content_sha256
+        )
+
+    def _lookup_recovery_prs(
+        self, api: str, owner: str, branch_name: str
+    ) -> list[dict]:
         pulls = requests.get(
             f"{api}/pulls",
             params={
@@ -482,44 +512,7 @@ class GitHubPublisher:
         matches = pulls.json()
         if not isinstance(matches, list) or len(matches) > 1:
             raise ValueError("Ambiguous recovery PR lookup")
-        if matches:
-            return self._verify_recovery_pr(
-                matches[0],
-                api,
-                full_name,
-                branch_name,
-                base,
-                output_filename,
-                content_sha256,
-            )
-
-        # Prove the branch currently carries the saved artifact before opening
-        # a draft. Verify again against the immutable head returned by GitHub.
-        self._verify_recovery_artifact(
-            api, branch_name, output_filename, content_sha256
-        )
-        created = requests.post(
-            f"{api}/pulls",
-            json={
-                "head": branch_name,
-                "base": base,
-                "title": title,
-                "body": body,
-                "draft": True,
-            },
-            headers=self.headers,
-            timeout=15,
-        )
-        created.raise_for_status()
-        return self._verify_recovery_pr(
-            created.json(),
-            api,
-            full_name,
-            branch_name,
-            base,
-            output_filename,
-            content_sha256,
-        )
+        return list(matches)
 
     def _verify_recovery_pr(
         self,

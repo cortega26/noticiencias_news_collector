@@ -815,46 +815,86 @@ class LifecycleRepository:
             ) != (branch, started_at):
                 return None
             rows = self._recovery_rows(session, article_id)
-            active = [row for row in rows if row.state == "PUBLISHING"]
-            if rows and (len(active) != 1 or active[0].id != rows[0].id):
-                return None
-            token = metadata.get("publication_attempt_id")
-            if token:
-                if (
-                    metadata.get("legacy_recovery_sha256") == digest
-                    and active
-                    and self._matches_recovery_row(active[0], branch, token, digest)
-                ):
-                    return str(token)
-                return None
+            return self._adopt_recovery_row(session, article, rows, branch, digest)
 
-            row = (
-                active[0]
-                if active
-                else _PublicationAttemptModel(
-                    article_id=article_id,
-                    refinery_id=str(article_id),
-                    attempt_number=1,
-                    state="PUBLISHING",
-                    started_at=datetime.now(timezone.utc),
-                )
-            )
-            details = dict(row.details or {})
-            if (
-                details.get("publication_attempt_id")
-                or row.branch_name not in (None, branch)
-                or row.pr_url
-                or row.refinery_id != str(article_id)
+    def _adopt_recovery_row(
+        self,
+        session: Session,
+        article: _ArticleModel,
+        rows: list[_PublicationAttemptModel],
+        branch: str,
+        digest: str,
+    ) -> str | None:
+        if rows and not self._has_one_current_publishing_row(rows):
+            return None
+        metadata = dict(article.article_metadata or {})
+        token = metadata.get("publication_attempt_id")
+        if token:
+            if rows and self._matches_adopted_recovery(
+                rows[0], metadata, branch, token, digest
             ):
-                return None
-            token = uuid4().hex
-            details.update(publication_attempt_id=token, content_sha256=digest)
-            row.details = details
-            row.branch_name = branch
-            metadata.update(publication_attempt_id=token, legacy_recovery_sha256=digest)
-            article.article_metadata = metadata
-            session.add(row)
-            return token
+                return str(token)
+            return None
+
+        row = (
+            rows[0]
+            if rows
+            else _PublicationAttemptModel(
+                article_id=article.id,
+                refinery_id=str(article.id),
+                attempt_number=1,
+                state="PUBLISHING",
+                started_at=datetime.now(timezone.utc),
+            )
+        )
+        return self._claim_tokenless_recovery(session, article, row, branch, digest)
+
+    @staticmethod
+    def _has_one_current_publishing_row(rows: list[_PublicationAttemptModel]) -> bool:
+        return (
+            rows[0].state == "PUBLISHING"
+            and sum(row.state == "PUBLISHING" for row in rows) == 1
+        )
+
+    def _matches_adopted_recovery(
+        self,
+        row: _PublicationAttemptModel,
+        metadata: dict,
+        branch: str,
+        token: str,
+        digest: str,
+    ) -> bool:
+        return metadata.get(
+            "legacy_recovery_sha256"
+        ) == digest and self._matches_recovery_row(row, branch, token, digest)
+
+    @staticmethod
+    def _claim_tokenless_recovery(
+        session: Session,
+        article: _ArticleModel,
+        row: _PublicationAttemptModel,
+        branch: str,
+        digest: str,
+    ) -> str | None:
+        details = dict(row.details or {})
+        if (
+            details.get("publication_attempt_id")
+            or row.branch_name not in (None, branch)
+            or row.pr_url
+            or row.refinery_id != str(article.id)
+        ):
+            return None
+        token = uuid4().hex
+        details.update(publication_attempt_id=token, content_sha256=digest)
+        row.details = details
+        row.branch_name = branch
+        article.article_metadata = {
+            **(article.article_metadata or {}),
+            "publication_attempt_id": token,
+            "legacy_recovery_sha256": digest,
+        }
+        session.add(row)
+        return token
 
     @staticmethod
     def _matches_recovery_row(row: Any, branch: str, token: str, digest: str) -> bool:

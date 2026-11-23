@@ -149,8 +149,7 @@ class PROrchestrator:
                 branch_name,
                 output_filename,
                 pr_body,
-                publication_attempt_id,
-                content_sha256,
+                (publication_attempt_id, content_sha256),
             )
 
         pr_url = git.create_pull_request(
@@ -188,9 +187,9 @@ class PROrchestrator:
         branch: str,
         filename: str,
         body: str,
-        token: str | None,
-        digest: str | None,
+        correlation: tuple[str | None, str | None],
     ) -> PRResult:
+        token, digest = correlation
         if not token or not digest:
             return PRResult(None, recovery_pending=True)
         pr_url = None
