@@ -315,27 +315,13 @@ class ArticleRepository:
 
             article.processing_status = "publishing"
             article_metadata = dict(article.article_metadata or {})
-            publication_meta = dict(article_metadata.get("publication") or {})
-            publication_meta.update(
-                {
-                    "state": "PR_CREATED",
-                    "pr_url": pr_url,
-                    "refinery_id": refinery_id or str(article_id),
-                    "frontend_checks": {
-                        "state": "pending",
-                        "ready_for_merge": False,
-                        "required_workflows": list(
-                            FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS
-                        ),
-                    },
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
+            set_pr_created_projection(
+                article_metadata,
+                pr_url,
+                refinery_id or str(article_id),
+                publication_attempt_id,
+                content_sha256,
             )
-            if publication_attempt_id:
-                publication_meta["publication_attempt_id"] = publication_attempt_id
-            if content_sha256:
-                publication_meta["content_sha256"] = content_sha256
-            article_metadata["publication"] = publication_meta
             article.article_metadata = article_metadata
             session.add(article)
             logger.info("Marked article {} as PR_CREATED (PR: {})", article_id, pr_url)
@@ -703,6 +689,7 @@ class ArticleRepository:
                 timezone.utc
             ).isoformat()
             article_metadata["publishing_branch"] = branch_name
+            article_metadata.pop("legacy_recovery_sha256", None)
             if publication_attempt_id:
                 article_metadata["publication_attempt_id"] = publication_attempt_id
             article.article_metadata = article_metadata
@@ -730,11 +717,14 @@ class ArticleRepository:
             metadata = dict(article.article_metadata or {})
             if metadata.get("publication"):
                 return None
-            return {
+            state = {
                 "publishing_started_at": metadata.get("publishing_started_at"),
                 "publishing_branch": metadata.get("publishing_branch"),
                 "publication_attempt_id": metadata.get("publication_attempt_id"),
             }
+            if metadata.get("legacy_recovery_sha256"):
+                state["legacy_recovery_sha256"] = metadata["legacy_recovery_sha256"]
+            return state
 
     def release_article_publishing(
         self,
@@ -1986,3 +1976,32 @@ class ArticleRepository:
                 article_record = cast(Any, article)
                 article_record.cluster_id = new_cluster
                 article_record.duplication_confidence = 0.0
+
+
+def set_pr_created_projection(
+    article_metadata: dict,
+    pr_url: str,
+    refinery_id: str,
+    publication_attempt_id: str | None,
+    content_sha256: str | None,
+) -> None:
+    """Apply the PR-created article projection within the caller's transaction."""
+    publication_meta = dict(article_metadata.get("publication") or {})
+    publication_meta.update(
+        {
+            "state": "PR_CREATED",
+            "pr_url": pr_url,
+            "refinery_id": refinery_id,
+            "frontend_checks": {
+                "state": "pending",
+                "ready_for_merge": False,
+                "required_workflows": list(FRONTEND_REQUIRED_PUBLICATION_WORKFLOWS),
+            },
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    if publication_attempt_id:
+        publication_meta["publication_attempt_id"] = publication_attempt_id
+    if content_sha256:
+        publication_meta["content_sha256"] = content_sha256
+    article_metadata["publication"] = publication_meta

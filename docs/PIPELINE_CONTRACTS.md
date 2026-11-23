@@ -367,3 +367,17 @@ an explicit maintenance transition to `interrupted` that preserves
 in the downgrade. Interrupted checkpoints remain retained for controlled
 recovery after compatible code is restored; do not delete them to satisfy the
 constraint.
+
+### Reader report URLs
+
+The Worker accepts absolute HTTP(S) URLs with an unambiguous authority and a valid port. Article links must use noticiencias.com or a subdomain. Evidence may use an external HTTP(S) host. Encode spaces within the URL. The Worker stores the accepted string as supplied. The shared corpus lives in the frontend at `../noticiencias/tests/fixtures/reader-report-url-contract.json` and is exercised by both repositories.
+
+### Legacy publication recovery
+
+Refinery adopts a pre-PR legacy attempt in the Collector database before contacting
+GitHub. It binds the existing branch and artifact hash to one publication attempt.
+On retry, it can verify the persisted hash against the PR's immutable head even
+if the local checkout was recreated. The PR reference, article projection and
+lifecycle event commit together. A pending recovery exits the current run without
+starting a new publication. Use the existing explicit article-ID path to retry a
+pending article because standard batch selection skips articles in publishing state.

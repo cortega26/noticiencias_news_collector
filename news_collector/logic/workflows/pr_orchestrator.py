@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
-from uuid import uuid4
 
 from news_collector.utils.logger import get_logger
 
@@ -35,6 +34,7 @@ class PRResult:
 
     pr_url: str | None
     recovered: bool = False
+    recovery_pending: bool = False
 
 
 class PROrchestrator:
@@ -70,6 +70,7 @@ class PROrchestrator:
         output_filename: str,
         git_handler: Any = None,
         recovered: bool = False,
+        adopted_recovery: bool = False,
         review_notes: str = "",
         publication_attempt_id: str | None = None,
         content_sha256: str | None = None,
@@ -140,6 +141,18 @@ class PROrchestrator:
         if review_notes.strip():
             pr_body += f"\n\n{review_notes.strip()}"
 
+        if adopted_recovery:
+            return self._complete_adopted_recovery(
+                git,
+                numeric_id,
+                repo_url,
+                branch_name,
+                output_filename,
+                pr_body,
+                publication_attempt_id,
+                content_sha256,
+            )
+
         pr_url = git.create_pull_request(
             repo_url=repo_url,
             branch_name=branch_name,
@@ -166,6 +179,41 @@ class PROrchestrator:
             )
 
         return PRResult(pr_url=pr_url, recovered=recovered)
+
+    def _complete_adopted_recovery(
+        self,
+        git: Any,
+        numeric_id: int,
+        repo_url: str,
+        branch: str,
+        filename: str,
+        body: str,
+        token: str | None,
+        digest: str | None,
+    ) -> PRResult:
+        if not token or not digest:
+            return PRResult(None, recovery_pending=True)
+        pr_url = None
+        try:
+            pr_url = git.get_or_create_recovery_pr(
+                repo_url=repo_url,
+                branch_name=branch,
+                title=f"News: {filename.removesuffix('.md')}",
+                body=body,
+                output_filename=filename,
+                content_sha256=digest,
+            )
+            if pr_url and self._db.lifecycle.finish_legacy_recovery(
+                numeric_id, token, pr_url
+            ):
+                return PRResult(pr_url, recovered=True)
+        except Exception as exc:
+            logger.warning(
+                "Recovery for article {} remains pending ({})",
+                numeric_id,
+                type(exc).__name__,
+            )
+        return PRResult(pr_url, recovery_pending=True)
 
     def resolve_repo_url(self) -> str | None:
         """
@@ -196,10 +244,9 @@ class PROrchestrator:
     def _recovery_correlation(
         *,
         article_id: str,
-        publishing_info: Dict[str, Any],
         target_dir: Path | None,
         output_filename: str,
-    ) -> tuple[str, str] | None:
+    ) -> str | None:
         """Bind a recovered PR to its exact artifact and workflow attempt."""
         if target_dir is None:
             logger.warning(
@@ -219,13 +266,7 @@ class PROrchestrator:
                 exc,
             )
             return None
-        publication_attempt_id = publishing_info.get("publication_attempt_id")
-        if not publication_attempt_id:
-            # Legacy publishing rows predate attempt tokens. Give this recovery
-            # run its own identity; the exact PR and artifact hash still bind
-            # any callback to the recovered publication.
-            publication_attempt_id = uuid4().hex
-        return str(publication_attempt_id), content_sha256
+        return content_sha256
 
     @staticmethod
     def _recovery_timed_out(publishing_started_at: str | None, article_id: str) -> bool:
@@ -263,7 +304,7 @@ class PROrchestrator:
         B-01 / F-0012 / F-0015: If article is stuck in 'publishing' state, attempt recovery.
 
         Returns:
-            PRResult(recovered=True)  – recovery PR created, caller should return True.
+            PRResult – recovered or pending, caller stops normal processing.
             None                      – no recovery needed, caller should continue.
         """
         get_state = getattr(self._db, "get_publishing_state", None)
@@ -271,14 +312,19 @@ class PROrchestrator:
             return None
 
         publishing_info = get_state(numeric_id)
-        if publishing_info is None:
+        if not isinstance(publishing_info, dict):
             return None
 
         publishing_started_at = publishing_info.get("publishing_started_at")
         publishing_branch = publishing_info.get("publishing_branch")
 
-        # Check timeout
-        if self._recovery_timed_out(publishing_started_at, article_id):
+        token = publishing_info.get("publication_attempt_id")
+        stored_digest = publishing_info.get("legacy_recovery_sha256")
+        already_adopted = bool(stored_digest)
+        adopted_recovery = not token or already_adopted
+        if not adopted_recovery and self._recovery_timed_out(
+            publishing_started_at, article_id
+        ):
             return None
 
         if not publishing_branch:
@@ -298,17 +344,21 @@ class PROrchestrator:
         git = git_handler if git_handler is not None else self._git
         slug = publishing_branch.replace("content/update-", "", 1)
         output_filename = f"{slug}.md"
-        correlation = self._recovery_correlation(
+        content_sha256 = stored_digest or self._recovery_correlation(
             article_id=article_id,
-            publishing_info=publishing_info,
             target_dir=target_dir,
             output_filename=output_filename,
         )
-        if correlation is None:
-            return None
-        publication_attempt_id, content_sha256 = correlation
+        if content_sha256 is None:
+            return PRResult(None, recovery_pending=True) if already_adopted else None
 
         try:
+            if adopted_recovery:
+                token = self._db.lifecycle.adopt_legacy_recovery(
+                    numeric_id, publishing_branch, content_sha256, publishing_started_at
+                )
+                if not token:
+                    return PRResult(None, recovery_pending=True)
             result = self.create_pr(
                 article_id=article_id,
                 article=article,
@@ -316,8 +366,9 @@ class PROrchestrator:
                 output_filename=output_filename,
                 git_handler=git,
                 recovered=True,
-                publication_attempt_id=publication_attempt_id,
+                publication_attempt_id=token,
                 content_sha256=content_sha256,
+                adopted_recovery=adopted_recovery,
             )
         except Exception as e:
             logger.warning(
@@ -326,14 +377,6 @@ class PROrchestrator:
                 article_id,
                 e,
             )
-            return None
+            return PRResult(None, recovery_pending=True) if adopted_recovery else None
 
-        if result.pr_url:
-            logger.info(
-                "Publishing recovery succeeded for article {}: {}",
-                article_id,
-                result.pr_url,
-            )
-            return result
-
-        return None
+        return result if result.recovery_pending or result.pr_url else None

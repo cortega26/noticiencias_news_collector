@@ -284,7 +284,8 @@ class ReconciliationSummary:
     ``listed`` = keys seen on pages; ``fetched`` = objects pulled; the
     outcome counters partition ``fetched`` (+ ``skipped``). ``fatal`` is
     set (with a reason) when the listing itself failed — per-object
-    failures never set it, the run continues.
+    failures finish the current page. The resume cursor refers to the next
+    page or to the page that must be retried.
     """
 
     listed: int = 0
@@ -298,6 +299,10 @@ class ReconciliationSummary:
     truncated: bool = False
     fatal: Optional[str] = None
     outcomes: tuple[ReportOutcome, ...] = ()
+    continuation_status: Literal["complete", "more", "retry_page", "list_error"] = (
+        "complete"
+    )
+    resume_cursor: Optional[str] = None
 
     @property
     def processed(self) -> int:

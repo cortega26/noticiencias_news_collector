@@ -112,7 +112,9 @@ class TestPublishingStateRecoveryWithoutPR:
 
         # PR does not exist — create_pull_request creates a new one
         new_pr_url = "https://github.com/owner/repo/pull/99"
-        mock_git.create_pull_request.return_value = new_pr_url
+        mock_git.get_or_create_recovery_pr.return_value = new_pr_url
+        mock_db.lifecycle.adopt_legacy_recovery.return_value = "adopted-attempt"
+        mock_db.lifecycle.finish_legacy_recovery.return_value = True
 
         article = {
             "id": "456",
@@ -129,15 +131,40 @@ class TestPublishingStateRecoveryWithoutPR:
             result = engine.process_single_article(article, MagicMock(), target_dir)
 
         assert result is True
-        mock_git.create_pull_request.assert_called_once()
-        published_call = mock_db.mark_article_published.call_args
-        assert published_call.args == (456, new_pr_url, "456")
-        assert published_call.kwargs["publication_attempt_id"]
+        mock_git.get_or_create_recovery_pr.assert_called_once()
         assert (
-            published_call.kwargs["content_sha256"]
+            mock_git.get_or_create_recovery_pr.call_args.kwargs["content_sha256"]
             == hashlib.sha256(b"legacy recovered markdown\n").hexdigest()
         )
+        mock_db.lifecycle.finish_legacy_recovery.assert_called_once_with(
+            456, "adopted-attempt", new_pr_url
+        )
         mock_editor.process_article.assert_not_called()
+
+
+@pytest.mark.parametrize("checkpointed", [False, True])
+def test_pending_recovery_blocks_fresh_publication(
+    _engine_deps, tmp_path, checkpointed
+):
+    engine, db, git, editor, _ = _engine_deps
+    if checkpointed:
+        engine.checkpoint_repository = MagicMock()
+        engine.checkpoint_repository.load.return_value = None
+        engine.checkpoint_run_id = 1
+    db.get_publishing_state.return_value = {
+        "publishing_branch": "content/update-pending",
+        "publication_attempt_id": "adopted-attempt",
+        "legacy_recovery_sha256": "a" * 64,
+    }
+    git.get_or_create_recovery_pr.return_value = "https://github.com/owner/repo/pull/99"
+    db.lifecycle.adopt_legacy_recovery.return_value = "adopted-attempt"
+    db.lifecycle.finish_legacy_recovery.return_value = False
+
+    article = {"id": "456", "title": "Pending article", "source_id": "test"}
+    assert engine.process_single_article(article, MagicMock(), tmp_path) is False
+    assert engine._last_blocked_error["reason"] == "legacy_recovery_pending"
+    editor.process_article.assert_not_called()
+    git.create_pull_request.assert_not_called()
 
 
 class TestPublishingStateTimeout:
@@ -152,6 +179,7 @@ class TestPublishingStateTimeout:
         old_time = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": old_time,
+            "publication_attempt_id": "expired-modern-attempt",
             "publishing_branch": "content/update-2024-01-01-old-article",
         }
         mock_db.get_canonical_slug.return_value = None

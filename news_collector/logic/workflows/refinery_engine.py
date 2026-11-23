@@ -575,8 +575,11 @@ class RefineryEngine:
             )
 
         # --- B-01 / F-0012, F-0015: Publishing state recovery ---
-        if self._attempt_publishing_recovery(article_id, article, target_dir, run):
-            return True
+        recovery = self._attempt_publishing_recovery(
+            article_id, article, target_dir, run
+        )
+        if recovery is not None:
+            return recovery
 
         # 1. Canonical Identity Check (Idempotency)
         posts_dir = target_dir / "src/content/posts"
@@ -698,8 +701,11 @@ class RefineryEngine:
                 "error": "Previous item failed; explicit retry required"
             }
             return False
-        if self._attempt_publishing_recovery(article_id, article, target_dir, run):
-            return True
+        recovery = self._attempt_publishing_recovery(
+            article_id, article, target_dir, run
+        )
+        if recovery is not None:
+            return recovery
         posts_dir = target_dir / "src/content/posts"
         fingerprint = editorial_fingerprint(article, self._draft_settings())
         identity = self._run_progress_step(
@@ -860,13 +866,9 @@ class RefineryEngine:
         article: Dict[str, Any],
         target_dir: Path,
         run: "_PublicationRun",
-    ) -> bool:
-        """B-01 / F-0012, F-0015: recover an article stuck in `publishing`.
+    ) -> bool | None:
+        """Return the recovery outcome, or None to continue publishing."""
 
-        Returns True when recovery completed the publication (caller returns
-        immediately); False means "no recovery needed, continue normal flow".
-        """
-        run.numeric_id = None
         with contextlib.suppress(ValueError, TypeError):
             run.numeric_id = int(article_id)
 
@@ -880,11 +882,18 @@ class RefineryEngine:
             )
             if recovery_result is not None:
                 run.pr_url = recovery_result.pr_url
+                if recovery_result.recovery_pending:
+                    self._last_blocked_error = {
+                        "error": "Publication recovery is pending",
+                        "reason": "legacy_recovery_pending",
+                    }
+                    run.record_stage("publishing_recovery", False, pr_url=run.pr_url)
+                    return False
                 run.record_stage("publishing_recovery", True, pr_url=run.pr_url)
                 run.persist_attempt(True)
                 return True
             # recovery_result is None → no recovery needed, continue normal flow
-        return False
+        return None
 
     def _resolve_identity(
         self,

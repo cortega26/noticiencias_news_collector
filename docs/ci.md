@@ -337,3 +337,7 @@ trial run validates the suite on Ubuntu 26.
   The baseline pins known historical debt (see issue #249) — new secrets must never be
   added to it; the correct fix for a baseline entry is rotation + history purge, after
   which the entry is deleted.
+
+### Reader report URL fixture
+
+Collector CI copies `../noticiencias/tests/fixtures/reader-report-url-contract.json` from the same frontend checkout as the publication schema. Land the fixture in the frontend before enabling the Collector CI requirement. With `CI_EXPECTED_FRONTEND_SCHEMA=1`, the Collector test requires the fixture.

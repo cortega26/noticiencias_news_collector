@@ -352,7 +352,7 @@ def _run_object(
 
     return ReportOutcome(
         key=key,
-        status=persist.status,  # created | duplicate | db_failed
+        status="persist_failed" if persist.status == "db_failed" else persist.status,
         idempotency_key=intake.idempotency_key,
         reason=persist.reason,
     )
@@ -374,6 +374,16 @@ def _bump(summary: ReconciliationSummary, outcome: ReportOutcome) -> None:
         summary.fetch_failed += 1
 
 
+def _listing_page_error(
+    page: R2KeyPage, page_size: int, seen_cursors: set[Optional[str]]
+) -> Optional[str]:
+    if len(page.keys) > page_size:
+        return "list_page_too_large"
+    if page.next_cursor is not None and page.next_cursor in seen_cursors:
+        return "list_cursor_repeated"
+    return None
+
+
 def reconcile_report_objects(
     *,
     feed: ReportIntakeFeed,
@@ -382,22 +392,15 @@ def reconcile_report_objects(
     prefix: str = "reports/",
     limit: int = 100,
     since: Optional[datetime] = None,
+    cursor: Optional[str] = None,
 ) -> ReconciliationSummary:
-    """Idempotently reconcile up to ``limit`` R2 report objects.
-
-    Pages the listing and, per key, fetches bytes, interprets, resolves
-    identity (185) and persists — every object producing a typed
-    ``ReportOutcome``. Per-object failures never abort the run; the pass
-    only stops early on a listing failure (recorded in ``summary.fatal``).
-    ``truncated`` marks a pass that reached ``limit`` while more keys
-    remained (non-empty next cursor).
-    """
+    """Reconcile a bounded batch, checkpointing only fully processed pages."""
     if limit < 1:
         raise ValueError("limit must be at least 1")
 
     summary = ReconciliationSummary()
     outcomes: list[ReportOutcome] = []
-    cursor: Optional[str] = None
+    seen_cursors = {cursor}
 
     while summary.processed < limit:
         page_size = min(limit - summary.processed, MAX_LIST_PER_PAGE)
@@ -408,15 +411,15 @@ def reconcile_report_objects(
             logger.error("Report listing failed (error_type={})", type(exc).__name__)
             break
 
-        page_keys = list(page.keys)
-        summary.listed += len(page_keys)
+        summary.listed += len(page.keys)
 
-        truncated_by_limit = False
-        for key in page_keys:
-            if summary.processed >= limit:
-                # Limit hit while this still-held page had unprocessed keys.
-                truncated_by_limit = True
-                break
+        summary.fatal = _listing_page_error(page, page_size, seen_cursors)
+        if summary.fatal:
+            summary.truncated = len(page.keys) > page_size
+            break
+
+        retry_page = False
+        for key in page.keys:
             outcome = _run_object(
                 key,
                 feed=feed,
@@ -428,15 +431,27 @@ def reconcile_report_objects(
             _bump(summary, outcome)
             summary.fetched += 1  # every processed object was fetched once
 
-        if summary.processed >= limit and (
-            truncated_by_limit or page.next_cursor is not None
-        ):
-            summary.truncated = True
-        if summary.processed >= limit:
+            retry_page |= outcome.status == "persist_failed" or (
+                outcome.status == "fetch_failed"
+                and outcome.reason != REASON_FETCH_MISSING
+            )
+
+        summary.truncated = summary.processed >= limit and page.next_cursor is not None
+        if retry_page:
+            summary.continuation_status = "retry_page"
+            summary.resume_cursor = cursor
             break
         if page.next_cursor is None:
             break
+        if summary.truncated:
+            summary.continuation_status = "more"
+            summary.resume_cursor = page.next_cursor
+            break
         cursor = page.next_cursor
+        seen_cursors.add(cursor)
 
+    if summary.fatal:
+        summary.continuation_status = "list_error"
+        summary.resume_cursor = cursor
     summary.outcomes = tuple(outcomes)
     return summary

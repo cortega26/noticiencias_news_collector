@@ -148,6 +148,8 @@ class TestCreatePR:
         assert "Test Source" in normal_body  # source_name
         assert "Noticiencias Refinery" in normal_body
 
+        assert mock_git.create_pull_request.call_args.kwargs["draft"] is True
+
         # --- Recovery path ---
         mock_git.reset_mock()
         from datetime import timedelta
@@ -164,7 +166,9 @@ class TestCreatePR:
             article=make_article("42"),
             target_dir=_target_with_recovery_artifact(tmp_path, "test.md"),
         )
-        recovery_body = mock_git.create_pull_request.call_args.kwargs.get("body", "")
+        recovery_body = mock_git.get_or_create_recovery_pr.call_args.kwargs.get(
+            "body", ""
+        )
 
         assert "42" in recovery_body
         assert "src" in recovery_body
@@ -189,7 +193,6 @@ class TestCreatePR:
         )
         assert normal_prefix == recovery_prefix
         assert normal_suffix.split("\n", 1)[1] == recovery_suffix.split("\n", 1)[1]
-        assert mock_git.create_pull_request.call_args.kwargs["draft"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +279,7 @@ class TestAttemptRecovery:
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": recent_time,
             "publishing_branch": "content/update-2024-01-01-test",
+            "publication_attempt_id": "existing-attempt",
         }
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
@@ -298,6 +302,7 @@ class TestAttemptRecovery:
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": recent_time,
             "publishing_branch": "content/update-2024-01-01-test",
+            "publication_attempt_id": "existing-attempt",
         }
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
@@ -321,6 +326,7 @@ class TestAttemptRecovery:
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": recent_time,
             "publishing_branch": "content/update-2024-01-01-test",
+            "publication_attempt_id": "existing-attempt",
             "publication_attempt_id": "attempt-1",
         }
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
@@ -366,6 +372,7 @@ class TestAttemptRecovery:
         mock_db.get_publishing_state.return_value = {
             "publishing_started_at": recent_time,
             "publishing_branch": "content/update-2024-01-01-test",
+            "publication_attempt_id": "existing-attempt",
         }
         orchestrator = PROrchestrator(git=mock_git, db=mock_db, config=config_obj)
 
