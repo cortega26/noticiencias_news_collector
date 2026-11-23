@@ -12,7 +12,7 @@ Owns:
   tests can monkeypatch ``admin_images.MAX_UPLOAD_BYTES``.
 
 Does NOT own:
-- Authentication: ``build_router`` receives ``verify_admin_token`` from
+- Authentication: ``build_router`` receives ``verify_authorization`` from
   ``serving/api.py``. The factory parameter is what keeps the two modules
   from importing each other.
 - Brief storage semantics: every request delegates to
@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 
 from news_collector.contracts.admin import (
     AdminImageBriefItem,
@@ -42,6 +42,7 @@ from news_collector.contracts.image_brief import (
     ImageGenerationMetadata,
     ImageOrigin,
 )
+from news_collector.serving.bounded_body import VerifyAuthorization, bounded_body_route
 from news_collector.utils.logger import get_logger
 
 logger = get_logger().create_module_logger("AdminImages")
@@ -49,6 +50,8 @@ logger = get_logger().create_module_logger("AdminImages")
 # NC-BE-087 S2: ceiling for admin image-brief uploads — generous above any
 # GUI-produced hero image. Overridable in tests via monkeypatch.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+# Account for multipart boundary, headers and optional metadata fields.
+_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 _UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 
@@ -68,14 +71,14 @@ def _read_upload_capped(upload: UploadFile, *, cap_bytes: int) -> bytes:
 
 
 def build_router(  # noqa: C901
-    verify_admin_token: Callable[..., None],
+    verify_authorization: VerifyAuthorization,
     on_image_ready: Callable[[], object] | None = None,
     *,
     data_dir: Path | None = None,
 ) -> APIRouter:
     """Build the admin images router with the caller's auth dependency.
 
-    ``verify_admin_token`` is injected rather than imported: ``api.py`` owns
+    ``verify_authorization`` is injected rather than imported: ``api.py`` owns
     it and imports this module, so importing it back would be a cycle.
     """
     router = APIRouter()
@@ -97,7 +100,7 @@ def build_router(  # noqa: C901
 
     @router.get("/v1/admin/images", response_model=AdminImageQueueEnvelope)
     def admin_image_queue(
-        _: None = Depends(verify_admin_token),
+        _: None = Depends(verify_authorization),
     ) -> AdminImageQueueEnvelope:
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
 
@@ -139,7 +142,7 @@ def build_router(  # noqa: C901
     def admin_update_image_brief(
         slug: str,
         payload: AdminImageBriefUpdate,
-        _: None = Depends(verify_admin_token),
+        _: None = Depends(verify_authorization),
     ) -> AdminImageBriefUploadResult:
         """Edit an image brief's editable fields (no asset upload)."""
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
@@ -168,13 +171,20 @@ def build_router(  # noqa: C901
             asset_path=updated.uploaded_asset_path or "",
         )
 
-    @router.post(
+    uploads = APIRouter(
+        route_class=bounded_body_route(
+            verify_authorization,
+            lambda: MAX_UPLOAD_BYTES + _MULTIPART_OVERHEAD_BYTES,
+            lambda _size, _limit: HTTPException(413, "File upload too large"),
+        )
+    )
+
+    @uploads.post(
         "/v1/admin/images/{slug}/upload",
         response_model=AdminImageBriefUploadResult,
     )
     def admin_upload_image_brief(
         slug: str,
-        request: Request,
         file: UploadFile = File(...),
         topic: Optional[str] = Form(None),
         news_angle: Optional[str] = Form(None),
@@ -183,20 +193,10 @@ def build_router(  # noqa: C901
         draft_alt_text: Optional[str] = Form(None),
         image_origin: Optional[ImageOrigin] = Form(None),
         generation_metadata: Optional[str] = Form(None),
-        _: None = Depends(verify_admin_token),
+        _: Optional[str] = Header(None, alias="Authorization"),
     ) -> AdminImageBriefUploadResult:
         """Stage an image asset for a brief (multipart)."""
         from news_collector.logic.workflows.image_briefs import ImageBriefStore
-
-        # NC-BE-087 S2: early reject when the declared body already exceeds
-        # the cap, before touching the store or reading the stream.
-        declared_length = request.headers.get("content-length")
-        if (
-            declared_length
-            and declared_length.isdigit()
-            and int(declared_length) > MAX_UPLOAD_BYTES
-        ):
-            raise HTTPException(status_code=413, detail="File upload too large")
 
         store = ImageBriefStore(image_data_dir)
         try:
@@ -234,4 +234,5 @@ def build_router(  # noqa: C901
             asset_path=updated.uploaded_asset_path or "",
         )
 
+    router.include_router(uploads)
     return router

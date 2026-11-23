@@ -19,3 +19,10 @@ El webhook y el upload de imágenes aplican sus controles al cuerpo antes de que
 3. Ejecutar `python -m pytest tests/unit/serving/test_write_surface_bounds.py tests/unit/serving/test_admin_images_router.py --no-cov`, `make test-boundaries`, `make test-contracts`, `make quality`, `make docs-check` y el chequeo del artefacto OpenAPI del Admin. La auditoría ejecutó las pruebas focalizadas de límites existentes. Las regresiones de orden y los gates completos son aceptación del plan.
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- news_collector/serving/api.py news_collector/serving/admin_images.py tests/unit/serving docs/PIPELINE_CONTRACTS.md`. Si el control abre una diferencia en el contrato de upload o necesita tocar rutas fuera del alcance, caracterizar el consumidor y revisar el plan antes de ampliar. Registrar el resultado en la fila 218.
+
+
+## Evidencia local de implementación
+
+Verificado con cambios locales sobre `7ed42e008525fd6be66351f6ed8014930015b585`. Pasaron 74 casos focalizados, 9 pruebas de integración de los endpoints y 4.670 unitarias. También pasaron quality, los gates de contratos y límites del sistema, la validación de documentación y el chequeo del OpenAPI del Admin.
+
+El adaptador ASGI comprobó cero lecturas para solicitudes sin autorización, la precedencia del tamaño declarado y el rechazo de un stream antes del parser. El webhook acepta el límite exacto y devuelve 422 cuando el JSON es inválido. El upload admite un archivo en el límite con su envoltura multipart válida.

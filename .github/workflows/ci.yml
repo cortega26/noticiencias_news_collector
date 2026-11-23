@@ -397,6 +397,28 @@ jobs:
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: Verify Docker context excludes local files
+        run: |
+          set -euo pipefail
+          fixture_dir=$(mktemp -d news_collector/docker_context_fixture.XXXXXX)
+          export_dir=$(mktemp -d)
+          trap 'rm -rf -- "$fixture_dir" "$export_dir"' EXIT
+          mkdir -p "$fixture_dir"/{.venv,node_modules,backups}
+          touch "$fixture_dir"/{settings.env,settings.yaml,fixture.sqlite3,fixture.log,source.py.bak}
+          touch "$fixture_dir"/{.venv,node_modules,backups}/excluded.py
+          docker buildx build --output "type=local,dest=$export_dir" -f - . <<'DOCKERFILE'
+          FROM scratch
+          COPY . /context
+          DOCKERFILE
+          test -f "$export_dir/context/scripts/run_collector.py"
+          test -f "$export_dir/context/news_collector/config/sources.yaml"
+          test -f "$export_dir/context/news_collector/collectors/__init__.py"
+          test -f "$export_dir/context/noticiencias/config_schema.py"
+          if test -d "$export_dir/context/$fixture_dir"; then
+            test -z "$(find "$export_dir/context/$fixture_dir" -type f -print -quit)"
+          fi
+          test ! -e "$export_dir/context/data"
+          test ! -e "$export_dir/context/config/noticiencias-collector.env"
       - name: Build Docker image
         id: docker-build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
@@ -410,6 +432,7 @@ jobs:
           set -euo pipefail
           mkdir -p reports
           # Explicit bounded smoke mode: one deterministic cycle, no continuous sleep.
+          docker run --rm --network none local/noticiencias-news-collector:ci python scripts/run_collector.py --help
           docker run --rm -e NOTICIENCIAS_SMOKE=1 local/noticiencias-news-collector:ci > reports/docker-smoke.log
       - name: Upload smoke test log
         if: always()

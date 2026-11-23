@@ -39,6 +39,15 @@ Current jobs:
 - `build-artifacts` — `make build` + Docker image + smoke
 - `update-ci-badge` — CI badge sync (diagnostic)
 
+The Collector and serving Dockerfiles share the root `.dockerignore`.
+The allowlist admits application package directories, migration scripts,
+lockfiles, entry points and explicit root configuration. Local artifact
+patterns are excluded within the allowed directories. The context test
+exports a scratch image to verify that runtime data and synthetic files stay
+outside the context. The Collector image copies its application directories
+and scripts explicitly. Supply database files, exports, credentials and logs
+at runtime through environment variables or volumes.
+
 The `full` profile is the one that measures the `e2e`-marked suites (admin/public API), which the unit profile never collects; the unit profile remains the fast local gate behind `make type`.
 
 `make e2e` is a local gate (not a CI job) with the same contract as `make perf`:

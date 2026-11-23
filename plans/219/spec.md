@@ -19,3 +19,12 @@ El contexto y las capas del colector incluyen solo los archivos de aplicación n
 3. Ejecutar `make docs-check` y los comandos de validación Docker de `.github/workflows/ci.yml` en modo local sin push. Usar exclusivamente datos de prueba para el build. Registrar el resultado de ambos entrypoints y del chequeo negativo de contexto.
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- .dockerignore Dockerfile Dockerfile.serving docker-compose.yml .github/workflows/ci.yml docs/ci.md`. Si un archivo requerido por el runtime es local e irreproducible, documentar su provisión por entorno antes de alterar el contexto. Evitar cualquier prueba que empaquete el checkout de operación. Actualizar la fila 219.
+
+
+## Evidencia local de implementación
+
+Se construyeron las dos imágenes en un árbol efímero de `7ed42e008525fd6be66351f6ed8014930015b585` con los cambios del plan y fixtures ficticios. La exportación del contexto conservó los módulos Python anidados, migraciones, configuración y scripts. Excluyó bases SQLite, logs, configuración local, copias y archivos dentro de directorios de dependencias. Se comprobó la ausencia de los archivos ficticios dentro de ambas imágenes y la ejecución del Collector como usuario no root.
+
+`scripts/run_collector.py --help` y el ciclo de smoke del Collector salieron con código 0. La comprobación sin red acredita arranque y ejecución, y las fuentes remotas quedaron sin consultar con éxito. Serving respondió 200 en `/readyz` y `/healthz`, con estados `ready` y `ok`. Pasaron docs-check, el análisis YAML y la comprobación de sintaxis de los comandos añadidos a CI. La validación Docker local usó el builder disponible en el host. El paso Buildx queda para CI.
+
+La variante Compose de Refinery conserva su bind mount. La imagen del Collector sigue sin Streamlit porque sus dos locks instalados carecen de esa dependencia, que se encuentra en el lock dedicado de Refinery.
