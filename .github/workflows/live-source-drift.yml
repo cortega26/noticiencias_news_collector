@@ -44,6 +44,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: live-source-drift
+          # 410 MB per weekly run. Keeping the default 90-day retention filled
+          # the account-wide artifact quota and broke uploads in other repos
+          # (2026-11-18). Three days are enough to inspect the latest drift.
+          retention-days: 3
           path: |
             artifacts/live-source-drift
             artifacts/live-publication-smoke
