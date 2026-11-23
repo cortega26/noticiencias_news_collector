@@ -20,3 +20,9 @@ El panel solo habilita acciones sobre un detalle que corresponde a la selección
 4. En `apps/admin`, ejecutar `npm test && npm run check && npm run build && npm run contracts:check`. La auditoría ejecutó los primeros tres comandos en copia aislada con la instalación local y verificó 97 tests. Comprobar que el contrato generado se mantiene y que una interacción de teclado real en preview local respeta la selección y el login.
 
 Comprobar deriva con `git diff ffebfc9b..HEAD -- apps/admin/src/pages/triage.astro apps/admin/src/lib`. Si el panel dejó de ser dueño de la identidad o ahora dispone de integración de navegador oficial, adaptar la prueba antes de editar. Actualizar la fila 216 con evidencia del SHA.
+
+## Evidencia local de implementación
+
+Cambios locales verificados sobre `7ed42e008525fd6be66351f6ed8014930015b585`. Pasaron 102 tests del Admin, incluido el script real en Happy DOM con cinco casos de selección, paginación, autenticación y acciones obsoletas. También pasaron lint, Astro check, build y el contrato OpenAPI.
+
+En Chromium contra el preview local, con la API simulada, se verificaron el primer login, el bloqueo de acciones durante la carga, los atajos con modificadores y el ID exacto del artículo auditado. Un lote iniciado sobre una selección anterior conservó su resultado global sin sustituir el detalle nuevo.

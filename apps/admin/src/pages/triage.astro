@@ -286,6 +286,8 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   let detail: AdminArticleDetail | null = null;
   let cursor: string | null = null;
   let loading = false;
+  let queueGeneration = 0;
+  let selectionGeneration = 0;
   // Batch selection (plan 109): ticked publishable row ids. Survives
   // re-renders via renderBatchBar; cleared on filter change with the queue.
   const BATCH_MAX = 5;
@@ -371,34 +373,42 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         (s === status
           ? 'border-amber-500/70 bg-amber-500/10 text-amber-400'
           : 'border-ink-700 text-ink-300 hover:border-ink-600 hover:text-ink-100');
-      btn.addEventListener('click', () => {
-        status = s;
-        cursor = null;
-        items = [];
-        selectedId = null;
-        detail = null;
-        batchSelected.clear();
-        renderFilters();
-        void loadQueue();
-        window.addEventListener('auth:ready', () => void loadQueue());
-      });
+      btn.addEventListener('click', () => resetQueue(s));
       filterEl.appendChild(btn);
     }
   }
 
-  async function loadQueue() {
+  function resetQueue(nextStatus: ArticleStatus = status) {
+    queueGeneration++;
+    loading = false;
+    status = nextStatus;
+    cursor = null;
+    items = [];
+    batchSelected.clear();
+    resetDetail(null);
+    renderFilters();
+    renderQueue();
+    loadMoreBtn?.classList.add('hidden');
+    void loadQueue();
+  }
+
+  async function loadQueue(pageCursor: string | null = null) {
     if (loading) return;
+    const generation = queueGeneration;
+    const requestedStatus = status;
     loading = true;
+    loadMoreBtn?.setAttribute('disabled', '');
     try {
-      const envelope = await listArticles(status, cursor, 20);
+      const envelope = await listArticles(requestedStatus, pageCursor, 20);
+      if (generation !== queueGeneration) return;
       items = [...items, ...envelope.data];
-      cursor = envelope.pagination.next_cursor;
+      const nextCursor = envelope.pagination.next_cursor;
+      cursor = envelope.pagination.has_more && nextCursor !== pageCursor ? nextCursor : null;
       renderQueue();
-      loadMoreBtn?.classList.toggle('hidden', !envelope.pagination.has_more);
-      if (items.length > 0 && selectedId == null) {
-        select(items[0].id);
-      }
+      loadMoreBtn?.classList.toggle('hidden', cursor === null);
+      if (items.length > 0 && selectedId == null) void select(items[0].id);
     } catch (e) {
+      if (generation !== queueGeneration) return;
       if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
@@ -406,7 +416,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         showToast('No se pudo cargar la cola: ' + (e as Error).message, 'err');
       }
     } finally {
-      loading = false;
+      if (generation === queueGeneration) {
+        loading = false;
+        loadMoreBtn?.removeAttribute('disabled');
+      }
     }
   }
 
@@ -519,18 +532,48 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     el?.scrollIntoView({ block: 'nearest' });
   }
 
-  async function select(id: number) {
+  function authGateVisible() {
+    return document.getElementById('auth-gate')?.classList.contains('hidden') === false;
+  }
+
+  function resetDetail(id: number | null) {
+    selectionGeneration++;
     selectedId = id;
+    detail = null;
+    if (detailEl) {
+      detailEl.replaceChildren();
+      detailEl.classList.add('hidden');
+    }
+    detailEmptyEl?.classList.toggle('hidden', id !== null);
+  }
+
+  function renderDetailMessage(message: string) {
+    if (!detailEl) return;
+    detailEl.textContent = message;
+    detailEl.classList.remove('hidden');
+  }
+
+  function readyDetail(expected?: AdminArticleDetail) {
+    if (authGateVisible() || detail?.id !== selectedId || (expected && expected !== detail)) {
+      return null;
+    }
+    return detail;
+  }
+
+  async function select(id: number) {
+    resetDetail(id);
+    const generation = selectionGeneration;
     renderQueue();
+    renderDetailMessage('Cargando artículo…');
     try {
       const fresh = await getArticle(id);
-      // Escape, a filter change, or another selection may have landed
-      // mid-request: only adopt the response when it still matches the
-      // current selection, so hotkeys never act on a stale article.
-      if (selectedId !== id) return;
+      if (generation !== selectionGeneration) return;
+      if (fresh.id !== id) throw new Error('La respuesta pertenece a otro artículo');
       detail = fresh;
       renderDetail();
     } catch (e) {
+      if (generation !== selectionGeneration) return;
+      renderDetailMessage('No se pudo cargar el artículo.');
       if (e instanceof Error && e.name === 'AuthError') {
         clearToken();
         showAuthGate();
@@ -646,8 +689,9 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       }
     `;
 
+    const displayed = detail;
     detailEl.querySelector('[data-action="open"]')?.addEventListener('click', () => {
-      window.open(detail?.url, '_blank', 'noopener');
+      if (readyDetail(displayed)) window.open(displayed.url, '_blank', 'noopener');
     });
     {
       const publishBtn = detailEl.querySelector(
@@ -660,7 +704,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           publishBtn.title = 'Publicar este artículo y abrir el PR';
           publishBtn.toggleAttribute('disabled', publishInFlight);
           publishBtn.addEventListener('click', () => {
-            void doPublish({ articleId: current.id });
+            if (readyDetail(displayed)) void doPublish({ articleId: current.id });
           });
         } else {
           publishBtn.toggleAttribute('disabled', true);
@@ -669,63 +713,75 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       }
     }
     detailEl.querySelector('[data-action="full"]')?.addEventListener('click', () => {
-      if (detail) window.location.href = `/article?id=${detail.id}`;
+      if (readyDetail(displayed)) window.location.href = `/article?id=${displayed.id}`;
     });
     detailEl.querySelector('[data-action="reprocess"]')?.addEventListener('click', () => {
-      void doReprocess();
+      void doReprocess(displayed);
     });
     detailEl.querySelector('[data-action="reject"]')?.addEventListener('click', () => {
-      void doReject();
+      void doReject(displayed);
     });
     detailEl.querySelector('[data-action="audit-pass"]')?.addEventListener('click', () => {
-      void doAudit('passed');
+      void doAudit('passed', displayed);
     });
     detailEl.querySelector('[data-action="audit-fail"]')?.addEventListener('click', () => {
-      void doAudit('failed');
+      void doAudit('failed', displayed);
     });
   }
 
-  async function doReprocess() {
-    if (detail == null) return;
+  async function doReprocess(expected?: AdminArticleDetail) {
+    const current = readyDetail(expected);
+    if (!current) return;
+    const generation = selectionGeneration;
     try {
-      const result = await reprocessArticle(detail.id);
+      const result = await reprocessArticle(current.id);
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast(result.detail);
       if (result.status === 'ok') {
-        detail.processing_status = 'pending';
-        detail.error_message = null;
+        current.processing_status = 'pending';
+        current.error_message = null;
         renderDetail();
       }
     } catch (e) {
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast('No se pudo reprocesar: ' + (e as Error).message, 'err');
     }
   }
 
-  async function doReject() {
-    if (detail == null) return;
+  async function doReject(expected?: AdminArticleDetail) {
+    const current = readyDetail(expected);
+    if (!current) return;
+    const generation = selectionGeneration;
     // Single confirmation gate for every entry point (button + R hotkey).
     if (!window.confirm('¿Rechazar este artículo?')) return;
     try {
-      const result = await rejectArticle(detail.id);
+      const result = await rejectArticle(current.id);
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast(result.detail);
       if (result.status === 'ok') {
-        detail.processing_status = 'rejected';
+        current.processing_status = 'rejected';
         renderDetail();
       }
     } catch (e) {
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast('No se pudo rechazar: ' + (e as Error).message, 'err');
     }
   }
 
-  async function doAudit(state: string) {
-    if (detail == null) return;
+  async function doAudit(state: string, expected?: AdminArticleDetail) {
+    const current = readyDetail(expected);
+    if (!current) return;
+    const generation = selectionGeneration;
     try {
-      const result = await updateAuditStatus(detail.id, state);
+      const result = await updateAuditStatus(current.id, state);
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast(result.detail);
       if (result.status === 'ok') {
-        detail.audit = { ...(detail.audit as object), state };
+        current.audit = { ...(current.audit as object), state };
         renderDetail();
       }
     } catch (e) {
+      if (generation !== selectionGeneration || !readyDetail(current)) return;
       showToast('No se pudo auditar: ' + (e as Error).message, 'err');
     }
   }
@@ -741,15 +797,24 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      authGateVisible() ||
+      (event.target instanceof Element &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
+        ))
+    ) {
       return;
     }
     if (event.key === 'Escape') {
-      selectedId = null;
-      detail = null;
+      resetDetail(null);
       renderQueue();
-      detailEl?.classList.add('hidden');
-      detailEmptyEl?.classList.remove('hidden');
       return;
     }
     switch (event.key.toLowerCase()) {
@@ -771,24 +836,29 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         event.preventDefault();
         void doAudit('failed');
         break;
-      case 'o':
+      case 'o': {
         event.preventDefault();
-        if (detail?.url) window.open(detail.url, '_blank', 'noopener');
+        const current = readyDetail();
+        if (current?.url) window.open(current.url, '_blank', 'noopener');
         break;
+      }
       case 'p': {
         event.preventDefault();
-        if (detail == null) break;
-        if (detail.publishable) {
-          void doPublish({ articleId: detail.id });
+        const current = readyDetail();
+        if (!current) break;
+        if (current.publishable) {
+          void doPublish({ articleId: current.id });
         } else {
-          showToast(notPublishableReason(detail), 'err');
+          showToast(notPublishableReason(current), 'err');
         }
         break;
       }
     }
   });
 
-  loadMoreBtn?.addEventListener('click', () => void loadQueue());
+  loadMoreBtn?.addEventListener('click', () => {
+    if (cursor !== null) void loadQueue(cursor);
+  });
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     clearToken();
     window.location.href = '/triage';
@@ -864,10 +934,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           );
           setTimeout(() => {
             collectStatusEl?.classList.add('hidden');
-            status = 'pending';
-            cursor = null;
-            items = [];
-            void loadQueue();
+            resetQueue('pending');
           }, 1200);
         } else if (st.status === 'cancelled') {
           renderCollectStatus(`Recopilación cancelada${st.error ? `: ${st.error}` : '.'}`);
@@ -1105,26 +1172,18 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   function renderBatchItems(runId: string, items: unknown): boolean {
     const lines = renderPublishItems(items);
     if (!lines) return false;
-    renderPublishStatus(
-      `Lote ${esc(runId)} terminado:<br>${lines} <span class="text-ink-500">(actualizando la cola…)</span>`
-    );
+    renderPublishStatus(`Lote ${esc(runId)} terminado:<br>${lines}`);
     return true;
   }
 
-  function scheduleQueueRefresh() {
+  function scheduleQueueRefresh(generation: number) {
     setTimeout(() => {
       if (!publishInFlight) publishStatusEl?.classList.add('hidden');
-      status = 'pending';
-      cursor = null;
-      items = [];
-      selectedId = null;
-      detail = null;
-      batchSelected.clear();
-      void loadQueue();
+      if (generation === selectionGeneration && !authGateVisible()) resetQueue('pending');
     }, 2500);
   }
 
-  function pollPublish(runId: string) {
+  function pollPublish(runId: string, generation = selectionGeneration) {
     releasePublicationWatch(runId);
     let transientFailures = 0;
     const MAX_TRANSIENT = 5;
@@ -1162,12 +1221,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         const batchItems = (st.summary as Record<string, unknown> | undefined)?.items;
         if (st.status === 'succeeded' && st.pr_url) {
           renderPublishStatus(
-            `PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar. Actualizando la cola…`
+            `PR abierto: <a class="text-amber-400 underline" href="${esc(st.pr_url)}" target="_blank" rel="noopener">${esc(st.pr_url)}</a>. Fusiónalo para publicar.`
           );
-          scheduleQueueRefresh();
+          scheduleQueueRefresh(generation);
         } else if (renderBatchItems(runId, batchItems)) {
-          batchSelected.clear();
-          scheduleQueueRefresh();
+          if (generation === selectionGeneration) batchSelected.clear();
+          scheduleQueueRefresh(generation);
         } else if (st.status === 'succeeded') {
           renderPublishStatus(
             `La refinería terminó sin registrar URL de PR (proceso ${runId}). Revisa el resumen del intento de publicación.`
@@ -1224,6 +1283,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       showToast('Ya hay una publicación en curso.', 'err');
       return;
     }
+    const generation = selectionGeneration;
     publishDispatching = true;
     setPublishInFlight(true);
     renderPublishStatus('Iniciando proceso…');
@@ -1233,7 +1293,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         articleUrl: opts.articleUrl,
       });
       renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
-      pollPublish(started.run_id);
+      pollPublish(started.run_id, generation);
     } catch (e) {
       if (e instanceof Error && e.name === 'AuthError') {
         setPublishInFlight(false);
@@ -1247,7 +1307,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           renderPublishStatus(
             `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`
           );
-          pollPublish(existing.run_id);
+          pollPublish(existing.run_id, generation);
           return;
         }
       }
@@ -1276,13 +1336,14 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       showToast('Marca primero de 1 a 5 filas publicables.', 'err');
       return;
     }
+    const generation = selectionGeneration;
     publishDispatching = true;
     setPublishInFlight(true);
     renderPublishStatus(`Iniciando lote de ${ids.length} artículos…`);
     try {
       const started = await startPublishBatch(ids);
       renderPublishStatus(`${esc(started.detail)} (run ${started.run_id})`);
-      pollPublish(started.run_id);
+      pollPublish(started.run_id, generation);
     } catch (e) {
       if (e instanceof Error && e.name === 'AuthError') {
         setPublishInFlight(false);
@@ -1296,7 +1357,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           renderPublishStatus(
             `Ya hay una publicación en curso (proceso ${existing.run_id}) — observándola.`
           );
-          pollPublish(existing.run_id);
+          pollPublish(existing.run_id, generation);
           return;
         }
       }
@@ -1329,7 +1390,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
     }
   }
   restorePublicationWatches();
-  window.addEventListener('auth:ready', restorePublicationWatches);
+  window.addEventListener('auth:ready', () => {
+    restorePublicationWatches();
+    resetQueue();
+  });
   window.addEventListener('pagehide', () => {
     publicationWatches.forEach((w) => window.clearInterval(w.timer));
     stopProgress();

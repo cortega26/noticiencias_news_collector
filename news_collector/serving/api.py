@@ -54,6 +54,7 @@ from urllib.parse import urlparse
 
 from dateutil import parser as date_parser
 from fastapi import (
+    APIRouter,
     Depends,
     FastAPI,
     Header,
@@ -132,6 +133,7 @@ from news_collector.serving.admin_images import build_router
 from news_collector.serving.admin_reader_reports import (
     build_router as build_reader_report_router,
 )
+from news_collector.serving.bounded_body import bounded_body_route
 from news_collector.serving.dashboard_health import build_dashboard_health
 from news_collector.storage.database import DatabaseManager, get_database_manager
 from news_collector.storage.models import Article, ScoreLog, WorkflowRun
@@ -1032,41 +1034,11 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 _WEBHOOK_MAX_BODY_BYTES = 2 * 1024 * 1024
 
 
-def _check_webhook_body_size(raw_body: bytes) -> None:
-    """Reject an inbound webhook body above the documented cap (413)."""
-    if len(raw_body) > _WEBHOOK_MAX_BODY_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=(
-                f"Webhook payload too large ({len(raw_body)} bytes, "
-                f"limit {_WEBHOOK_MAX_BODY_BYTES})"
-            ),
-        )
-
-
-async def verify_webhook_body_size(request: Request) -> None:
-    """413 before payload validation when the raw body exceeds the cap.
-
-    Rejects on the declared ``Content-Length`` first (no body read), then on
-    the actual body for requests that do not declare one. Runs before the
-    other webhook dependencies so an oversize body is refused before any
-    authentication or validation work; Starlette caches the read body for
-    FastAPI's own parse.
-    """
-    declared = request.headers.get("content-length")
-    if (
-        declared is not None
-        and declared.isdigit()
-        and int(declared) > _WEBHOOK_MAX_BODY_BYTES
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=(
-                f"Webhook payload too large ({declared} bytes, "
-                f"limit {_WEBHOOK_MAX_BODY_BYTES})"
-            ),
-        )
-    _check_webhook_body_size(await request.body())
+def _webhook_payload_too_large(size: int, limit: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        detail=f"Webhook payload too large ({size} bytes, limit {limit})",
+    )
 
 
 def verify_webhook_token(
@@ -1559,15 +1531,23 @@ def create_app(  # noqa: C901
                 for item in related
             ]
 
-    @app.post(
+    webhook_router = APIRouter(
+        route_class=bounded_body_route(
+            verify_webhook_token,
+            lambda: _WEBHOOK_MAX_BODY_BYTES,
+            _webhook_payload_too_large,
+            declared_first=True,
+        )
+    )
+
+    @webhook_router.post(
         "/api/v1/webhook/frontend",
         status_code=status.HTTP_202_ACCEPTED,
     )
     def frontend_webhook(
         payload: Dict[str, Any],
-        _size: None = Depends(verify_webhook_body_size),
         manager: DatabaseManager = Depends(get_db),
-        _: None = Depends(verify_webhook_token),
+        _: Optional[str] = Header(None, alias="Authorization"),
     ) -> Dict[str, Any]:
         """Receive CI callbacks from the Noticiencias frontend.
 
@@ -1596,6 +1576,8 @@ def create_app(  # noqa: C901
         # processing failure — it records a failed receipt and still returns a
         # body — so the response stays 202 per the callback contract.
         return handle_webhook_event(event, manager)
+
+    app.include_router(webhook_router)
 
     # ------------------------------------------------------------------
     # Admin surface (/v1/admin/*) — Phase 1 of the Refinery GUI decoupling.

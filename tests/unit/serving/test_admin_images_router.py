@@ -52,7 +52,7 @@ def store(tmp_path, monkeypatch):
 def client() -> TestClient:
     """Minimal app: only the images router, auth replaced by a no-op."""
     app = FastAPI()
-    app.include_router(admin_images.build_router(lambda: None))
+    app.include_router(admin_images.build_router(lambda _authorization=None: None))
     return TestClient(app)
 
 
@@ -152,6 +152,7 @@ def test_upload_declared_length_over_cap_413(
 ) -> None:
     store.save_brief(_make_brief("brief-big"))
     monkeypatch.setattr(admin_images, "MAX_UPLOAD_BYTES", 16)
+    monkeypatch.setattr(admin_images, "_MULTIPART_OVERHEAD_BYTES", 16)
 
     response = client.post(
         "/v1/admin/images/brief-big/upload",
@@ -159,6 +160,21 @@ def test_upload_declared_length_over_cap_413(
     )
     assert response.status_code == 413
     assert response.json()["detail"] == "File upload too large"
+
+
+def test_multipart_overhead_allows_file_at_exact_file_cap(
+    client: TestClient, store, monkeypatch
+) -> None:
+    store.save_brief(_make_brief("brief-exact-limit"))
+    image = raster_bytes()
+    monkeypatch.setattr(admin_images, "MAX_UPLOAD_BYTES", len(image))
+
+    response = client.post(
+        "/v1/admin/images/brief-exact-limit/upload",
+        files={"file": ("hero.png", image, "image/png")},
+        data={"topic": "astronomía"},
+    )
+    assert response.status_code == 200
 
 
 def test_upload_rejects_bad_type_422(client: TestClient, store) -> None:
@@ -194,7 +210,9 @@ def test_verified_upload_notifies_after_durable_stage(store) -> None:
         ready_states.append(store.ready_for_article("123"))
 
     app = FastAPI()
-    app.include_router(admin_images.build_router(lambda: None, resume))
+    app.include_router(
+        admin_images.build_router(lambda _authorization=None: None, resume)
+    )
     with TestClient(app) as client:
         response = client.post(
             "/v1/admin/images/brief-resume/upload",
@@ -210,7 +228,9 @@ def test_unknown_upload_does_not_notify_until_rights_confirmed(store) -> None:
     notifications = []
     app = FastAPI()
     app.include_router(
-        admin_images.build_router(lambda: None, lambda: notifications.append(True))
+        admin_images.build_router(
+            lambda _authorization=None: None, lambda: notifications.append(True)
+        )
     )
     with TestClient(app) as client:
         response = client.post(
@@ -235,7 +255,9 @@ def test_resume_error_does_not_fail_committed_upload(store) -> None:
         raise RuntimeError("publication slot busy")
 
     app = FastAPI()
-    app.include_router(admin_images.build_router(lambda: None, busy))
+    app.include_router(
+        admin_images.build_router(lambda _authorization=None: None, busy)
+    )
     with TestClient(app) as client:
         response = client.post(
             "/v1/admin/images/brief-busy/upload",

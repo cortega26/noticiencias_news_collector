@@ -9,11 +9,16 @@ no TestClient, no network, no database.
 
 from __future__ import annotations
 
+import json
+
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
+from starlette.types import Message, Scope
 
 from news_collector.config.runtime import is_explicit_development
+from news_collector.serving import admin_images
 from news_collector.serving import api as serving_api
+from news_collector.storage.database import DatabaseManager
 
 # ---------------------------------------------------------------------------
 # _validate_prompts_payload
@@ -273,25 +278,147 @@ def test_publish_url_accepts_public_url() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# _check_webhook_body_size (plan 142)
-# ---------------------------------------------------------------------------
+WEBHOOK = "/api/v1/webhook/frontend"
+UPLOAD = "/v1/admin/images/fixture/upload"
 
 
-def test_webhook_body_size_accepts_normal_payload() -> None:
-    assert (
-        serving_api._check_webhook_body_size(b'{"event": "validation_result"}') is None
+async def _asgi_request(app, path, chunks, *, headers=(), method="POST"):
+    messages: list[Message] = []
+    reads = 0
+    scope: Scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.4"},
+        "http_version": "1.1",
+        "method": method,
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode(),
+        "root_path": "",
+        "query_string": b"",
+        "headers": list(headers),
+    }
+
+    async def receive() -> Message:
+        nonlocal reads
+        chunk = chunks[reads]
+        reads += 1
+        if chunk is None:
+            return {"type": "http.disconnect"}
+        return {"type": "http.request", "body": chunk, "more_body": reads < len(chunks)}
+
+    async def send(message: Message) -> None:
+        messages.append(message)
+
+    await app(scope, receive, send)
+    body = b"".join(m.get("body", b"") for m in messages[1:])
+    return messages[0]["status"], json.loads(body), reads
+
+
+@pytest.fixture
+def bounded_app(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEBHOOK_API_KEY", "webhook-fixture")
+    monkeypatch.setenv("ADMIN_API_KEY", "admin-fixture")
+    db = DatabaseManager({"type": "sqlite", "path": tmp_path / "bounds.db"})
+    try:
+        yield serving_api.create_app(database_manager=db)
+    finally:
+        db.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", [WEBHOOK, UPLOAD])
+async def test_unauthenticated_write_never_reads_body(bounded_app, path):
+    status, result, reads = await _asgi_request(bounded_app, path, [])
+    assert (status, reads) == (401, 0)
+    assert result["detail"] == "Missing Authorization header"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path, expected", [(WEBHOOK, 413), (UPLOAD, 401)])
+async def test_declared_size_and_auth_precedence(
+    bounded_app, monkeypatch, path, expected
+):
+    monkeypatch.setattr(serving_api, "_WEBHOOK_MAX_BODY_BYTES", 8)
+    monkeypatch.setattr(admin_images, "MAX_UPLOAD_BYTES", 4)
+    monkeypatch.setattr(admin_images, "_MULTIPART_OVERHEAD_BYTES", 4)
+    status, _, reads = await _asgi_request(
+        bounded_app, path, [], headers=[(b"content-length", b"9")]
     )
+    assert (status, reads) == (expected, 0)
 
 
-def test_webhook_body_size_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(serving_api, "_WEBHOOK_MAX_BODY_BYTES", 16)
+@pytest.mark.asyncio
+async def test_interrupted_upload_keeps_bad_request_response(bounded_app):
+    headers = [
+        (b"authorization", b"Bearer admin-fixture"),
+        (b"content-type", b"multipart/form-data; boundary=fixture"),
+    ]
+    status, result, reads = await _asgi_request(
+        bounded_app, UPLOAD, [None], headers=headers
+    )
+    assert (status, reads) == (400, 1)
+    assert result["detail"] == "There was an error parsing the body"
 
-    serving_api._check_webhook_body_size(b"x" * 16)
 
-    with pytest.raises(HTTPException) as exc_info:
-        serving_api._check_webhook_body_size(b"x" * 17)
-    assert exc_info.value.status_code == 413
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path, token, content_type",
+    [
+        (WEBHOOK, b"webhook-fixture", b"application/json"),
+        (UPLOAD, b"admin-fixture", b"multipart/form-data; boundary=fixture"),
+    ],
+)
+async def test_budget_stops_stream_before_parser(
+    bounded_app, monkeypatch, path, token, content_type
+):
+    monkeypatch.setattr(serving_api, "_WEBHOOK_MAX_BODY_BYTES", 8)
+    monkeypatch.setattr(admin_images, "MAX_UPLOAD_BYTES", 4)
+    monkeypatch.setattr(admin_images, "_MULTIPART_OVERHEAD_BYTES", 4)
+
+    def parser_must_not_run(*_args, **_kwargs):
+        pytest.fail("Over-budget requests must never enter the parser")
+
+    monkeypatch.setattr(Request, "json", parser_must_not_run)
+    monkeypatch.setattr(Request, "form", parser_must_not_run)
+    headers = [
+        (b"authorization", b"Bearer " + token),
+        (b"content-type", content_type),
+    ]
+    declared, _, reads = await _asgi_request(
+        bounded_app, path, [], headers=[*headers, (b"content-length", b"9")]
+    )
+    assert (declared, reads) == (413, 0)
+    streamed, result, reads = await _asgi_request(
+        bounded_app, path, [b"abcd", b"abcde", b"unread"], headers=headers
+    )
+    assert (streamed, reads) == (413, 2)
+    assert "too large" in result["detail"]
+
+
+@pytest.mark.asyncio
+async def test_webhook_accepts_exact_budget_and_preserves_422(bounded_app, monkeypatch):
+    payload = json.dumps(
+        {
+            "event": "validation_result",
+            "commit_sha": "fixture",
+            "frontend_ref": "fixture",
+            "branch": "main",
+            "status": "pass",
+            "diagnostics": [],
+            "run_url": "https://github.com/example/repo/actions/runs/1",
+        }
+    ).encode()
+    monkeypatch.setattr(serving_api, "_WEBHOOK_MAX_BODY_BYTES", len(payload))
+    headers = [
+        (b"authorization", b"Bearer webhook-fixture"),
+        (b"content-type", b"application/json"),
+    ]
+    status, _, reads = await _asgi_request(
+        bounded_app, WEBHOOK, [payload[:16], payload[16:]], headers=headers
+    )
+    assert (status, reads) == (202, 2)
+    invalid, _, _ = await _asgi_request(bounded_app, WEBHOOK, [b"{"], headers=headers)
+    assert invalid == 422
 
 
 # ---------------------------------------------------------------------------

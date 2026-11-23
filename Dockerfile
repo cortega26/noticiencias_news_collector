@@ -21,8 +21,13 @@ RUN mkdir /ms-playwright && playwright install --with-deps chromium
 RUN useradd -m appuser && chown -R appuser:appuser /ms-playwright /app
 USER appuser
 
-# Copy application code (chown for rw access if needed, though usually code is ro)
-COPY --chown=appuser:appuser . .
+# Keep application assets and operational entry points explicit.
+COPY --chown=appuser:appuser config.toml alembic.ini ./
+COPY --chown=appuser:appuser config ./config
+COPY --chown=appuser:appuser alembic ./alembic
+COPY --chown=appuser:appuser news_collector ./news_collector
+COPY --chown=appuser:appuser noticiencias ./noticiencias
+COPY --chown=appuser:appuser scripts/run_collector.py scripts/healthcheck.py scripts/migrate.py ./scripts/
 
 # Environment Defaults
 ENV RUN_ENVIRONMENT=production
