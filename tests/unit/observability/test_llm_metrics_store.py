@@ -7,6 +7,7 @@ import json
 import sqlite3
 import threading
 import time
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -81,7 +82,7 @@ def test_summary_by_purpose_and_window(store):
 
 def test_run_id_and_environment_are_stored(store):
     store.record(_rec())
-    with sqlite3.connect(store.db_path) as conn:
+    with closing(sqlite3.connect(store.db_path)) as conn:
         run_id, env = conn.execute(
             "SELECT run_id, environment FROM llm_calls"
         ).fetchone()
@@ -227,7 +228,7 @@ def test_report_script_text_json_and_probe(store, capsys, monkeypatch):
 
 def test_queue_wait_is_persisted_and_old_databases_are_migrated(tmp_path):
     db = tmp_path / "old.db"
-    with sqlite3.connect(db) as conn:  # schema from before queue_wait_ms
+    with closing(sqlite3.connect(db)) as conn:  # schema from before queue_wait_ms
         conn.executescript(
             "CREATE TABLE llm_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL,"
             " run_id TEXT, environment TEXT, provider TEXT NOT NULL, model TEXT,"
@@ -237,5 +238,5 @@ def test_queue_wait_is_persisted_and_old_databases_are_migrated(tmp_path):
     store = LLMMetricsStore(db, environment="test")
     rec = _rec()
     store.record(attempts.AttemptRecord(**{**rec.__dict__, "queue_wait_ms": 1234}))
-    with sqlite3.connect(db) as conn:
+    with closing(sqlite3.connect(db)) as conn:
         assert conn.execute("SELECT queue_wait_ms FROM llm_calls").fetchone() == (1234,)
