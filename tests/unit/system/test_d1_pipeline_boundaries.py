@@ -48,7 +48,14 @@ from news_collector.storage.models import Article
 from news_collector.system import NewsCollectorSystem
 from news_collector.validation.validator import ContentValidator
 
-_NOW = datetime.now(timezone.utc)
+
+def _now() -> datetime:
+    """Evaluate "now" per call, not at import.
+
+    A module-level timestamp is frozen before the time-shift plugin moves the
+    clock, so rows land outside the repository's relative `days_back` window.
+    """
+    return datetime.now(timezone.utc)
 
 
 class _NullLogger:
@@ -162,7 +169,7 @@ def _article(
         source_name=source_name,
         processing_status=status,
         final_score=final_score,
-        collected_date=collected_at or _NOW,
+        collected_date=collected_at or _now(),
         published_date=published_at,
         article_metadata=metadata or {},
         content_mode="full_text",
@@ -236,13 +243,13 @@ def test_validation_boundary_uses_payload(
                 1,
                 title="Mars rover finds ancient riverbed",
                 content=valid_content,
-                collected_at=_NOW - timedelta(minutes=2),
+                collected_at=_now() - timedelta(minutes=2),
             ),
             _article(
                 2,
                 title="Stub article",
                 content="too short",
-                collected_at=_NOW - timedelta(minutes=1),
+                collected_at=_now() - timedelta(minutes=1),
             ),
         ],
     )
@@ -296,21 +303,21 @@ async def test_scoring_boundary_uses_input_model(
                 title="Pending one",
                 source_id="source-a",
                 status="validated",
-                collected_at=_NOW - timedelta(minutes=3),
+                collected_at=_now() - timedelta(minutes=3),
             ),
             _article(
                 2,
                 title="Pending three",
                 source_id="source-a",
                 status="validated",
-                collected_at=_NOW - timedelta(minutes=1),
+                collected_at=_now() - timedelta(minutes=1),
             ),
             _article(
                 3,
                 title="Pending two",
                 source_id="source-b",
                 status="validated",
-                collected_at=_NOW - timedelta(minutes=2),
+                collected_at=_now() - timedelta(minutes=2),
             ),
             _article(
                 4,
@@ -318,7 +325,7 @@ async def test_scoring_boundary_uses_input_model(
                 source_id="source-b",
                 status="completed",
                 final_score=0.4,
-                collected_at=_NOW - timedelta(minutes=4),
+                collected_at=_now() - timedelta(minutes=4),
             ),
         ],
     )
