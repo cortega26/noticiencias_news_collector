@@ -34,6 +34,7 @@ from fastapi.testclient import TestClient
 from news_collector.contracts.webhook import parse_webhook_payload
 from news_collector.serving import create_app
 from news_collector.serving.webhook_handler import (
+    handle_webhook_event,
     process_publish_complete,
     process_validation_result,
 )
@@ -258,6 +259,53 @@ class TestReplay:
         assert first_result["updated"] == 1
         assert duplicate_result["duplicates"] == 1
         assert duplicate_result["needs_attention"] is False
+
+
+def test_corrected_run_delivery_can_complete_only_the_exact_attempt(db_manager):
+    ident = "corrected-evidence"
+    article_id, ref = _create_pr_created_article(
+        db_manager, refinery_id=ident, url_suffix=ident
+    )
+    opts = {
+        "event": "publish_complete",
+        "status": "success",
+        "diagnostics": {
+            "check": "deploy",
+            "status": "pass",
+            "deploy_url": "https://noticiencias.com/corrected-evidence",
+        },
+        "publication_ids": [ident],
+        "github_env": {
+            "GITHUB_RUN_ID": "217",
+            "GITHUB_REPOSITORY": "cortega26/noticiencias",
+        },
+    }
+
+    def send(envelope):
+        return handle_webhook_event(parse_webhook_payload(envelope), db_manager)
+
+    initial = _build_envelope_via_frontend(**opts)
+    corrected = _build_envelope_via_frontend(**opts, publication_attempt_refs=[ref])
+    assert send(initial)["result"]["needs_attention"]
+    assert _article_state(db_manager, article_id)["processing_status"] == "publishing"
+    # The Collector CI pins a frontend revision. Keep checking v1 compatibility
+    # there until that pin is advanced after the sender lands.
+    if initial["delivery_id"].startswith("v1:"):
+        assert send(corrected)["duplicate"]
+        assert (
+            _article_state(db_manager, article_id)["processing_status"] == "publishing"
+        )
+        return
+
+    wrong_hash = _build_envelope_via_frontend(
+        **opts, publication_attempt_refs=[{**ref, "content_sha256": "f" * 64}]
+    )
+    assert len({d["delivery_id"] for d in (initial, wrong_hash, corrected)}) == 3
+    assert send(wrong_hash)["result"]["needs_attention"]
+    assert _article_state(db_manager, article_id)["processing_status"] == "publishing"
+    assert send(corrected)["result"]["updated"] == 1
+    assert send(corrected)["duplicate"]
+    assert _article_state(db_manager, article_id)["processing_status"] == "completed"
 
 
 class TestUnrelatedId:

@@ -1,5 +1,7 @@
 # Plan 198 — reconciliar intentos de publicación con el estado de GitHub
 
+> La finalización por merge se reemplaza en el [plan 217](../217/spec.md). Se conserva este documento como registro histórico.
+
 ## Contexto (verificado 2026-10-26)
 
 18 intentos de publicación siguen en `PR_CREATED` y sus artículos en

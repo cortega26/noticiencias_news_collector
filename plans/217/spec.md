@@ -27,3 +27,10 @@ Una entrega corregida puede completar su intento exacto, los reintentos de trans
 | Collector `make lint && make type && make test && make quality-gate` | Declarados | Verde con lockfiles conforme al entorno. |
 
 Si el receptor interpreta la clave nueva de modo incompatible o una operación depende de la promoción merge-only, demostrar primero un mecanismo de recuperación utilizable. Validar con pruebas aisladas, sin enviar eventos o abrir PR de publicación reales. Actualizar la fila 217 con evidencia de cada fase.
+
+
+## Evidencia local de implementación
+
+Frontend `2da7714dea317d8b908bd8617507137e1b4fcc6f` y Collector `7ed42e008525fd6be66351f6ed8014930015b585` con cambios locales. Pasaron los 23 casos del notificador, los 1.036 tests del frontend, el build, el chequeo de salida y la paridad del contrato. Pasaron 52 casos de callbacks y reconciliación, 4.663 unitarias, 311 de contratos y 3 de límites en Collector. También pasaron mypy, cobertura, lint, docs-check y quality-gate. Una prueba adicional ejecutó el emisor v1 del frontend versionado para comprobar sus recibos. El emisor v2 real y SQLite verificaron corrección de evidencia en el mismo run, hash incorrecto, cierre exacto y entrega repetida.
+
+El resumen conserva el PR integrado como pendiente y evita atribuir a un intento la proyección de un PR o hash distinto. Los cambios del emisor deben llegar primero a producción. Ambas fases se mantienen locales.

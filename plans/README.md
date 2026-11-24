@@ -685,7 +685,7 @@ Base Collector `ffebfc9b3c8ff91cd001b3e2cc1c085ab6acbfc6`. El [informe de audito
 | --- | --- | --- | --- | --- | --- |
 | 215 | [Gates de dependencias](215/spec.md) | P1 | M | — | PARTIAL — locks de aplicación reparados; restricciones upstream de Semgrep pendientes |
 | 216 | [Identidad de acciones de Triage](216/spec.md) | P1 | M | — | DONE (local) — KEEP: evidencia de carreras de selección y autenticación |
-| 217 | [Evidencia y reconciliación de despliegue](217/spec.md) | P1 | M | Coordinar con frontend 024 | TODO |
+| 217 | [Evidencia y reconciliación de despliegue](217/spec.md) | P1 | M | Coordinar con frontend 024 | PARTIAL — emisor y reconciliación verificados localmente; liberación coordinada pendiente |
 | 218 | [Límites previos al parser](218/spec.md) | P1 | M | — | DONE (local) — KEEP: contrato de límites y evidencia ASGI |
 | 219 | [Contexto Docker sin datos locales](219/spec.md) | P1 | S–M | — | DONE (local) — KEEP: alcance del contexto y verificación de imágenes |
 

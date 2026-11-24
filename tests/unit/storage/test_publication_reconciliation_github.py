@@ -1,4 +1,4 @@
-"""Plan 198: close stale ``PR_CREATED`` attempts from GitHub PR evidence.
+"""Plan 217: keep merged attempts pending until deployment is proven.
 
 Real SQLite through ``DatabaseManager``; the PR reader is a fake callable, so
 no network is involved. ``GitHubPublisher.get_pull_request_state`` is covered
@@ -108,27 +108,58 @@ def _run(db: DatabaseManager, reader, *, dry_run: bool = False):
     )
 
 
-def test_merged_pr_completes_attempt_and_article(db_manager: DatabaseManager):
+def test_merged_pr_stays_pending_without_deploy_evidence(db_manager: DatabaseManager):
     article_id = _pr_created(db_manager)
 
     summary = _run(db_manager, _reader(MERGED))
 
-    assert summary.completed == 1
-    assert _attempt(db_manager, article_id).state == "COMPLETED"
+    assert summary.completed == 0
+    assert summary.missing_deploy_evidence == 1
+    assert PR_URL in summary.actions[0].detail
+    assert MERGED_AT in summary.actions[0].detail
+    attempt = _attempt(db_manager, article_id)
+    assert attempt.state == "PR_CREATED"
+    assert attempt.finished_at is None
     article = db_manager.articles.get_article_by_id(article_id)
-    assert article.processing_status == "completed"
-    assert article.published_url == "https://noticiencias.com/"
-    published_at = article.published_at
-    if published_at.tzinfo is None:
-        published_at = published_at.replace(tzinfo=timezone.utc)
-    assert published_at == datetime(2026, 10, 12, 15, 30, tzinfo=timezone.utc)
-    events = db_manager.lifecycle.get_publication_events_for_attempt(
-        _attempt(db_manager, article_id).id
-    )
-    deployed = [e for e in events if e.event_type == "deployed"]
-    assert deployed and deployed[0].details["source"] == "github_reconciliation"
-    assert deployed[0].details["merge_commit_sha"] == "deadbeef"
-    assert deployed[0].details["content_sha256"] == SHA
+    assert article.processing_status == "publishing"
+    assert article.published_url is None
+    assert article.published_at is None
+    events = db_manager.lifecycle.get_publication_events_for_attempt(attempt.id)
+    assert [event.event_type for event in events] == ["pr_created"]
+
+
+@pytest.mark.parametrize(
+    "projection",
+    [
+        {
+            "pr_url": "https://github.com/cortega26/noticiencias/pull/78",
+            "publication_attempt_id": "newer-attempt",
+        },
+        {
+            "pr_url": PR_URL,
+            "publication_attempt_id": "attempt-a",
+            "content_sha256": "f" * 64,
+        },
+    ],
+)
+def test_older_attempt_does_not_inherit_a_newer_deploy(
+    db_manager: DatabaseManager, projection
+):
+    article_id = _pr_created(db_manager)
+    with db_manager.get_session() as session:
+        article = session.get(Article, article_id)
+        article.processing_status = "completed"
+        article.published_url = "https://noticiencias.com/newer"
+        article.article_metadata = {
+            **article.article_metadata,
+            "publication": projection,
+        }
+
+    summary = _run(db_manager, _reader(MERGED))
+
+    assert summary.missing_deploy_evidence == 1
+    assert "different publication attempt" in summary.actions[0].detail
+    assert _attempt(db_manager, article_id).state == "PR_CREATED"
 
 
 def test_closed_unmerged_pr_rejects_attempt_and_article(db_manager: DatabaseManager):
@@ -171,12 +202,12 @@ def test_legacy_attempt_without_token_projects_when_latest(
 ):
     article_id = _pr_created(db_manager, "legacy", token=False)
 
-    _run(db_manager, _reader(MERGED))
+    _run(db_manager, _reader(CLOSED))
 
-    assert _attempt(db_manager, article_id).state == "COMPLETED"
+    assert _attempt(db_manager, article_id).state == "REJECTED"
     assert (
         db_manager.articles.get_article_by_id(article_id).processing_status
-        == "completed"
+        == "rejected"
     )
 
 
@@ -188,9 +219,9 @@ def test_non_current_attempt_updates_attempt_only(db_manager: DatabaseManager):
         metadata["publication_attempt_id"] = "a-newer-attempt"
         article.article_metadata = metadata
 
-    _run(db_manager, _reader(MERGED))
+    _run(db_manager, _reader(CLOSED))
 
-    assert _attempt(db_manager, article_id).state == "COMPLETED"
+    assert _attempt(db_manager, article_id).state == "REJECTED"
     article = db_manager.articles.get_article_by_id(article_id)
     assert article.processing_status == "publishing"
     assert article.published_at is None
@@ -201,7 +232,7 @@ def test_dry_run_writes_nothing(db_manager: DatabaseManager):
 
     summary = _run(db_manager, _reader(MERGED), dry_run=True)
 
-    assert summary.completed == 1
+    assert summary.missing_deploy_evidence == 1
     assert _attempt(db_manager, article_id).state == "PR_CREATED"
     assert (
         db_manager.articles.get_article_by_id(article_id).processing_status
@@ -212,12 +243,12 @@ def test_dry_run_writes_nothing(db_manager: DatabaseManager):
 def test_second_pass_is_idempotent(db_manager: DatabaseManager):
     _pr_created(db_manager)
     reader = _reader(MERGED)
-    _run(db_manager, reader)
-
+    first = _run(db_manager, reader)
     second = _run(db_manager, reader)
 
-    assert second.scanned == 0
-    assert len(reader.calls) == 1
+    assert second.actions == first.actions
+    assert second.missing_deploy_evidence == 1
+    assert len(reader.calls) == 2
 
 
 def test_without_reader_behaviour_is_unchanged(db_manager: DatabaseManager):
