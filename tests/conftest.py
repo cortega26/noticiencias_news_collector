@@ -130,6 +130,21 @@ def _close_global_db_manager():
         manager.close()
         database_module._db_manager = None
 
+    # The global metrics stores keep a sqlite connection open for the whole
+    # session. Without this they can be collected in the middle of an unrelated
+    # test and surface as an unclosed-database ResourceWarning. They reconnect
+    # lazily on the next write, so closing after each test is safe.
+    try:
+        from news_collector.observability.enrichment_metrics_store import (
+            enrichment_metrics,
+            production_metrics_view,
+        )
+
+        enrichment_metrics.close()
+        production_metrics_view.close()
+    except (ImportError, AttributeError):
+        pass
+
 
 @pytest.fixture
 def mock_article_payload():
@@ -164,7 +179,8 @@ def mock_article_payload():
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Clean up global sqlite connections after all tests to prevent ResourceWarnings."""
+    """Clean up sqlite connections after all tests to prevent ResourceWarnings."""
+    import gc
     import logging
 
     try:
@@ -177,3 +193,13 @@ def pytest_sessionfinish(session, exitstatus):
         production_metrics_view.close()
     except (ImportError, AttributeError, sqlite3.OperationalError) as e:
         logging.warning("Skipped cleanup of metrics DB: %s", e)
+
+    # Tests may leave raw sqlite3.Connection objects to the garbage collector.
+    # CPython emits ResourceWarning at interpreter shutdown, after pytest's
+    # warning summary, so close any survivors deterministically here.
+    for obj in gc.get_objects():
+        if isinstance(obj, sqlite3.Connection):
+            try:
+                obj.close()
+            except sqlite3.Error:
+                pass

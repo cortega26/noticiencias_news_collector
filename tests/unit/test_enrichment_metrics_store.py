@@ -18,6 +18,11 @@ class TestEnrichmentMetricsStore(unittest.TestCase):
         # But for now, let's just use the reset method which clears the table.
         self.store.reset()
 
+    def tearDown(self):
+        # Each test opens a sqlite connection; close it so it is not collected
+        # mid-suite and reported as an unclosed-database ResourceWarning.
+        self.store.close()
+
     def test_record_attempt(self):
         self.store.record_attempt("source_a")
         metrics = self.store.get_metrics("source_a")
