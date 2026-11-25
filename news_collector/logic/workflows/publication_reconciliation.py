@@ -112,7 +112,8 @@ class PublicationReconciliationWorkflow:
     ) -> None:
         self._db = db_manager
         self._pull_request_state = pull_request_state
-        self._site_url = site_url
+        # Keep the legacy keyword accepted for callers of the old merge-only path.
+        del site_url
 
     # ------------------------------------------------------------------
     # entry point
@@ -348,6 +349,12 @@ class PublicationReconciliationWorkflow:
                     "evidence"
                 ),
             )
+        if _legacy_deploy_evidence_conflicts(article, current, self._db.lifecycle):
+            return ReconciliationAction(
+                **base,
+                outcome="missing_deploy_evidence",
+                detail="legacy deploy evidence belongs to a different publication attempt",
+            )
         if not dry_run:
             self._db.lifecycle.apply_publication_transition(
                 current.id,
@@ -382,11 +389,7 @@ class PublicationReconciliationWorkflow:
     def _repair_from_pull_request(
         self, base: dict[str, Any], current: Any, *, dry_run: bool
     ) -> ReconciliationAction:
-        """Close the attempt from its PR's merge state (plan 198).
-
-        Merged -> ``COMPLETED`` (the frontend deploys its main branch);
-        closed unmerged -> ``REJECTED``; open or unreadable -> unchanged.
-        """
+        """Report merged PRs as pending and reject closed, unmerged PRs."""
         assert self._pull_request_state is not None
         state = self._pull_request_state(current.pr_url) if current.pr_url else None
         evidence = _pull_request_evidence(current.pr_url, state)
@@ -397,29 +400,34 @@ class PublicationReconciliationWorkflow:
                 outcome="stale_pr_open",
                 detail=f"pull request state {reason}: {current.pr_url}",
             )
-        merged = evidence["outcome"] == "merged"
+        if evidence["outcome"] == "merged":
+            return ReconciliationAction(
+                **base,
+                outcome="missing_deploy_evidence",
+                detail=(
+                    f"github: merged {current.pr_url} "
+                    f"at {evidence['details']['merged_at']}; awaiting deploy evidence"
+                ),
+            )
         refusal = (
-            None
-            if dry_run
-            else self._apply_pull_request_outcome(current.id, evidence, merged=merged)
+            None if dry_run else self._reject_closed_pull_request(current.id, evidence)
         )
         if refusal is not None:
             return ReconciliationAction(**base, outcome="stale_pr_open", detail=refusal)
         return ReconciliationAction(
             **base,
-            outcome="completed" if merged else "rejected",
-            detail=f"github: {evidence['outcome']} {current.pr_url}",
+            outcome="rejected",
+            detail=f"github: closed_unmerged {current.pr_url}",
         )
 
-    def _apply_pull_request_outcome(
-        self, attempt_id: int, evidence: dict[str, Any], *, merged: bool
+    def _reject_closed_pull_request(
+        self, attempt_id: int, evidence: dict[str, Any]
     ) -> str | None:
-        """Persist one PR outcome; returns a refusal detail, or None."""
         result = self._db.lifecycle.apply_reconciled_pull_request_outcome(
             attempt_id,
-            target_state="COMPLETED" if merged else "REJECTED",
+            target_state="REJECTED",
             evidence=evidence["details"],
-            deploy_url=self._site_url if merged else None,
+            deploy_url=None,
             occurred_at=evidence["occurred_at"],
         )
         if result.transitioned:
@@ -524,6 +532,41 @@ def _parse_github_timestamp(value: Any) -> datetime | None:
     except ValueError:
         return None
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _legacy_deploy_evidence_conflicts(
+    article: Any, attempt: Any, lifecycle: Any
+) -> bool:
+    metadata = article.article_metadata or {}
+    publication = metadata.get("publication") or {}
+    if not isinstance(publication, Mapping):
+        return False
+    details = attempt.details or {}
+    expected = {
+        "pr_url": attempt.pr_url,
+        "publication_attempt_id": details.get("publication_attempt_id"),
+    }
+    observed = {
+        "pr_url": publication.get("pr_url"),
+        "publication_attempt_id": publication.get("publication_attempt_id")
+        or metadata.get("publication_attempt_id"),
+    }
+    if any(
+        value and observed[key] and value != observed[key]
+        for key, value in expected.items()
+    ):
+        return True
+    observed_digest = publication.get("content_sha256")
+    if not isinstance(observed_digest, str) or not observed_digest:
+        return False
+    creation_hashes = {
+        event.details["content_sha256"]
+        for event in lifecycle.get_publication_events_for_attempt(attempt.id)
+        if event.event_type == "pr_created"
+        and event.details
+        and isinstance(event.details.get("content_sha256"), str)
+    }
+    return bool(creation_hashes and creation_hashes != {observed_digest})
 
 
 def _classify_closed_pull_request(

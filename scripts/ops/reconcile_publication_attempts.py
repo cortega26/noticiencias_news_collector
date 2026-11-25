@@ -19,10 +19,9 @@ without deploy evidence. Convention: a manual on-demand ops script, like
 `scripts/ops/prune_workflow_runs.py` — this repo has no scheduler
 infrastructure, so wiring an external timer is out of scope.
 
-With ``--github`` (plan 198), an attempt still unresolved after steps 1-2
-is closed from its pull request's merge state: merged -> ``COMPLETED``
-(the frontend deploys its main branch), closed unmerged -> ``REJECTED``,
-open or unreadable -> unchanged. Reads ``GITHUB_TOKEN`` when set.
+With ``--github``, a merged PR remains pending until a correlated
+deployment callback arrives. A closed, unmerged PR is rejected. Open
+and unreadable PRs remain unchanged. Reads ``GITHUB_TOKEN`` when set.
 
 Usage:
     python scripts/ops/reconcile_publication_attempts.py \
@@ -99,14 +98,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "--github",
         action="store_true",
         help=(
-            "Use each pull request's GitHub merge state as deploy evidence "
-            "for attempts no stored evidence resolves (plan 198)."
+            "Check GitHub for merged PRs awaiting deployment and reject "
+            "PRs closed without merge."
         ),
     )
     parser.add_argument(
         "--site-url",
         default=DEFAULT_SITE_URL,
-        help=f"Deploy URL recorded for merged PRs (default: {DEFAULT_SITE_URL}).",
+        help="Deprecated compatibility option. Deploy URLs come from evidence.",
     )
     return parser
 

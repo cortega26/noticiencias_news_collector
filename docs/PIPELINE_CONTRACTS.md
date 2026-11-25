@@ -372,6 +372,21 @@ constraint.
 
 The Worker accepts absolute HTTP(S) URLs with an unambiguous authority and a valid port. Article links must use noticiencias.com or a subdomain. Evidence may use an external HTTP(S) host. Encode spaces within the URL. The Worker stores the accepted string as supplied. The shared corpus lives in the frontend at `../noticiencias/tests/fixtures/reader-report-url-contract.json` and is exercised by both repositories.
 
+### Reconciliation after a PR merge
+
+With `--github`, reconciliation reports a merged PR as
+`missing_deploy_evidence` and leaves its attempt in `PR_CREATED`. A closed,
+unmerged PR can still reject its own attempt. A matching deployment callback
+completes the attempt and uses its deployment URL when provided. A legacy
+article projection can repair a legacy attempt unless the recorded PR,
+attempt ID or content hash conflicts. Existing terminal records are retained. Plan 217 supersedes the merge-based completion rule
+from plan 198.
+
+Frontend sender IDs beginning with `v2:` identify stable evidence within a
+repository and workflow run. A corrected delivery can carry new exact
+attempt references. Unchanged evidence keeps its delivery key, and stored
+v1 receipts remain readable.
+
 ### Legacy publication recovery
 
 Refinery adopts a pre-PR legacy attempt in the Collector database before contacting
@@ -381,3 +396,18 @@ if the local checkout was recreated. The PR reference, article projection and
 lifecycle event commit together. A pending recovery exits the current run without
 starting a new publication. Use the existing explicit article-ID path to retry a
 pending article because standard batch selection skips articles in publishing state.
+
+### Request limits before parsing
+
+The frontend webhook and Admin image upload validate bearer credentials
+before reading any request body. A webhook with a declared length above
+2 MiB receives 413 before authentication. The image upload authenticates
+first, then checks the total multipart limit of 10 MiB plus 64 KiB for
+form fields and framing. The uploaded file itself remains limited to
+10 MiB.
+
+Both routes count bytes from the incoming stream and buffer at most the
+route limit before passing the body to the parser. The count applies even if the request
+provides a content length. Development-only authentication behavior,
+parser validation, and the Admin OpenAPI schema follow the existing
+contracts.
